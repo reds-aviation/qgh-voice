@@ -1,0 +1,37 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "Choose your listening mode",
+      "start": 0
+    },
+    {
+      "title": "Press, speak, release",
+      "start": 6.633333
+    },
+    {
+      "title": "Execution and response",
+      "start": 14.035328
+    },
+    {
+      "title": "A natural pause",
+      "start": 20.876326
+    },
+    {
+      "title": "Controller has priority",
+      "start": 27.909658999999998
+    },
+    {
+      "title": "Mute when needed",
+      "start": 35.876326
+    },
+    {
+      "title": "Keep the console visible",
+      "start": 42.186326
+    },
+    {
+      "title": "Practice complete calls",
+      "start": 48.986326
+    }
+  ]
+}

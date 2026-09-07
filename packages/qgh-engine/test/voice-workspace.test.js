@@ -7,7 +7,7 @@ const test = require('node:test');
 
 const workspace = fs.readFileSync(path.join(__dirname, '..', 'voice-workspace.js'), 'utf8');
 const offlineEngine = fs.readFileSync(path.join(__dirname, '..', 'offline-voice-engine.js'), 'utf8');
-const guide = fs.readFileSync(path.join(__dirname, '..', 'user-guide.html'), 'utf8');
+const guide = fs.readFileSync(path.join(__dirname, '..', 'training-centre.html'), 'utf8');
 const voiceStyles = fs.readFileSync(path.join(__dirname, '..', 'voice.css'), 'utf8');
 
 test('voice workspace is a local DOM adapter and does not contain flight-model logic', () => {

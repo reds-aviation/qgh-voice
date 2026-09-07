@@ -6,6 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { pathToFileURL } = require('node:url');
 const Radio = require('../radio-session.js');
+const ProcedureIntent = require('../procedure-intent.js');
 const source = fs.readFileSync(path.join(__dirname, '..', 'radio-workspace.js'), 'utf8');
 
 function harness(voices = [], enableAudio = true, nativeCapability, bundled = false) {
@@ -59,6 +60,7 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
     cancel() { nativeCancellations += 1; }
   };
   sandbox.globalThis = sandbox;
+  sandbox.QGHProcedureIntent = ProcedureIntent;
   vm.runInNewContext(source, sandbox);
   if (enableAudio) sandbox.QGHRadioWorkspace.setAudioEnabled(true);
   const advance = ms => {
@@ -85,6 +87,16 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
 }
 const local = [{ localService: true, lang: 'en-IN', name: 'Local test voice' }];
 const turn = { intent: 'normal-turn-heading', aircraft: 'A', side: 'right', heading: 230 };
+
+test('delayed altitude crossing reports say PASSED and retain the original addressed aircraft', () => {
+  const h = harness([],false);
+  h.radio.controllerStart();
+  h.radio.enqueueProcedureReport({source:'A',timestamp:0,text:'PASSING ALTITUDE 6000 FEET'});
+  h.heading('A',230,10); h.select('B');
+  h.radio.controllerEnd(); h.advance(300);
+  assert.match(h.captions.at(-1),/^PASSED ALTITUDE 6000 FEET.*FALCON 11/);
+  assert.equal(h.receiver.read().source,'A');
+});
 
 test('stored opt-in never restores pilot sound and current headphone confirmation is required', () => {
   const h = harness(local, false);

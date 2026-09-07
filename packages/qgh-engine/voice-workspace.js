@@ -38,6 +38,7 @@
     announcement: null,
     effectBatch: null,
     callTranscripts: new Set(),
+    transactionSegments: [],
     restartTimer: null,
     radioQuietTimer: null,
     readinessTimer: null,
@@ -249,12 +250,14 @@
     const cancelled = /CANCELLED/.test(outcome.message);
     const applied = outcome.ok && !pending && !cancelled;
     const radioOnly = applied && command.intent === 'radio-exchange';
-    const phase = pending ? 'CONFIRM REQUIRED' : cancelled ? 'CANCELLED' : radioOnly ? 'RECEIVED' : applied ? 'APPLIED' : command?.accepted ? 'REJECTED' : 'NOT RECOGNISED';
+    const procedureStatus = outcome.procedureOutcome?.executionStatus;
+    const phase = pending ? 'CONFIRM REQUIRED' : cancelled ? 'CANCELLED' : applied && procedureStatus ? procedureStatus
+      : radioOnly ? (command.radioKind === 'unmodelled' ? 'NOT SIMULATED' : 'RECEIVED') : applied ? 'APPLIED' : command?.accepted ? 'REJECTED' : 'NOT RECOGNISED';
     state.currentOutcome = phase;
     const description = command?.accepted ? describeWorkspaceVoiceCommand(command, outcome.message) : String(transcript || '').trim();
     // Snapshot the synchronous control reply now, before the display transition:
     // the aircraft may keep turning or the selected tactical aircraft may change.
-    const appliedReply = radioOnly ? outcome.message : applied ? appliedExerciseReply(command) : '';
+    const appliedReply = radioOnly || outcome.radioTarget ? outcome.message : applied ? appliedExerciseReply(command) : '';
     const resultDetail = appliedReply || outcome.message;
     state.lastCall = { heard: String(transcript || '').trim(), interpreted: description, result: phase, reason: resultDetail };
     setStatus(phase, applied ? 'success' : pending ? 'active' : 'error');
@@ -902,6 +905,17 @@
     if (callsignRequired.has(command.intent) && !command.aircraft) {
       return result(false, 'SAY THE AIRCRAFT CALLSIGN FOR A TACTICAL COMMAND');
     }
+    if (command.aircraft && command.intent !== 'select-aircraft') {
+      const id = tacticalId(command.aircraft);
+      const addressed = root.QGHRadioAdapter?.executeRadioCommand?.({ ...command, aircraft: id });
+      if (addressed) {
+        if (addressed.ok) {
+          root.QGHRadioAdapter.highlightRadioTarget?.(id);
+          if (addressed.controlId) state.effectBatch?.add($(addressed.controlId));
+        }
+        return { ...addressed, radioTarget: id };
+      }
+    }
     if (command.intent === 'select-aircraft') return selectTacticalAircraft(command.aircraft);
     if (['start-orbit', 'continue-orbit', 'resume-normal'].includes(command.intent)) {
       const selected = selectTacticalAircraft(command.aircraft);
@@ -1231,6 +1245,7 @@
     state.nativeResultReceived = false;
     state.lastNativeGrammarJson = null;
     state.callTranscripts.clear();
+    state.transactionSegments = [];
     state.lastTranscript = '';
     state.lastTranscriptAt = 0;
     state.processing = false;
@@ -1271,22 +1286,40 @@
   function rememberTranscript(transcript) {
     if (pilotBlocksMicrophone()) return;
     const normalized = Voice.normalizeTranscript(transcript);
-    const now = Date.now();
-    if (!normalized || (normalized === state.lastTranscript && now - state.lastTranscriptAt < RECENT_TRANSCRIPT_WINDOW_MS)) return;
-    if (!state.continuous && state.callTranscripts.has(normalized)) return;
-    if (!state.continuous) state.callTranscripts.add(normalized);
+    if (!normalized || state.callTranscripts.has(normalized)) return;
+    state.callTranscripts.add(normalized);
     state.lastTranscript = normalized;
-    state.lastTranscriptAt = now;
+    state.lastTranscriptAt = Date.now();
+    const assembled = state.transactionSegments.join(' ');
+    if (assembled && normalized.startsWith(assembled + ' ')) state.transactionSegments = [normalized];
+    else state.transactionSegments.push(normalized);
     if (state.continuous) root.QGHRadioWorkspace?.controllerStart();
-    dispatchTranscript(transcript);
     if (state.continuous) scheduleRadioQuietEnd();
+  }
+
+  function commitControllerTransaction() {
+    if (state.pressHeld || !state.transactionSegments.length) return;
+    let transcript = state.transactionSegments.join(' ');
+    state.transactionSegments = [];
+    state.callTranscripts.clear();
+    // Only an explicit replacement of a complete heading turn is reconciled here.
+    // A late condition/negation remains in the whole text for the parser to reject.
+    const corrected = /^(.*?)\bturn (?:left|right)(?: heading)? [\w ]+ correction (turn (?:left|right)(?: heading)? [\w ]+)$/.exec(transcript);
+    if (corrected && !/\b(?:if|unless|negative|not|don't)\b/.test(transcript)) transcript = corrected[1] + corrected[2];
+    dispatchTranscript(transcript);
   }
 
   function scheduleRadioQuietEnd() {
     root.clearTimeout(state.radioQuietTimer);
     state.radioQuietTimer = root.setTimeout(() => {
       state.radioQuietTimer = null;
-      if (!state.pilotSpeaking && !state.pressHeld) root.QGHRadioWorkspace?.controllerEnd();
+      if (!state.pilotSpeaking && !state.pressHeld) {
+        // Close and drain the recognizer before executing a complete continuous call.
+        if (state.listening) {
+          if (nativeVoiceBridge()) nativeVoiceBridge().stop();
+          else state.engine?.stop({ cancel: false });
+        } else { commitControllerTransaction(); root.QGHRadioWorkspace?.controllerEnd(); }
+      }
     }, 900);
   }
 
@@ -1351,6 +1384,8 @@
     state.pilotSpeaking = Boolean(speaking);
     if (pilotBlocksMicrophone()) {
       state.startAttempt += 1;
+      state.transactionSegments = [];
+      state.callTranscripts.clear();
       state.nativeRequestId = null;
       clearRestartTimer();
       state.starting = false;
@@ -1362,10 +1397,15 @@
       state.processing = false;
       setStatus('PILOT TRANSMITTING', 'active');
     } else if (canContinueListening()) scheduleContinuousRestart();
+    else if (!state.pilotSpeaking && state.status?.textContent === 'PILOT TRANSMITTING') {
+      setStatus(state.localAvailability === 'ready' ? 'PTT READY' : 'SET UP OFFLINE VOICE', 'neutral');
+    }
     updateMicState();
   }
 
   function handleTerminalRecognitionError(error) {
+    state.transactionSegments = [];
+    state.callTranscripts.clear();
     state.nativeRequestId = null;
     state.processing = false;
     clearRestartTimer();
@@ -1405,8 +1445,10 @@
     state.starting = false;
     state.listening = false;
     if (!state.pressHeld && !state.pilotSpeaking) {
+      state.startAttempt += 1;
       root.clearTimeout(state.radioQuietTimer);
       state.radioQuietTimer = null;
+      commitControllerTransaction();
       root.QGHRadioWorkspace?.controllerEnd();
     }
     updateMicState();
@@ -1675,12 +1717,16 @@
 
   function stopListening(options) {
     const cancel = Boolean(options?.cancel);
+    if (cancel) { state.transactionSegments = []; state.callTranscripts.clear(); }
     root.clearTimeout(state.radioQuietTimer);
     state.radioQuietTimer = null;
     if (cancel) root.QGHRadioWorkspace?.reset();
     // PTT release asks the recognizer to flush; pilot playback waits for its
     // ended callback so no later final segment is cancelled by our own reply.
-    else if (!state.listening) root.QGHRadioWorkspace?.controllerEnd();
+    else if (!state.listening) {
+      commitControllerTransaction();
+      root.QGHRadioWorkspace?.controllerEnd();
+    }
     state.processing = !cancel && state.listening;
     if (state.processing) setStatus('PROCESSING', 'active');
     updateMicState();
@@ -1941,6 +1987,7 @@
       state.lastTranscript = '';
       state.lastTranscriptAt = 0;
       state.callTranscripts.clear();
+      state.transactionSegments = [];
       updateMicState();
       setStatus('STARTING MICROPHONE', 'neutral');
       try { if (event.pointerId !== undefined) mic.setPointerCapture?.(event.pointerId); } catch { /* Window release fallback remains active. */ }

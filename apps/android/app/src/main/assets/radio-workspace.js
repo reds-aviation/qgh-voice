@@ -11,6 +11,7 @@
   const speechDocumentId = root.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   // Audible readbacks are an explicit headphones opt-in, never a speaker default.
   let audioEnabled = false;
+  let pilotWpm = 100;
   let controllerHeld = false;
   let generation = 0;
   let pending = [];
@@ -23,6 +24,19 @@
   // Condition reports are flight obligations, not disposable command readbacks.
   // They survive microphone changes and wait for an available radio channel.
   const reports = new Map();
+
+  // Ordinary reports describe aircraft state.  They must be sampled when the
+  // pilot is about to transmit, not when a controller call is first accepted
+  // and may still be queued behind a held channel.
+  const liveSampleIntents = new Set(['report-heading', 'request-distance']);
+
+  function refreshLiveSample(item) {
+    if (!item?.liveSample) return item;
+    const aircraft = adapter.snapshot(item.source);
+    if (!aircraft) return null;
+    const reply = Radio.replyFor(item.command, aircraft);
+    return reply ? { ...item, reply } : null;
+  }
 
   function localVoice() {
     try {
@@ -65,6 +79,7 @@
   }
 
   function interrupt() {
+    if (active) adapter.reportEvent?.(active.source, `PILOT REPLY INTERRUPTED · ${active.reply?.text || ''}`);
     if (active?.report && active.token == null && !reports.has(active.report.queueKey)) reports.set(active.report.queueKey, active.report);
     generation += 1;
     clearTimers();
@@ -139,10 +154,14 @@
       if (!current || (report.intent === 'heading-passing-report' && current.procedure === 'us')) { schedule(); return; }
       const delayed = Number.isFinite(current.simulationSeconds) && current.simulationSeconds - report.simulationSeconds > 2;
       item = { source, report, intent: report.intent,
-        reply: Radio.replyFor({ intent: report.intent, heading: report.heading, delayed }, report) };
+        reply: report.reply || Radio.replyFor({ intent: report.intent, heading: report.heading, delayed }, report) };
+      if (delayed && report.intent === 'procedure-report' && /^PASSING\b/.test(item.reply?.text || '')) {
+        item.reply = Object.freeze({ ...item.reply, text: item.reply.text.replace(/^PASSING\b/, 'PASSED'), speech: item.reply.speech.replace(/^passing\b/i, 'passed') });
+      }
       if (!item.reply) { schedule(); return; }
     }
-    if (!adapter.snapshot(item.source)) { schedule(); return; }
+    item = refreshLiveSample(item);
+    if (!item || !adapter.snapshot(item.source)) { schedule(); return; }
     const ticket = ++generation;
     active = { ...item, token: null, utterance: null };
     const duration = item.intent === 'transmit-df' ? 4000 : Math.max(1500, Math.min(5000, item.reply.speech.split(/\s+/).length * 340));
@@ -194,7 +213,7 @@
       };
       startTimer = root.setTimeout(fallback, 60000);
       try {
-        const result = bundledSpeech.speak({ id: active.bundledId, text: item.reply.speech, source: item.source,
+        const result = bundledSpeech.speak({ id: active.bundledId, text: item.reply.speech, source: item.source, targetWpm: pilotWpm,
           onstart: guarded(onAudioStart), onend: guarded(onAudioEnd), onerror: guarded(fallback) });
         if (result?.catch) result.catch(guarded(fallback));
       } catch { fallback(); }
@@ -206,7 +225,7 @@
       active.nativeId = `qgh-pilot-${speechDocumentId}-${ticket}`;
       active.nativeCallbacks = { start: onAudioStart, end: onAudioEnd, error: fallback };
       armAudioWatchdogs();
-      try { nativeSpeech.speak(active.nativeId, item.reply.speech, 100 / 150); }
+      try { nativeSpeech.speak(active.nativeId, item.reply.speech, pilotWpm / 150); }
       catch { fallback(); }
       return;
     }
@@ -223,9 +242,10 @@
       active.utterance = utterance;
       utterance.voice = voice;
       utterance.lang = voice.lang;
-      // Approximate 100 WPM using a 150 WPM baseline; local voices vary.
+      // Device voices approximate the selected WPM against their normal 150 WPM
+      // baseline; the bundled pack uses exact clip-duration correction. This affects audio only, never flight/D-F.
       // This affects headphone readbacks only, never simulation or muted DF timing.
-      utterance.rate = 100 / 150;
+      utterance.rate = pilotWpm / 150;
       utterance.onstart = onAudioStart;
       utterance.onend = onAudioEnd;
       utterance.onerror = fallback;
@@ -249,7 +269,9 @@
     if (manoeuvres.includes(command.intent)) reports.delete(`orbit:${aircraft.source}`);
     if (manoeuvres.includes(command.intent)) pending = pending.filter(item => item.source !== aircraft.source || !manoeuvres.includes(item.intent));
     if (command.field === 'speed') pending = pending.filter(item => item.source !== aircraft.source || item.field !== 'speed');
-    pending.push({ source: aircraft.source, callsign: aircraft.callsign, intent: command.intent, field: command.field, reply });
+    pending.push({ source: aircraft.source, callsign: aircraft.callsign, intent: command.intent, field: command.field,
+      command: liveSampleIntents.has(command.intent) ? { ...command, aircraft: aircraft.source } : null,
+      liveSample: liveSampleIntents.has(command.intent), reply });
     if (pending.length > 4) pending.shift();
     schedule();
   }
@@ -276,7 +298,7 @@
     const report = Object.freeze({ ...aircraft, heading: crossing.heading, intent: 'heading-passing-report', queueKey: source });
     pending = pending.filter(item => item.source !== source || item.intent !== 'request-heading-passing');
     reports.set(source, report);
-    adapter.reportEvent?.(source, `PASSED ${String(crossing.heading).padStart(3, '0')}°M`);
+    adapter.reportEvent?.(source, `HEADING PASSED ${String(crossing.heading).padStart(3, '0')}°M`);
     schedule();
   }
 
@@ -309,12 +331,37 @@
     }
   }
 
-  root.QGHRadioWorkspace = Object.freeze({ acknowledge, controllerStart, controllerEnd, interrupt, reset, resetExercise, requestHeadingPassing, observeHeading, notifyOrbitComplete, channelAvailable: schedule,
+  function setPilotRate(value) {
+    pilotWpm = [100, 130, 170].includes(Number(value)) ? Number(value) : 100;
+  }
+
+  function enqueueOutcome(outcome) {
+    if (!adapter.active() || !outcome.transmission?.shouldReply) return;
+    const aircraft = adapter.snapshot(outcome.targetAircraftId);
+    if (!aircraft) return;
+    if (active || echoTimer) interrupt();
+    const text = outcome.response.text;
+    const reply = Object.freeze({ text: `${text} · ${aircraft.callsign}`, speech: `${root.QGHProcedureIntent.speech(text)}, ${aircraft.callsign}.` });
+    pending.push({ source: aircraft.source, callsign: aircraft.callsign, intent: 'procedure-command', outcome, reply });
+    if (pending.length > 8) pending.shift();
+    schedule();
+  }
+  function enqueueProcedureReport(report) {
+    const aircraft = adapter.snapshot(report.source);
+    if (!aircraft || !adapter.active()) return;
+    const key = `procedure:${report.source}:${report.timestamp}:${report.text}`;
+    reports.set(key, Object.freeze({ ...aircraft, simulationSeconds: report.timestamp, source: report.source,
+      queueKey: key, intent: 'procedure-report', reply: Object.freeze({ text: `${report.text} · ${aircraft.callsign}`,
+        speech: `${root.QGHProcedureIntent.speech(report.text)}, ${aircraft.callsign}.` }) }));
+    schedule();
+  }
+
+  root.QGHRadioWorkspace = Object.freeze({ acknowledge, enqueueOutcome, enqueueProcedureReport, controllerStart, controllerEnd, interrupt, reset, resetExercise, requestHeadingPassing, observeHeading, notifyOrbitComplete, channelAvailable: schedule,
     manualCommand: command => {
       if (!root.QGHVoiceWorkspace?.isDispatchingRadioCommand()) acknowledge(command);
     },
-    setAudioEnabled, receiveNativeSpeechEvent, audioAvailable: () => bundledSpeech ? bundledSpeech.capability() === 'ready' : nativeSpeech ? nativeAudioAvailable() : Boolean(localVoice()),
+    setAudioEnabled, setPilotRate, receiveNativeSpeechEvent, audioAvailable: () => bundledSpeech ? bundledSpeech.capability() === 'ready' : nativeSpeech ? nativeAudioAvailable() : Boolean(localVoice()),
     allowsBargeIn: () => audioEnabled,
-    status: () => ({ audioEnabled, controllerHeld, phase: active ? 'pilot' : controllerHeld ? 'controller' : pending.length ? 'pending' : 'idle', pending: pending.length })
+    status: () => ({ audioEnabled, pilotWpm, controllerHeld, phase: active ? 'pilot' : controllerHeld ? 'controller' : pending.length ? 'pending' : 'idle', pending: pending.length })
   });
 })(typeof globalThis === 'undefined' ? this : globalThis);

@@ -5,11 +5,10 @@ import test from 'node:test';
 import { runInNewContext } from 'node:vm';
 
 const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
-const workerSource = readFileSync(resolve(repositoryRoot, 'apps', 'web', 'static', 'service-worker.js'), 'utf8')
-  .replaceAll('__QGH_VERSION__', '4.0.2');
+const workerTemplate = readFileSync(resolve(repositoryRoot, 'apps', 'web', 'static', 'service-worker.js'), 'utf8');
 const scope = 'https://qgh.example/simulator/';
 
-function createWorkerHarness({ cachedResponse = null, cacheNames = [] } = {}) {
+function createWorkerHarness({ cachedResponse = null, cacheNames = [], version = '4.0.2' } = {}) {
   const handlers = new Map();
   const cacheCalls = { deleted: [], match: [], put: 0 };
   let networkCalls = 0;
@@ -29,7 +28,7 @@ function createWorkerHarness({ cachedResponse = null, cacheNames = [] } = {}) {
     skipWaiting: () => {},
   };
 
-  runInNewContext(workerSource, {
+  runInNewContext(workerTemplate.replaceAll('__QGH_VERSION__', version), {
     URL,
     Request,
     Response,
@@ -128,4 +127,33 @@ test('service worker clears only its scoped cache generation and the known legac
     ['qgh-simulator-simulator-v4.0.1', 'qgh-simulator-v4.0.1'],
     'unrelated same-origin cache names are retained'
   );
+});
+
+test('v4.4.9.1 to v5 upgrade removes only prior shell and serves current headphone controls offline', async () => {
+  const source = readFileSync(resolve(repositoryRoot, 'packages/qgh-engine/headphone-consent.js'), 'utf8');
+  assert.match(source, /100/); assert.match(source, /130/); assert.match(source, /170/);
+  assert.doesNotMatch(source, /300 WPM|450 WPM/);
+  const harness = createWorkerHarness({version:'5.0.0',cachedResponse:new Response(source),cacheNames:[
+    'qgh-simulator-simulator-v4.4.9-1','qgh-simulator-simulator-v5.0.0','qgh-training-videos:other:4.4.9-1','qgh-pilot-voices-v1'
+  ]});
+  let activation;
+  harness.activateHandler({waitUntil:value=>{activation=value;}}); await activation;
+  assert.deepEqual(harness.cacheCalls.deleted,['qgh-simulator-simulator-v4.4.9-1']);
+  let reply;
+  harness.fetchHandler({request:new Request(`${scope}headphone-consent.js?v=5.0.0&release=5.0.0`),respondWith:value=>{reply=value;}});
+  assert.equal(await (await reply).text(),source);
+  assert.equal(harness.networkCalls(),0);
+  let oldResponse;
+  harness.fetchHandler({request:new Request(`${scope}headphone-consent.js?v=4.4.9-1&release=4.4.9-1`),respondWith:value=>{oldResponse=value;}});
+  assert.equal(oldResponse,undefined,'old release request is never answered with an incompatible new script');
+});
+
+test('contextual guide links use cacheable hash routes offline', async () => {
+  const workspace = readFileSync(resolve(repositoryRoot,'packages/qgh-engine/procedure-workspace.js'),'utf8');
+  assert.doesNotMatch(workspace,/training-centre\.html\?/);
+  const harness = createWorkerHarness({version:'5.0.0',cachedResponse:new Response('offline guide')});
+  let reply;
+  harness.fetchHandler({request:new Request(`${scope}training-centre.html#level`),respondWith:value=>{reply=value;}});
+  assert.equal(await (await reply).text(),'offline guide');
+  assert.equal(harness.networkCalls(),0);
 });

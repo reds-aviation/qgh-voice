@@ -1,0 +1,19 @@
+PTT and Continuous Listening
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 PTT gives you a clear transmission boundary. Continuous Listening is optional when you need hands-free calls in a quiet environment.
+
+00:00:06.633 Hold PTT, speak one complete instruction, then release. Allow the final words to arrive before treating the transmission as complete.
+
+00:00:14.035 The accepted instruction executes before the pilot reply. Check the red result and affected control instead of relying on the sound alone.
+
+00:00:20.876 With Continuous Listening, finish the complete call and leave a short natural pause. Background conversation can be heard by the microphone.
+
+00:00:27.910 Controller PTT interrupts pilot audio. A fresh accepted command gets its own response. An interrupted old reply is not replayed afterward.
+
+00:00:35.876 Mute pilot sound before removing headphones. Muting does not cancel accepted instructions or stop the aircraft moving.
+
+00:00:42.186 Move the compact voice control or reset its position if it obscures a control. Use the Controls toggle to manage the exercise panel.
+
+00:00:48.986 Practise these steps with your own microphone. The images here illustrate the interface and do not claim that a spoken call was captured during recording.

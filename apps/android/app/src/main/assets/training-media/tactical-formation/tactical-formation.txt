@@ -1,0 +1,19 @@
+Tactical QGH and formation
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 Tactical QGH supports two to four aircraft. Check every callsign, colour and level before starting.
+
+00:00:06.100 Speak the configured callsign for every aircraft instruction. Text callsigns and three-digit numbers are supported. The name identifies the aircraft; colour is an additional aid.
+
+00:00:15.368 The radio target highlights during the transmission. Addressing another aircraft does not change your manual selection. Check the callsign in each acknowledgement.
+
+00:00:23.368 Choose the formation leader in setup. Attached followers follow its movement and preserve their formation level offsets.
+
+00:00:29.401 Stop Following Leader releases the addressed follower. It preserves its flight state until a new instruction changes it. You can then give individual turns.
+
+00:00:37.168 A follower must detach before choosing its own speed. Individual vertical instructions detach a follower, and level conflicts require the visible confirmation.
+
+00:00:45.069 Separate instructions let you vary the timing of base turns and the distances used for individual approaches. No automatic track join is added.
+
+00:00:52.002 During debrief, use callsigns and track colours to follow each aircraft. Compare the accepted call, its timing and the actual path before the next exercise.

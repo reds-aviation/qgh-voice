@@ -1,0 +1,33 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "Basic controls",
+      "start": 0
+    },
+    {
+      "title": "Offline voice setup",
+      "start": 58.210612
+    },
+    {
+      "title": "PTT and Continuous Listening",
+      "start": 118.07648499999999
+    },
+    {
+      "title": "Accepted calls and outcomes",
+      "start": 174.200022
+    },
+    {
+      "title": "Tactical QGH and formation",
+      "start": 235.234918
+    },
+    {
+      "title": "Review and debrief",
+      "start": 295.660504
+    },
+    {
+      "title": "Phone use and offline practice",
+      "start": 357.323785
+    }
+  ]
+}

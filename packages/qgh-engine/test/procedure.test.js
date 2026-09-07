@@ -114,3 +114,123 @@ test('negative temperature, explicit report datum and numeric step preserve valu
   assert.match(command(state, 'report flight level').response.text, /FLIGHT LEVEL 050/);
   P.step(state, '1'); assert.equal(state.simulationSeconds, 1);
 });
+test('pilot speech formats feet as thousands and hundreds, but headings, pressures and codes as digits', () => {
+  assert.equal(I.speech('DESCENDING TO ALTITUDE 12500 FEET'), 'descending to altitude one two thousand five hundred feet');
+  assert.equal(I.speech('FLIGHT LEVEL 065'), 'flight level zero six five');
+  assert.equal(I.speech('QNH 1013 SET, SQUAWK 0430'), 'q n h one zero one three set, squawk zero four three zero');
+  assert.equal(I.speech('RUNWAY 23L'), 'runway two three left');
+});
+
+test('reaching report retains accepted physical target after a pressure update', () => {
+  const state = make(undefined, { qnhHpa: 1000 });
+  command(state, 'descend flight level 120');
+  const target = state.aircraft.single.clearedAltitudeMslFt;
+  command(state, 'qnh 1013'); command(state, 'report reaching');
+  assert.equal(state.aircraft.single.pendingReports[0].msl, target);
+  assert.equal(P.step(state, 190).length, 0);
+  const reports = P.step(state, 30);
+  assert.equal(reports.length, 1);
+  assert.equal(state.aircraft.single.actualAltitudeMslFt, target);
+  assert.match(reports[0].text, /REACHING FLIGHT LEVEL 120/);
+});
+
+test('setup rejects underground aircraft and report requests reject unknown types atomically', () => {
+  assert.throws(() => make([{id:'single',callsign:'430',level:1000}], {aerodromeElevationFt:5000}), /below aerodrome/);
+  const state = make(); const before = JSON.stringify(state.aircraft);
+  assert.equal(P.apply(state, {aircraft:'single',actions:[{type:'arm-level',kind:'whatever',target:{datum:'QNH',value:6000}}]}).authorization, 'REJECTED');
+  assert.equal(JSON.stringify(state.aircraft), before);
+});
+
+test('separation checks intermediate trajectories and rate amendments, not only final altitudes', () => {
+  const fleet = [{id:'A',callsign:'430',level:10000,verticalRateFpm:500}, {id:'B',callsign:'431',level:12000,verticalRateFpm:500}];
+  const state = make(fleet);
+  const climb = (aircraft, value) => P.apply(state, {aircraft,actions:[{type:'vertical',direction:'CLIMB',target:{datum:'QNH',value}}]});
+  assert.equal(climb('B',22000).authorization, 'AUTHORIZED');
+  assert.equal(climb('A',20000).authorization, 'AUTHORIZED');
+  const before = JSON.stringify(state.aircraft);
+  const rate = {aircraft:'A',actions:[{type:'vertical-rate',value:6000}]};
+  assert.equal(P.apply(state,rate).requiresSeparationConfirmation, true);
+  assert.equal(JSON.stringify(state.aircraft),before);
+  assert.equal(P.apply(state,rate,{confirmSeparation:true}).authorization,'AUTHORIZED');
+  const second = make([{...fleet[0],verticalRateFpm:6000},fleet[1]]);
+  P.apply(second,{aircraft:'B',actions:[{type:'vertical',direction:'CLIMB',target:{datum:'QNH',value:22000}}]});
+  assert.equal(P.apply(second,{aircraft:'A',actions:[{type:'vertical',direction:'CLIMB',target:{datum:'QNH',value:20000}}]}).requiresSeparationConfirmation,true);
+});
+
+test('weather bounds and types apply equally to setup, radio changes and saved-state migration', () => {
+  const invalid = [
+    { visibilityM: -1 }, { visibilityM: 100001 }, { visibilityM: Infinity }, { visibilityM: NaN },
+    { visibilityM: null }, { visibilityM: true }, { visibilityM: '10000' }, { visibilityM: [] },
+    { windDirectionDeg: 361 }, { windSpeedKt: 151 }, { windGustKt: 201 },
+    { temperatureC: -61 }, { dewPointC: 61 }, { trend: 'unknown' }, { visibility: 10000 },
+    { cloudLayers: null }, { cloudLayers: {} }, { cloudLayers: [null] }, { cloudLayers: Array(1) },
+    { cloudLayers: [{ cover: 'unknown', baseFt: 2000 }] },
+    { cloudLayers: [{ cover: 'broken', baseFt: -1 }] },
+    { cloudLayers: [{ cover: 'overcast', baseFt: '2000' }] },
+    { cloudLayers: [{ cover: 'broken', baseFt: 2000, extra: true }] },
+    null, [], 'clear'
+  ];
+  for (const weather of invalid) {
+    assert.throws(() => make(undefined, { weather }), undefined, `setup ${JSON.stringify(weather)}`);
+    const state = make(), before = JSON.stringify({ environment: state.environment, aircraft: state.aircraft });
+    const result = P.apply(state, { aircraft: 'single', actions: [{ type: 'pressure', reference: 'QNH', value: 1000 }, { type: 'weather', values: weather }] });
+    assert.equal(result.authorization, 'REJECTED', `radio ${JSON.stringify(weather)}`);
+    assert.equal(JSON.stringify({ environment: state.environment, aircraft: state.aircraft }), before, 'invalid weather cannot partially apply a briefing');
+    const saved = make(); saved.environment.weather = weather;
+    const migrated = P.migrate(saved);
+    assert.equal(migrated.ok, false, `migration ${JSON.stringify(weather)}`);
+    assert.equal(migrated.original, saved, 'failed migration retains original state');
+  }
+});
+
+test('valid weather initialization and migration use the same defaults and visual restrictions as radio updates', () => {
+  const values = { visibilityM: 500, windDirectionDeg: 230, windSpeedKt: 12,
+    cloudLayers: [{ cover: 'broken', baseFt: 1000 }], temperatureC: -5 };
+  const initial = make([{ id: 'single', callsign: '430', level: 2000 }], { weather: values });
+  const changed = make([{ id: 'single', callsign: '430', level: 2000 }]);
+  assert.equal(P.apply(changed, { aircraft: 'single', actions: [{ type: 'weather', values }] }).authorization, 'AUTHORIZED');
+  assert.deepEqual(initial.environment.weather, changed.environment.weather);
+  const geometry = { range: 1, phase: 'inbound', heading: 225, inbound: 225 };
+  assert.equal(P.visual(initial.aircraft.single, initial.environment, geometry, 'runway'), false);
+  assert.equal(P.visual(changed.aircraft.single, changed.environment, geometry, 'runway'), false);
+  const saved = make(); saved.environment.weather = { visibilityM: 500 };
+  const restored = P.migrate(saved);
+  assert.equal(restored.ok, true);
+  assert.equal(restored.state.environment.weather.visibilityM, 500);
+  assert.deepEqual(restored.state.environment.weather.cloudLayers, []);
+  assert.equal(saved.environment.weather.cloudLayers, undefined, 'migration does not modify original data');
+  values.cloudLayers[0].baseFt = 5000;
+  assert.equal(initial.environment.weather.cloudLayers[0].baseFt, 1000, 'setup does not retain external mutable cloud references');
+});
+
+test('leader rate changes preserve companion target and report; replacement altitude cancels obsolete reaching report', () => {
+  const state = make([{ id: 'single', callsign: '430', level: 15000 }, { id: 'B', callsign: '431', level: 16000 }]);
+  const context = { attachedIds: ['B'] }, following = { B: 'single' };
+  command(state, 'climb altitude 17000 feet', context);
+  assert.equal(P.apply(state, { aircraft: 'B', actions: [{ type: 'arm-level', kind: 'reaching' }] }).authorization, 'AUTHORIZED');
+  const followerTarget = state.aircraft.B.clearedAltitudeMslFt;
+  P.step(state, 30, following);
+  assert.equal(command(state, 'set vertical rate 2000 feet per minute', context).authorization, 'AUTHORIZED');
+  assert.equal(state.aircraft.B.clearedAltitudeMslFt, followerTarget);
+  assert.equal(state.aircraft.B.pendingReports.length, 1, 'rate amendment retains the reporting obligation');
+  assert.equal(state.aircraft.B.verticalRateFpm, 2000);
+  command(state, 'climb altitude 19000 feet', context);
+  assert.equal(state.aircraft.B.clearedAltitudeMslFt, 20000);
+  assert.equal(state.aircraft.B.pendingReports.length, 0, 'new leader clearance invalidates old companion reaching obligation');
+  const reports = P.step(state, 180, following);
+  assert.equal(reports.some(report => report.source === 'B'), false, 'crossing the former target must not report obsolete completion');
+  assert.equal(state.aircraft.B.actualAltitudeMslFt - state.aircraft.single.actualAltitudeMslFt, 1000);
+});
+
+test('leader stop cancels companion reaching reports while preserving explicitly armed passing reports', () => {
+  const state = make([{ id: 'single', callsign: '430', level: 15000 }, { id: 'B', callsign: '431', level: 16000 }]);
+  command(state, 'climb altitude 17000 feet', { attachedIds: ['B'] });
+  P.apply(state, { aircraft: 'B', actions: [{ type: 'arm-level', kind: 'reaching' }] });
+  P.apply(state, { aircraft: 'B', actions: [{ type: 'arm-level', kind: 'passing', target: { datum: 'QNH', value: 17500 } }] });
+  P.step(state, 30, { B: 'single' });
+  command(state, 'stop climb now', { attachedIds: ['B'] });
+  assert.deepEqual(state.aircraft.B.pendingReports.map(report => report.kind), ['passing']);
+  const stopped = state.aircraft.B.actualAltitudeMslFt;
+  assert.equal(P.step(state, 60, { B: 'single' }).length, 0);
+  assert.equal(state.aircraft.B.actualAltitudeMslFt, stopped);
+});

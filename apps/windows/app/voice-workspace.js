@@ -38,12 +38,14 @@
     announcement: null,
     effectBatch: null,
     callTranscripts: new Set(),
+    transactionSegments: [],
     restartTimer: null,
     radioQuietTimer: null,
     readinessTimer: null,
     availabilityPromise: null,
     preparePromise: null,
     startAttempt: 0,
+    recognitionContext: null,
     lastNativeGrammarJson: null,
     nativeRequestId: null,
     nativeResultReceived: false,
@@ -92,6 +94,11 @@
     return 'entry';
   }
 
+  function currentProcedure() {
+    const usControl = pageKind() === 'tactical' ? $('tProcedureUs') : $('us');
+    return usControl?.getAttribute('aria-pressed') === 'true' ? 'us' : 'normal';
+  }
+
   function buttonText(button) {
     return (button?.textContent || '').replace(/\s+/g, ' ').trim();
   }
@@ -100,6 +107,40 @@
     if (!element || element.disabled || element.hidden || element.closest('[hidden]')) return false;
     const screen = element.closest('.screen, .tactical-screen');
     return !screen || screen.classList.contains('active');
+  }
+
+  function browserBottomInset() {
+    const viewport = root.visualViewport;
+    const layoutHeight = Number(root.innerHeight);
+    const visibleHeight = Number(viewport?.height);
+    const visibleTop = Number(viewport?.offsetTop || 0);
+    if (!viewport || !Number.isFinite(layoutHeight) || !Number.isFinite(visibleHeight)) return 0;
+    // iPhone Safari's bottom controls reduce visualViewport.height, but are not
+    // consistently included in env(safe-area-inset-bottom). Keep fixed UI clear.
+    return Math.max(0, Math.round(layoutHeight - visibleHeight - visibleTop));
+  }
+
+  function syncBrowserBottomInset() {
+    documentRef.documentElement?.style?.setProperty('--qgh-browser-bottom-inset', `${browserBottomInset()}px`);
+  }
+
+  function refreshViewportLayout() {
+    syncBrowserBottomInset();
+    positionVoicePopovers();
+  }
+
+  function scheduleBrowserBottomInset() {
+    refreshViewportLayout();
+    if (!root.visualViewport) return;
+    // Safari may finish expanding its first-load browser controls after the
+    // workspace script runs, without a later viewport event for this document.
+    const nextFrame = () => {
+      refreshViewportLayout();
+      if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(refreshViewportLayout);
+    };
+    if (typeof root.requestAnimationFrame === 'function') root.requestAnimationFrame(nextFrame);
+    else root.setTimeout(nextFrame, 0);
+    root.setTimeout(refreshViewportLayout, 240);
   }
 
   function result(ok, message) {
@@ -156,7 +197,7 @@
 
   function describeWorkspaceVoiceCommand(command, fallback) {
     if (command?.intent === 'radio-exchange') return String(command.radioMessage).toUpperCase();
-    if (command?.intent === 'request-heading-passing') return `REPORT PASSING ${String(command.heading).padStart(3, '0')}°M`;
+    if (command?.intent === 'request-heading-passing') return `REPORT HEADING PASSING ${String(command.heading).padStart(3, '0')}°M`;
     if (command?.intent === 'start-orbit') return `ORBIT ${command.side.toUpperCase()}`;
     if (command?.intent === 'continue-orbit') return 'CONTINUE ORBIT';
     if (command?.intent === 'resume-normal') return 'RESUME NORMAL';
@@ -180,7 +221,7 @@
       reply = root.QGHRadioAdapter?.snapshot(command.aircraft)?.orbitSide
         ? 'WILL RESUME NORMAL AFTER THIS ORBIT' : 'RESUMING NORMAL';
     } else if (command.intent === 'request-heading-passing') {
-      reply = `WILL REPORT PASSING ${String(command.heading).padStart(3, '0')}°M`;
+      reply = `WILL REPORT HEADING PASSING ${String(command.heading).padStart(3, '0')}°M`;
     } else if (command.intent === 'report-heading') {
       const reported = $(tactical ? 'tHeadingReply' : 'headingReply')?.textContent || '';
       if (/^HEADING \d{3}°M$/.test(reported)) reply = reported;
@@ -209,12 +250,14 @@
     const cancelled = /CANCELLED/.test(outcome.message);
     const applied = outcome.ok && !pending && !cancelled;
     const radioOnly = applied && command.intent === 'radio-exchange';
-    const phase = pending ? 'CONFIRM REQUIRED' : cancelled ? 'CANCELLED' : radioOnly ? 'RECEIVED' : applied ? 'APPLIED' : command?.accepted ? 'REJECTED' : 'NOT RECOGNISED';
+    const procedureStatus = outcome.procedureOutcome?.executionStatus;
+    const phase = pending ? 'CONFIRM REQUIRED' : cancelled ? 'CANCELLED' : applied && procedureStatus ? procedureStatus
+      : radioOnly ? (command.radioKind === 'unmodelled' ? 'NOT SIMULATED' : 'RECEIVED') : applied ? 'APPLIED' : command?.accepted ? 'REJECTED' : 'NOT RECOGNISED';
     state.currentOutcome = phase;
     const description = command?.accepted ? describeWorkspaceVoiceCommand(command, outcome.message) : String(transcript || '').trim();
     // Snapshot the synchronous control reply now, before the display transition:
     // the aircraft may keep turning or the selected tactical aircraft may change.
-    const appliedReply = radioOnly ? outcome.message : applied ? appliedExerciseReply(command) : '';
+    const appliedReply = radioOnly || outcome.radioTarget ? outcome.message : applied ? appliedExerciseReply(command) : '';
     const resultDetail = appliedReply || outcome.message;
     state.lastCall = { heard: String(transcript || '').trim(), interpreted: description, result: phase, reason: resultDetail };
     setStatus(phase, applied ? 'success' : pending ? 'active' : 'error');
@@ -621,6 +664,9 @@
       return change.ok ? result(true, `${command.field.toUpperCase()} SET`) : change;
     }
     if (onConsole && command.field === 'heading') {
+      if (isHidden($('headingInput')) || !isAvailable($('headingInput'))) {
+        return result(false, 'HEADING ENTRY IS NOT AVAILABLE IN U/S COMPASS');
+      }
       const change = applyHeading($('headingInput'), command.value);
       return change.ok ? result(true, `HEADING ${String(command.value).padStart(3, '0')}° SET`) : change;
     }
@@ -749,22 +795,26 @@
     if (command.intent === 'request-distance') return clickId('requestDistance', 'DISTANCE REQUESTED');
     if (command.intent === 'normal-turn-heading') {
       if (isHidden($('turnHeadingLeft'))) return result(false, 'HEADING TURNS ARE NOT AVAILABLE IN U/S COMPASS');
-      if (!isAvailable($('turnHeadingLeft'))) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
+      const turnControl = $(command.side === 'left' ? 'turnHeadingLeft' : 'turnHeadingRight');
+      if (!isAvailable(turnControl)) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
       const heading = applyHeading($('headingInput'), command.heading);
-      return heading.ok ? clickId(command.side === 'left' ? 'turnHeadingLeft' : 'turnHeadingRight', `TURN ${command.side.toUpperCase()} ${String(command.heading).padStart(3, '0')}°`) : heading;
+      return heading.ok ? clickElement(turnControl, `TURN ${command.side.toUpperCase()} ${String(command.heading).padStart(3, '0')}°`) : heading;
     }
     if (command.intent === 'continue-turn-heading') {
       if (isHidden($('turnHeadingLeft'))) return result(false, 'CONTINUE HEADING IS NOT AVAILABLE IN U/S COMPASS');
+      const continueControl = $('continueHeading');
+      if (!isAvailable(continueControl)) return result(false, 'CONTINUE TURN IS NOT AVAILABLE');
       const heading = applyHeading($('headingInput'), command.heading);
       if (!heading.ok) return heading;
-      const side = $('continueHeading')?.dataset.turnSide;
+      const side = continueControl.dataset.turnSide;
       if (side === 'left' || side === 'right') markVoiceAffected($(side === 'left' ? 'turnHeadingLeft' : 'turnHeadingRight'));
-      return clickId('continueHeading', `CONTINUE ACTIVE TURN ${String(command.heading).padStart(3, '0')}°`);
+      return clickElement(continueControl, `CONTINUE ACTIVE TURN ${String(command.heading).padStart(3, '0')}°`);
     }
     if (command.intent === 'us-turn') {
       if (isHidden($('turnLeft'))) return result(false, 'U/S TURNS ARE NOT AVAILABLE IN NORMAL QGH');
-      if (!isAvailable($('turnLeft'))) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
-      return clickId(command.side === 'left' ? 'turnLeft' : 'turnRight', `TURN ${command.side.toUpperCase()} NOW`);
+      const turnControl = $(command.side === 'left' ? 'turnLeft' : 'turnRight');
+      if (!isAvailable(turnControl)) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
+      return clickElement(turnControl, `TURN ${command.side.toUpperCase()} NOW`);
     }
     if (command.intent === 'us-turn-stop') return clickId('turnStop', 'TURN STOPPED');
     if (command.intent === 'clock') return clickId(`clock${command.action[0].toUpperCase()}${command.action.slice(1)}`, `CLOCK ${command.action.toUpperCase()}`);
@@ -855,6 +905,17 @@
     if (callsignRequired.has(command.intent) && !command.aircraft) {
       return result(false, 'SAY THE AIRCRAFT CALLSIGN FOR A TACTICAL COMMAND');
     }
+    if (command.aircraft && command.intent !== 'select-aircraft') {
+      const id = tacticalId(command.aircraft);
+      const addressed = root.QGHRadioAdapter?.executeRadioCommand?.({ ...command, aircraft: id });
+      if (addressed) {
+        if (addressed.ok) {
+          root.QGHRadioAdapter.highlightRadioTarget?.(id);
+          if (addressed.controlId) state.effectBatch?.add($(addressed.controlId));
+        }
+        return { ...addressed, radioTarget: id };
+      }
+    }
     if (command.intent === 'select-aircraft') return selectTacticalAircraft(command.aircraft);
     if (['start-orbit', 'continue-orbit', 'resume-normal'].includes(command.intent)) {
       const selected = selectTacticalAircraft(command.aircraft);
@@ -877,9 +938,10 @@
         if (!selected.ok) return selected;
       }
       if (isHidden($('tTurnLeft'))) return result(false, 'HEADING TURNS ARE NOT AVAILABLE IN U/S COMPASS');
-      if (!isAvailable($('tTurnLeft'))) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
+      const turnControl = $(command.side === 'left' ? 'tTurnLeft' : 'tTurnRight');
+      if (!isAvailable(turnControl)) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
       const heading = applyHeading($('tHeadingInput'), command.heading);
-      return heading.ok ? clickId(command.side === 'left' ? 'tTurnLeft' : 'tTurnRight', `TURN ${command.side.toUpperCase()} ${String(command.heading).padStart(3, '0')}°`) : heading;
+      return heading.ok ? clickElement(turnControl, `TURN ${command.side.toUpperCase()} ${String(command.heading).padStart(3, '0')}°`) : heading;
     }
     if (command.intent === 'continue-turn-heading') {
       if (command.aircraft) {
@@ -887,11 +949,13 @@
         if (!selected.ok) return selected;
       }
       if (isHidden($('tTurnLeft'))) return result(false, 'CONTINUE HEADING IS NOT AVAILABLE IN U/S COMPASS');
+      const continueControl = $('tContinueHeading');
+      if (!isAvailable(continueControl)) return result(false, 'CONTINUE TURN IS NOT AVAILABLE');
       const heading = applyHeading($('tHeadingInput'), command.heading);
       if (!heading.ok) return heading;
-      const side = $('tContinueHeading')?.dataset.turnSide;
+      const side = continueControl.dataset.turnSide;
       if (side === 'left' || side === 'right') markVoiceAffected($(side === 'left' ? 'tTurnLeft' : 'tTurnRight'));
-      return clickId('tContinueHeading', `CONTINUE ACTIVE TURN ${String(command.heading).padStart(3, '0')}°`);
+      return clickElement(continueControl, `CONTINUE ACTIVE TURN ${String(command.heading).padStart(3, '0')}°`);
     }
     if (command.intent === 'us-turn') {
       if (command.aircraft) {
@@ -899,8 +963,9 @@
         if (!selected.ok) return selected;
       }
       if (isHidden($('tUsLeft'))) return result(false, 'U/S TURNS ARE NOT AVAILABLE IN NORMAL QGH');
-      if (!isAvailable($('tUsLeft'))) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
-      return clickId(command.side === 'left' ? 'tUsLeft' : 'tUsRight', `TURN ${command.side.toUpperCase()} NOW`);
+      const turnControl = $(command.side === 'left' ? 'tUsLeft' : 'tUsRight');
+      if (!isAvailable(turnControl)) return result(false, 'TURN CONTROL IS NOT AVAILABLE');
+      return clickElement(turnControl, `TURN ${command.side.toUpperCase()} NOW`);
     }
     if (command.intent === 'us-turn-stop') {
       if (command.aircraft) {
@@ -960,6 +1025,7 @@
 
   function runCommand(command) {
     if (!command?.accepted) return result(false, 'COMMAND NOT RECOGNISED');
+    if (command.intent === 'procedure-command') return root.QGHProcedureWorkspace?.execute(command) || result(false, 'PROCEDURE CONTROLS UNAVAILABLE');
     if (command.intent === 'request-heading-passing') {
       const tactical = pageKind() === 'tactical';
       if (!activeScreen(tactical ? 'tConsole' : 'console')) return result(false, 'START AN EXERCISE FIRST');
@@ -1057,6 +1123,16 @@
     return null;
   }
 
+  function commandPreemptsPendingConfirmation(command) {
+    if (!command?.accepted) return false;
+    if (command.intent === 'clock') return command.action === 'stop';
+    return new Set([
+      'normal-turn-heading', 'continue-turn-heading', 'us-turn', 'us-turn-stop',
+      'start-orbit', 'continue-orbit', 'resume-normal', 'transmit-df',
+      'report-heading', 'request-distance', 'advance-flight'
+    ]).has(command.intent);
+  }
+
   function confirmPendingVoiceCommand() {
     const command = state.pendingCommand;
     if (!command) return result(false, 'NO VOICE COMMAND AWAITS CONFIRMATION');
@@ -1084,8 +1160,9 @@
 
   function dispatchTranscript(transcript) {
     if (pilotBlocksMicrophone()) return result(false, 'PILOT TRANSMITTING');
+    const radioOptions = { callsigns: voiceCallsignOptions(), single: pageKind() === 'single' };
     const radio = activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console')
-      ? root.QGHRadioSession?.parseMessage(transcript, Voice, { callsigns: voiceCallsignOptions(), single: pageKind() === 'single' }) : null;
+      ? root.QGHProcedureIntent?.parse(transcript, radioOptions, Voice) || root.QGHRadioSession?.parseMessage(transcript, Voice, radioOptions) : null;
     const command = radio || Voice.parseCommand(transcript, {
       callsigns: voiceCallsignOptions(),
       profiles: availableProfileOptions()
@@ -1096,7 +1173,7 @@
     try { outcome = routeTranscript(transcript, command); }
     finally { state.dispatchingRadioCommand = false; }
     if (sequence === state.feedbackSequence) presentVoiceResult(command, outcome, transcript);
-    if (outcome.ok && !state.pendingCommand) root.QGHRadioWorkspace?.acknowledge(command);
+    if (outcome.ok && !state.pendingCommand && command.intent !== 'procedure-command') root.QGHRadioWorkspace?.acknowledge(command);
     return outcome;
   }
 
@@ -1105,8 +1182,12 @@
       const response = pendingVoiceResponse(transcript, command);
       if (response === 'confirm') return confirmPendingVoiceCommand();
       if (response === 'cancel') return cancelPendingVoiceCommand();
-      setStatus('CONFIRM OR CANCEL THE PENDING VOICE COMMAND', 'error');
-      return result(false, 'CONFIRM OR CANCEL THE PENDING VOICE COMMAND');
+      if (commandPreemptsPendingConfirmation(command)) {
+        clearPendingVoiceCommand();
+      } else {
+        setStatus('CONFIRM OR CANCEL THE PENDING VOICE COMMAND', 'error');
+        return result(false, 'CONFIRM OR CANCEL THE PENDING VOICE COMMAND');
+      }
     }
     if (!command.accepted) {
       setStatus('COMMAND NOT RECOGNISED', 'error');
@@ -1142,8 +1223,45 @@
   function grammarContext() {
     return {
       screen: currentVoiceContext(),
+      procedure: currentProcedure(),
       callsigns: voiceCallsignOptions()
     };
+  }
+
+  function recognitionContextSignature() {
+    const context = grammarContext();
+    const callsigns = context.callsigns.map(item => `${item.id || ''}:${item.callsign || item}`).join('\u0001');
+    return [context.screen, context.procedure, callsigns].join('\u0000');
+  }
+
+  function reconfigureRecognitionContext(signature) {
+    if (!signature || signature === state.recognitionContext) return;
+    state.recognitionContext = signature;
+    const resumeContinuous = state.continuous && !state.manuallyStopped && !pilotBlocksMicrophone();
+    // A capture opened for another screen, procedure or callsign roster cannot
+    // be allowed to finalize later against the new exercise context.
+    state.startAttempt += 1;
+    state.nativeRequestId = null;
+    state.nativeResultReceived = false;
+    state.lastNativeGrammarJson = null;
+    state.callTranscripts.clear();
+    state.transactionSegments = [];
+    state.lastTranscript = '';
+    state.lastTranscriptAt = 0;
+    state.processing = false;
+    state.starting = false;
+    state.listening = false;
+    clearRestartTimer();
+    root.clearTimeout(state.radioQuietTimer);
+    state.radioQuietTimer = null;
+    clearPendingVoiceCommand();
+    try {
+      if (nativeVoiceBridge()) nativeVoiceBridge().cancel();
+      else state.engine?.cancel();
+    } catch { /* The incremented attempt gate rejects any late result. */ }
+    root.QGHRadioWorkspace?.controllerEnd();
+    updateMicState();
+    if (resumeContinuous) scheduleContinuousRestart();
   }
 
   function currentRecognitionPlan() {
@@ -1168,22 +1286,40 @@
   function rememberTranscript(transcript) {
     if (pilotBlocksMicrophone()) return;
     const normalized = Voice.normalizeTranscript(transcript);
-    const now = Date.now();
-    if (!normalized || (normalized === state.lastTranscript && now - state.lastTranscriptAt < RECENT_TRANSCRIPT_WINDOW_MS)) return;
-    if (!state.continuous && state.callTranscripts.has(normalized)) return;
-    if (!state.continuous) state.callTranscripts.add(normalized);
+    if (!normalized || state.callTranscripts.has(normalized)) return;
+    state.callTranscripts.add(normalized);
     state.lastTranscript = normalized;
-    state.lastTranscriptAt = now;
+    state.lastTranscriptAt = Date.now();
+    const assembled = state.transactionSegments.join(' ');
+    if (assembled && normalized.startsWith(assembled + ' ')) state.transactionSegments = [normalized];
+    else state.transactionSegments.push(normalized);
     if (state.continuous) root.QGHRadioWorkspace?.controllerStart();
-    dispatchTranscript(transcript);
     if (state.continuous) scheduleRadioQuietEnd();
+  }
+
+  function commitControllerTransaction() {
+    if (state.pressHeld || !state.transactionSegments.length) return;
+    let transcript = state.transactionSegments.join(' ');
+    state.transactionSegments = [];
+    state.callTranscripts.clear();
+    // Only an explicit replacement of a complete heading turn is reconciled here.
+    // A late condition/negation remains in the whole text for the parser to reject.
+    const corrected = /^(.*?)\bturn (?:left|right)(?: heading)? [\w ]+ correction (turn (?:left|right)(?: heading)? [\w ]+)$/.exec(transcript);
+    if (corrected && !/\b(?:if|unless|negative|not|don't)\b/.test(transcript)) transcript = corrected[1] + corrected[2];
+    dispatchTranscript(transcript);
   }
 
   function scheduleRadioQuietEnd() {
     root.clearTimeout(state.radioQuietTimer);
     state.radioQuietTimer = root.setTimeout(() => {
       state.radioQuietTimer = null;
-      if (!state.pilotSpeaking && !state.pressHeld) root.QGHRadioWorkspace?.controllerEnd();
+      if (!state.pilotSpeaking && !state.pressHeld) {
+        // Close and drain the recognizer before executing a complete continuous call.
+        if (state.listening) {
+          if (nativeVoiceBridge()) nativeVoiceBridge().stop();
+          else state.engine?.stop({ cancel: false });
+        } else { commitControllerTransaction(); root.QGHRadioWorkspace?.controllerEnd(); }
+      }
     }, 900);
   }
 
@@ -1248,6 +1384,8 @@
     state.pilotSpeaking = Boolean(speaking);
     if (pilotBlocksMicrophone()) {
       state.startAttempt += 1;
+      state.transactionSegments = [];
+      state.callTranscripts.clear();
       state.nativeRequestId = null;
       clearRestartTimer();
       state.starting = false;
@@ -1259,10 +1397,15 @@
       state.processing = false;
       setStatus('PILOT TRANSMITTING', 'active');
     } else if (canContinueListening()) scheduleContinuousRestart();
+    else if (!state.pilotSpeaking && state.status?.textContent === 'PILOT TRANSMITTING') {
+      setStatus(state.localAvailability === 'ready' ? 'PTT READY' : 'SET UP OFFLINE VOICE', 'neutral');
+    }
     updateMicState();
   }
 
   function handleTerminalRecognitionError(error) {
+    state.transactionSegments = [];
+    state.callTranscripts.clear();
     state.nativeRequestId = null;
     state.processing = false;
     clearRestartTimer();
@@ -1302,8 +1445,10 @@
     state.starting = false;
     state.listening = false;
     if (!state.pressHeld && !state.pilotSpeaking) {
+      state.startAttempt += 1;
       root.clearTimeout(state.radioQuietTimer);
       state.radioQuietTimer = null;
+      commitControllerTransaction();
       root.QGHRadioWorkspace?.controllerEnd();
     }
     updateMicState();
@@ -1572,12 +1717,16 @@
 
   function stopListening(options) {
     const cancel = Boolean(options?.cancel);
+    if (cancel) { state.transactionSegments = []; state.callTranscripts.clear(); }
     root.clearTimeout(state.radioQuietTimer);
     state.radioQuietTimer = null;
     if (cancel) root.QGHRadioWorkspace?.reset();
     // PTT release asks the recognizer to flush; pilot playback waits for its
     // ended callback so no later final segment is cancelled by our own reply.
-    else if (!state.listening) root.QGHRadioWorkspace?.controllerEnd();
+    else if (!state.listening) {
+      commitControllerTransaction();
+      root.QGHRadioWorkspace?.controllerEnd();
+    }
     state.processing = !cancel && state.listening;
     if (state.processing) setStatus('PROCESSING', 'active');
     updateMicState();
@@ -1703,6 +1852,7 @@
     settings.append(continuousLabel, prepare, engineNote, resetPosition, lastCall);
     let updatePilotNote = () => {};
     if (root.QGHRadioWorkspace) {
+      const setupPilotReadbacks = $('setupPilotReadbacks');
       const pilotLabel = documentRef.createElement('label');
       pilotLabel.className = 'voice-continuous';
       const pilotAudio = documentRef.createElement('input');
@@ -1716,12 +1866,30 @@
       mutePilot.type = 'button';
       mutePilot.className = 'voice-mute-pilot';
       mutePilot.textContent = 'MUTE PILOT REPLIES';
+      const isPilotSetupStage = () => /:(?:setup)$/.test(currentVoiceContext());
+      const requestPilotReadbacks = () => {
+        if (!isPilotSetupStage()) {
+          setStatus('SET UP PILOT REPLIES BEFORE START', 'neutral');
+          updatePilotNote();
+          return false;
+        }
+        pilotAudio.checked = false;
+        setSettingsOpen(false);
+        root.QGHHeadphones?.requestEnable();
+        return true;
+      };
       updatePilotNote = () => {
-        const enabled = root.QGHRadioWorkspace.status().audioEnabled;
+        const radioStatus = root.QGHRadioWorkspace.status();
+        const enabled = radioStatus.audioEnabled;
+        const rate = radioStatus.pilotWpm || 100;
+        const inSetup = isPilotSetupStage();
         pilotAudio.checked = enabled;
+        pilotLabel.hidden = !inSetup;
         mutePilot.hidden = !enabled;
         pilotNote.textContent = root.QGHPilotVoiceEngine
-          ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Bundled male voices · target 100 words/minute. PTT and continuous controller speech take priority.`
+          ? inSetup
+            ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Pilot speed ${rate} words/minute. PTT and continuous controller speech take priority.`
+            : `${enabled ? 'Pilot replies are on. You can mute them here.' : 'Pilot replies are muted.'} Headphone setup is available before starting the next exercise.`
           : root.QGHRadioWorkspace.audioAvailable()
             ? 'Off by default: muted. Enable only with headphones. In continuous mode, your speech interrupts pilot audio. PTT always takes priority.'
             : 'No local English output voice available. Captions and timed pilot D/F still work offline.';
@@ -1733,9 +1901,7 @@
       root.addEventListener?.('qgh-pilot-audio-change', updatePilotNote);
       pilotAudio.addEventListener('change', () => {
         if (pilotAudio.checked && root.QGHHeadphones) {
-          pilotAudio.checked = false;
-          setSettingsOpen(false);
-          root.QGHHeadphones.requestEnable();
+          requestPilotReadbacks();
         } else {
           if (root.QGHHeadphones) root.QGHHeadphones.mute();
           else root.QGHRadioWorkspace.setAudioEnabled(pilotAudio.checked);
@@ -1747,6 +1913,7 @@
         else root.QGHRadioWorkspace.setAudioEnabled(false);
         updatePilotNote();
       });
+      setupPilotReadbacks?.addEventListener('click', requestPilotReadbacks);
       settings.append(pilotLabel, mutePilot, pilotNote);
     }
 
@@ -1789,6 +1956,7 @@
       listeningIndicator, engineNote, confirmationPanel: confirmation, confirmationDetail,
       confirmationButton, cancellationButton, lastCallDetail, announcement
     });
+    scheduleBrowserBottomInset();
     settingsToggle.addEventListener('click', () => {
       const opening = settings.hidden;
       setSettingsOpen(opening);
@@ -1819,6 +1987,7 @@
       state.lastTranscript = '';
       state.lastTranscriptAt = 0;
       state.callTranscripts.clear();
+      state.transactionSegments = [];
       updateMicState();
       setStatus('STARTING MICROPHONE', 'neutral');
       try { if (event.pointerId !== undefined) mic.setPointerCapture?.(event.pointerId); } catch { /* Window release fallback remains active. */ }
@@ -1860,7 +2029,12 @@
     root.addEventListener('pointermove', moveDock);
     root.addEventListener('pointerup', event => { endDockDrag(event); endPressToTalk(event); });
     root.addEventListener('pointercancel', event => { endDockDrag(event); endPressToTalk(event); });
+    root.visualViewport?.addEventListener?.('resize', refreshViewportLayout);
+    root.visualViewport?.addEventListener?.('scroll', refreshViewportLayout);
+    root.addEventListener('orientationchange', scheduleBrowserBottomInset);
+    root.addEventListener('pageshow', scheduleBrowserBottomInset);
     root.addEventListener('resize', () => {
+      refreshViewportLayout();
       if (state.dock.dataset.phone !== String(phoneDock())) { restoreVoiceDockPosition(); return; }
       const left = Number.parseFloat(dock.style.left);
       const top = Number.parseFloat(dock.style.top);
@@ -1889,19 +2063,29 @@
     restoreVoiceDockPosition();
     // Phone content has its own scroll area above the dock. Reset that area only
     // when the existing simulator changes screens; no simulator state is touched.
-    const app = documentRef.querySelector('.app, .tactical-app');
+    const app = documentRef.querySelector('.app, .tactical-app') || documentRef.body;
     if (app && root.MutationObserver) {
-      let context = currentVoiceContext();
-      const screens = app.querySelectorAll('.screen, .tactical-screen');
+      let screen = currentVoiceContext();
+      let context = recognitionContextSignature();
+      state.recognitionContext = context;
+      const refreshRecognitionContext = () => {
+        const nextScreen = currentVoiceContext();
+        const nextContext = recognitionContextSignature();
+        if (nextContext === context) return;
+        if (nextScreen !== screen) root.QGHRadioWorkspace?.reset();
+        reconfigureRecognitionContext(nextContext);
+        screen = nextScreen;
+        context = nextContext;
+        if (phoneDock()) app.scrollTop = 0;
+      };
       const observer = new root.MutationObserver(() => {
-        const next = currentVoiceContext();
-        if (next !== context) {
-          root.QGHRadioWorkspace?.reset();
-          context = next;
-          if (phoneDock()) app.scrollTop = 0;
-        }
+        refreshRecognitionContext();
       });
-      screens.forEach(screen => observer.observe(screen, { attributes: true, attributeFilter: ['class'] }));
+      observer.observe(app, { subtree: true, attributes: true, attributeFilter: ['class', 'aria-pressed'] });
+      // Input values are properties rather than DOM attributes, so roster edits
+      // need the same safe context refresh as a screen/procedure transition.
+      documentRef.addEventListener('input', refreshRecognitionContext);
+      documentRef.addEventListener('change', refreshRecognitionContext);
     }
     checkLocalAvailability({ force: true });
   }

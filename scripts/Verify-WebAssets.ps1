@@ -7,6 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$staticRoot = Join-Path $repoRoot 'apps\web\static'
 $availableRoots = @{
     Android = Join-Path $repoRoot 'apps\android\app\src\main\assets'
     Windows = Join-Path $repoRoot 'apps\windows\app'
@@ -18,11 +19,24 @@ $engineFiles = @(
     'index.html',
     'entry.css',
     'user-guide.html',
+    'training-centre.html',
+    'training-centre.js',
+    'training-centre.css',
+    'rt-catalogue.js',
+    'training-videos.json',
     'rt-reference.md',
     'single.html',
     'simulator-core.js',
+    'procedure-core.js',
+    'procedure-intent.js',
+    'procedure-workspace.js',
+    'procedure.css',
     'radio-session.js',
     'radio-workspace.js',
+    'headphone-consent.js',
+    'pilot-voice-engine.js',
+    'pilot-voice-worker.js',
+    'pilot-voices\manifest.json',
     'simulator.js',
     'voice-control.js',
     'offline-voice-engine.js',
@@ -46,6 +60,23 @@ $engineFiles = @(
     'voice-models\qgh-vosk-en-us-small-0.15.tar.gz',
     'voice-models\NOTICE.txt'
 )
+$assetDirectories = @(
+    'pilot-voices',
+    'training-media',
+    'vendor\pilot-tts'
+)
+$releaseFiles = @('app-version.json')
+
+foreach ($relativeDirectory in $assetDirectories) {
+    $sourceDirectory = Join-Path $engineRoots.Shared $relativeDirectory
+    if (-not (Test-Path -LiteralPath $sourceDirectory -PathType Container)) {
+        throw "Shared engine asset directory is missing: $sourceDirectory"
+    }
+    foreach ($sourceFile in Get-ChildItem -LiteralPath $sourceDirectory -File -Recurse) {
+        $engineFiles += $sourceFile.FullName.Substring($engineRoots.Shared.Length + 1)
+    }
+}
+$engineFiles = @($engineFiles | Select-Object -Unique)
 
 $selectedTargets = if ($Target -eq 'All') {
     @('Android', 'Windows')
@@ -82,6 +113,23 @@ foreach ($relativeFile in $engineFiles) {
         $report[$name] = $hashes[$name]
     }
     [PSCustomObject]$report
+}
+
+foreach ($relativeFile in $releaseFiles) {
+    $sourceFile = Join-Path $staticRoot $relativeFile
+    if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
+        $mismatches.Add("Shared release is missing $relativeFile")
+        continue
+    }
+    $sourceHash = (Get-FileHash -LiteralPath $sourceFile -Algorithm SHA256).Hash
+    foreach ($targetName in $selectedTargets) {
+        $candidate = Join-Path $availableRoots[$targetName] $relativeFile
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            $mismatches.Add("$targetName is missing release $relativeFile")
+        } elseif ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ne $sourceHash) {
+            $mismatches.Add("$relativeFile differs between Shared release and $targetName")
+        }
+    }
 }
 
 if ($mismatches.Count -gt 0) {

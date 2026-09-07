@@ -190,8 +190,9 @@
     state.toastTimer = setTimeout(() => toast.classList.remove('show'), 1150);
   }
 
-  function logCommand(type, detail) {
-    state.commands.push({ time: formatTime(state.clockSeconds), type, detail });
+  function logCommand(type, detail, at = Math.max(0, state.path.length - 1) * PHYSICS_STEP_SECONDS) {
+    if (state.procedure === 'us' && /established on \d+°M/.test(detail)) detail = detail.replace(/established on \d+°M/, 'track established');
+    state.commands.push({ time: formatTime(Math.floor(at)), clockTime: formatTime(state.clockSeconds), type, detail });
   }
 
   function updateClock() {
@@ -397,7 +398,8 @@
     for (let step = 0; step < steps; step += 1) physicsStep(PHYSICS_STEP_SECONDS);
     logCommand(
       'ADVANCE FLIGHT · 1 MIN',
-      `60 seconds simulated · ${padHeading(startingHeading)}°M / ${startingRange.toFixed(1)} NM to ${padHeading(state.plane.heading)}°M / ${rangeNm().toFixed(1)} NM.`
+      state.procedure === 'us' ? `60 seconds simulated · ${startingRange.toFixed(1)} NM to ${rangeNm().toFixed(1)} NM.`
+        : `60 seconds simulated · ${padHeading(startingHeading)}°M / ${startingRange.toFixed(1)} NM to ${padHeading(state.plane.heading)}°M / ${rangeNm().toFixed(1)} NM.`
     );
     showToast('FLIGHT ADVANCED 1 MINUTE');
   }
@@ -683,6 +685,7 @@
     logCommand('TERMINATED', 'Exercise terminated by controller.');
     prepareReview();
     showScreen('analysis');
+    window.QGHProcedureWorkspace?.renderReview();
     scrollToScreenTop();
     showToast('FLIGHT PATH READY');
   }
@@ -907,7 +910,7 @@
     endTransmit: releaseRadioTransmit,
     observation: () => receiver.read(),
     procedureContext: () => ({ geometry: radioSnapshot() }),
-    reportEvent: (source, text) => logCommand('HEADING PASSING REPORT', text),
+    reportEvent: (source, text, at) => logCommand(/^HEADING PASSED /.test(text) ? 'HEADING PASSING REPORT' : 'RADIO EVENT', text, at),
     controllerStart: () => { clearTimeout(state.dfExpiry); receiver.controllerStart(); renderDF(); }
   });
 

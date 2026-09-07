@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#007d7d">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <meta name="description" content="Learn the QGH training simulator: controls, offline voice, accepted radio calls and review.">
+  <title>Training Centre · Reds QGH Simulator</title>
+  <link rel="stylesheet" href="training-centre.css">
+  <script src="rt-catalogue.js" defer></script>
+  <script src="training-centre.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to training content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html">QGH SIMULATOR<span>TRAINING CENTRE</span></a>
+    <a class="back-link" href="index.html">Back to simulator <span aria-hidden="true">↗</span></a>
+  </header>
+  <div class="training-layout">
+    <nav class="section-nav" aria-label="Training topics">
+      <p class="eyebrow">LEARN AT YOUR PACE</p>
+      <a href="#quick-start">01 <span>Quick start</span></a>
+      <a href="#setup">02 <span>Set up an exercise</span></a>
+      <a href="#controls">03 <span>Exercise controls</span></a>
+      <a href="#voice">04 <span>Voice & pilot replies</span></a>
+      <a href="#calls">05 <span>Accepted RT calls</span></a>
+      <a href="#tactical">06 <span>Tactical & formation</span></a>
+      <a href="#review">07 <span>Review & debrief</span></a>
+      <a href="#demonstrations">08 <span>Demonstrations</span></a>
+      <a href="#troubleshooting">09 <span>Troubleshooting</span></a>
+      <a href="#changes">10 <span>Version information</span></a>
+    </nav>
+    <main id="main">
+      <section id="quick-start" class="intro section">
+        <p class="eyebrow">PRACTICE. OBSERVE. REVIEW.</p>
+        <h1>Your guide to the<br>QGH console.</h1>
+        <p class="lead">A practical reference for the exercise you already know. Start with the essentials, then find a control or a radio call when you need it.</p>
+        <div class="meta-line"><span id="guideVersion">Reading release information…</span><span>Written guidance works offline</span></div>
+        <ol class="step-list">
+          <li><strong>Choose Single or Tactical.</strong><span>Single trains one aircraft. Tactical trains two to four independently addressed aircraft, with an optional formation.</span></li>
+          <li><strong>Set the exercise.</strong><span>Choose Normal QGH or U/S Compass, tracks, aircraft performance and initial distance. Check level and airfield settings before starting.</span></li>
+          <li><strong>Choose how to communicate.</strong><span>Use the buttons, PTT or Continuous Listening. Pilot audio starts muted; test and confirm headphones before enabling it.</span></li>
+          <li><strong>Fly, terminate and review.</strong><span>Request D/F, issue clearances and watch the transmission display. Terminate to examine the full flight path and command history.</span></li>
+        </ol>
+        <div class="action-row"><a class="button primary" href="single.html">Start Single QGH</a><a class="button" href="tactical.html">Start Tactical QGH</a></div>
+      </section>
+      <section id="setup" class="section">
+        <p class="eyebrow">02 · BEFORE YOU START</p><h2>Set up an exercise</h2>
+        <div class="guide-grid">
+          <article class="guide-card"><h3>Tracks and aircraft</h3><p>Runway orientation and inbound/outbound tracks describe the exercise geometry and review references. They are not automatic join clearances. A runway designator such as 23 is a separate airfield value.</p><p>Choose an aircraft profile, then check ground speed in knots, distance in nautical miles and turn rate in degrees per second. Speed and turn rate determine the radius of each curved turn.</p></article>
+          <article class="guide-card"><h3>Level and airfield</h3><p>Check initial altitude, aerodrome elevation, QNH, QFE and training vertical rate. Altitude uses QNH, height uses the aerodrome/QFE reference, and flight level uses standard pressure.</p><p>The pressure conversion is a training approximation of 27 ft/hPa. Changing a pressure setting changes its reference; it does not move the aircraft instantly.</p></article>
+          <article class="guide-card"><h3>Callsigns</h3><p>Use readable text callsigns or three-digit numbers from 100 to 999. In Single QGH you may speak the callsign or omit it. In Tactical, address the intended aircraft for each aircraft instruction.</p><p>A new random exercise will not reproduce the previous start. The aircraft may already be turning.</p></article>
+          <article class="guide-card"><h3>Preflight audio</h3><p>Connect headphones before enabling audible pilot replies. Play the test, confirm you hear it through your headphones and choose 100, 130 or 170 WPM. This is your confirmation of the output route.</p><p>Keep replies muted when using speakers. Text acknowledgements and simulated D/F transmissions remain available.</p></article>
+        </div>
+      </section>
+      <section id="controls" class="section">
+        <p class="eyebrow">03 · AT THE CONSOLE</p><h2>Exercise controls</h2>
+        <div class="comparison">
+          <article class="guide-card"><h3>Normal QGH</h3><p>Give a left or right turn to a particular heading. The selected turn rate applies until the target is reached. A new direction and target replace the prior instruction.</p><p>Report Heading returns the current heading. Report Heading Passing arms a future report and does not assign a turn.</p><a href="#calls" data-call-filter="normal">Browse Normal calls →</a></article>
+          <article class="guide-card"><h3>U/S Compass</h3><p>Use Turn Left Now, Turn Right Now and Stop Turn Now. Left and right are independent: reverse the direction directly when needed.</p><p>No actual aircraft heading is provided to the controller. Stop Turn stops the turn while flight continues. Time the manoeuvre with the clock.</p><a href="#calls" data-call-filter="us">Browse U/S calls →</a></article>
+        </div>
+        <details open><summary>D/F display and transmission timing</summary><p>QDM selects magnetic homing; QTE selects true bearing. During a simulated aircraft transmission, the indication follows that aircraft. On release, the last indication holds for two seconds and then disappears. Muted audio still produces the simulated transmission. Controller ground indication is off.</p><p>Close to overhead, bearings can change rapidly or become unusable. Use repeated independent transmissions for confirmation; a single unstable reading is not a reliable position fix.</p></details>
+        <details><summary>Clock, speed and one-minute advance</summary><p>The controller clock has start, stop and reset controls. Speed changes affect the aircraft’s subsequent motion. Advance Flight One Minute moves simulated time forward by sixty seconds while retaining the flight model, turns and report events. Use it deliberately: it can pass several events quickly.</p></details>
+        <details id="resume-normal"><summary>Orbit, Continue Orbit and Resume Normal</summary><p>Orbit Left or Right starts a continuous curved orbit. Continue Orbit keeps it going. Resume Normal requests the orbit exit back onto the heading held before entry; it is not an immediate jump onto a course. Watch the acknowledgement and review the completed geometry.</p></details>
+        <details id="heading-passing"><summary>Report Heading Passing</summary><p>This is a report condition in Normal QGH. The selected heading need not be the final target of the turn. A report is triggered when the aircraft actually crosses it. An aircraft that never crosses it has nothing to report. U/S Compass does not disclose actual heading.</p></details>
+        <details><summary>Vertical controls and visual reports</summary><p>Choose the target and reference, then issue Climb or Descend. Maintain Level stops vertical motion at the present altitude. Report Level is immediate; Report Passing and Report Reaching arm later events. Arming a report does not itself clear a climb or descent.</p><p>Runway or aerodrome visual reports use the scenario’s range, height and approach gates, together with applicable visibility and overrides. A forced Not Visual state persists until cleared. A visual report does not create a landing clearance.</p></details>
+      </section>
+      <section id="voice" class="section">
+        <p class="eyebrow">04 · RADIO WORK · PRESS TO TALK BY DEFAULT</p><h2>Voice & pilot replies</h2>
+        <p>There is no cloud speech fallback. In Tactical, for example: “Raven Twenty One turn right heading zero six zero”. A unique designator may identify one aircraft; use its full callsign whenever two aircraft share that designator. Confirm termination in the dialog before ending an exercise.</p>
+        <div class="guide-grid">
+          <article class="guide-card"><h3>PTT</h3><p>Hold PTT, speak one clear transmission, then release. Allow the final words to be recognised. Execution follows the completed accepted transmission, before the pilot reply.</p><p>The red acknowledgement shows the accepted result; the affected control highlights. Check those results whenever you issue a command.</p></article>
+          <article class="guide-card" id="continuous-listening"><h3>Continuous Listening</h3><p>Speak a complete call and leave a short natural pause to finish the transmission. Background speech can be heard by the microphone, so use a quiet environment and headphones for pilot sound.</p><p>Turn this mode off when you are not controlling the exercise. Manual controls stay available throughout.</p></article>
+          <article class="guide-card"><h3>Interrupting a reply</h3><p>Controller PTT takes priority over pilot audio. A new accepted instruction executes and receives its own acknowledgement. The interrupted audible reply is not played again; the command history retains what happened.</p><p>Muting pilot sound does not stop the aircraft, accepted calls, captions or D/F timing.</p></article>
+          <article class="guide-card"><h3>Reliable recognition</h3><p>Use the catalogue’s complete phrases, a clear direction and complete digits. Do not rely on one matching word to identify a command. An unclear, conditional or negated call must not produce an unintended manoeuvre.</p><p>Use the on-screen control if recognition is unavailable. Once resources are prepared on the device, speech processing and pilot resources are local.</p></article>
+        </div>
+        <p class="note">Information received, a report armed and a manoeuvre executed are different outcomes. The acknowledgement tells you which occurred. Unsupported procedures are identified without pretending they were flown.</p>
+      </section>
+      <section id="calls" class="section">
+        <p class="eyebrow">05 · A SINGLE REFERENCE</p><h2>Accepted RT calls</h2>
+        <p>The examples below are checked against the simulator parser. Numbers are examples: substitute a valid heading, level or setting. Tactical calls need the actual aircraft callsign.</p>
+        <div class="catalogue-tools">
+          <label class="search-field">Find a call<input id="callSearch" type="search" placeholder="Try heading, orbit, QNH or squawk" autocomplete="off"></label>
+          <label>Procedure<select id="modeFilter"><option value="all">All procedures</option><option value="normal">Normal QGH</option><option value="us">U/S Compass</option><option value="tactical">Tactical QGH</option></select></label>
+          <label>Category<select id="categoryFilter"><option value="all">All categories</option><option value="df">D/F</option><option value="turn">Turns</option><option value="report">Reports</option><option value="orbit">Orbits</option><option value="clock">Clock & time</option><option value="formation">Formation</option><option value="information">Information</option><option value="level">Level</option></select></label>
+        </div>
+        <div class="catalogue-count"><span id="callCount" role="status" aria-live="polite"></span><button id="printReference" type="button">Print this reference</button></div>
+        <div id="callResults" class="call-results"></div>
+        <noscript><p>Enable JavaScript to search the accepted-call catalogue. The written guide above and below remains readable.</p></noscript>
+      </section>
+      <section id="tactical" class="section">
+        <p class="eyebrow">06 · TWO TO FOUR AIRCRAFT</p><h2>Tactical & formation</h2>
+        <p>Check every callsign, colour and level before starting. Colour helps tracking, but the callsign is the identity. Address each aircraft explicitly; the radio target highlights for the transmission while your manual selection remains available.</p>
+        <div class="guide-grid"><article class="guide-card"><h3>Independent aircraft</h3><p>Use the callsign tabs to select manual controls and the relevant transmission request. A voice instruction targets its spoken callsign. Do not infer that an instruction went to the aircraft whose tab you last selected.</p><p>Initial levels should be separated by 1,000 ft. A new vertical clearance can create a conflict; review the displayed conflict before confirming it.</p></article><article class="guide-card" id="stop-following-leader"><h3>Formation and detachment</h3><p>Select the formation leader in setup. Attached followers continue following its geometry; vertical movement preserves their formation offsets. Addressing the leader does not silently assign every follower the same level clearance.</p><p>Stop Following Leader detaches an individual follower. It keeps its current flight state until you issue a new instruction. You can then space individual base turns and approaches.</p></article></div>
+        <p class="note">On a phone, the compact aircraft tabs preserve readable callsigns. Check the addressed name in the acknowledgement before the next call.</p>
+      </section>
+      <section id="review" class="section">
+        <p class="eyebrow">07 · AFTER TERMINATION</p><h2>Review & debrief</h2>
+        <p>Terminate the exercise to reveal the flight track. Use replay speed to shorten the debrief, pause at a command, and zoom or fit the track for context. Reference radials and outbound/final approach lines show how the track relates to the configured procedure.</p>
+        <ol class="step-list"><li><strong>Match command to response.</strong><span>Check the addressed aircraft, accepted instruction and timing. Distinguish flight actions from received information and pending reports.</span></li><li><strong>Read the curved path.</strong><span>Look at the radius of turns, overhead manoeuvres, base-turn direction and the effect of speed. Aircraft cannot make a single-point turn.</span></li><li><strong>Review event timing.</strong><span>Compare report requests with actual crossings, levels and simulated transmissions. A report request is not evidence the event already occurred.</span></li><li><strong>Practise one improvement.</strong><span>Restart a random exercise with the same setup or return to setup to change its demands.</span></li></ol>
+      </section>
+      <section id="demonstrations" class="section">
+        <p class="eyebrow">08 · WATCH WHEN USEFUL</p><h2>Demonstrations</h2>
+        <p>Clips are optional. Choose a clip to watch online or save only that clip for offline practice. Written guidance and the call catalogue do not depend on videos.</p>
+        <p id="videoStatus" role="status">Checking demonstration availability…</p><div id="videoResults" class="video-results"></div>
+      </section>
+      <section id="troubleshooting" class="section">
+        <p class="eyebrow">09 · GET BACK TO PRACTICE</p><h2>Troubleshooting</h2>
+        <details><summary>Voice is unavailable or a call is missed</summary><p>Check microphone permission for this site and the selected input device. Complete any initial offline voice preparation while connected. Confirm the page is listening, then use a complete catalogue phrase. On Tactical, include the correct callsign. Use manual controls while resolving audio input.</p></details>
+        <details><summary>Pilot sound is heard as a command</summary><p>Mute pilot replies immediately. Connect and test headphones, reduce leakage and confirm the microphone is the intended device. Do not enable audible replies on speakers. Disconnecting headphones can change the audio route even when the browser cannot report the change.</p></details>
+        <details><summary>The phone view is too large or obscured</summary><p>Use the Controls toggle to reveal or hide exercise controls. Move or reset the voice control position. Close any open settings panel. If a stale layout remains after a release, complete the app’s offered update and reopen the page; record the displayed version when reporting the issue.</p></details>
+        <details><summary>The installed web app shows an older release</summary><p>Open it while connected so it can check for an update. Finish the exercise before accepting a reload. Verify the release shown in this guide. Repeated hard refreshes should not be part of normal operation; report persistent version differences with the site address and device.</p></details>
+        <details><summary>A video will not save or play offline</summary><p>Check available storage, allow the complete download and keep the page open until saving finishes. Remove an unneeded saved clip to free space. Clips are saved for this site and release; after an upgrade, use Remove Previous-Version Videos to clear older clips when that button is shown. It does not remove current clips or exercise data.</p><p>Private browsing or device cleanup may remove caches. The app reports failures without marking an incomplete clip as available offline. Downloading stops if a file exceeds its declared or permitted size.</p></details>
+        <details><summary>A command was acknowledged but no turn began</summary><p>Check whether it was information, Standby, an armed report, an unsupported instruction or a rejected clearance. Confirm Normal versus U/S Compass and the addressed callsign. In U/S, use the immediate left/right/stop controls. Do not infer execution solely from hearing a pilot voice.</p></details>
+      </section>
+      <section id="changes" class="section"><p class="eyebrow">10 · YOUR INSTALLED RELEASE</p><h2>Version information</h2><p id="releaseDetail">Release details are being loaded from this installation.</p><p>This candidate adds structured level and radio handling, a searchable RT reference and task-based training guidance. The exercise remains Single or Tactical, then setup, exercise and review.</p><p class="note">For simulator training. This guide does not replace your applicable operating procedures or provide operational certification.</p></section>
+      <footer>Created by Flt Lt Balaram Reddy · Service No. 38703 <a href="index.html">Return to simulator</a></footer>
+    </main>
+  </div>
+</body>
+</html>

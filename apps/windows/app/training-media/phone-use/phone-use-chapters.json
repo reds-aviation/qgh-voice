@@ -1,0 +1,37 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "A smaller screen",
+      "start": 0
+    },
+    {
+      "title": "Make room for the task",
+      "start": 7.433333
+    },
+    {
+      "title": "Test the audio route",
+      "start": 15.100000000000001
+    },
+    {
+      "title": "Prepare offline resources",
+      "start": 21.8
+    },
+    {
+      "title": "Save only useful clips",
+      "start": 29.066667000000002
+    },
+    {
+      "title": "Storage and updates",
+      "start": 36.666667000000004
+    },
+    {
+      "title": "Avoid interrupting a run",
+      "start": 45.5
+    },
+    {
+      "title": "Keep a manual fallback",
+      "start": 54.069002
+    }
+  ]
+}

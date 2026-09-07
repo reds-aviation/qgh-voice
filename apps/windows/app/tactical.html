@@ -13,6 +13,9 @@
   <script defer src="offline-voice-engine.js?v=4.2.0"></script>
   <script defer src="voice-control.js?v=4.2.0"></script>
   <script defer src="simulator-core.js?v=4.2.0"></script>
+  <link rel="stylesheet" href="procedure.css">
+  <script defer src="procedure-core.js"></script>
+  <script defer src="procedure-intent.js"></script>
   <script defer src="radio-session.js?v=4.2.0"></script>
   <script defer src="tactical-core.js?v=4.2.0"></script>
   <script defer src="tactical-workspace.js?v=4.2.0"></script>
@@ -20,13 +23,14 @@
   <script defer src="pilot-voice-engine.js?v=4.4.2"></script>
   <script defer src="radio-workspace.js?v=4.2.0"></script>
   <script defer src="headphone-consent.js?v=4.4.2"></script>
+  <script defer src="procedure-workspace.js"></script>
   <script defer src="voice-workspace.js?v=4.2.0"></script>
   <script defer src="guided-familiarisation.js?v=4.2.0"></script>
 </head>
 <body>
   <main class="tactical-app">
     <header class="tactical-app-header">
-      <div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="user-guide.html">USER GUIDE</a><small>VERSION 1.0</small></div>
+      <div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="user-guide.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
       <div class="tactical-credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
@@ -91,6 +95,7 @@
           </section>
         </section>
 
+        <button class="tactical-pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
         <button class="tactical-start" id="tStart" type="button">START TACTICAL EXERCISE</button>
       </div>
     </section>

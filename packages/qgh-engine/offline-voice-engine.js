@@ -241,6 +241,7 @@
   function buildGrammar(context) {
     const details = recognitionPlanContext(context);
     const { screen, scope, procedure, callsigns } = details;
+    const procedureExamples = [];
 
     // Keep the recognizer's local bias aligned to the visible console.  U/S
     // Compass has no heading display/control, so do not spend recognition
@@ -292,6 +293,29 @@
         `${prefix}report passing two four zero`
       ]));
     }
+    if (isExerciseScreen(screen)) {
+      // These examples are added within the remaining native grammar budget.
+      // They are language transitions, never authorization.
+      const examples = [
+        'descend to altitude one two thousand feet', 'climb to altitude one five thousand feet report reaching',
+        'descend to height two thousand feet', 'climb flight level one eight zero',
+        'maintain altitude nine thousand feet', 'stop descent', 'stop climb',
+        'report altitude', 'report height', 'report flight level', 'report level',
+        'report passing altitude eight thousand feet', 'report reaching',
+        'qnh one zero one tree', 'qfe niner niner eight', 'set standard pressure',
+        'report pressure', 'squawk seven zero zero zero', 'report squawk',
+        'runway in use two tree left', 'runway in use zero six right',
+        'surface wind two three zero degrees at ten knots gusting twenty knots',
+        'temperature minus five degrees', 'dew point minus one degrees',
+        'visibility five kilometres', 'cloud broken two thousand feet', 'trend no change',
+        'frequency one two one decimal five', 'report runway visual', 'report aerodrome visual',
+        'stand by to commence descent', 'vertical rate one thousand feet per minute',
+        'correction', 'negative', 'if', 'unless', 'do not', 'cancel'
+      ];
+      procedureExamples.push(...examples);
+      callsigns.forEach(callsign => headingAliases(callsign, callsigns, 'digits').forEach(alias =>
+        procedureExamples.push(...examples.map(phrase => `${alias} ${phrase}`))));
+    }
     // Add headings after the other commands so the tactical alias budget accounts for
     // the entire grammar. They are relevant only during a Normal QGH exercise.
     if (isExerciseScreen(screen) && procedure === 'normal') {
@@ -319,7 +343,7 @@
       const examples = (radio?.GRAMMAR_EXAMPLES || []).filter(phrase => (
         procedure !== 'us' || !/\b(?:heading|passing)\b/i.test(phrase)
       ));
-      const additional = [...examples];
+      const additional = [...procedureExamples, ...examples];
       callsigns.forEach(callsign => headingAliases(callsign, callsigns, 'digits').forEach(alias =>
         additional.unshift(...['orbit left', 'orbit right', 'left hand orbit', 'right hand orbit', 'continue orbit', 'continue', 'resume normal'].map(phrase => `${alias} ${phrase}`))));
       callsigns.forEach(callsign => headingAliases(callsign, callsigns).forEach(alias =>

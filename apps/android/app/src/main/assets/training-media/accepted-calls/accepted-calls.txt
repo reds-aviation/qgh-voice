@@ -1,0 +1,19 @@
+Accepted calls and outcomes
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 The accepted-call catalogue is the reference for this release. Filter by procedure or category, then read the required state and limitations.
+
+00:00:07.136 turn left heading 140 and turn left 140 have the same heading-turn meaning. Use a complete heading and a clear direction.
+
+00:00:14.406 report heading passing 065 arms a report. It does not assign that heading. The aircraft reports only when it actually crosses the requested value.
+
+00:00:22.573 U/S Compass uses immediate left, right and stop commands. It does not provide actual aircraft heading reports.
+
+00:00:29.212 qnh 1013 applies a pressure setting. Weather is received as information. report passing altitude 6000 feet arms a separate level report.
+
+00:00:37.812 Standby is preparation, not a turn. Unclear, conditional or negated calls must not silently create a manoeuvre. Check the displayed outcome.
+
+00:00:46.012 A landing instruction can be recognised as not simulated. It does not create an automatic landing. Use the catalogue to distinguish these outcomes.
+
+00:00:53.812 These captured screens show controls and their reported states. They are a guide to intended operation; test real recognition with your own voice.

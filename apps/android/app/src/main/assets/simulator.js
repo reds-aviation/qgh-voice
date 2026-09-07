@@ -68,7 +68,7 @@
     const overhead = rangeNm() <= OVERHEAD_ZONE_NM;
     return { source: 'single', callsign: state.cfg.callsign, procedure: state.procedure,
       heading: state.plane.heading, simulationSeconds: Math.max(0, state.path.length - 1) * PHYSICS_STEP_SECONDS,
-      range: rangeNm(), orbitSide: state.orbit?.side, turnSide: $('continueHeading')?.dataset.turnSide,
+      range: rangeNm(), phase: state.phase, inbound: state.cfg.inbound, orbitSide: state.orbit?.side, turnSide: $('continueHeading')?.dataset.turnSide,
       overhead, qdm: overhead ? null : qdm(), qte: overhead ? null : qte() };
   }
 
@@ -82,6 +82,7 @@
   }
 
   function releaseRadioTransmit(token) {
+    window.QGHProcedureWorkspace?.endTransmission('single', token, radioSnapshot());
     receiver.release(token);
     renderDF();
     window.QGHRadioWorkspace?.channelAvailable();
@@ -189,8 +190,9 @@
     state.toastTimer = setTimeout(() => toast.classList.remove('show'), 1150);
   }
 
-  function logCommand(type, detail) {
-    state.commands.push({ time: formatTime(state.clockSeconds), type, detail });
+  function logCommand(type, detail, at = Math.max(0, state.path.length - 1) * PHYSICS_STEP_SECONDS) {
+    if (state.procedure === 'us' && /established on \d+°M/.test(detail)) detail = detail.replace(/established on \d+°M/, 'track established');
+    state.commands.push({ time: formatTime(Math.floor(at)), clockTime: formatTime(state.clockSeconds), type, detail });
   }
 
   function updateClock() {
@@ -379,6 +381,7 @@
     checkPendingLeg(motion.distanceNm);
     if (state.dfLive) renderDF();
     record();
+    window.QGHProcedureWorkspace?.advance(duration);
     window.QGHRadioWorkspace?.observeHeading('single', state.plane.heading);
     if (motion.completedLaps || motion.exited) {
       logCommand(motion.exited ? 'ORBIT RESUMED' : 'ORBIT COMPLETE', motion.exited ? 'Pre-orbit heading resumed.' : '360° completed; continuing orbit.');
@@ -395,7 +398,8 @@
     for (let step = 0; step < steps; step += 1) physicsStep(PHYSICS_STEP_SECONDS);
     logCommand(
       'ADVANCE FLIGHT · 1 MIN',
-      `60 seconds simulated · ${padHeading(startingHeading)}°M / ${startingRange.toFixed(1)} NM to ${padHeading(state.plane.heading)}°M / ${rangeNm().toFixed(1)} NM.`
+      state.procedure === 'us' ? `60 seconds simulated · ${startingRange.toFixed(1)} NM to ${rangeNm().toFixed(1)} NM.`
+        : `60 seconds simulated · ${padHeading(startingHeading)}°M / ${startingRange.toFixed(1)} NM to ${padHeading(state.plane.heading)}°M / ${rangeNm().toFixed(1)} NM.`
     );
     showToast('FLIGHT ADVANCED 1 MINUTE');
   }
@@ -494,13 +498,28 @@
 
   function updateUsTurnControls() {
     const turning = Boolean(state.manualTurnSide || state.initialTurnSide);
-    $('turnLeft').disabled = turning;
-    $('turnRight').disabled = turning;
-    $('turnStop').disabled = !turning;
+    const available = state.procedure === 'us' && Boolean(state.plane && state.cfg);
+    const orbitActive = Boolean(state.orbit);
+    $('turnLeft').disabled = !available || orbitActive;
+    $('turnRight').disabled = !available || orbitActive;
+    $('turnStop').disabled = !available || !turning;
+    for (const side of ['left', 'right']) {
+      $('turn' + (side === 'left' ? 'Left' : 'Right'))?.setAttribute(
+        'aria-pressed',
+        String(!orbitActive && (state.manualTurnSide || state.initialTurnSide) === side)
+      );
+    }
   }
 
   function startTurn(side) {
-    if (!state.plane || state.manualTurnSide || state.initialTurnSide) return;
+    if (!state.plane || !state.cfg || state.procedure !== 'us' || state.orbit) return;
+    const currentSide = state.manualTurnSide || state.initialTurnSide;
+    if (currentSide === side) {
+      updateUsTurnControls();
+      showToast(`TURN ${side.toUpperCase()} CONTINUES`);
+      window.QGHRadioWorkspace?.manualCommand({ intent: 'us-turn', side });
+      return;
+    }
     state.initialTurnSide = null;
     state.targetHeading = null;
     state.forcedTurnSide = null;
@@ -528,7 +547,7 @@
     state.manualTurnRecord = null;
     updateUsTurnControls();
     updateNormalContinueControl();
-    logCommand('STOP TURN NOW', `Aircraft levels on ${padHeading(state.plane.heading)}°M.`);
+    logCommand('STOP TURN NOW', 'Turn stopped; wings level.');
     startFlightLoop();
     showToast('TURN STOPPED');
     window.QGHRadioWorkspace?.manualCommand({ intent: 'us-turn-stop' });
@@ -543,6 +562,7 @@
     $('usCtl').hidden = !usCompass;
     $('requestHeading').hidden = usCompass;
     $('infoRow').classList.toggle('single', usCompass);
+    updateUsTurnControls();
     updateNormalContinueControl();
   }
 
@@ -665,6 +685,7 @@
     logCommand('TERMINATED', 'Exercise terminated by controller.');
     prepareReview();
     showScreen('analysis');
+    window.QGHProcedureWorkspace?.renderReview();
     scrollToScreenTop();
     showToast('FLIGHT PATH READY');
   }
@@ -759,6 +780,7 @@
       state.commands = [];
       state.procedureTurns = { overhead: null, base: null };
       state.reviewMaxRange = null;
+      window.QGHProcedureWorkspace?.initialize([{ id: 'single', callsign }]);
       resetClock();
       record();
       $('headingInput').value = Math.round(state.cfg.inbound);
@@ -887,7 +909,8 @@
     beginTransmit: beginRadioTransmit,
     endTransmit: releaseRadioTransmit,
     observation: () => receiver.read(),
-    reportEvent: (source, text) => logCommand('HEADING PASSING REPORT', text),
+    procedureContext: () => ({ geometry: radioSnapshot() }),
+    reportEvent: (source, text, at) => logCommand(/^HEADING PASSED /.test(text) ? 'HEADING PASSING REPORT' : 'RADIO EVENT', text, at),
     controllerStart: () => { clearTimeout(state.dfExpiry); receiver.controllerStart(); renderDF(); }
   });
 

@@ -1,0 +1,19 @@
+Offline voice setup
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 Prepare voice resources while connected, before relying on offline practice. The microphone and pilot resources operate on the device after preparation.
+
+00:00:07.867 Allow microphone access for this site. Check that the intended headset or microphone is selected in your device settings.
+
+00:00:13.733 Pilot replies start muted. Their captions and simulated transmissions still work. Sound is optional, and manual exercise controls stay available.
+
+00:00:22.067 For audible pilot replies, wear headphones, play the headphone test, then confirm that you heard the test through them.
+
+00:00:28.141 Choose one hundred, one hundred and thirty, or one hundred and seventy words per minute. This setting controls pilot speech, not aircraft speed.
+
+00:00:36.014 Keep replies muted on speakers. Sound entering the microphone can be mistaken for a controller call. Device changes are not reported reliably by every browser.
+
+00:00:44.497 If recognition is unavailable, use the on-screen controls and consult the accepted-call catalogue. This screen guide does not certify a microphone or headphone route.
+
+00:00:52.664 Before a full exercise, make a short call on your own device and check the acknowledgement. Physical microphone and mobile testing remain essential.

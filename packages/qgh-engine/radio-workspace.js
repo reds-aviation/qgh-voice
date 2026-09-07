@@ -155,6 +155,9 @@
       const delayed = Number.isFinite(current.simulationSeconds) && current.simulationSeconds - report.simulationSeconds > 2;
       item = { source, report, intent: report.intent,
         reply: report.reply || Radio.replyFor({ intent: report.intent, heading: report.heading, delayed }, report) };
+      if (delayed && report.intent === 'procedure-report' && /^PASSING\b/.test(item.reply?.text || '')) {
+        item.reply = Object.freeze({ ...item.reply, text: item.reply.text.replace(/^PASSING\b/, 'PASSED'), speech: item.reply.speech.replace(/^passing\b/i, 'passed') });
+      }
       if (!item.reply) { schedule(); return; }
     }
     item = refreshLiveSample(item);

@@ -55,6 +55,7 @@ public final class MainActivity extends ComponentActivity {
     private static boolean isAllowedAssetUrl(String url) {
         return (ASSET_PREFIX + "index.html").equals(url)
                 || (ASSET_PREFIX + "user-guide.html").equals(url)
+                || (ASSET_PREFIX + "training-centre.html").equals(url)
                 || (ASSET_PREFIX + "single.html").equals(url)
                 || (ASSET_PREFIX + "tactical.html").equals(url);
     }

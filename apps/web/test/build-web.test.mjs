@@ -23,6 +23,11 @@ test('web build creates an allowlisted PWA package', () => {
     'index.html',
     'entry.css',
     'user-guide.html',
+    'training-centre.html',
+    'training-centre.js',
+    'training-centre.css',
+    'rt-catalogue.js',
+    'training-videos.json',
     'rt-reference.md',
     'radio-session.js',
     'radio-workspace.js',
@@ -72,6 +77,7 @@ test('web build creates an allowlisted PWA package', () => {
     'icons/apple-touch-icon.png',
     'icons/favicon-32.png',
     ...JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/qgh-engine/pilot-voices/manifest.json'), 'utf8')).assets.map(asset => asset.path),
+    ...JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/qgh-engine/training-videos.json'), 'utf8')).videos.flatMap(clip => ['src','captions','transcript','poster','chaptersFile'].map(field => clip[field]).filter(Boolean)),
   ].sort();
 
   if (existsSync(staticProbe)) rmSync(staticProbe, { force: true });

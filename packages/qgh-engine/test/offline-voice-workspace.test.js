@@ -12,6 +12,14 @@ const Radio = require('../radio-session.js');
 const workspaceSource = fs.readFileSync(path.join(__dirname, '..', 'voice-workspace.js'), 'utf8');
 const radioWorkspaceSource = fs.readFileSync(path.join(__dirname, '..', 'radio-workspace.js'), 'utf8');
 
+test('ending pilot transmission clears the stale transmitting indicator even before voice setup', () => {
+  const env = createEnvironment();
+  env.workspace.setPilotSpeaking(true);
+  assert.equal(env.document.querySelector('.voice-status').textContent, 'PILOT TRANSMITTING');
+  env.workspace.setPilotSpeaking(false);
+  assert.equal(env.document.querySelector('.voice-status').textContent, 'SET UP OFFLINE VOICE');
+});
+
 class FakeEvent {
   constructor(type, options) {
     this.type = type;
@@ -340,11 +348,11 @@ test('native activity interrupts real pilot audio, extends the quiet boundary, a
   env.advanceTime(899);
   assert.equal(env.radio.status().controllerHeld, true, 'each activity signal renews the quiet deadline');
   env.advanceTime(1);
-  assert.equal(env.radio.status().controllerHeld, false);
+  assert.equal(env.radio.status().controllerHeld, true, 'quiet boundary drains the recognizer before release');
 
   env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'report heading' });
   env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'request distance' });
-  assert.deepEqual(env.commands, ['requestHeading'], 'one native utterance executes once, even if a duplicate differs');
+  assert.deepEqual(env.commands, [], 'a final is buffered until the native transaction ends');
   env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
   env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'request distance' });
   env.workspace.receiveNativeVoiceEvent({ type: 'speech-activity', requestId });
@@ -415,9 +423,10 @@ test('native PTT ignores activity signals and accepts its delayed final after re
   assert.equal(controllerStarts, 1, 'processing PTT does not become continuous activity');
   env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'report heading' });
   env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'request distance' });
-  assert.deepEqual(env.commands, ['requestHeading']);
+  assert.deepEqual(env.commands, [], 'the delayed final is buffered until ended');
   assert.equal(env.radio.status().controllerHeld, true);
   env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
+  assert.deepEqual(env.commands, ['requestHeading']);
   assert.equal(env.radio.status().controllerHeld, false);
   assert.equal(mic.getAttribute('aria-pressed'), 'false');
   env.advanceTime(300);
@@ -510,13 +519,14 @@ test('PTT radio release waits for delayed finalization and pilot audio invalidat
   capture.onResult('report heading');
   mic.dispatchEvent(new FakeEvent('pointerup', { pointerId: 1 }));
   assert.equal(calls.filter(call => call === 'end').length, 0);
-  capture.onResult('request distance');
-  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · request distance/);
+  capture.onResult('report heading');
+  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /No voice call yet/);
   runtime.engine.triggerEnd();
+  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · report heading/);
   assert.equal(calls.filter(call => call === 'end').length, 1);
   env.workspace.setPilotSpeaking(true);
   capture.onResult('turn left heading 140');
-  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · request distance/, 'old speech cannot self-execute during pilot playback');
+  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · report heading/, 'old speech cannot self-execute during pilot playback');
 });
 
 test('continuous radio waits for a quiet boundary and stopping it prevents microphone restart after pilot speech', async () => {
@@ -561,6 +571,8 @@ test('headphones keep continuous recognition live and controller speech interrup
   capture.onPartial('turn left');
   assert.deepEqual(calls, ['interrupt']);
   capture.onResult('turn left heading 010');
+  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /No voice call yet/);
+  runtime.engine.triggerEnd();
   assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · turn left heading 010/);
 });
 
@@ -613,15 +625,58 @@ test('one PTT call is not dispatched twice, but a deliberate repeat on a new pre
   await flush();
   runtime.engine.triggerResult('transmit for df');
   runtime.engine.triggerResult('transmit for df');
-  assert.equal(parsed, 1);
+  assert.equal(parsed, 0, 'no execution while PTT is held');
   mic.dispatchEvent(new FakeEvent('pointerup', { pointerId: 1 }));
+  assert.equal(parsed, 1);
   mic.dispatchEvent(new FakeEvent('pointerdown', { pointerId: 2 }));
   await flush();
   runtime.engine.triggerResult('transmit for df');
+  mic.dispatchEvent(new FakeEvent('pointerup', { pointerId: 2 }));
   assert.equal(parsed, 2);
   assert.equal(env.storage.size, 0, 'no heard text is persisted');
   const fresh = createEnvironment({ offlineVoice: runtime.api });
   assert.match(fresh.document.querySelector('.voice-last-call').textContent || fresh.document.querySelector('.voice-last-call').children[1].textContent, /No voice call yet/);
+});
+
+test('PTT assembles a complete turn correction before asking the command parser once', async () => {
+  const runtime = makeOfflineEngine({ cachedArchive: true, deferStop: true });
+  const heard = [];
+  const env = createEnvironment({ offlineVoice: runtime.api, voiceControl: { ...Voice,
+    parseCommand(text, options) { heard.push(text); return Voice.parseCommand(text, options); }
+  } });
+  await flush();
+  const mic = env.document.querySelector('.voice-mic');
+  mic.dispatchEvent(new FakeEvent('pointerdown', { pointerId: 1 })); await flush();
+  runtime.engine.triggerResult('turn right heading two three zero');
+  runtime.engine.triggerResult('correction turn left heading zero one zero');
+  assert.deepEqual(heard, []);
+  mic.dispatchEvent(new FakeEvent('pointerup', { pointerId: 1 }));
+  assert.deepEqual(heard, [], 'release still waits for drain');
+  runtime.engine.triggerEnd();
+  assert.deepEqual(heard, ['turn left heading zero one zero']);
+});
+
+test('a late condition is not discarded and cancellation never executes buffered speech', async () => {
+  const runtime = makeOfflineEngine({ cachedArchive: true, deferStop: true });
+  const heard = [];
+  const env = createEnvironment({ offlineVoice: runtime.api, voiceControl: { ...Voice,
+    parseCommand(text, options) { heard.push(text); return Voice.parseCommand(text, options); }
+  } });
+  await flush();
+  const mic = env.document.querySelector('.voice-mic');
+  mic.dispatchEvent(new FakeEvent('pointerdown', { pointerId: 1 })); await flush();
+  runtime.engine.triggerResult('turn right heading two three zero');
+  runtime.engine.triggerResult('if runway in sight');
+  mic.dispatchEvent(new FakeEvent('pointerup', { pointerId: 1 }));
+  runtime.engine.triggerEnd();
+  assert.equal(heard.length, 1);
+  assert.match(heard[0], /if runway in sight$/);
+  assert.equal(Voice.parseCommand(heard[0]).accepted, false);
+  mic.dispatchEvent(new FakeEvent('pointerdown', { pointerId: 2 })); await flush();
+  runtime.engine.triggerResult('turn left now');
+  mic.dispatchEvent(new FakeEvent('pointercancel', { pointerId: 2 }));
+  runtime.engine.triggerEnd();
+  assert.equal(heard.length, 1);
 });
 
 test('saved dock position recovers into the viewport and can be reset', async () => {

@@ -1,0 +1,37 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "Choose your exercise",
+      "start": 0
+    },
+    {
+      "title": "Check the setup",
+      "start": 9.433333
+    },
+    {
+      "title": "Level and airfield",
+      "start": 16.802335
+    },
+    {
+      "title": "Normal QGH",
+      "start": 23.878344
+    },
+    {
+      "title": "U/S Compass",
+      "start": 31.479342
+    },
+    {
+      "title": "Observe the transmission",
+      "start": 38.312675
+    },
+    {
+      "title": "Control remains available",
+      "start": 46.046008
+    },
+    {
+      "title": "Finish with review",
+      "start": 51.854013
+    }
+  ]
+}

@@ -13,6 +13,11 @@ const engineFiles = [
   'index.html',
   'entry.css',
   'user-guide.html',
+  'training-centre.html',
+  'training-centre.js',
+  'training-centre.css',
+  'rt-catalogue.js',
+  'training-videos.json',
   'rt-reference.md',
   'single.html',
   'simulator-core.js',
@@ -50,7 +55,7 @@ const engineFiles = [
   'voice-models/NOTICE.txt',
 ];
 
-const pageFiles = ['index.html', 'user-guide.html', 'single.html', 'tactical.html'];
+const pageFiles = ['index.html', 'user-guide.html', 'training-centre.html', 'single.html', 'tactical.html'];
 const pwaFiles = [
   'manifest.webmanifest',
   'service-worker.js',
@@ -118,6 +123,7 @@ function addPwaMarkup(pageName, source, version) {
   // their query strings for each PWA build so a browser cannot retain a previous
   // voice or simulator script after the service worker has updated.
   let html = source.replace(/\?v=[0-9][a-zA-Z0-9.+-]*/g, `?v=${version}`);
+  html = html.replace(/((?:src|href)="[a-zA-Z0-9_./-]+\.(?:js|css))"/g, `$1?v=${version}"`);
 
   if (!html.includes("worker-src 'self'")) {
     html = assertReplaced(
@@ -201,6 +207,20 @@ async function build() {
     }
     seen.add(asset.path);
     filesToCopy.push(asset.path);
+  }
+  const training = JSON.parse(await readFile(resolve(engineRoot, 'training-videos.json'), 'utf8'));
+  if (!Array.isArray(training.videos)) throw new Error('Training video manifest must contain a videos array.');
+  for (const clip of training.videos) {
+    if (clip.version !== version || !Number.isSafeInteger(clip.bytes) || clip.bytes < 1 || clip.bytes > 192 * 1048576) throw new Error('Training clip version/size is invalid.');
+    for (const field of ['src', 'captions', 'transcript', ...(clip.poster ? ['poster'] : []), ...(clip.chaptersFile ? ['chaptersFile'] : [])]) {
+      const path = clip[field];
+      const allowed = { src: /\.mp4$/, captions: /\.vtt$/, transcript: /\.(txt|md)$/, poster: /\.(png|jpg|webp)$/, chaptersFile: /\.json$/ };
+      if (typeof path !== 'string' || !/^training-media\/[a-zA-Z0-9_/-]+\.[a-zA-Z0-9]+$/.test(path) || path.split('/').some(part => !part || part === '..') || !allowed[field].test(path) || seen.has(path)) throw new Error('Invalid or duplicate training resource.');
+      const data = await readFile(resolve(engineRoot, path));
+      const limit = {src:clip.bytes,captions:512*1024,transcript:2*1048576,poster:4*1048576,chaptersFile:512*1024}[field];
+      if (!data.length || data.length > limit || field === 'src' && data.length !== clip.bytes) throw new Error(`Training resource size mismatch: ${path}`);
+      seen.add(path); filesToCopy.push(path);
+    }
   }
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputRoot, { recursive: true });

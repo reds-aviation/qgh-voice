@@ -1,0 +1,19 @@
+Basic controls
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 Welcome to Reds QGH Simulator. This narrated screen guide uses captures from the actual release. It explains the controls; it is not a live microphone recognition test.
+
+00:00:09.433 Choose Single Aircraft or Tactical, then check the procedure, tracks, aircraft profile, initial distance, speed and rate of turn.
+
+00:00:16.802 Check initial altitude and airfield settings. A runway designator is separate from runway orientation. Keep their units clear.
+
+00:00:23.878 In Normal QGH, turn right heading 230 assigns a right turn to the selected heading. The aircraft follows a curved path at its configured rate.
+
+00:00:31.479 In U/S Compass, use turn left now, turn right now, and stop turn now. Left and right work independently.
+
+00:00:38.313 Request a transmission to see the direction-finding indication. It follows the aircraft during the reply, holds briefly after release, then blanks.
+
+00:00:46.046 Watch the red acknowledgement and the highlighted control. The buttons remain available whenever you prefer manual control.
+
+00:00:51.854 Terminate the exercise to inspect the track and command history. Replay helps connect each instruction with the movement that followed.

@@ -4,7 +4,7 @@ const { fileURLToPath, pathToFileURL } = require('url');
 
 const appRoot = path.resolve(__dirname, 'app');
 const allowedPagePaths = new Set(
-  ['index.html', 'user-guide.html', 'single.html', 'tactical.html'].map(page => path.resolve(appRoot, page))
+  ['index.html', 'user-guide.html', 'training-centre.html', 'single.html', 'tactical.html'].map(page => path.resolve(appRoot, page))
 );
 
 function isAllowedLocalAppUrl(targetUrl) {

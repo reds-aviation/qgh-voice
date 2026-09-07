@@ -67,3 +67,7 @@ artifacts/
 apps/web/dist/
 packages/qgh-engine/state/
 packages/qgh-engine/screens/
+docs/qa/v5-media-captures/masters/
+docs/qa/v5-media-captures/work/
+docs/qa/v5-media-captures/fresh/
+docs/qa/v5-ce-work-receipt.json

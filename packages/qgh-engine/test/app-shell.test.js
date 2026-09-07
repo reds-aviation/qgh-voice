@@ -51,7 +51,7 @@ test('each live homing display includes an unobtrusive voice-command acknowledge
 
 test('guided familiarisation teaches exercise-first RT calls for each QGH mode', () => {
   const guidedTour = readEngineFile('guided-familiarisation.js');
-  const userGuide = readEngineFile('user-guide.html');
+  const userGuide = readEngineFile('training-centre.html');
 
   assert.match(guidedTour, /continue zero six zero/);
   assert.match(guidedTour, /while a same-direction turn is active/i);
@@ -61,5 +61,6 @@ test('guided familiarisation teaches exercise-first RT calls for each QGH mode',
   assert.match(guidedTour, /Raven Twenty One turn right heading zero six zero/);
   assert.match(guidedTour, /Raven Twenty One transmit for D\/F/);
   assert.match(guidedTour, /Raven Twenty One stop following leader/);
-  assert.match(userGuide, /EXERCISE RT CALLS/);
+  assert.match(readEngineFile('user-guide.html'), /url=training-centre.html/);
+  assert.match(userGuide, /Accepted RT calls/);
 });

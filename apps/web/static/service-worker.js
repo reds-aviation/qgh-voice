@@ -18,6 +18,11 @@ const APP_SHELL = [
   './index.html',
   './entry.css',
   './user-guide.html',
+  './training-centre.html',
+  './training-centre.js',
+  './training-centre.css',
+  './rt-catalogue.js',
+  './training-videos.json',
   './rt-reference.md',
   './single.html',
   './simulator-core.js',
@@ -67,7 +72,7 @@ const APP_SHELL_PATHS = new Set(
   APP_SHELL.map(asset => new URL(asset, self.registration.scope).pathname)
 );
 const PAGE_SHELL_PATHS = new Set(
-  ['./', './index.html', './user-guide.html', './single.html', './tactical.html']
+  ['./', './index.html', './user-guide.html', './training-centre.html', './single.html', './tactical.html']
     .map(page => new URL(page, self.registration.scope).pathname)
 );
 let cachePromise;

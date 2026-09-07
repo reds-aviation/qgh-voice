@@ -80,7 +80,7 @@ const recipe = await readFile(path.join(root, 'vendor/pilot-tts/render-recipe.js
 const index = JSON.parse(await readFile(path.join(root, 'pilot-voices/index.json'), 'utf8'));
 if (index.recipeSha256 !== digest(recipe)) throw new Error('Voice index does not match the current render recipe. Re-render the banks.');
 const manifest = {
-  version: 'qgh-pilot-kokoro-clips-en-2', format: 'pcm16-wav-segment-banks', sampleRate: 24000,
+  version: 'qgh-pilot-kokoro-clips-en-3', format: 'pcm16-wav-segment-banks', sampleRate: 24000,
   targetWPM: 100, voices: VOICES, model: 'onnx-community/Kokoro-82M-v1.0-ONNX', modelRevision: MODEL_REVISION,
   buildRuntime: 'onnxruntime==1.22.0', buildNumpy: 'numpy==2.3.5', recipeSha256: digest(recipe),
   tempoNormalization: index.tempoNormalization,

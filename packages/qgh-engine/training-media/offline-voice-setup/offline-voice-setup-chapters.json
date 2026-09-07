@@ -1,0 +1,37 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "Prepare before practice",
+      "start": 0
+    },
+    {
+      "title": "Permission and input",
+      "start": 7.866667
+    },
+    {
+      "title": "Pilot replies start muted",
+      "start": 13.733334
+    },
+    {
+      "title": "Connect and test headphones",
+      "start": 22.066667
+    },
+    {
+      "title": "Choose a learning pace",
+      "start": 28.140658
+    },
+    {
+      "title": "Prevent speaker feedback",
+      "start": 36.013650999999996
+    },
+    {
+      "title": "Prepare a fallback",
+      "start": 44.496643999999996
+    },
+    {
+      "title": "Test on your device",
+      "start": 52.663650999999994
+    }
+  ]
+}

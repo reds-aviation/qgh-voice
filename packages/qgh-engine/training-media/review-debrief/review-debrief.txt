@@ -1,0 +1,19 @@
+Review and debrief
+Reds QGH Simulator 5.0.0
+Narrated screen guide using actual UI captures. Not a live microphone-recognition test.
+
+00:00:00.000 After termination, the review shows the completed flight path and command history. Fit the track before inspecting a smaller section.
+
+00:00:06.816 Cardinal radials and configured outbound and approach references help relate the flown path to the exercise. These lines are references, not automatic clearances.
+
+00:00:14.749 Turn radius depends on speed and turn rate. Inspect the overhead manoeuvre and base turn as curved paths, not single-point changes of direction.
+
+00:00:22.127 Choose a faster replay speed to cover quiet portions, then pause around an instruction. Zoom and fit controls let you keep the useful part of the path in view.
+
+00:00:29.894 Match each accepted instruction to its aircraft and response. Distinguish a received information call from a report request or an applied flight action.
+
+00:00:37.140 A request to report a heading or level creates a future condition. The report occurs only when the aircraft reaches the corresponding event.
+
+00:00:43.807 For Tactical exercises, inspect separation and detachment timing alongside each callsign. The shared display does not mean all aircraft received one clearance.
+
+00:00:52.073 Choose one improvement and restart with a new random exercise. Keep the same setup or return to setup to change its demands. This is a training debrief, not operational certification.

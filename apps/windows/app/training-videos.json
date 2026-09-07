@@ -1,0 +1,397 @@
+{
+  "schemaVersion": 1,
+  "versionSource": "app-version.json",
+  "version": "5.0.0",
+  "productionStatus": "screen-guides-ready",
+  "generatedWith": "Offline Windows SAPI and ffmpeg; actual release screenshot captures",
+  "videos": [
+    {
+      "id": "complete-walkthrough",
+      "title": "Complete QGH walkthrough",
+      "description": "Seven narrated screen guides in one chaptered walkthrough. Actual interface captures; not a live recognition test.",
+      "version": "5.0.0",
+      "src": "training-media/complete-walkthrough/complete-walkthrough.mp4",
+      "captions": "training-media/complete-walkthrough/complete-walkthrough.vtt",
+      "transcript": "training-media/complete-walkthrough/complete-walkthrough.txt",
+      "poster": "training-media/complete-walkthrough/complete-walkthrough.jpg",
+      "chaptersFile": "training-media/complete-walkthrough/complete-walkthrough-chapters.json",
+      "chapters": [
+        {
+          "title": "Basic controls",
+          "start": 0
+        },
+        {
+          "title": "Offline voice setup",
+          "start": 58.210612
+        },
+        {
+          "title": "PTT and Continuous Listening",
+          "start": 118.07648499999999
+        },
+        {
+          "title": "Accepted calls and outcomes",
+          "start": 174.200022
+        },
+        {
+          "title": "Tactical QGH and formation",
+          "start": 235.234918
+        },
+        {
+          "title": "Review and debrief",
+          "start": 295.660504
+        },
+        {
+          "title": "Phone use and offline practice",
+          "start": 357.323785
+        }
+      ],
+      "bytes": 11149073,
+      "duration": "7:00",
+      "durationSeconds": 420.226009,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "basic-controls",
+      "title": "Basic controls",
+      "description": "Single, Normal and U/S Compass: a narrated screen guide.",
+      "version": "5.0.0",
+      "src": "training-media/basic-controls/basic-controls.mp4",
+      "captions": "training-media/basic-controls/basic-controls.vtt",
+      "transcript": "training-media/basic-controls/basic-controls.txt",
+      "poster": "training-media/basic-controls/basic-controls.jpg",
+      "chaptersFile": "training-media/basic-controls/basic-controls-chapters.json",
+      "chapters": [
+        {
+          "title": "Choose your exercise",
+          "start": 0
+        },
+        {
+          "title": "Check the setup",
+          "start": 9.433333
+        },
+        {
+          "title": "Level and airfield",
+          "start": 16.802335
+        },
+        {
+          "title": "Normal QGH",
+          "start": 23.878344
+        },
+        {
+          "title": "U/S Compass",
+          "start": 31.479342
+        },
+        {
+          "title": "Observe the transmission",
+          "start": 38.312675
+        },
+        {
+          "title": "Control remains available",
+          "start": 46.046008
+        },
+        {
+          "title": "Finish with review",
+          "start": 51.854013
+        }
+      ],
+      "bytes": 1407206,
+      "duration": "0:58",
+      "durationSeconds": 58.210612,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "offline-voice-setup",
+      "title": "Offline voice setup",
+      "description": "Prepare local resources and test headphone output.",
+      "version": "5.0.0",
+      "src": "training-media/offline-voice-setup/offline-voice-setup.mp4",
+      "captions": "training-media/offline-voice-setup/offline-voice-setup.vtt",
+      "transcript": "training-media/offline-voice-setup/offline-voice-setup.txt",
+      "poster": "training-media/offline-voice-setup/offline-voice-setup.jpg",
+      "chaptersFile": "training-media/offline-voice-setup/offline-voice-setup-chapters.json",
+      "chapters": [
+        {
+          "title": "Prepare before practice",
+          "start": 0
+        },
+        {
+          "title": "Permission and input",
+          "start": 7.866667
+        },
+        {
+          "title": "Pilot replies start muted",
+          "start": 13.733334
+        },
+        {
+          "title": "Connect and test headphones",
+          "start": 22.066667
+        },
+        {
+          "title": "Choose a learning pace",
+          "start": 28.140658
+        },
+        {
+          "title": "Prevent speaker feedback",
+          "start": 36.013650999999996
+        },
+        {
+          "title": "Prepare a fallback",
+          "start": 44.496643999999996
+        },
+        {
+          "title": "Test on your device",
+          "start": 52.663650999999994
+        }
+      ],
+      "bytes": 1698493,
+      "duration": "1:00",
+      "durationSeconds": 59.865873,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "ptt-continuous",
+      "title": "PTT and Continuous Listening",
+      "description": "Transmission boundaries, readback and controller priority.",
+      "version": "5.0.0",
+      "src": "training-media/ptt-continuous/ptt-continuous.mp4",
+      "captions": "training-media/ptt-continuous/ptt-continuous.vtt",
+      "transcript": "training-media/ptt-continuous/ptt-continuous.txt",
+      "poster": "training-media/ptt-continuous/ptt-continuous.jpg",
+      "chaptersFile": "training-media/ptt-continuous/ptt-continuous-chapters.json",
+      "chapters": [
+        {
+          "title": "Choose your listening mode",
+          "start": 0
+        },
+        {
+          "title": "Press, speak, release",
+          "start": 6.633333
+        },
+        {
+          "title": "Execution and response",
+          "start": 14.035328
+        },
+        {
+          "title": "A natural pause",
+          "start": 20.876326
+        },
+        {
+          "title": "Controller has priority",
+          "start": 27.909658999999998
+        },
+        {
+          "title": "Mute when needed",
+          "start": 35.876326
+        },
+        {
+          "title": "Keep the console visible",
+          "start": 42.186326
+        },
+        {
+          "title": "Practice complete calls",
+          "start": 48.986326
+        }
+      ],
+      "bytes": 1365651,
+      "duration": "0:56",
+      "durationSeconds": 56.123537,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "accepted-calls",
+      "title": "Accepted calls and outcomes",
+      "description": "Clearances, reports, information and calls outside the model.",
+      "version": "5.0.0",
+      "src": "training-media/accepted-calls/accepted-calls.mp4",
+      "captions": "training-media/accepted-calls/accepted-calls.vtt",
+      "transcript": "training-media/accepted-calls/accepted-calls.txt",
+      "poster": "training-media/accepted-calls/accepted-calls.jpg",
+      "chaptersFile": "training-media/accepted-calls/accepted-calls-chapters.json",
+      "chapters": [
+        {
+          "title": "Find the exact contract",
+          "start": 0
+        },
+        {
+          "title": "Heading clearances",
+          "start": 7.136009
+        },
+        {
+          "title": "A report is not a turn",
+          "start": 14.406009
+        },
+        {
+          "title": "Respect the selected mode",
+          "start": 22.572676
+        },
+        {
+          "title": "Level and information",
+          "start": 29.211678
+        },
+        {
+          "title": "Do not infer execution",
+          "start": 37.811678
+        },
+        {
+          "title": "Outside this model",
+          "start": 46.011678
+        },
+        {
+          "title": "Manual demonstration",
+          "start": 53.811678
+        }
+      ],
+      "bytes": 1578460,
+      "duration": "1:01",
+      "durationSeconds": 61.034896,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "tactical-formation",
+      "title": "Tactical QGH and formation",
+      "description": "Addressed aircraft, selection and independent control.",
+      "version": "5.0.0",
+      "src": "training-media/tactical-formation/tactical-formation.mp4",
+      "captions": "training-media/tactical-formation/tactical-formation.vtt",
+      "transcript": "training-media/tactical-formation/tactical-formation.txt",
+      "poster": "training-media/tactical-formation/tactical-formation.jpg",
+      "chaptersFile": "training-media/tactical-formation/tactical-formation-chapters.json",
+      "chapters": [
+        {
+          "title": "Two to four aircraft",
+          "start": 0
+        },
+        {
+          "title": "Address each aircraft",
+          "start": 6.1
+        },
+        {
+          "title": "Selection and radio target",
+          "start": 15.368005
+        },
+        {
+          "title": "Formation leader",
+          "start": 23.368005
+        },
+        {
+          "title": "Detach before independent control",
+          "start": 29.401338
+        },
+        {
+          "title": "Speed and level",
+          "start": 37.168005
+        },
+        {
+          "title": "Independent approaches",
+          "start": 45.069003
+        },
+        {
+          "title": "Review all aircraft",
+          "start": 52.002336
+        }
+      ],
+      "bytes": 1783052,
+      "duration": "1:00",
+      "durationSeconds": 60.425586,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "review-debrief",
+      "title": "Review and debrief",
+      "description": "Read the track, replay events and choose one improvement.",
+      "version": "5.0.0",
+      "src": "training-media/review-debrief/review-debrief.mp4",
+      "captions": "training-media/review-debrief/review-debrief.vtt",
+      "transcript": "training-media/review-debrief/review-debrief.txt",
+      "poster": "training-media/review-debrief/review-debrief.jpg",
+      "chaptersFile": "training-media/review-debrief/review-debrief-chapters.json",
+      "chapters": [
+        {
+          "title": "Start with the whole path",
+          "start": 0
+        },
+        {
+          "title": "Use the reference lines",
+          "start": 6.816009
+        },
+        {
+          "title": "Inspect curved turns",
+          "start": 14.749342
+        },
+        {
+          "title": "Replay deliberately",
+          "start": 22.127347
+        },
+        {
+          "title": "Command and response",
+          "start": 29.894014
+        },
+        {
+          "title": "Armed reports",
+          "start": 37.140023
+        },
+        {
+          "title": "Look for sequencing",
+          "start": 43.80669
+        },
+        {
+          "title": "Practise one improvement",
+          "start": 52.073357
+        }
+      ],
+      "bytes": 1532151,
+      "duration": "1:02",
+      "durationSeconds": 61.663281,
+      "presentation": "narrated-screen-guide"
+    },
+    {
+      "id": "phone-use",
+      "title": "Phone use and offline practice",
+      "description": "Responsive controls, audio routes and release updates.",
+      "version": "5.0.0",
+      "src": "training-media/phone-use/phone-use.mp4",
+      "captions": "training-media/phone-use/phone-use.vtt",
+      "transcript": "training-media/phone-use/phone-use.txt",
+      "poster": "training-media/phone-use/phone-use.jpg",
+      "chaptersFile": "training-media/phone-use/phone-use-chapters.json",
+      "chapters": [
+        {
+          "title": "A smaller screen",
+          "start": 0
+        },
+        {
+          "title": "Make room for the task",
+          "start": 7.433333
+        },
+        {
+          "title": "Test the audio route",
+          "start": 15.100000000000001
+        },
+        {
+          "title": "Prepare offline resources",
+          "start": 21.8
+        },
+        {
+          "title": "Save only useful clips",
+          "start": 29.066667000000002
+        },
+        {
+          "title": "Storage and updates",
+          "start": 36.666667000000004
+        },
+        {
+          "title": "Avoid interrupting a run",
+          "start": 45.5
+        },
+        {
+          "title": "Keep a manual fallback",
+          "start": 54.069002
+        }
+      ],
+      "bytes": 1792368,
+      "duration": "1:03",
+      "durationSeconds": 62.902222,
+      "presentation": "narrated-screen-guide"
+    }
+  ]
+}

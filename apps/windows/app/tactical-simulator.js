@@ -77,7 +77,7 @@
     const bearing = Tactical.bearingFor(aircraft);
     return { source: id, callsign: aircraft.callsign, procedure: state.procedure,
       heading: aircraft.plane.heading, simulationSeconds: state.exercise.simulationSeconds,
-      range: bearing.range, orbitSide: aircraft.orbit?.side,
+      range: bearing.range, phase: aircraft.phase, inbound: state.exercise.cfg.inbound, orbitSide: aircraft.orbit?.side,
       turnSide: aircraft.forcedTurnSide || aircraft.manualTurnSide || aircraft.initialTurnSide,
       overhead: bearing.overhead, qdm: bearing.overhead ? null : bearing.qdm, qte: bearing.overhead ? null : bearing.qte };
   }
@@ -94,6 +94,7 @@
   }
 
   function releaseRadioTransmit(token) {
+    window.QGHProcedureWorkspace?.endTransmission(state.dfAircraftId, token, radioSnapshot(state.dfAircraftId));
     receiver.release(token);
     renderDF();
     window.QGHRadioWorkspace?.channelAvailable();
@@ -201,10 +202,17 @@
     return 'INDEPENDENT';
   }
 
-  function logCommand(aircraftId, type, detail) {
+  function logCommand(aircraftId, type, detail, at = state.exercise?.simulationSeconds || 0) {
     const aircraft = aircraftById(aircraftId);
+    if (state.procedure === 'us') {
+      if (type === 'STOP TURN NOW') detail = 'Turn stopped; continuing wings level.';
+      else if (type === 'STOP FOLLOWING LEADER') detail = 'Released from formation; continuing wings level at the current speed.';
+      else if (type === 'REPORT HEADING' || type === 'HEADING PASSING REPORT') detail = 'Heading report unavailable in U/S Compass.';
+      else if (type === 'OUTBOUND TRACK' || type.endsWith('BASE TURN')) detail = detail.replace(/ · established on \d+°M\./, ' · track established.');
+    }
     state.commands.push({
-      time: formatTime(state.clockSeconds),
+      time: formatTime(Math.floor(at)),
+      clockTime: formatTime(state.clockSeconds),
       aircraftId: aircraft ? aircraft.id : null,
       callsign: aircraft ? aircraft.callsign : 'FLIGHT',
       color: aircraft ? aircraft.color : '#617177',
@@ -430,9 +438,17 @@
   function updateUsTurnControls() {
     const aircraft = currentAircraft();
     const turning = Boolean(aircraft && (aircraft.manualTurnSide || aircraft.initialTurnSide));
-    $('tUsLeft').disabled = turning;
-    $('tUsRight').disabled = turning;
-    $('tUsStop').disabled = !turning;
+    const available = state.procedure === 'us' && Boolean(aircraft);
+    const orbitActive = Boolean(aircraft?.orbit);
+    $('tUsLeft').disabled = !available || orbitActive;
+    $('tUsRight').disabled = !available || orbitActive;
+    $('tUsStop').disabled = !available || !turning;
+    for (const side of ['left', 'right']) {
+      $('tUs' + (side === 'left' ? 'Left' : 'Right'))?.setAttribute(
+        'aria-pressed',
+        String(!orbitActive && (aircraft?.manualTurnSide || aircraft?.initialTurnSide) === side)
+      );
+    }
   }
 
   function updateNormalContinueControl() {
@@ -549,6 +565,7 @@
     $('tUsControls').hidden = !usCompass;
     $('tRequestHeading').hidden = usCompass;
     $('tInfoRow').classList.toggle('single', usCompass);
+    updateUsTurnControls();
     updateNormalContinueControl();
   }
 
@@ -780,6 +797,7 @@
       state.activeAircraftId = state.exercise.formation && state.exercise.formation.enabled
         ? state.exercise.formation.leaderId
         : state.exercise.aircraft[0].id;
+      window.QGHProcedureWorkspace?.initialize(state.exercise.aircraft);
       state.commands = [];
       state.reviewMaxRange = null;
       state.focusedReviewId = null;
@@ -806,6 +824,7 @@
 
   function stepFlight(duration) {
     const events = Tactical.step(state.exercise, duration);
+    window.QGHProcedureWorkspace?.advance(duration);
     state.exercise.aircraft.forEach(aircraft => window.QGHRadioWorkspace?.observeHeading(aircraft.id, aircraft.plane.heading));
     const resumed = new Set(events.filter(event => event.type === 'ORBIT RESUMED').map(event => event.aircraftId));
     for (const event of events) {
@@ -871,11 +890,14 @@
     try {
       const result = Tactical.startTurn(state.exercise, state.activeAircraftId, side);
       if (!result) {
-        showToast('STOP THE CURRENT TURN BEFORE GIVING A NEW TURN');
+        showToast('STOP ORBIT BEFORE TIMED TURN');
         return;
       }
       if (result.events && result.events.length) logEvents(result.events);
-      logCommand(result.aircraft.id, 'TURN ' + side.toUpperCase() + ' NOW', 'Timed turn at ' + result.aircraft.cfg.rate.toFixed(1) + '°/sec · nominal radius ' + result.radius.toFixed(2) + ' NM.');
+      const detail = result.unchanged
+        ? 'Already turning ' + side.toUpperCase() + ' at ' + result.aircraft.cfg.rate.toFixed(1) + '°/sec; turn geometry retained.'
+        : 'Timed turn at ' + result.aircraft.cfg.rate.toFixed(1) + '°/sec · nominal radius ' + result.radius.toFixed(2) + ' NM.';
+      logCommand(result.aircraft.id, 'TURN ' + side.toUpperCase() + ' NOW', detail);
       startFlightLoop();
       renderRail();
       renderSelectedAircraft();
@@ -912,6 +934,7 @@
   function requestHeading() {
     const aircraft = currentAircraft();
     if (!aircraft) return;
+    if (state.procedure !== 'normal') { showToast('HEADING REPORT UNAVAILABLE IN U/S COMPASS'); return; }
     $('tHeadingReply').textContent = 'HEADING ' + padHeading(aircraft.plane.heading) + '°M';
     logCommand(aircraft.id, 'REPORT HEADING', 'Aircraft reports ' + padHeading(aircraft.plane.heading) + '°M.');
     showToast(aircraft.callsign + ' HEADING RECEIVED');
@@ -942,6 +965,7 @@
     logEvents(events);
     const detail = state.exercise.aircraft.map(aircraft => {
       const start = before.find(item => item.id === aircraft.id);
+      if (state.procedure === 'us') return aircraft.callsign + ' ' + start.range.toFixed(1) + ' NM → ' + Tactical.rangeFor(aircraft).toFixed(1) + ' NM';
       return aircraft.callsign + ' ' + padHeading(start.heading) + '°/' + start.range.toFixed(1) + ' NM → ' + padHeading(aircraft.plane.heading) + '°/' + Tactical.rangeFor(aircraft).toFixed(1) + ' NM';
     }).join(' · ');
     logCommand(null, 'ADVANCE FLIGHT · 1 MIN', '60 seconds simulated for all aircraft. ' + detail + '.');
@@ -1173,6 +1197,7 @@
     logCommand(null, 'TERMINATED', 'Tactical exercise terminated by controller.');
     prepareReview();
     showScreen('tAnalysis');
+    window.QGHProcedureWorkspace?.renderReview();
     scrollToScreenTop();
     showToast('FLIGHT PATH REVIEW READY');
   }
@@ -1302,13 +1327,145 @@
     });
   }
 
+  // Radio addressing never changes the controller's manually selected aircraft.
+  // Existing flight-core methods remain the sole owners of movement and formation changes.
+  function executeRadioCommand(command) {
+    const intents = new Set(['transmit-df', 'normal-turn-heading', 'continue-turn-heading', 'us-turn', 'us-turn-stop',
+      'start-orbit', 'continue-orbit', 'resume-normal', 'report-heading', 'request-distance', 'stop-following-leader']);
+    const speedCommand = command?.intent === 'set-aircraft-field' && command.field === 'speed';
+    if (!command || (!intents.has(command.intent) && !speedCommand)) return null;
+    const fail = message => ({ ok: false, message });
+    if (!state.exercise || !$('tConsole')?.classList.contains('active')) return fail('COMMAND IS NOT AVAILABLE ON THIS SCREEN');
+    const aircraft = aircraftById(command.aircraft);
+    if (!aircraft) return fail('SAY A CONFIGURED AIRCRAFT CALLSIGN');
+    const id = aircraft.id;
+    const normalCommand = ['normal-turn-heading', 'continue-turn-heading', 'report-heading'].includes(command.intent);
+    if (normalCommand && state.procedure !== 'normal') return fail('HEADING COMMANDS ARE NOT AVAILABLE IN U/S COMPASS');
+    if (['us-turn', 'us-turn-stop'].includes(command.intent) && state.procedure !== 'us') return fail('TIMED TURNS ARE NOT AVAILABLE IN NORMAL QGH');
+    if (['normal-turn-heading', 'us-turn', 'start-orbit'].includes(command.intent) && !['left', 'right'].includes(command.side)) return fail('SPECIFY LEFT OR RIGHT');
+    if (['normal-turn-heading', 'continue-turn-heading'].includes(command.intent)
+      && (typeof command.heading !== 'number' || !Number.isFinite(command.heading) || command.heading < 0 || command.heading > 360)) return fail('SPECIFY A HEADING FROM 000 TO 360');
+    let message, controlId, result, events = [];
+    try {
+      switch (command.intent) {
+        case 'normal-turn-heading':
+        case 'continue-turn-heading': {
+          const heading = Core.normalize(command.heading);
+          result = command.intent === 'normal-turn-heading' ? Tactical.issueHeading(state.exercise, id, command.side, heading)
+            : Tactical.continueHeading(state.exercise, id, heading);
+          if (!result) return fail('NO HEADING TURN TO CONTINUE');
+          const side = result.turn.side;
+          message = 'TURNING ' + side.toUpperCase() + ' ' + padHeading(heading);
+          controlId = command.intent === 'continue-turn-heading' ? 'tContinueHeading' : side === 'left' ? 'tTurnLeft' : 'tTurnRight';
+          logCommand(id, command.intent === 'continue-turn-heading' ? 'CONTINUE ' + side.toUpperCase() : 'TURN ' + side.toUpperCase(),
+            'Heading ' + padHeading(heading) + '°M · ' + Math.round(result.turn.degrees) + '° turn · ' + result.turn.way + ' · nominal radius ' + result.radius.toFixed(2) + ' NM.');
+          if (id === state.activeAircraftId) $('tHeadingInput').value = String(heading).padStart(3, '0');
+          break;
+        }
+        case 'us-turn':
+          result = Tactical.startTurn(state.exercise, id, command.side);
+          if (!result) return fail('STOP ORBIT BEFORE TIMED TURN');
+          message = 'TURNING ' + command.side.toUpperCase(); controlId = command.side === 'left' ? 'tUsLeft' : 'tUsRight';
+          logCommand(id, 'TURN ' + command.side.toUpperCase() + ' NOW', 'Timed turn at ' + aircraft.cfg.rate.toFixed(1) + '°/sec · nominal radius ' + result.radius.toFixed(2) + ' NM.');
+          break;
+        case 'us-turn-stop':
+          result = Tactical.stopTurn(state.exercise, id);
+          if (!result) return fail('NO TURN IS IN PROGRESS');
+          message = 'STOP TURN'; controlId = 'tUsStop'; logCommand(id, 'STOP TURN NOW', 'Turn stopped; continuing wings level.');
+          break;
+        case 'start-orbit':
+        case 'continue-orbit':
+        case 'resume-normal':
+          result = command.intent === 'start-orbit' ? Tactical.startOrbit(state.exercise, id, command.side)
+            : command.intent === 'continue-orbit' ? Tactical.continueOrbit(state.exercise, id) : Tactical.resumeOrbit(state.exercise, id);
+          if (!result) return fail('NO ORBIT IN PROGRESS');
+          message = command.intent === 'start-orbit' ? 'ORBITING ' + command.side.toUpperCase()
+            : command.intent === 'continue-orbit' ? 'CONTINUING ORBIT' : 'RESUMING NORMAL AFTER THIS CIRCLE';
+          controlId = command.intent === 'start-orbit' ? command.side === 'left' ? 'tOrbitLeft' : 'tOrbitRight'
+            : command.intent === 'continue-orbit' ? 'tContinueOrbit' : 'tResumeNormal';
+          logCommand(id, command.intent === 'start-orbit' ? 'ORBIT ' + command.side.toUpperCase() : command.intent === 'continue-orbit' ? 'CONTINUE ORBIT' : 'RESUME NORMAL',
+            command.intent === 'resume-normal' ? 'Resume the pre-orbit heading after this circle.' : 'Continuous orbit at selected speed and rate of turn.');
+          break;
+        case 'report-heading':
+          message = 'HEADING ' + padHeading(aircraft.plane.heading); controlId = 'tRequestHeading';
+          logCommand(id, 'REPORT HEADING', 'Aircraft reports ' + padHeading(aircraft.plane.heading) + '°M.');
+          break;
+        case 'request-distance':
+          message = 'RANGE ' + Tactical.rangeFor(aircraft).toFixed(1) + ' NM'; controlId = 'tRequestDistance';
+          logCommand(id, 'REQUEST DISTANCE', 'Aircraft reports ' + Tactical.rangeFor(aircraft).toFixed(1) + ' NM from overhead.');
+          break;
+        case 'stop-following-leader':
+          result = Tactical.stopFollowingLeader(state.exercise, id);
+          if (!result) return fail('AIRCRAFT IS NOT FOLLOWING THE LEADER');
+          state.lastLoggedSpeedById[id] = result.speed;
+          message = 'STOPPING FOLLOWING LEADER, CONTINUING INDEPENDENTLY'; controlId = 'tStopFollowing';
+          break;
+        case 'set-aircraft-field':
+          if (formationRole(aircraft) === 'FORMATION') return fail('GROUND SPEED FOLLOWS THE FORMATION LEADER; STOP FOLLOWING FIRST');
+          if (typeof command.value !== 'number' || !Number.isFinite(command.value) || command.value < 60 || command.value > 600) return fail('SPEED MUST BE FROM 60 TO 600 KT');
+          if (state.pendingSpeedChange?.id === id) {
+            clearTimeout(state.speedChangeTimer); state.speedChangeTimer = null; state.pendingSpeedChange = null;
+          }
+          Tactical.setSpeed(state.exercise, id, command.value);
+          state.lastLoggedSpeedById[id] = command.value;
+          message = 'SPEED ' + command.value + ' KT'; controlId = 'tLiveSpeed'; logCommand(id, 'SPEED', message);
+          break;
+        case 'transmit-df': {
+          if (command.mode && !['qdm', 'qte'].includes(command.mode)) return fail('SELECT QDM OR QTE');
+          if (command.mode) chooseBearingMode(command.mode);
+          const bearing = Tactical.bearingFor(aircraft);
+          logCommand(id, 'TRANSMIT FOR D/F', bearing.overhead ? 'Overhead / no-bearing indication.'
+            : 'QDM ' + padHeading(bearing.qdm) + '°M · QTE ' + padHeading(bearing.qte) + '°T.');
+          message = 'TRANSMITTING FOR D/F'; controlId = 'tTransmit';
+          break;
+        }
+      }
+      events = result?.events || [];
+      if (events.length) logEvents(events);
+      renderRail();
+      if (id === state.activeAircraftId) {
+        renderSelectedAircraft();
+        if (command.intent === 'report-heading') $('tHeadingReply').textContent = message + '°M';
+        if (command.intent === 'request-distance') $('tDistanceReply').textContent = message;
+      }
+      startFlightLoop();
+      return { ok: true, message: aircraft.callsign + ', ' + message, controlId };
+    } catch (error) { return fail(error.message || 'RADIO COMMAND UNAVAILABLE'); }
+  }
+
   window.QGHRadioAdapter = Object.freeze({
+    executeRadioCommand,
     snapshot: radioSnapshot,
     active: () => $('tConsole').classList.contains('active'),
     beginTransmit: beginRadioTransmit,
     endTransmit: releaseRadioTransmit,
     observation: () => receiver.read(),
-    reportEvent: (source, text) => logCommand(source, 'HEADING PASSING REPORT', text),
+    followingMap: () => {
+      const formation = state.exercise?.formation;
+      if (!formation?.enabled) return {};
+      return Object.fromEntries(formation.memberIds.filter(id => id !== formation.leaderId && !formation.detachedIds.includes(id)).map(id => [id, formation.leaderId]));
+    },
+    procedureContext: id => {
+      const formation = state.exercise?.formation;
+      const members = formation?.enabled ? formation.memberIds.filter(member => !formation.detachedIds.includes(member)) : [];
+      return { geometry: radioSnapshot(id), follower: members.includes(id) && id !== formation.leaderId,
+        attachedIds: id === formation?.leaderId ? members.filter(member => member !== id) : [] };
+    },
+    detachFollower: id => { Tactical.stopFollowingLeader(state.exercise, id); renderRail(); },
+    setActualLevel: (id, altitude) => { const aircraft = aircraftById(id); if (aircraft) aircraft.level = altitude; },
+    highlightRadioTarget: id => {
+      const item = state.railItems.get(id)?.item;
+      if (!item) return;
+      const rail = item.parentElement;
+      if (rail?.scrollWidth > rail.clientWidth && item.getBoundingClientRect) {
+        const box = item.getBoundingClientRect(), visible = rail.getBoundingClientRect();
+        if (box.left < visible.left) rail.scrollLeft -= visible.left - box.left;
+        else if (box.right > visible.right) rail.scrollLeft += box.right - visible.right;
+      }
+      item.classList.add('radio-target');
+      setTimeout(() => item.classList.remove('radio-target'), 2500);
+    },
+    reportEvent: (source, text, at) => logCommand(source, /^HEADING PASSED /.test(text) ? 'HEADING PASSING REPORT' : 'RADIO EVENT', text, at),
     controllerStart: () => { clearTimeout(state.dfExpiry); receiver.controllerStart(); renderDF(); }
   });
 

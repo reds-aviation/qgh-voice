@@ -1,0 +1,37 @@
+{
+  "version": "5.0.0",
+  "chapters": [
+    {
+      "title": "Find the exact contract",
+      "start": 0
+    },
+    {
+      "title": "Heading clearances",
+      "start": 7.136009
+    },
+    {
+      "title": "A report is not a turn",
+      "start": 14.406009
+    },
+    {
+      "title": "Respect the selected mode",
+      "start": 22.572676
+    },
+    {
+      "title": "Level and information",
+      "start": 29.211678
+    },
+    {
+      "title": "Do not infer execution",
+      "start": 37.811678
+    },
+    {
+      "title": "Outside this model",
+      "start": 46.011678
+    },
+    {
+      "title": "Manual demonstration",
+      "start": 53.811678
+    }
+  ]
+}

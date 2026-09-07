@@ -260,6 +260,28 @@ test('the manifest can describe a different bounded local voice package', async 
   assert.deepEqual(worker.requests, [`${scope}${pack.assets[1].path}`]);
 });
 
+test('a changed clip-bank generation does not replace the bank used by an older open client', async () => {
+  const asset = pack.assets[1];
+  const oldManifest = { version: 'qgh-pilot-kokoro-clips-en-2', assets: [asset] };
+  const old = createHarness({ version: '4.4.9-1', manifest: oldManifest });
+  await old.install();
+  await old.prepare();
+  const replacement = Buffer.from('New segment offsets and new bank generation');
+  const currentManifest = { version: 'qgh-pilot-kokoro-clips-en-3', assets: [{ ...asset,
+    bytes: replacement.length, sha256: createHash('sha256').update(replacement).digest('hex') }] };
+  const current = createHarness({ storage: old.storage, version: '5.0.0', manifest: currentManifest });
+  current.failures.set(`${scope}${asset.path}`, () => new Response(replacement));
+  await current.install();
+  await current.activate();
+  await current.prepare();
+  assert.equal(current.messages.at(-1).state, 'ready');
+  old.setOffline(true); current.setOffline(true);
+  assert.equal(await (await old.fetch(`${scope}${asset.path}`)).text(), bodies.get(asset.path).toString());
+  assert.equal(await (await current.fetch(`${scope}${asset.path}`)).text(), replacement.toString());
+  assert.ok(old.storage.has('qgh-pilot-voices-simulator-qgh-pilot-kokoro-clips-en-2'));
+  assert.ok(old.storage.has('qgh-pilot-voices-simulator-qgh-pilot-kokoro-clips-en-3'));
+});
+
 function createRegistrationHarness({ entry = true, exercise = false } = {}) {
   const swHandlers = new Map();
   const windowHandlers = new Map();

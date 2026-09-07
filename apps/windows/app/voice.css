@@ -358,7 +358,10 @@
 }
 
 /* Desktop keeps the movable rail; phones get a reserved bottom dock. */
-:root { --qgh-voice-dock-height: 0px; }
+:root {
+  --qgh-voice-dock-height: 0px;
+  --qgh-browser-bottom-inset: 0px;
+}
 body:has(.voice-dock) { padding-right: 90px; }
 .voice-dock {
   --voice-safe-top: env(safe-area-inset-top, 0px);
@@ -403,25 +406,40 @@ body:has(.voice-dock) { padding-right: 90px; }
 .voice-confirmation strong { font-size: 11px; }
 
 @media (max-width: 600px) and (orientation: portrait) {
-  :root { --qgh-voice-dock-height: calc(120px + env(safe-area-inset-bottom, 0px)); }
-  body:has(.voice-dock) { padding: 0; height: 100dvh; overflow: hidden; }
+  :root {
+    --qgh-phone-bottom-inset: max(env(safe-area-inset-bottom, 0px), var(--qgh-browser-bottom-inset));
+    --qgh-voice-dock-height: calc(120px + var(--qgh-phone-bottom-inset));
+  }
+  /* Keep the browser as the single scroll surface.  A fixed-height inner app made
+     setup and exercise content look clipped on phones and was awkward to scroll. */
+  body:has(.voice-dock) {
+    padding: 0;
+    min-height: 100dvh;
+    height: auto;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
   body:has(.voice-dock) :is(.app, .tactical-app, .entry-app) {
-    height: calc(100dvh - var(--qgh-voice-dock-height));
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
     margin: 0;
-    padding: 12px 12px 20px;
+    padding:
+      max(12px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      calc(var(--qgh-voice-dock-height) + 20px)
+      max(12px, env(safe-area-inset-left, 0px));
     width: 100%;
     max-width: none;
-    scrollbar-width: thin;
     scroll-padding-block: 12px;
   }
   body:has(.voice-dock) :is(.review-toolbar, .tactical-review-toolbar) { bottom: 8px; }
-  body:has(.voice-dock[data-edge='top']) { padding-top: calc(120px + env(safe-area-inset-top, 0px)); }
+  body:has(.voice-dock[data-edge='top']) :is(.app, .tactical-app, .entry-app) {
+    padding-top: calc(120px + env(safe-area-inset-top, 0px) + 20px);
+  }
   .voice-dock {
     top: auto;
-    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    bottom: max(8px, var(--qgh-phone-bottom-inset));
     right: max(8px, env(safe-area-inset-right, 0px));
     left: max(8px, env(safe-area-inset-left, 0px));
     width: auto;
@@ -475,6 +493,9 @@ body:has(.voice-dock) { padding-right: 90px; }
 .headphone-dialog .headphone-eyebrow { color: #006568; font: 600 11px/1.5 'IBM Plex Mono', monospace; letter-spacing: .09em; }
 .headphone-warning { border-left: 3px solid #b32f36; padding-left: 14px; }
 .headphone-pace { color: #006568; font-weight: 600; }
+.headphone-rate-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.headphone-dialog .headphone-rate { min-height: 42px; padding: 8px 4px; font-size: 10px; }
+.headphone-dialog .headphone-rate[aria-pressed='true'] { border-color: #007d7d; background: #007d7d; color: #fff; }
 .headphone-help { color: #485b60; font-size: 13px; }
 .headphone-dialog button { width: 100%; min-height: 48px; padding: 12px; border: 1px solid #9cadaa; border-radius: 8px; background: #fffefa; color: #075e60; font: 600 12px/1.35 'IBM Plex Sans', sans-serif; cursor: pointer; }
 .headphone-dialog button:disabled { color: #647776; background: #eceeea; cursor: not-allowed; }

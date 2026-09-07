@@ -1,0 +1,169 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:09.178
+Welcome to Reds QGH Simulator. This narrated screen guide uses captures from the actual release. It explains the controls; it is not a live microphone recognition test.
+
+00:00:09.433 --> 00:00:16.552
+Choose Single Aircraft or Tactical, then check the procedure, tracks, aircraft profile, initial distance, speed and rate of turn.
+
+00:00:16.802 --> 00:00:23.628
+Check initial altitude and airfield settings. A runway designator is separate from runway orientation. Keep their units clear.
+
+00:00:23.878 --> 00:00:31.230
+In Normal QGH, turn right heading 230 assigns a right turn to the selected heading. The aircraft follows a curved path at its configured rate.
+
+00:00:31.479 --> 00:00:38.060
+In U/S Compass, use turn left now, turn right now, and stop turn now. Left and right work independently.
+
+00:00:38.313 --> 00:00:45.790
+Request a transmission to see the direction-finding indication. It follows the aircraft during the reply, holds briefly after release, then blanks.
+
+00:00:46.046 --> 00:00:51.604
+Watch the red acknowledgement and the highlighted control. The buttons remain available whenever you prefer manual control.
+
+00:00:51.854 --> 00:00:57.935
+Terminate the exercise to inspect the track and command history. Replay helps connect each instruction with the movement that followed.
+
+00:00:58.211 --> 00:01:05.820
+Prepare voice resources while connected, before relying on offline practice. The microphone and pilot resources operate on the device after preparation.
+
+00:01:06.077 --> 00:01:11.689
+Allow microphone access for this site. Check that the intended headset or microphone is selected in your device settings.
+
+00:01:11.944 --> 00:01:20.024
+Pilot replies start muted. Their captions and simulated transmissions still work. Sound is optional, and manual exercise controls stay available.
+
+00:01:20.277 --> 00:01:26.102
+For audible pilot replies, wear headphones, play the headphone test, then confirm that you heard the test through them.
+
+00:01:26.351 --> 00:01:33.975
+Choose one hundred, one hundred and thirty, or one hundred and seventy words per minute. This setting controls pilot speech, not aircraft speed.
+
+00:01:34.224 --> 00:01:42.457
+Keep replies muted on speakers. Sound entering the microphone can be mistaken for a controller call. Device changes are not reported reliably by every browser.
+
+00:01:42.707 --> 00:01:50.624
+If recognition is unavailable, use the on-screen controls and consult the accepted-call catalogue. This screen guide does not certify a microphone or headphone route.
+
+00:01:50.874 --> 00:01:57.803
+Before a full exercise, make a short call on your own device and check the acknowledgement. Physical microphone and mobile testing remain essential.
+
+00:01:58.076 --> 00:02:04.454
+PTT gives you a clear transmission boundary. Continuous Listening is optional when you need hands-free calls in a quiet environment.
+
+00:02:04.710 --> 00:02:11.862
+Hold PTT, speak one complete instruction, then release. Allow the final words to arrive before treating the transmission as complete.
+
+00:02:12.112 --> 00:02:18.703
+The accepted instruction executes before the pilot reply. Check the red result and affected control instead of relying on the sound alone.
+
+00:02:18.953 --> 00:02:25.728
+With Continuous Listening, finish the complete call and leave a short natural pause. Background conversation can be heard by the microphone.
+
+00:02:25.986 --> 00:02:33.699
+Controller PTT interrupts pilot audio. A fresh accepted command gets its own response. An interrupted old reply is not replayed afterward.
+
+00:02:33.953 --> 00:02:40.013
+Mute pilot sound before removing headphones. Muting does not cancel accepted instructions or stop the aircraft moving.
+
+00:02:40.263 --> 00:02:46.804
+Move the compact voice control or reset its position if it obscures a control. Use the Controls toggle to manage the exercise panel.
+
+00:02:47.063 --> 00:02:53.927
+Practise these steps with your own microphone. The images here illustrate the interface and do not claim that a spoken call was captured during recording.
+
+00:02:54.200 --> 00:03:01.086
+The accepted-call catalogue is the reference for this release. Filter by procedure or category, then read the required state and limitations.
+
+00:03:01.336 --> 00:03:08.356
+turn left heading 140 and turn left 140 have the same heading-turn meaning. Use a complete heading and a clear direction.
+
+00:03:08.606 --> 00:03:16.522
+report heading passing 065 arms a report. It does not assign that heading. The aircraft reports only when it actually crosses the requested value.
+
+00:03:16.773 --> 00:03:23.161
+U/S Compass uses immediate left, right and stop commands. It does not provide actual aircraft heading reports.
+
+00:03:23.412 --> 00:03:31.752
+qnh 1013 applies a pressure setting. Weather is received as information. report passing altitude 6000 feet arms a separate level report.
+
+00:03:32.012 --> 00:03:39.953
+Standby is preparation, not a turn. Unclear, conditional or negated calls must not silently create a manoeuvre. Check the displayed outcome.
+
+00:03:40.212 --> 00:03:47.760
+A landing instruction can be recognised as not simulated. It does not create an automatic landing. Use the catalogue to distinguish these outcomes.
+
+00:03:48.012 --> 00:03:54.958
+These captured screens show controls and their reported states. They are a guide to intended operation; test real recognition with your own voice.
+
+00:03:55.235 --> 00:04:01.074
+Tactical QGH supports two to four aircraft. Check every callsign, colour and level before starting.
+
+00:04:01.335 --> 00:04:10.352
+Speak the configured callsign for every aircraft instruction. Text callsigns and three-digit numbers are supported. The name identifies the aircraft; colour is an additional aid.
+
+00:04:10.603 --> 00:04:18.353
+The radio target highlights during the transmission. Addressing another aircraft does not change your manual selection. Check the callsign in each acknowledgement.
+
+00:04:18.603 --> 00:04:24.371
+Choose the formation leader in setup. Attached followers follow its movement and preserve their formation level offsets.
+
+00:04:24.636 --> 00:04:32.139
+Stop Following Leader releases the addressed follower. It preserves its flight state until a new instruction changes it. You can then give individual turns.
+
+00:04:32.403 --> 00:04:40.054
+A follower must detach before choosing its own speed. Individual vertical instructions detach a follower, and level conflicts require the visible confirmation.
+
+00:04:40.304 --> 00:04:46.982
+Separate instructions let you vary the timing of base turns and the distances used for individual approaches. No automatic track join is added.
+
+00:04:47.237 --> 00:04:55.378
+During debrief, use callsigns and track colours to follow each aircraft. Compare the accepted call, its timing and the actual path before the next exercise.
+
+00:04:55.661 --> 00:05:02.226
+After termination, the review shows the completed flight path and command history. Fit the track before inspecting a smaller section.
+
+00:05:02.477 --> 00:05:10.157
+Cardinal radials and configured outbound and approach references help relate the flown path to the exercise. These lines are references, not automatic clearances.
+
+00:05:10.410 --> 00:05:17.538
+Turn radius depends on speed and turn rate. Inspect the overhead manoeuvre and base turn as curved paths, not single-point changes of direction.
+
+00:05:17.788 --> 00:05:25.291
+Choose a faster replay speed to cover quiet portions, then pause around an instruction. Zoom and fit controls let you keep the useful part of the path in view.
+
+00:05:25.555 --> 00:05:32.551
+Match each accepted instruction to its aircraft and response. Distinguish a received information call from a report request or an applied flight action.
+
+00:05:32.801 --> 00:05:39.207
+A request to report a heading or level creates a future condition. The report occurs only when the aircraft reaches the corresponding event.
+
+00:05:39.467 --> 00:05:47.471
+For Tactical exercises, inspect separation and detachment timing alongside each callsign. The shared display does not mean all aircraft received one clearance.
+
+00:05:47.734 --> 00:05:57.036
+Choose one improvement and restart with a new random exercise. Keep the same setup or return to setup to change its demands. This is a training debrief, not operational certification.
+
+00:05:57.324 --> 00:06:04.497
+On a phone, keep the exercise display in view and use the Controls toggle when you need the panel. Compact aircraft tabs retain the callsigns.
+
+00:06:04.757 --> 00:06:12.173
+Close open settings after use. Move or reset the voice controls if they cover a control. Change orientation only when it helps your task.
+
+00:06:12.424 --> 00:06:18.866
+Check microphone permission and headphone output on the actual phone. A laptop test cannot prove the phone uses the same route or microphone.
+
+00:06:19.124 --> 00:06:26.131
+Open the site while connected and complete resource preparation. An installed web app still needs its resources available locally before offline practice.
+
+00:06:26.390 --> 00:06:33.725
+Demonstration videos are optional. Save one clip deliberately for offline use. Wait for the complete saved confirmation before disconnecting.
+
+00:06:33.990 --> 00:06:42.560
+Remove unneeded clips to free storage. Older-version videos are not used by a new release. The remove button clears only that site’s older video caches.
+
+00:06:42.824 --> 00:06:51.143
+Finish the exercise before accepting an update or reloading the page. If the layout or version stays wrong, record the site, device and visible version when reporting it.
+
+00:06:51.393 --> 00:06:59.953
+Use manual controls whenever voice is unavailable. These screen guides explain the interface; physical phone, microphone and offline testing remain necessary on your device.

@@ -204,10 +204,67 @@ test('bundled segments cover generated radio replies without spelling fixed word
   }
 });
 
+test('bundled segments speak every fixed word in accepted procedure readbacks and reports', async () => {
+  const runtime = await import(pathToFileURL(path.join(__dirname, '..', 'vendor/pilot-tts/runtime.mjs')).href);
+  const index = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'pilot-voices/index.json'), 'utf8'));
+  const Procedure = require('../procedure-core.js');
+  const Intent = require('../procedure-intent.js');
+  const Voice = require('../voice-control.js');
+  const make = (level = 15000) => Procedure.create({
+    environment: { aerodromeElevationFt: 1000 },
+    aircraft: [{ id: 'single', callsign: 'RAVEN 21', level }]
+  });
+  const reply = (state, text, context) => {
+    const plan = Intent.parse(text, { single: true, callsigns: [{ id: 'single', callsign: 'RAVEN 21' }] }, Voice);
+    assert.equal(plan?.accepted, true, text);
+    const result = Procedure.apply(state, plan, context);
+    assert.equal(result.authorization, 'AUTHORIZED', text);
+    return result.response.text;
+  };
+  const samples = [];
+  let state = make();
+  for (const text of [
+    'qnh nine one eight', 'qfe nine nine eight', 'runway in use two three left',
+    'runway in use zero six right', 'runway in use one eight centre', 'squawk four one zero zero',
+    'frequency one two three decimal four',
+    'surface wind two three zero degrees ten knots temperature two eight degrees celsius',
+    'stand by to commence descent'
+  ]) samples.push(reply(state, text));
+  samples.push(reply(make(), 'descend altitude fourteen thousand five hundred feet'));
+  samples.push(reply(make(), 'descend height four thousand feet'));
+  samples.push(reply(make(), 'climb flight level one eight zero'));
+  samples.push(reply(make(), 'maintain altitude fifteen thousand feet'));
+  state = make();
+  reply(state, 'descend altitude twelve thousand feet');
+  samples.push(reply(state, 'report level'));
+  samples.push(reply(state, 'report passing altitude fourteen thousand five hundred feet'));
+  samples.push(...Procedure.step(state, 60).map(report => report.text));
+  state = make();
+  samples.push(reply(state, 'descend altitude fourteen thousand feet report reaching'));
+  samples.push(...Procedure.step(state, 60).map(report => report.text));
+  samples.push(reply(make(2000), 'report aerodrome visual', { geometry: { range: 1, phase: 'inbound', heading: 225, inbound: 225 } }));
+  samples.push(reply(make(2000), 'report runway visual', { geometry: { range: 3, phase: 'inbound', heading: 225, inbound: 225 } }));
+  state = make();
+  const overhead = { range: 0.1, qte: null, overhead: true };
+  assert.equal(Procedure.observeOverhead(state, 'single', overhead, 'tx-1'), false);
+  assert.equal(Procedure.observeOverhead(state, 'single', overhead, 'tx-2'), true);
+  samples.push('OVERHEAD INDICATION 1 OF 2', 'OVERHEAD CONFIRMED');
+  for (const text of samples) {
+    const speech = `${Intent.speech(text)}, Raven 21.`;
+    const segments = runtime.selectSegments(speech, index);
+    assert.ok(segments.length > 0, text);
+    assert.equal(segments.some(segment => segment.startsWith('letter:')), false,
+      `${text} fell back to spelling: ${segments.join(', ')}`);
+  }
+});
+
 test('all bundled assets match their pinned manifest and remain below ordinary Git file limits', () => {
   const { createHash } = require('node:crypto');
   const root = path.join(__dirname, '..');
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'pilot-voices/manifest.json'), 'utf8'));
+  const voiceIndex = JSON.parse(fs.readFileSync(path.join(root, 'pilot-voices/index.json'), 'utf8'));
+  assert.equal(manifest.version, 'qgh-pilot-kokoro-clips-en-3');
+  assert.equal(voiceIndex.version, manifest.version, 'voice index and cache manifest must share a pack version');
   assert.equal(manifest.voices.length, 4);
   for (const asset of manifest.assets) {
     assert.match(asset.path, /^(?:pilot-voices\/|vendor\/pilot-tts\/)/);
@@ -225,6 +282,13 @@ test('all four real banks contain complete bounded segments and assemble a readb
   const runtime = await import(pathToFileURL(path.join(__dirname, '..', 'vendor/pilot-tts/runtime.mjs')).href);
   const root = path.join(__dirname, '..', 'pilot-voices');
   const index = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'));
+  const recipe = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vendor/pilot-tts/render-recipe.json'), 'utf8'));
+  const recipeSegments = new Map(recipe.segments.map(segment => [segment.key, segment]));
+  assert.deepEqual(recipe.segments.filter(segment => segment.tempoMaxFactor != null)
+    .map(segment => [segment.key, segment.tempoMaxFactor]), [['frequency', 2.1]]);
+  assert.deepEqual(recipe.nativeRenderSpeedMultipliers,
+    { maintaining: { bm_george: 1.2 }, descending: { bm_george: 1.1 }, altitude: { bm_george: 1.1 } });
+  assert.deepEqual(index.tempoNormalization.segmentMaxFactorOverrides, { frequency: 2.1 });
   const fingerprints = new Set();
   const { createHash } = require('node:crypto');
   for (const voice of runtime.VOICE_IDS) {
@@ -233,9 +297,11 @@ test('all four real banks contain complete bounded segments and assemble a readb
     const bank = runtime.decodeBank(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
     for (const key of [...index.phrases, ...Array.from('abcdefghijklmnopqrstuvwxyz', letter => `letter:${letter}`)]) {
       const segment = index.voices[voice].segments[key];
+      const maxFactor = recipeSegments.get(key)?.tempoMaxFactor ?? 2.0;
       assert.ok(segment?.offset >= 0 && segment.length > 0 && segment.offset + segment.length <= bank.length, `${voice}: ${key}`);
       assert.equal(segment.length, segment.words * 14400, `${voice}: ${key} must target 100 WPM`);
-      assert.ok(segment.tempo.appliedFactor >= 0.5 && segment.tempo.appliedFactor <= 2.0);
+      assert.equal(segment.tempo.maxFactor, maxFactor, `${voice}: ${key} tempo provenance`);
+      assert.ok(segment.tempo.appliedFactor >= 0.5 && segment.tempo.appliedFactor <= maxFactor);
       assert.ok(Math.abs(segment.tempo.silenceAdjustmentSamples) <= 720);
     }
     const reply = runtime.assemble('Roger, turning left, one four zero, Raven 21.', voice, index, bank);
