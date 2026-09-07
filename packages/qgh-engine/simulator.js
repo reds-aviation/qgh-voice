@@ -68,7 +68,7 @@
     const overhead = rangeNm() <= OVERHEAD_ZONE_NM;
     return { source: 'single', callsign: state.cfg.callsign, procedure: state.procedure,
       heading: state.plane.heading, simulationSeconds: Math.max(0, state.path.length - 1) * PHYSICS_STEP_SECONDS,
-      range: rangeNm(), orbitSide: state.orbit?.side, turnSide: $('continueHeading')?.dataset.turnSide,
+      range: rangeNm(), phase: state.phase, inbound: state.cfg.inbound, orbitSide: state.orbit?.side, turnSide: $('continueHeading')?.dataset.turnSide,
       overhead, qdm: overhead ? null : qdm(), qte: overhead ? null : qte() };
   }
 
@@ -82,6 +82,7 @@
   }
 
   function releaseRadioTransmit(token) {
+    window.QGHProcedureWorkspace?.endTransmission('single', token, radioSnapshot());
     receiver.release(token);
     renderDF();
     window.QGHRadioWorkspace?.channelAvailable();
@@ -379,6 +380,7 @@
     checkPendingLeg(motion.distanceNm);
     if (state.dfLive) renderDF();
     record();
+    window.QGHProcedureWorkspace?.advance(duration);
     window.QGHRadioWorkspace?.observeHeading('single', state.plane.heading);
     if (motion.completedLaps || motion.exited) {
       logCommand(motion.exited ? 'ORBIT RESUMED' : 'ORBIT COMPLETE', motion.exited ? 'Pre-orbit heading resumed.' : '360° completed; continuing orbit.');
@@ -543,7 +545,7 @@
     state.manualTurnRecord = null;
     updateUsTurnControls();
     updateNormalContinueControl();
-    logCommand('STOP TURN NOW', `Aircraft levels on ${padHeading(state.plane.heading)}°M.`);
+    logCommand('STOP TURN NOW', 'Turn stopped; wings level.');
     startFlightLoop();
     showToast('TURN STOPPED');
     window.QGHRadioWorkspace?.manualCommand({ intent: 'us-turn-stop' });
@@ -775,6 +777,7 @@
       state.commands = [];
       state.procedureTurns = { overhead: null, base: null };
       state.reviewMaxRange = null;
+      window.QGHProcedureWorkspace?.initialize([{ id: 'single', callsign }]);
       resetClock();
       record();
       $('headingInput').value = Math.round(state.cfg.inbound);
@@ -903,6 +906,7 @@
     beginTransmit: beginRadioTransmit,
     endTransmit: releaseRadioTransmit,
     observation: () => receiver.read(),
+    procedureContext: () => ({ geometry: radioSnapshot() }),
     reportEvent: (source, text) => logCommand('HEADING PASSING REPORT', text),
     controllerStart: () => { clearTimeout(state.dfExpiry); receiver.controllerStart(); renderDF(); }
   });

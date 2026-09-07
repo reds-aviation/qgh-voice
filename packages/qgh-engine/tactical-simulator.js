@@ -77,7 +77,7 @@
     const bearing = Tactical.bearingFor(aircraft);
     return { source: id, callsign: aircraft.callsign, procedure: state.procedure,
       heading: aircraft.plane.heading, simulationSeconds: state.exercise.simulationSeconds,
-      range: bearing.range, orbitSide: aircraft.orbit?.side,
+      range: bearing.range, phase: aircraft.phase, inbound: state.exercise.cfg.inbound, orbitSide: aircraft.orbit?.side,
       turnSide: aircraft.forcedTurnSide || aircraft.manualTurnSide || aircraft.initialTurnSide,
       overhead: bearing.overhead, qdm: bearing.overhead ? null : bearing.qdm, qte: bearing.overhead ? null : bearing.qte };
   }
@@ -94,6 +94,7 @@
   }
 
   function releaseRadioTransmit(token) {
+    window.QGHProcedureWorkspace?.endTransmission(state.dfAircraftId, token, radioSnapshot(state.dfAircraftId));
     receiver.release(token);
     renderDF();
     window.QGHRadioWorkspace?.channelAvailable();
@@ -789,6 +790,7 @@
       state.activeAircraftId = state.exercise.formation && state.exercise.formation.enabled
         ? state.exercise.formation.leaderId
         : state.exercise.aircraft[0].id;
+      window.QGHProcedureWorkspace?.initialize(state.exercise.aircraft);
       state.commands = [];
       state.reviewMaxRange = null;
       state.focusedReviewId = null;
@@ -815,6 +817,7 @@
 
   function stepFlight(duration) {
     const events = Tactical.step(state.exercise, duration);
+    window.QGHProcedureWorkspace?.advance(duration);
     state.exercise.aircraft.forEach(aircraft => window.QGHRadioWorkspace?.observeHeading(aircraft.id, aircraft.plane.heading));
     const resumed = new Set(events.filter(event => event.type === 'ORBIT RESUMED').map(event => event.aircraftId));
     for (const event of events) {
@@ -1320,6 +1323,25 @@
     beginTransmit: beginRadioTransmit,
     endTransmit: releaseRadioTransmit,
     observation: () => receiver.read(),
+    followingMap: () => {
+      const formation = state.exercise?.formation;
+      if (!formation?.enabled) return {};
+      return Object.fromEntries(formation.memberIds.filter(id => id !== formation.leaderId && !formation.detachedIds.includes(id)).map(id => [id, formation.leaderId]));
+    },
+    procedureContext: id => {
+      const formation = state.exercise?.formation;
+      const members = formation?.enabled ? formation.memberIds.filter(member => !formation.detachedIds.includes(member)) : [];
+      return { geometry: radioSnapshot(id), follower: members.includes(id) && id !== formation.leaderId,
+        attachedIds: id === formation?.leaderId ? members.filter(member => member !== id) : [] };
+    },
+    detachFollower: id => { Tactical.stopFollowingLeader(state.exercise, id); renderRail(); },
+    setActualLevel: (id, altitude) => { const aircraft = aircraftById(id); if (aircraft) aircraft.level = altitude; },
+    highlightRadioTarget: id => {
+      const item = state.railItems.get(id)?.item;
+      if (!item) return;
+      item.classList.add('radio-target');
+      setTimeout(() => item.classList.remove('radio-target'), 2500);
+    },
     reportEvent: (source, text) => logCommand(source, 'HEADING PASSING REPORT', text),
     controllerStart: () => { clearTimeout(state.dfExpiry); receiver.controllerStart(); renderDF(); }
   });

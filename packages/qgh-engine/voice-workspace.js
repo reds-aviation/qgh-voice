@@ -1011,6 +1011,7 @@
 
   function runCommand(command) {
     if (!command?.accepted) return result(false, 'COMMAND NOT RECOGNISED');
+    if (command.intent === 'procedure-command') return root.QGHProcedureWorkspace?.execute(command) || result(false, 'PROCEDURE CONTROLS UNAVAILABLE');
     if (command.intent === 'request-heading-passing') {
       const tactical = pageKind() === 'tactical';
       if (!activeScreen(tactical ? 'tConsole' : 'console')) return result(false, 'START AN EXERCISE FIRST');
@@ -1145,8 +1146,9 @@
 
   function dispatchTranscript(transcript) {
     if (pilotBlocksMicrophone()) return result(false, 'PILOT TRANSMITTING');
+    const radioOptions = { callsigns: voiceCallsignOptions(), single: pageKind() === 'single' };
     const radio = activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console')
-      ? root.QGHRadioSession?.parseMessage(transcript, Voice, { callsigns: voiceCallsignOptions(), single: pageKind() === 'single' }) : null;
+      ? root.QGHProcedureIntent?.parse(transcript, radioOptions, Voice) || root.QGHRadioSession?.parseMessage(transcript, Voice, radioOptions) : null;
     const command = radio || Voice.parseCommand(transcript, {
       callsigns: voiceCallsignOptions(),
       profiles: availableProfileOptions()
@@ -1157,7 +1159,7 @@
     try { outcome = routeTranscript(transcript, command); }
     finally { state.dispatchingRadioCommand = false; }
     if (sequence === state.feedbackSequence) presentVoiceResult(command, outcome, transcript);
-    if (outcome.ok && !state.pendingCommand) root.QGHRadioWorkspace?.acknowledge(command);
+    if (outcome.ok && !state.pendingCommand && command.intent !== 'procedure-command') root.QGHRadioWorkspace?.acknowledge(command);
     return outcome;
   }
 

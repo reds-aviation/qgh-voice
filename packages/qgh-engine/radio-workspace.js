@@ -79,6 +79,7 @@
   }
 
   function interrupt() {
+    if (active) adapter.reportEvent?.(active.source, `PILOT REPLY INTERRUPTED · ${active.reply?.text || ''}`);
     if (active?.report && active.token == null && !reports.has(active.report.queueKey)) reports.set(active.report.queueKey, active.report);
     generation += 1;
     clearTimers();
@@ -153,7 +154,7 @@
       if (!current || (report.intent === 'heading-passing-report' && current.procedure === 'us')) { schedule(); return; }
       const delayed = Number.isFinite(current.simulationSeconds) && current.simulationSeconds - report.simulationSeconds > 2;
       item = { source, report, intent: report.intent,
-        reply: Radio.replyFor({ intent: report.intent, heading: report.heading, delayed }, report) };
+        reply: report.reply || Radio.replyFor({ intent: report.intent, heading: report.heading, delayed }, report) };
       if (!item.reply) { schedule(); return; }
     }
     item = refreshLiveSample(item);
@@ -331,7 +332,28 @@
     pilotWpm = [100, 130, 170].includes(Number(value)) ? Number(value) : 100;
   }
 
-  root.QGHRadioWorkspace = Object.freeze({ acknowledge, controllerStart, controllerEnd, interrupt, reset, resetExercise, requestHeadingPassing, observeHeading, notifyOrbitComplete, channelAvailable: schedule,
+  function enqueueOutcome(outcome) {
+    if (!adapter.active() || !outcome.transmission?.shouldReply) return;
+    const aircraft = adapter.snapshot(outcome.targetAircraftId);
+    if (!aircraft) return;
+    if (active || echoTimer) interrupt();
+    const text = outcome.response.text;
+    const reply = Object.freeze({ text: `${text} · ${aircraft.callsign}`, speech: `${root.QGHProcedureIntent.speech(text)}, ${aircraft.callsign}.` });
+    pending.push({ source: aircraft.source, callsign: aircraft.callsign, intent: 'procedure-command', outcome, reply });
+    if (pending.length > 8) pending.shift();
+    schedule();
+  }
+  function enqueueProcedureReport(report) {
+    const aircraft = adapter.snapshot(report.source);
+    if (!aircraft || !adapter.active()) return;
+    const key = `procedure:${report.source}:${report.timestamp}:${report.text}`;
+    reports.set(key, Object.freeze({ ...aircraft, simulationSeconds: report.timestamp, source: report.source,
+      queueKey: key, intent: 'procedure-report', reply: Object.freeze({ text: `${report.text} · ${aircraft.callsign}`,
+        speech: `${root.QGHProcedureIntent.speech(report.text)}, ${aircraft.callsign}.` }) }));
+    schedule();
+  }
+
+  root.QGHRadioWorkspace = Object.freeze({ acknowledge, enqueueOutcome, enqueueProcedureReport, controllerStart, controllerEnd, interrupt, reset, resetExercise, requestHeadingPassing, observeHeading, notifyOrbitComplete, channelAvailable: schedule,
     manualCommand: command => {
       if (!root.QGHVoiceWorkspace?.isDispatchingRadioCommand()) acknowledge(command);
     },
