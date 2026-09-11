@@ -1,8 +1,8 @@
 {
   "name": "Reds QGH Simulator",
-  "releaseName": "v5.0.0 · Complete QGH Training Edition",
-  "version": "5.0.0",
-  "androidVersionCode": 30,
-  "updated": "2026-09-07",
+  "releaseName": "v5.0.1 · Protected Pilot Readbacks",
+  "version": "5.0.1",
+  "androidVersionCode": 31,
+  "updated": "2026-09-11",
   "releaseStage": "public-release"
 }

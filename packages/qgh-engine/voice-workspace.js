@@ -1377,7 +1377,10 @@
   }
 
   function pilotBlocksMicrophone() {
-    return Boolean(root.QGHHeadphones?.blocksMicrophone?.()) || (state.pilotSpeaking && !root.QGHRadioWorkspace?.allowsBargeIn?.());
+    // Continuous Listening is half-duplex while the aircraft is transmitting.
+    // Only an explicit PTT press may interrupt a pilot readback; raw activity
+    // from echo, breathing or room noise must never cancel it.
+    return Boolean(root.QGHHeadphones?.blocksMicrophone?.()) || state.pilotSpeaking;
   }
 
   function setPilotSpeaking(speaking) {
@@ -1888,10 +1891,10 @@
         mutePilot.hidden = !enabled;
         pilotNote.textContent = root.QGHPilotVoiceEngine
           ? inSetup
-            ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Pilot speed ${rate} words/minute. PTT and continuous controller speech take priority.`
+            ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Pilot speed ${rate} words/minute. PTT can interrupt a reply; Continuous Listening pauses until the reply finishes.`
             : `${enabled ? 'Pilot replies are on. You can mute them here.' : 'Pilot replies are muted.'} Headphone setup is available before starting the next exercise.`
           : root.QGHRadioWorkspace.audioAvailable()
-            ? 'Off by default: muted. Enable only with headphones. In continuous mode, your speech interrupts pilot audio. PTT always takes priority.'
+            ? 'Off by default: muted. Enable only with headphones. Continuous Listening pauses during pilot replies and automatically resumes after the channel clears. PTT always takes priority.'
             : 'No local English output voice available. Captions and timed pilot D/F still work offline.';
         const message = root.QGHHeadphones?.status?.().message;
         if (!enabled && message) pilotNote.textContent = `${message} ${pilotNote.textContent}`;

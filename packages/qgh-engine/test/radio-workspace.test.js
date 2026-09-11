@@ -104,7 +104,6 @@ test('stored opt-in never restores pilot sound and current headphone confirmatio
   h.confirmHeadphones(false);
   h.radio.setAudioEnabled(true);
   assert.equal(h.radio.status().audioEnabled, false);
-  assert.equal(h.radio.allowsBargeIn(), false);
   h.confirmHeadphones(true); h.radio.setAudioEnabled(true);
   assert.equal(h.radio.status().audioEnabled, true);
 });
@@ -172,8 +171,8 @@ test('a real bundled readback with a twenty-letter callsign stays live past fift
   speech.onend();
   assert.equal(h.radio.status().phase, 'idle');
   assert.equal(h.receiver.read().phase, 'hold');
-  h.advance(250); assert.equal(h.gates.at(-1), false);
-  h.advance(1750); assert.equal(h.receiver.read().phase, 'idle');
+  h.advance(900); assert.equal(h.gates.at(-1), false);
+  h.advance(1100); assert.equal(h.receiver.read().phase, 'idle');
 });
 
 test('bundled playback watchdog uses duration plus margin and bounds missing or invalid metadata', () => {
@@ -189,8 +188,8 @@ test('bundled playback watchdog uses duration plus margin and bounds missing or 
     assert.equal(h.bundledCancellations(), 1);
     assert.equal(h.radio.status().phase, 'idle');
     assert.equal(h.receiver.read().phase, 'hold');
-    h.advance(250); assert.equal(h.gates.at(-1), false);
-    h.advance(1750); assert.equal(h.receiver.read().phase, 'idle');
+    h.advance(900); assert.equal(h.gates.at(-1), false);
+    h.advance(1100); assert.equal(h.receiver.read().phase, 'idle');
   }
 });
 
@@ -211,8 +210,8 @@ test('native local pilot audio drives the same transmission and frozen two-secon
   h.move(70); h.nativeEvent(speech.id, 'end'); h.move(90);
   assert.equal(h.receiver.read().qdm, 70);
   assert.equal(h.receiver.read().phase, 'hold');
-  h.advance(250); assert.equal(h.gates.at(-1), false);
-  h.advance(1750); assert.equal(h.receiver.read().phase, 'idle');
+  h.advance(900); assert.equal(h.gates.at(-1), false);
+  h.advance(1100); assert.equal(h.receiver.read().phase, 'idle');
 });
 
 test('native unavailable, preparing and disabled audio never use browser speech and retain muted DF', () => {
@@ -263,7 +262,7 @@ test('muting active native speech cancels audio but preserves DF and ignores cal
   assert.equal(h.nativeCancellations(), 1);
   h.nativeEvent(speech.id, 'end'); h.nativeEvent(speech.id, 'error');
   assert.equal(h.receiver.read().phase, 'live');
-  h.advance(250); assert.equal(h.gates.at(-1), false);
+  h.advance(900); assert.equal(h.gates.at(-1), false);
   h.advance(10000); assert.equal(h.receiver.read().phase, 'idle');
 });
 
@@ -325,7 +324,7 @@ test('automatic reports wait for pilot and manual DF transmissions and survive a
   h.radio.requestHeadingPassing({ aircraft: 'B', heading: 240 }); h.heading('B', 241); h.advance(500);
   assert.equal(h.utterances.length, 1, 'does not preempt pilot speech');
   h.radio.controllerStart(); h.radio.acknowledge({ ...turn, heading: 60 }); h.radio.controllerEnd();
-  h.advance(300); h.utterances[1].onstart(); h.utterances[1].onend(); h.advance(550);
+  h.advance(300); h.utterances[1].onstart(); h.utterances[1].onend(); h.advance(1200);
   assert.match(h.utterances[2].text, /^Heading passing two four zero, RAVEN 21/);
   h.utterances[2].onstart(); h.utterances[2].onend(); h.advance(3000);
   const token = h.receiver.transmit('A');
@@ -364,12 +363,11 @@ test('replacing a fired but unsent report cancels only that aircraft’s old rep
 test('a fresh device defaults to muted replies and headphones are an explicit opt-in', () => {
   const h = harness(local, false);
   assert.equal(h.radio.status().audioEnabled, false);
-  assert.equal(h.radio.allowsBargeIn(), false);
   h.radio.acknowledge(turn); h.advance(300);
   assert.equal(h.utterances.length, 0);
   assert.equal(h.receiver.read().phase, 'live');
   h.radio.setAudioEnabled(true);
-  assert.equal(h.radio.allowsBargeIn(), true);
+  assert.equal(h.radio.status().audioEnabled, true);
 });
 
 test('pilot transmission waits for channel release and retains addressed identity across selection changes', () => {
@@ -449,7 +447,7 @@ test('a newer pending manoeuvre supersedes an older one and muting does not exti
   assert.equal(h.queuedSpeech(), null, 'muting must stop actual synthesis');
   assert.ok(h.cancellations() > 0);
   assert.equal(h.receiver.read().phase, 'live');
-  h.advance(250);
+  h.advance(900);
   assert.equal(h.gates.at(-1), false, 'muting reopens requested continuous listening after the audio tail');
   assert.equal(h.receiver.read().phase, 'live', 'mute does not stop the aircraft radio observation');
   h.advance(10000);
@@ -480,7 +478,7 @@ test('new speed readbacks replace obsolete speeds for that aircraft without drop
   assert.equal(h.radio.status().pending, 2);
   h.radio.controllerEnd(); h.advance(300);
   assert.equal(h.utterances[0].text, 'Speed 200 knots, RAVEN 21.');
-  h.utterances[0].onstart(); h.utterances[0].onend(); h.advance(550);
+  h.utterances[0].onstart(); h.utterances[0].onend(); h.advance(1200);
   assert.equal(h.utterances[1].text, 'Speed 300 knots, FALCON 11.');
   assert.ok(h.utterances.every(utterance => !utterance.text.includes('240')));
 });

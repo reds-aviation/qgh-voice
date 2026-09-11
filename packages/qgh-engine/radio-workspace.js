@@ -127,7 +127,7 @@
       echoTimer = null;
       root.QGHVoiceWorkspace?.setPilotSpeaking(false);
       schedule();
-    }, 250);
+    }, 900);
   }
 
   function finish(ticket) {
@@ -361,7 +361,6 @@
       if (!root.QGHVoiceWorkspace?.isDispatchingRadioCommand()) acknowledge(command);
     },
     setAudioEnabled, setPilotRate, receiveNativeSpeechEvent, audioAvailable: () => bundledSpeech ? bundledSpeech.capability() === 'ready' : nativeSpeech ? nativeAudioAvailable() : Boolean(localVoice()),
-    allowsBargeIn: () => audioEnabled,
     status: () => ({ audioEnabled, pilotWpm, controllerHeld, phase: active ? 'pilot' : controllerHeld ? 'controller' : pending.length ? 'pending' : 'idle', pending: pending.length })
   });
 })(typeof globalThis === 'undefined' ? this : globalThis);

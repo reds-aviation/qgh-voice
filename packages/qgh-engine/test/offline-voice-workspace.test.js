@@ -329,39 +329,30 @@ test('continuous recognition retires the previous screen context and rearms afte
   assert.notEqual(env.nativeVoice.starts.at(-1).requestId, firstRequestId);
 });
 
-test('native activity interrupts real pilot audio, extends the quiet boundary, and executes only one final', async () => {
+test('continuous listening protects a pilot readback from raw activity and rearms after its audio tail', async () => {
   const env = createNativeRadioEnvironment();
   const requestId = await startNativeContinuous(env);
+  const recognitionCancellations = env.nativeVoice.cancels;
   env.radio.manualCommand({ intent: 'report-heading' });
   env.advanceTime(300);
   assert.equal(env.receiver.read().phase, 'live');
   assert.equal(env.nativeSpeech.calls.length, 1);
-  const cancelledBefore = env.nativeVoice.cancels;
+  assert.equal(env.nativeVoice.cancels, recognitionCancellations + 1,
+    'continuous microphone capture pauses before audible pilot speech');
   env.workspace.receiveNativeVoiceEvent({ type: 'speech-activity', requestId });
-  assert.equal(env.nativeSpeech.cancels, 1, 'pilot output stops before a final transcript exists');
-  assert.equal(env.nativeVoice.cancels, cancelledBefore, 'headphone continuous capture stays active');
-  assert.equal(env.radio.status().controllerHeld, true);
-  assert.deepEqual(env.commands, [], 'activity never executes a partial command');
-  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /^No voice call yet/);
-  env.advanceTime(800);
-  env.workspace.receiveNativeVoiceEvent({ type: 'speech-activity', requestId });
-  env.advanceTime(899);
-  assert.equal(env.radio.status().controllerHeld, true, 'each activity signal renews the quiet deadline');
-  env.advanceTime(1);
-  assert.equal(env.radio.status().controllerHeld, true, 'quiet boundary drains the recognizer before release');
+  assert.equal(env.nativeSpeech.cancels, 0, 'noise from a retired continuous capture cannot cut off the pilot');
+  assert.equal(env.receiver.read().phase, 'live', 'the pilot transmission remains live');
+  assert.equal(env.radio.status().controllerHeld, false, 'raw activity cannot take controller ownership');
+  assert.deepEqual(env.commands, [], 'raw activity cannot execute a command');
 
-  env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'report heading' });
-  env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'request distance' });
-  assert.deepEqual(env.commands, [], 'a final is buffered until the native transaction ends');
-  env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
-  env.workspace.receiveNativeVoiceEvent({ type: 'result', requestId, transcript: 'request distance' });
-  env.workspace.receiveNativeVoiceEvent({ type: 'speech-activity', requestId });
-  assert.deepEqual(env.commands, ['requestHeading']);
-  assert.equal(env.radio.status().controllerHeld, false, 'ended and late activity cannot retain ownership');
-  env.advanceTime(300);
+  const pilotId = env.nativeSpeech.calls[0].id;
+  env.radio.receiveNativeSpeechEvent({ type: 'end', id: pilotId });
+  env.advanceTime(899);
   await flush();
-  assert.equal(env.nativeSpeech.calls.length, 2, 'the accepted final receives its normal pilot readback');
-  assert.equal(env.receiver.read().phase, 'live');
+  assert.equal(env.nativeVoice.starts.length, 1, 'continuous listening stays paused through the audio tail');
+  env.advanceTime(181);
+  await flush();
+  assert.equal(env.nativeVoice.starts.length, 2, 'continuous listening automatically rearms after the protected reply');
 });
 
 test('stale, cancelled, and other-document native events cannot take radio ownership or execute controls', async () => {
@@ -389,7 +380,7 @@ test('stale, cancelled, and other-document native events cannot take radio owner
   };
   assertIgnored(env, oldRequestId);
   env.workspace.receiveNativeVoiceEvent({ type: 'speech-activity', requestId });
-  assert.equal(env.radio.status().controllerHeld, true, 'the current request still owns continuous capture');
+  assert.equal(env.radio.status().controllerHeld, false, 'pilot speech retires the current continuous capture');
   env.workspace.stopListening({ cancel: true });
   env.radio.manualCommand({ intent: 'report-heading' }); env.advanceTime(300);
   assertIgnored(env, requestId);
@@ -444,7 +435,7 @@ test('opening VOICE refreshes native pilot output readiness without a browser vo
   settings.click();
   env.nativeSpeech.capability = 'ready';
   settings.click();
-  assert.match(note.textContent, /your speech interrupts pilot audio/);
+  assert.match(note.textContent, /Continuous Listening pauses during pilot replies/);
   assert.equal(env.nativeSpeech.calls.length, 0, 'refreshing availability does not start audio');
 });
 
@@ -552,12 +543,11 @@ test('continuous radio waits for a quiet boundary and stopping it prevents micro
   assert.equal(runtime.engine.startCalls.length, starts);
 });
 
-test('headphones keep continuous recognition live and controller speech interrupts the pilot', async () => {
+test('headphones pause continuous recognition until the pilot readback is complete', async () => {
   const calls = [];
   const runtime = makeOfflineEngine({ cachedArchive: true });
   let env;
   env = createEnvironment({ offlineVoice: runtime.api, radio: {
-    allowsBargeIn: () => true,
     controllerStart() { calls.push('interrupt'); env.workspace.setPilotSpeaking(false); },
     controllerEnd() {}, reset() {}, acknowledge() {}
   } });
@@ -567,13 +557,16 @@ test('headphones keep continuous recognition live and controller speech interrup
   const capture = runtime.engine.lastStart;
   const cancellations = runtime.engine.cancelCalls;
   env.workspace.setPilotSpeaking(true);
-  assert.equal(runtime.engine.cancelCalls, cancellations, 'headphones do not cancel active recognition');
+  assert.equal(runtime.engine.cancelCalls, cancellations + 1, 'pilot speech pauses active recognition');
   capture.onPartial('turn left');
-  assert.deepEqual(calls, ['interrupt']);
+  assert.deepEqual(calls, [], 'retired microphone activity cannot interrupt the pilot');
   capture.onResult('turn left heading 010');
   assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /No voice call yet/);
-  runtime.engine.triggerEnd();
-  assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · turn left heading 010/);
+  const starts = runtime.engine.startCalls.length;
+  env.workspace.setPilotSpeaking(false);
+  [...env.timers.values()].forEach(callback => callback());
+  await flush();
+  assert.equal(runtime.engine.startCalls.length, starts + 1, 'continuous listening automatically rearms');
 });
 
 test('PTT releases outside without capture and ignores unrelated or duplicate releases', async () => {
