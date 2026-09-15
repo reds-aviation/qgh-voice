@@ -16,6 +16,7 @@
   ]);
   const PREPARE_TIMEOUT_MS = 120000;
   const GENERATION_TIMEOUT_MS = 5000;
+  const AUDIO_RECOVERY_TIMEOUT_MS = 8000;
   // The pre-rendered bank contains reusable phrases and individual number clips.
   // A short readback can therefore contain more natural clip duration than its
   // nominal word count allows.  Correct its *actual* duration at playback so
@@ -31,6 +32,7 @@
   let active = null;
   let serial = 0;
   let generationTimer = null;
+  let recoveryTimer = null;
 
   function available() {
     return typeof root.Worker === 'function'
@@ -62,6 +64,51 @@
   function clearGenerationTimer() {
     if (generationTimer !== null) root.clearTimeout(generationTimer);
     generationTimer = null;
+  }
+
+  function clearRecoveryTimer() {
+    if (recoveryTimer !== null) root.clearTimeout(recoveryTimer);
+    recoveryTimer = null;
+  }
+
+  function playbackError(pending, error) {
+    if (active !== pending) return;
+    active = null;
+    clearRecoveryTimer();
+    stopAudio();
+    notify(pending.onerror, error);
+  }
+
+  function boundRecovery(pending) {
+    clearRecoveryTimer();
+    recoveryTimer = root.setTimeout(() => playbackError(pending,
+      new Error('Pilot audio was interrupted. Test your headphones again.')), AUDIO_RECOVERY_TIMEOUT_MS);
+  }
+
+  function recovered(pending) {
+    if (active !== pending || !pending.recovering || context.state !== 'running') return;
+    pending.recovering = false;
+    clearRecoveryTimer();
+    notify(pending.onresume, { remainingSeconds: Math.max(0, pending.endAt - context.currentTime) });
+  }
+
+  function contextChanged() {
+    const pending = active;
+    if (!pending || !audio) return;
+    if (context.state === 'running') { recovered(pending); return; }
+    if (context.state === 'closed') {
+      playbackError(pending, new Error('Pilot audio was closed. Test your headphones again.'));
+      return;
+    }
+    if (pending.recovering || root.document?.visibilityState === 'hidden') return;
+    // A phone may interrupt the output context as its microphone route closes.
+    // Resume this source at its existing audio-clock position, not from word one.
+    pending.recovering = true;
+    boundRecovery(pending);
+    notify(pending.onpause);
+    try {
+      Promise.resolve(context.resume()).then(() => recovered(pending), error => playbackError(pending, error));
+    } catch (error) { playbackError(pending, error); }
   }
 
   function spokenWordCount(text) {
@@ -97,6 +144,7 @@
     serial += 1;
     active = null;
     clearGenerationTimer();
+    clearRecoveryTimer();
     stopAudio();
     try { worker?.postMessage({ type: 'cancel', token: serial }); } catch (_) { /* Failed worker is reset on its error. */ }
   }
@@ -146,6 +194,29 @@
     if (message.type !== 'audio') return;
     clearGenerationTimer();
     const pending = active;
+    const play = () => {
+      if (active !== pending) return;
+      clearRecoveryTimer();
+      startPlayback(pending, message);
+    };
+    const resumeAndPlay = () => {
+      if (active !== pending) return;
+      if (context.state === 'running') { play(); return; }
+      try {
+        Promise.resolve(context.resume()).then(play, error => playbackError(pending, error));
+      } catch (error) { playbackError(pending, error); }
+    };
+    // Stop/cancel synchronously invalidates recognition, but closing its audio
+    // hardware is asynchronous. Wait for that release before waking pilot output.
+    const waitForInput = root.QGHVoiceWorkspace?.whenInputAudioReleased;
+    if (waitForInput || context.state !== 'running') {
+      boundRecovery(pending);
+      try { Promise.resolve(waitForInput?.()).then(resumeAndPlay, error => playbackError(pending, error)); }
+      catch (error) { playbackError(pending, error); }
+    } else play();
+  }
+
+  function startPlayback(pending, message) {
     try {
       if (context.state !== 'running') throw new Error('Pilot audio is suspended. Test pilot voice again.');
       const samples = message.samples instanceof Float32Array ? message.samples : new Float32Array(message.samples);
@@ -160,19 +231,19 @@
       audio.playbackRate.value = pace;
       audio.connect(context.destination);
       const playing = audio;
+      pending.endAt = context.currentTime + samples.length / message.sampleRate / pace;
       playing.onended = () => {
         playing.disconnect();
         if (audio === playing) audio = null;
         if (active?.token !== pending.token) return;
+        clearRecoveryTimer();
         active = null;
         notify(pending.onend);
       };
       playing.start();
       notify(pending.onstart, { durationSeconds: samples.length / message.sampleRate / pace });
     } catch (error) {
-      active = null;
-      stopAudio();
-      notify(pending.onerror, error);
+      playbackError(pending, error);
     }
   }
 
@@ -184,7 +255,8 @@
       // by the explicit headphone test, including Safari and installed PWAs.
       if (!context || context.state === 'closed') {
         const AudioContext = root.AudioContext || root.webkitAudioContext;
-        context = new AudioContext();
+        context = new AudioContext({ latencyHint: 'playback' });
+        context.addEventListener?.('statechange', contextChanged);
       }
       resume = context.resume();
     } catch (error) { return Promise.reject(error); }

@@ -1,8 +1,8 @@
 {
   "name": "Reds QGH Simulator",
-  "releaseName": "v5.0.1 · Protected Pilot Readbacks",
-  "version": "5.0.1",
-  "androidVersionCode": 31,
-  "updated": "2026-09-11",
+  "releaseName": "v5.0.2 · Mobile Pilot Audio",
+  "version": "5.0.2",
+  "androidVersionCode": 32,
+  "updated": "2026-09-15",
   "releaseStage": "public-release"
 }

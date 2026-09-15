@@ -138,6 +138,38 @@ test('selected pilot pace is passed to bundled and native offline audio without 
   assert.equal(native.nativeUtterances[0].rate, 130 / 150);
 });
 
+test('phone audio interruption keeps continuous recognition blocked and resets completion deadline on resume', () => {
+  const h = harness([], true, undefined, true);
+  h.radio.acknowledge(turn); h.advance(300);
+  const speech = h.bundledCalls[0];
+  speech.onstart({ durationSeconds: 5 });
+  h.advance(1000);
+  speech.onpause();
+  h.advance(7000);
+  speech.onresume({ remainingSeconds: 4 });
+  h.advance(2500);
+  assert.equal(h.bundledCancellations(), 0, 'the original wall-clock timeout must not cut recovered speech');
+  assert.equal(h.receiver.read().phase, 'live');
+  assert.equal(h.gates.at(-1), true, 'recognition stays blocked through route recovery');
+  speech.onend();
+  h.advance(900);
+  assert.equal(h.gates.at(-1), false);
+});
+
+test('stale audio recovery cannot prolong a replacement reply or clear its microphone guard', () => {
+  const h = harness([], true, undefined, true);
+  h.radio.acknowledge(turn); h.advance(300);
+  const old = h.bundledCalls[0]; old.onstart({ durationSeconds: 5 }); old.onpause();
+  h.radio.controllerStart();
+  h.radio.acknowledge({ ...turn, side: 'left', heading: 10 });
+  h.radio.controllerEnd(); h.advance(300);
+  const fresh = h.bundledCalls[1]; fresh.onstart({ durationSeconds: 2 });
+  old.onresume({ remainingSeconds: 90 }); old.onpause();
+  h.advance(7001);
+  assert.equal(h.bundledCancellations(), 2, 'replacement retains its own bounded deadline');
+  assert.match(h.captions.at(-1), /LEFT 010/);
+});
+
 test('muting bundled speech preserves visual transmission and never falls through to system TTS', () => {
   const h = harness(local, true, undefined, true);
   h.radio.acknowledge(turn); h.advance(300); h.bundledCalls[0].onstart();

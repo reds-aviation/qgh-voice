@@ -2100,6 +2100,7 @@
     pageKind,
     stopListening,
     setPilotSpeaking,
+    whenInputAudioReleased: () => state.engine?.whenAudioReleased?.() || Promise.resolve(),
     showPilotReply,
     isDispatchingRadioCommand: () => state.dispatchingRadioCommand,
     receiveNativeVoiceEvent

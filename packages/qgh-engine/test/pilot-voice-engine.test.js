@@ -18,8 +18,10 @@ function loadRuntime(options = {}) {
     emit(message) { this.onmessage({ data: message }); }
   }
   class AudioContext {
-    constructor() { this.state = 'suspended'; this.destination = {}; state.contexts.push(this); }
-    resume() { this.resumed = true; this.state = options.suspended ? 'suspended' : 'running'; return Promise.resolve(); }
+    constructor(settings) { this.settings = settings; this.state = 'suspended'; this.currentTime = 0; this.destination = {}; this.listeners = {}; state.contexts.push(this); }
+    addEventListener(type, callback) { this.listeners[type] = callback; }
+    changeState(value) { this.state = value; this.listeners.statechange?.(); }
+    resume() { this.resumed = true; if (!options.deferResume) this.state = options.suspended ? 'suspended' : 'running'; return Promise.resolve(); }
     createBuffer(channels, length, sampleRate) { return { channels, length, sampleRate, copyToChannel() {} }; }
     createBufferSource() {
       const node = { playbackRate: { value: 1 }, connect() {}, disconnect() { this.disconnected = true; }, start() { this.started = true; }, stop() { this.stopped = true; } };
@@ -76,6 +78,74 @@ test('fixed pilot profiles remain distinct across runtimes without device voice 
   assert.equal(a.profile('single').id, a.profile('A').id);
   assert.equal(a.profile('aircraft-B').id, 'am_fenrir');
   assert.equal(Object.isFrozen(a.voices), true);
+});
+
+test('exercise reply waits for microphone route teardown before starting output', async () => {
+  const runtime = loadRuntime();
+  const worker = await ready(runtime);
+  let release;
+  const closingInput = new Promise(resolve => { release = resolve; });
+  runtime.root.QGHVoiceWorkspace = { whenInputAudioReleased: () => closingInput };
+  const events = [];
+  runtime.api.speak({ text: 'Roger turning right two three zero Falcon one one', onstart: () => events.push('start') });
+  worker.emit({ type: 'audio', token: worker.messages.at(-1).token, samples: new Float32Array(24000), sampleRate: 24000 });
+  assert.equal(runtime.state.audio.length, 0, 'the old microphone route must finish closing first');
+  runtime.state.contexts[0].state = 'suspended';
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.state.audio.length, 1);
+  assert.deepEqual(events, ['start']);
+  assert.equal(runtime.state.contexts[0].settings.latencyHint, 'playback');
+});
+
+test('PTT replacement invalidates a reply waiting for microphone teardown', async () => {
+  const runtime = loadRuntime();
+  const worker = await ready(runtime);
+  let release;
+  runtime.root.QGHVoiceWorkspace = { whenInputAudioReleased: () => new Promise(resolve => { release = resolve; }) };
+  runtime.api.speak({ text: 'Obsolete reply' });
+  worker.emit({ type: 'audio', token: worker.messages.at(-1).token, samples: new Float32Array(24000), sampleRate: 24000 });
+  runtime.api.cancel();
+  release();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(runtime.state.audio.length, 0, 'no obsolete audio may begin after controller PTT');
+});
+
+test('transient audio interruption resumes the same source without losing the middle or repeating the start', async () => {
+  const runtime = loadRuntime();
+  const worker = await ready(runtime);
+  const events = [];
+  runtime.api.speak({ text: 'Roger turning right two three zero Falcon one one',
+    onstart: () => events.push('start'), onpause: () => events.push('pause'),
+    onresume: value => events.push(['resume', value.remainingSeconds]), onend: () => events.push('end') });
+  worker.emit({ type: 'audio', token: worker.messages.at(-1).token, samples: new Float32Array(120000), sampleRate: 24000 });
+  const context = runtime.state.contexts[0];
+  context.currentTime = 1;
+  context.changeState('interrupted');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events, ['start', 'pause', ['resume', 4]]);
+  assert.equal(runtime.state.audio.length, 1, 'resume the existing buffer, never replay its prefix');
+  assert.equal(runtime.state.audio[0].stopped, undefined);
+  runtime.state.audio[0].onended();
+  assert.deepEqual(events.at(-1), 'end');
+});
+
+test('a permanently interrupted audio route fails once and releases the reply', async () => {
+  const runtime = loadRuntime();
+  const worker = await ready(runtime);
+  const errors = [];
+  runtime.api.speak({ text: 'Roger turning right two three zero Falcon one one', onerror: error => errors.push(error.message) });
+  worker.emit({ type: 'audio', token: worker.messages.at(-1).token, samples: new Float32Array(120000), sampleRate: 24000 });
+  const context = runtime.state.contexts[0];
+  context.resume = () => new Promise(() => {});
+  context.changeState('interrupted');
+  const timeout = [...runtime.state.timers.values()].find(timer => timer.delay === 8000);
+  assert.ok(timeout, 'recovery must be bounded');
+  timeout.fn();
+  assert.equal(errors.length, 1);
+  assert.equal(runtime.state.audio[0].stopped, true);
+  context.changeState('running');
+  assert.equal(errors.length, 1);
 });
 
 test('speech cannot implicitly initialize the pack or fall back to system speech', () => {

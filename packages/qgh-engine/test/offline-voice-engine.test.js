@@ -76,10 +76,21 @@ function loadEngineRuntime(options) {
     createMediaStreamSource() { return node(); }
     createScriptProcessor() { return { ...node(), onaudioprocess: null }; }
     createGain() { return { ...node(), gain: { value: 1 } }; }
-    async close() { this.closed = true; this.state = 'closed'; }
+    close() {
+      this.closeCalls = (this.closeCalls || 0) + 1;
+      if (config.closeThrows) throw new Error('audio close failed');
+      const finish = () => { this.closed = true; this.state = 'closed'; };
+      if (config.deferClose) return new Promise((resolve, reject) => {
+        this.resolveClose = () => { finish(); resolve(); };
+        this.rejectClose = reject;
+      });
+      finish();
+      return Promise.resolve();
+    }
   }
 
-  const track = { stop() {}, addEventListener() {} };
+  const track = { stopped: false, stop() { this.stopped = true; }, addEventListener() {} };
+  state.track = track;
   const sandbox = {
     URL,
     Blob,
@@ -363,4 +374,90 @@ test('never reports listening when the browser leaves the audio context suspende
   assert.deepEqual(errors, ['audio-suspended']);
   assert.equal(runtime.state.streamRequests, 0, 'a suspended audio path is rejected before microphone capture');
   assert.equal(runtime.state.audioContexts[0].closed, true);
+});
+
+test('audio release settles immediately when no input context has been created', async () => {
+  const runtime = loadEngineRuntime();
+  const session = runtime.api.create();
+  session.cancel();
+  await session.whenAudioReleased();
+  assert.equal(runtime.state.audioContexts.length, 0);
+  assert.equal(runtime.state.streamRequests, 0);
+});
+
+test('final recognition ends synchronously while audio release waits for context close', async () => {
+  const runtime = loadEngineRuntime({ deferClose: true });
+  const events = [];
+  let release;
+  const session = runtime.api.create({ onEnded() {
+    events.push('ended');
+    release = session.whenAudioReleased().then(() => events.push('released'));
+  } });
+  await session.start({ onResult: transcript => events.push(transcript) });
+  session.stop();
+  runtime.state.recognizer.emit('result', { result: { text: 'report heading' } });
+  assert.deepEqual(events, ['report heading', 'ended']);
+  assert.equal(session.listening, false);
+  assert.equal(runtime.state.track.stopped, true);
+  assert.equal(session.stream, null);
+  assert.equal(session.audioContext, null);
+  assert.equal(runtime.state.recognizer.removed, true);
+  await Promise.resolve();
+  assert.deepEqual(events, ['report heading', 'ended'], 'playback must wait for the browser to finish releasing audio input');
+  runtime.state.audioContexts[0].resolveClose();
+  await release;
+  assert.deepEqual(events, ['report heading', 'ended', 'released']);
+});
+
+test('audio release waits for every previous close across repeated cancelled captures', async () => {
+  const runtime = loadEngineRuntime({ deferClose: true });
+  const session = runtime.api.create();
+  await session.start({});
+  session.cancel();
+  await session.primeAudio();
+  assert.equal(session.releasePrimedAudio(), true);
+  const [first, second] = runtime.state.audioContexts;
+  let released = false;
+  const release = session.whenAudioReleased().then(() => { released = true; });
+  second.resolveClose();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(released, false, 'a newer close cannot hide an older pending input release');
+  first.resolveClose();
+  await release;
+  assert.equal(released, true);
+});
+
+test('repeated cleanup closes each context once and safely settles rejected closes', async () => {
+  const runtime = loadEngineRuntime({ deferClose: true });
+  let ended = 0;
+  const session = runtime.api.create({ onEnded: () => { ended += 1; } });
+  await session.start({});
+  const context = runtime.state.audioContexts[0];
+  session.cancel();
+  session.cancel();
+  session.finish();
+  session.discardAudioContext(context);
+  assert.equal(context.closeCalls, 1);
+  assert.equal(ended, 1);
+  assert.equal(session.releasePrimedAudio(), false);
+  const release = session.whenAudioReleased();
+  context.rejectClose(new Error('device already closed the audio context'));
+  await release;
+  await session.whenAudioReleased();
+  assert.equal(session.audioContext, null);
+  assert.equal(session.stream, null);
+});
+
+test('a synchronous context close failure does not prevent cancellation or audio release', async () => {
+  const runtime = loadEngineRuntime({ closeThrows: true });
+  let ended = false;
+  const session = runtime.api.create({ onEnded: () => { ended = true; } });
+  await session.start({});
+  assert.doesNotThrow(() => session.cancel());
+  await session.whenAudioReleased();
+  assert.equal(ended, true);
+  assert.equal(runtime.state.track.stopped, true);
+  assert.equal(session.stream, null);
+  assert.equal(session.audioContext, null);
 });

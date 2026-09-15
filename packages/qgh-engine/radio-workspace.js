@@ -211,10 +211,23 @@
       const guarded = callback => payload => {
         if (ticket === generation && active?.bundledId === bundledId) callback(payload);
       };
+      const onPause = () => {
+        root.clearTimeout(endTimer);
+        // A paused audio clock does not consume the remaining spoken words.
+        // Keep the microphone gated; the engine's recovery is separately bounded.
+        endTimer = root.setTimeout(fallback, 10000);
+      };
+      const onResume = playback => {
+        root.clearTimeout(endTimer);
+        const remaining = Number.isFinite(playback?.remainingSeconds)
+          ? Math.max(0, Math.min(playback.remainingSeconds, 90)) : 90;
+        endTimer = root.setTimeout(() => finish(ticket), remaining * 1000 + 5000);
+      };
       startTimer = root.setTimeout(fallback, 60000);
       try {
         const result = bundledSpeech.speak({ id: active.bundledId, text: item.reply.speech, source: item.source, targetWpm: pilotWpm,
-          onstart: guarded(onAudioStart), onend: guarded(onAudioEnd), onerror: guarded(fallback) });
+          onstart: guarded(onAudioStart), onend: guarded(onAudioEnd), onerror: guarded(fallback),
+          onpause: guarded(onPause), onresume: guarded(onResume) });
         if (result?.catch) result.catch(guarded(fallback));
       } catch { fallback(); }
       return;

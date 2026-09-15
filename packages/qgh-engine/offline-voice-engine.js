@@ -474,6 +474,8 @@
       this.ended = false;
       this.finalizeTimer = null;
       this.audioUnlockPromise = null;
+      this.audioReleaseTasks = new Set();
+      this.closedAudioContexts = new WeakSet();
       this.callbacks = null;
       this.awaitingFinalResult = false;
       this.hasFinalResult = false;
@@ -482,6 +484,13 @@
 
     isReady() { return Boolean(this.model); }
     isFinalizing() { return Boolean(this.listening && this.ending); }
+
+    // Capture stops immediately, but the browser may still be releasing its
+    // input audio route. Pilot playback can wait for every close already begun.
+    whenAudioReleased() {
+      if (!this.audioReleaseTasks.size) return Promise.resolve();
+      return Promise.all([...this.audioReleaseTasks]).then(() => undefined);
+    }
 
     async prepare(onProgress) {
       if (this.model) return this.model;
@@ -538,9 +547,14 @@
         this.audioContext = null;
         this.audioUnlockPromise = null;
       }
+      if (this.closedAudioContexts.has(audioContext)) return;
+      this.closedAudioContexts.add(audioContext);
       try {
         const closed = audioContext.close?.();
-        closed?.catch?.(() => {});
+        const released = Promise.resolve(closed).catch(() => {}).then(() => {
+          this.audioReleaseTasks.delete(released);
+        });
+        this.audioReleaseTasks.add(released);
       } catch { /* Best effort cleanup for a blocked context. */ }
     }
 
@@ -696,7 +710,7 @@
       this.audioContext = null;
       this.audioUnlockPromise = null;
       this.callbacks = null;
-      if (context) context.close?.().catch?.(() => {});
+      this.discardAudioContext(context);
       if (!suppressCallbacks) this.options.onEnded?.();
     }
 
