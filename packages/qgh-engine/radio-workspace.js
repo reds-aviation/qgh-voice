@@ -48,6 +48,14 @@
     try { return nativeSpeech?.getCapability() === 'ready'; } catch { return false; }
   }
 
+  function audioAvailable() {
+    return bundledSpeech ? bundledSpeech.capability() === 'ready' : nativeSpeech ? nativeAudioAvailable() : Boolean(localVoice());
+  }
+
+  function hasQueuedAudibleReply() {
+    return Boolean(audioEnabled && adapter.active() && (pending.length || reports.size) && audioAvailable());
+  }
+
   function receiveNativeSpeechEvent(event) {
     if (!nativeSpeech || !event || typeof event.id !== 'string' || active?.nativeId !== event.id) return;
     // Cancellation clears the identity before calling into Android, so even an
@@ -373,7 +381,7 @@
     manualCommand: command => {
       if (!root.QGHVoiceWorkspace?.isDispatchingRadioCommand()) acknowledge(command);
     },
-    setAudioEnabled, setPilotRate, receiveNativeSpeechEvent, audioAvailable: () => bundledSpeech ? bundledSpeech.capability() === 'ready' : nativeSpeech ? nativeAudioAvailable() : Boolean(localVoice()),
+    setAudioEnabled, setPilotRate, receiveNativeSpeechEvent, audioAvailable, hasQueuedAudibleReply,
     status: () => ({ audioEnabled, pilotWpm, controllerHeld, phase: active ? 'pilot' : controllerHeld ? 'controller' : pending.length ? 'pending' : 'idle', pending: pending.length })
   });
 })(typeof globalThis === 'undefined' ? this : globalThis);

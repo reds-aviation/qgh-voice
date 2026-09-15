@@ -485,11 +485,10 @@
     isReady() { return Boolean(this.model); }
     isFinalizing() { return Boolean(this.listening && this.ending); }
 
-    // Capture stops immediately, but the browser may still be releasing its
-    // input audio route. Pilot playback can wait for every close already begun.
-    whenAudioReleased() {
-      if (!this.audioReleaseTasks.size) return Promise.resolve();
-      return Promise.all([...this.audioReleaseTasks]).then(() => undefined);
+    // An uncancellable getUserMedia request can outlive its input context.
+    // Wait for its late track to be stopped as well as every context closure.
+    async whenAudioReleased() {
+      while (this.audioReleaseTasks.size) await Promise.all([...this.audioReleaseTasks]);
     }
 
     async prepare(onProgress) {
@@ -591,19 +590,25 @@
       if (this.audioContext !== audioContext) return Object.freeze({ started: false, replacedPendingFinalResult });
 
       let stream;
+      let releaseAcquisition;
+      const acquisition = new Promise(resolve => { releaseAcquisition = resolve; });
+      this.audioReleaseTasks.add(acquisition);
       try {
         stream = await root.navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
           video: false
         });
+        if (this.audioContext !== audioContext) {
+          stream.getTracks().forEach(track => track.stop());
+          return Object.freeze({ started: false, replacedPendingFinalResult });
+        }
       } catch (error) {
         this.discardAudioContext(audioContext);
         settings.onError?.(error?.name === 'NotAllowedError' ? 'not-allowed' : 'unavailable');
         throw error;
-      }
-      if (this.audioContext !== audioContext) {
-        stream.getTracks().forEach(track => track.stop());
-        return Object.freeze({ started: false, replacedPendingFinalResult });
+      } finally {
+        this.audioReleaseTasks.delete(acquisition);
+        releaseAcquisition();
       }
 
       const grammar = Array.isArray(settings.grammar) && settings.grammar.length

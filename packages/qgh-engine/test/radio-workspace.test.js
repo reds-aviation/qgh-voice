@@ -34,6 +34,7 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
   let headphoneConfirmed = true;
   const bundledCalls = [];
   let bundledCancellations = 0;
+  let bundledCapability = 'ready';
   const receiver = Radio.createReceiver({ observe: snapshots, now: () => time, setTimer, clearTimer, onChange: () => paints++ });
   const sandbox = {
     QGHHeadphones: { confirmed: () => headphoneConfirmed },
@@ -50,7 +51,7 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
     SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }
   };
   if (bundled) sandbox.QGHPilotVoiceEngine = {
-    capability: () => 'ready',
+    capability: () => bundledCapability,
     speak: request => bundledCalls.push(request),
     cancel: () => { bundledCancellations++; }
   };
@@ -76,6 +77,8 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
   };
   return { radio: sandbox.QGHRadioWorkspace, receiver, utterances, gates, advance, captions,
     bundledCalls, bundledCancellations: () => bundledCancellations,
+    setBundledCapability: value => { bundledCapability = value; },
+    setNativeCapability: value => { nativeCapability = value; },
     confirmHeadphones: value => { headphoneConfirmed = value; },
     nativeUtterances, nativeCancellations: () => nativeCancellations,
     nativeEvent: (id, type) => sandbox.QGHRadioWorkspace.receiveNativeSpeechEvent({ id, type }),
@@ -87,6 +90,42 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
 }
 const local = [{ localService: true, lang: 'en-IN', name: 'Local test voice' }];
 const turn = { intent: 'normal-turn-heading', aircraft: 'A', side: 'right', heading: 230 };
+
+test('queued audible replies reserve automatic listening only while the selected output can speak', () => {
+  for (const h of [harness(local), harness([], true, 'ready'), harness([], true, undefined, true)]) {
+    assert.equal(h.radio.hasQueuedAudibleReply(), false);
+    h.radio.acknowledge(turn);
+    assert.equal(h.radio.hasQueuedAudibleReply(), true);
+    h.radio.setAudioEnabled(false);
+    assert.equal(h.radio.hasQueuedAudibleReply(), false, 'muted replies do not reserve microphone startup');
+    h.radio.setAudioEnabled(true);
+    assert.equal(h.radio.hasQueuedAudibleReply(), true);
+    h.advance(300);
+    assert.equal(h.radio.hasQueuedAudibleReply(), false, 'active audio is protected by the existing speaking gate');
+  }
+  const bundled = harness(local, true, 'ready', true);
+  bundled.radio.acknowledge(turn);
+  bundled.setBundledCapability('unprepared');
+  assert.equal(bundled.radio.hasQueuedAudibleReply(), false, 'other output engines cannot override bundled readiness');
+  const native = harness(local, true, 'ready');
+  native.radio.acknowledge(turn);
+  native.setNativeCapability('unavailable');
+  assert.equal(native.radio.hasQueuedAudibleReply(), false, 'device voice cannot override native readiness');
+  const inactive = harness([], true, undefined, true);
+  inactive.radio.acknowledge(turn); inactive.close();
+  assert.equal(inactive.radio.hasQueuedAudibleReply(), false, 'an inactive exercise cannot play its old queue');
+});
+
+test('report-only queues reserve automatic listening and release it when the report is discarded', () => {
+  const h = harness([], true, undefined, true);
+  h.radio.requestHeadingPassing({ aircraft: 'A', heading: 240 });
+  h.heading('A', 241);
+  assert.equal(h.radio.status().pending, 0);
+  assert.equal(h.radio.hasQueuedAudibleReply(), true);
+  h.procedure('us'); h.advance(300);
+  assert.equal(h.bundledCalls.length, 0);
+  assert.equal(h.radio.hasQueuedAudibleReply(), false);
+});
 
 test('delayed altitude crossing reports say PASSED and retain the original addressed aircraft', () => {
   const h = harness([],false);

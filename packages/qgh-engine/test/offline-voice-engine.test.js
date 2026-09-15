@@ -107,6 +107,10 @@ function loadEngineRuntime(options) {
         getUserMedia: async () => {
           state.streamRequests += 1;
           state.contextPresentAtStreamRequest = state.audioContexts.length > 0;
+          if (config.deferStream) return new Promise((resolve, reject) => {
+            state.resolveStream = () => resolve({ getTracks: () => [track] });
+            state.rejectStream = reject;
+          });
           return { getTracks: () => [track] };
         }
       }
@@ -383,6 +387,64 @@ test('audio release settles immediately when no input context has been created',
   await session.whenAudioReleased();
   assert.equal(runtime.state.audioContexts.length, 0);
   assert.equal(runtime.state.streamRequests, 0);
+});
+
+test('pilot handoff waits for a cancelled pending microphone grant and stops its late track', async () => {
+  const runtime = loadEngineRuntime({ deferStream: true });
+  const session = runtime.api.create();
+  let started = false;
+  const start = session.start({ onStarted: () => { started = true; } });
+  for (let tick = 0; tick < 20 && !runtime.state.resolveStream; tick++) await Promise.resolve();
+  assert.equal(runtime.state.streamRequests, 1);
+  session.cancel();
+  let released = false;
+  const release = session.whenAudioReleased().then(() => { released = true; });
+  for (let tick = 0; tick < 10; tick++) await Promise.resolve();
+  assert.equal(released, false, 'closing the context alone cannot release an unresolved microphone request');
+  runtime.state.resolveStream();
+  const outcome = await start;
+  await release;
+  assert.equal(outcome.started, false);
+  assert.equal(started, false);
+  assert.equal(runtime.state.track.stopped, true, 'late input must be stopped before pilot playback may begin');
+  assert.equal(released, true);
+});
+
+test('a rejected pending microphone request releases the pilot handoff without leaking its context', async () => {
+  const runtime = loadEngineRuntime({ deferStream: true });
+  const session = runtime.api.create();
+  const start = session.start({});
+  const rejected = assert.rejects(start, /microphone unplugged/);
+  for (let tick = 0; tick < 20 && !runtime.state.rejectStream; tick++) await Promise.resolve();
+  session.cancel();
+  let released = false;
+  const release = session.whenAudioReleased().then(() => { released = true; });
+  for (let tick = 0; tick < 10; tick++) await Promise.resolve();
+  assert.equal(released, false);
+  runtime.state.rejectStream(new Error('microphone unplugged'));
+  await rejected;
+  await release;
+  assert.equal(released, true);
+  assert.equal(runtime.state.audioContexts[0].closeCalls, 1);
+  assert.equal(session.audioReleaseTasks.size, 0);
+});
+
+test('pilot handoff waits for both late microphone grant and deferred input context closure', async () => {
+  const runtime = loadEngineRuntime({ deferStream: true, deferClose: true });
+  const session = runtime.api.create();
+  const start = session.start({});
+  for (let tick = 0; tick < 20 && !runtime.state.resolveStream; tick++) await Promise.resolve();
+  session.cancel();
+  let released = false;
+  const release = session.whenAudioReleased().then(() => { released = true; });
+  runtime.state.resolveStream();
+  await start;
+  assert.equal(runtime.state.track.stopped, true);
+  assert.equal(released, false);
+  runtime.state.audioContexts[0].resolveClose();
+  await release;
+  assert.equal(released, true);
+  assert.equal(session.audioReleaseTasks.size, 0);
 });
 
 test('final recognition ends synchronously while audio release waits for context close', async () => {

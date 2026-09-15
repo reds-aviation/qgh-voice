@@ -329,6 +329,94 @@ test('continuous recognition retires the previous screen context and rearms afte
   assert.notEqual(env.nativeVoice.starts.at(-1).requestId, firstRequestId);
 });
 
+test('continuous listening waits through the queued reply gap and resumes after its audio tail', async () => {
+  for (const queue of ['reply', 'report']) {
+    const env = createNativeRadioEnvironment();
+    const requestId = await startNativeContinuous(env);
+    if (queue === 'reply') env.radio.manualCommand({ intent: 'report-heading' });
+    else {
+      env.radio.requestHeadingPassing({ aircraft: 'single', heading: 240 });
+      env.aircraft.heading = 241;
+      env.radio.observeHeading('single', 241);
+    }
+    env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
+    env.advanceTime(180); await flush();
+    assert.equal(env.nativeVoice.starts.length, 1, `${queue}: no capture may reopen ahead of queued audio`);
+    env.advanceTime(120);
+    assert.equal(env.nativeSpeech.calls.length, 1);
+    const pilotId = env.nativeSpeech.calls[0].id;
+    env.radio.receiveNativeSpeechEvent({ type: 'end', id: pilotId });
+    env.advanceTime(1079); await flush();
+    assert.equal(env.nativeVoice.starts.length, 1, `${queue}: preserve the echo tail and restart delay`);
+    env.advanceTime(1); await flush();
+    assert.equal(env.nativeVoice.starts.length, 2, `${queue}: rearm once after audio`);
+  }
+});
+
+test('a deferred continuous restart retries when queued audio becomes silent or is discarded', async () => {
+  for (const reason of ['muted', 'unavailable', 'discarded', 'inactive']) {
+    const env = createNativeRadioEnvironment();
+    const requestId = await startNativeContinuous(env);
+    env.radio.manualCommand({ intent: 'report-heading' });
+    env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
+    env.advanceTime(180); await flush();
+    assert.equal(env.nativeVoice.starts.length, 1, `${reason}: initial restart is deferred`);
+    if (reason === 'muted') env.radio.setAudioEnabled(false);
+    if (reason === 'unavailable') env.nativeSpeech.capability = 'unavailable';
+    if (reason === 'discarded') env.sandbox.QGHRadioAdapter.snapshot = () => null;
+    if (reason === 'inactive') env.sandbox.QGHRadioAdapter.active = () => false;
+    env.advanceTime(180); await flush();
+    assert.equal(env.nativeVoice.starts.length, 2, `${reason}: queue changes must not strand continuous listening`);
+    assert.equal(env.nativeSpeech.calls.length, 0);
+  }
+});
+
+test('explicit stop cancels a continuous restart deferred behind queued audio', async () => {
+  const env = createNativeRadioEnvironment();
+  const requestId = await startNativeContinuous(env);
+  env.radio.manualCommand({ intent: 'report-heading' });
+  env.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId });
+  env.advanceTime(180); await flush();
+  assert.equal(env.nativeVoice.starts.length, 1);
+  env.workspace.stopListening({ cancel: true });
+  env.advanceTime(5000); await flush();
+  assert.equal(env.nativeVoice.starts.length, 1, 'the retry cannot undo STOP');
+  assert.equal(env.timers.size, 0, 'no continuous retry remains after STOP');
+});
+
+test('explicit PTT starts immediately even while an audible automatic report is queued', async () => {
+  const env = createNativeRadioEnvironment();
+  await flush();
+  env.radio.requestHeadingPassing({ aircraft: 'single', heading: 240 });
+  env.aircraft.heading = 241;
+  env.radio.observeHeading('single', 241);
+  const mic = env.document.querySelector('.voice-mic');
+  mic.dispatchEvent(new FakeEvent('pointerdown', { pointerId: 1 }));
+  await flush();
+  assert.equal(env.radio.hasQueuedAudibleReply(), true, 'PTT preserves the pending flight report');
+  assert.equal(env.nativeVoice.starts.length, 1);
+  assert.equal(env.nativeVoice.starts[0].continuous, false);
+  assert.equal(env.radio.status().controllerHeld, true);
+  env.advanceTime(500);
+  assert.equal(env.nativeSpeech.calls.length, 0, 'the report waits for explicit PTT release');
+});
+
+test('continuous startup rechecks queued audio after awaiting microphone readiness', async () => {
+  const env = createNativeRadioEnvironment();
+  await flush();
+  const continuous = env.document.querySelector('.voice-continuous').children[0];
+  continuous.checked = true;
+  continuous.dispatchEvent(new FakeEvent('change'));
+  env.radio.manualCommand({ intent: 'report-heading' });
+  await flush();
+  assert.equal(env.nativeVoice.starts.length, 0, 'the reply queued during the readiness await owns the next turn');
+  env.advanceTime(300); await flush();
+  assert.equal(env.nativeSpeech.calls.length, 1);
+  env.radio.receiveNativeSpeechEvent({ type: 'end', id: env.nativeSpeech.calls[0].id });
+  env.advanceTime(1080); await flush();
+  assert.equal(env.nativeVoice.starts.length, 1, 'a deferred first capture starts after the reply');
+});
+
 test('continuous listening protects a pilot readback from raw activity and rearms after its audio tail', async () => {
   const env = createNativeRadioEnvironment();
   const requestId = await startNativeContinuous(env);

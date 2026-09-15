@@ -1213,7 +1213,11 @@
     clearRestartTimer();
     state.restartTimer = root.setTimeout(() => {
       state.restartTimer = null;
-      if (canContinueListening() && !state.listening && !state.starting) beginListening(true);
+      if (!canContinueListening() || state.listening || state.starting) return;
+      // The radio's queued reply starts after this restart delay. Keep input
+      // closed until it plays, or retry if the queue is discarded or muted.
+      if (root.QGHRadioWorkspace?.hasQueuedAudibleReply?.()) scheduleContinuousRestart();
+      else beginListening(true);
     }, 180);
   }
 
@@ -1645,6 +1649,11 @@
       : state.pressHeld && !state.continuous;
     if (attempt !== state.startAttempt || !available || !shouldStart) {
       releasePrimedAudio();
+      return false;
+    }
+    if (continuous && root.QGHRadioWorkspace?.hasQueuedAudibleReply?.()) {
+      releasePrimedAudio();
+      scheduleContinuousRestart();
       return false;
     }
     const bridge = nativeVoiceBridge();
