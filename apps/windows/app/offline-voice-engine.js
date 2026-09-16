@@ -474,6 +474,8 @@
       this.ended = false;
       this.finalizeTimer = null;
       this.audioUnlockPromise = null;
+      this.audioReleaseTasks = new Set();
+      this.closedAudioContexts = new WeakSet();
       this.callbacks = null;
       this.awaitingFinalResult = false;
       this.hasFinalResult = false;
@@ -482,6 +484,12 @@
 
     isReady() { return Boolean(this.model); }
     isFinalizing() { return Boolean(this.listening && this.ending); }
+
+    // An uncancellable getUserMedia request can outlive its input context.
+    // Wait for its late track to be stopped as well as every context closure.
+    async whenAudioReleased() {
+      while (this.audioReleaseTasks.size) await Promise.all([...this.audioReleaseTasks]);
+    }
 
     async prepare(onProgress) {
       if (this.model) return this.model;
@@ -538,9 +546,14 @@
         this.audioContext = null;
         this.audioUnlockPromise = null;
       }
+      if (this.closedAudioContexts.has(audioContext)) return;
+      this.closedAudioContexts.add(audioContext);
       try {
         const closed = audioContext.close?.();
-        closed?.catch?.(() => {});
+        const released = Promise.resolve(closed).catch(() => {}).then(() => {
+          this.audioReleaseTasks.delete(released);
+        });
+        this.audioReleaseTasks.add(released);
       } catch { /* Best effort cleanup for a blocked context. */ }
     }
 
@@ -577,19 +590,25 @@
       if (this.audioContext !== audioContext) return Object.freeze({ started: false, replacedPendingFinalResult });
 
       let stream;
+      let releaseAcquisition;
+      const acquisition = new Promise(resolve => { releaseAcquisition = resolve; });
+      this.audioReleaseTasks.add(acquisition);
       try {
         stream = await root.navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
           video: false
         });
+        if (this.audioContext !== audioContext) {
+          stream.getTracks().forEach(track => track.stop());
+          return Object.freeze({ started: false, replacedPendingFinalResult });
+        }
       } catch (error) {
         this.discardAudioContext(audioContext);
         settings.onError?.(error?.name === 'NotAllowedError' ? 'not-allowed' : 'unavailable');
         throw error;
-      }
-      if (this.audioContext !== audioContext) {
-        stream.getTracks().forEach(track => track.stop());
-        return Object.freeze({ started: false, replacedPendingFinalResult });
+      } finally {
+        this.audioReleaseTasks.delete(acquisition);
+        releaseAcquisition();
       }
 
       const grammar = Array.isArray(settings.grammar) && settings.grammar.length
@@ -696,7 +715,7 @@
       this.audioContext = null;
       this.audioUnlockPromise = null;
       this.callbacks = null;
-      if (context) context.close?.().catch?.(() => {});
+      this.discardAudioContext(context);
       if (!suppressCallbacks) this.options.onEnded?.();
     }
 

@@ -2,7 +2,7 @@
 
 Offline-first QGH training simulator for Windows, Android, iPhone, iPad, and modern web browsers.
 
-Local web candidate: **v4.4.3 - Voice Safety & U/S Turns**. It is intentionally not published until browser verification. [Open the current Reds QGH Simulator](https://redsqghsimulator.netlify.app/) or read the [candidate notes](docs/qa/v4.4.3-web-candidate.md). Windows and Android installers remain at their previous delivered release until the web candidate is approved.
+Public web release: **v5.0.4 - Pilot Readback Stability**. [Open the GitHub Pages simulator](https://reds-aviation.github.io/qgh-voice/) or read the [release checks](docs/qa/v5.0.4-web-release.md). Windows and Android packages are built and distributed separately; the web release does not update installed native apps.
 
 See [USER_GUIDE.md](USER_GUIDE.md) for installation, exercise, replay, tactical, and voice-control guidance.
 
@@ -44,7 +44,7 @@ The generated `apps/web/dist` directory supports a browser-installed PWA on desk
 The PWA release record at 'apps/web/static/app-version.json' is shared by every platform. Set every platform's version together, then verify it before building:
 
 ~~~powershell
-.\scripts\Set-QghReleaseVersion.ps1 -Version 4.1.0 -AndroidVersionCode 14
+.\scripts\Set-QghReleaseVersion.ps1 -Version 5.0.4 -AndroidVersionCode 34
 node .\scripts\verify-release-version.mjs
 ~~~
 

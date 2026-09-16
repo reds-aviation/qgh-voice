@@ -1213,7 +1213,11 @@
     clearRestartTimer();
     state.restartTimer = root.setTimeout(() => {
       state.restartTimer = null;
-      if (canContinueListening() && !state.listening && !state.starting) beginListening(true);
+      if (!canContinueListening() || state.listening || state.starting) return;
+      // The radio's queued reply starts after this restart delay. Keep input
+      // closed until it plays, or retry if the queue is discarded or muted.
+      if (root.QGHRadioWorkspace?.hasQueuedAudibleReply?.()) scheduleContinuousRestart();
+      else beginListening(true);
     }, 180);
   }
 
@@ -1377,7 +1381,10 @@
   }
 
   function pilotBlocksMicrophone() {
-    return Boolean(root.QGHHeadphones?.blocksMicrophone?.()) || (state.pilotSpeaking && !root.QGHRadioWorkspace?.allowsBargeIn?.());
+    // Continuous Listening is half-duplex while the aircraft is transmitting.
+    // Only an explicit PTT press may interrupt a pilot readback; raw activity
+    // from echo, breathing or room noise must never cancel it.
+    return Boolean(root.QGHHeadphones?.blocksMicrophone?.()) || state.pilotSpeaking;
   }
 
   function setPilotSpeaking(speaking) {
@@ -1644,6 +1651,11 @@
       releasePrimedAudio();
       return false;
     }
+    if (continuous && root.QGHRadioWorkspace?.hasQueuedAudibleReply?.()) {
+      releasePrimedAudio();
+      scheduleContinuousRestart();
+      return false;
+    }
     const bridge = nativeVoiceBridge();
     state.starting = true;
     updateMicState();
@@ -1866,7 +1878,7 @@
       mutePilot.type = 'button';
       mutePilot.className = 'voice-mute-pilot';
       mutePilot.textContent = 'MUTE PILOT REPLIES';
-      const isPilotSetupStage = () => /:(?:setup)$/.test(currentVoiceContext());
+      const isPilotSetupStage = () => activeScreen(pageKind() === 'tactical' ? 'tSetup' : 'setup');
       const requestPilotReadbacks = () => {
         if (!isPilotSetupStage()) {
           setStatus('SET UP PILOT REPLIES BEFORE START', 'neutral');
@@ -1888,10 +1900,10 @@
         mutePilot.hidden = !enabled;
         pilotNote.textContent = root.QGHPilotVoiceEngine
           ? inSetup
-            ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Pilot speed ${rate} words/minute. PTT and continuous controller speech take priority.`
+            ? `${enabled ? 'Headphones confirmed by you.' : 'Muted. Connect headphones and complete the audio check to enable.'} Pilot speed ${rate} words/minute. PTT can interrupt a reply; Continuous Listening pauses until the reply finishes.`
             : `${enabled ? 'Pilot replies are on. You can mute them here.' : 'Pilot replies are muted.'} Headphone setup is available before starting the next exercise.`
           : root.QGHRadioWorkspace.audioAvailable()
-            ? 'Off by default: muted. Enable only with headphones. In continuous mode, your speech interrupts pilot audio. PTT always takes priority.'
+            ? 'Off by default: muted. Enable only with headphones. Continuous Listening pauses during pilot replies and automatically resumes after the channel clears. PTT always takes priority.'
             : 'No local English output voice available. Captions and timed pilot D/F still work offline.';
         const message = root.QGHHeadphones?.status?.().message;
         if (!enabled && message) pilotNote.textContent = `${message} ${pilotNote.textContent}`;
@@ -2097,6 +2109,7 @@
     pageKind,
     stopListening,
     setPilotSpeaking,
+    whenInputAudioReleased: () => state.engine?.whenAudioReleased?.() || Promise.resolve(),
     showPilotReply,
     isDispatchingRadioCommand: () => state.dispatchingRadioCommand,
     receiveNativeVoiceEvent

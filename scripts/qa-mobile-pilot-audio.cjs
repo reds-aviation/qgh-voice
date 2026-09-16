@@ -39,6 +39,12 @@ function installAudioProbe() {
         record.duration = source.buffer.duration / record.rate;
         record.frames = source.buffer.length;
         record.sampleRate = source.buffer.sampleRate;
+        const pcm = source.buffer.getChannelData(0);
+        const leadFrames = Math.ceil(0.24 * record.sampleRate * record.rate);
+        record.leadSeconds = leadFrames / record.sampleRate / record.rate;
+        record.silentLead = pcm.subarray(0, leadFrames).every(sample => sample === 0);
+        record.speechPeak = pcm.subarray(leadFrames, Math.min(pcm.length, leadFrames + record.sampleRate))
+          .reduce((peak, sample) => Math.max(peak, Math.abs(sample)), 0);
         record.contextIndex = probe.contexts.indexOf(context);
         probe.sources.push(record);
         context.addEventListener('statechange', stateChange);
@@ -94,6 +100,9 @@ function assertCompleteSignal(signal, label) {
   assert.equal(signal.ended, 1, `${label}: source ended exactly once`);
   assert.ok(signal.frames > 24000, `${label}: real speech PCM`);
   assert.equal(signal.sampleRate, 24000, `${label}: packaged bank sample rate`);
+  assert.ok(signal.leadSeconds >= 0.24 && signal.leadSeconds < 0.241 && signal.silentLead,
+    `${label}: silent output-route lead precedes speech`);
+  assert.ok(signal.speechPeak > 0.015, `${label}: speech follows the route lead`);
   assert.ok(Math.abs(signal.renderedSeconds - signal.duration) < 0.25,
     `${label}: full source rendered (${signal.renderedSeconds}/${signal.duration}s)`);
   for (const [part, section] of signal.thirds.entries()) {

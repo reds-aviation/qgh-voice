@@ -47,6 +47,12 @@ function installProbe(delayMs) {
           record.duration = source.buffer.duration / source.playbackRate.value;
           record.frames = source.buffer.length;
           record.sampleRate = source.buffer.sampleRate;
+          const pcm = source.buffer.getChannelData(0);
+          const leadFrames = Math.ceil(0.24 * record.sampleRate * source.playbackRate.value);
+          record.leadSeconds = leadFrames / record.sampleRate / source.playbackRate.value;
+          record.silentLead = pcm.subarray(0, leadFrames).every(sample => sample === 0);
+          record.speechPeak = pcm.subarray(leadFrames, Math.min(pcm.length, leadFrames + record.sampleRate))
+            .reduce((peak, sample) => Math.max(peak, Math.abs(sample)), 0);
           audit.sources.push(record);
           log('pilot-source-start', { id, label: record.label, duration: record.duration });
           timer = setInterval(() => {
@@ -299,6 +305,9 @@ function installProbe(delayMs) {
     for (const [label, audio] of [['continuous', source], ['manual pending-input reply', pending.audio], ['PTT replacement', report.ptt.replacement]]) {
       check(audio.ended === 1 && !audio.stopped, `${label}: playback ended unnaturally`);
       check(audio.frames > 24000 && audio.sampleRate === 24000, `${label}: packaged PCM was not used`);
+      check(audio.leadSeconds >= 0.24 && audio.leadSeconds < 0.241 && audio.silentLead,
+        `${label}: silent output-route lead did not precede speech`);
+      check(audio.speechPeak > 0.015, `${label}: speech did not follow the route lead`);
       check(Math.abs(audio.renderedSeconds - audio.duration) < 0.25, `${label}: incomplete audio duration`);
       check(audio.thirds.every(part => part.energetic >= 3 && part.maxRms > 0.015), `${label}: missing signal in beginning, middle or ending`);
     }

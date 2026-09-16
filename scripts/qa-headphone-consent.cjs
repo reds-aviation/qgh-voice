@@ -29,20 +29,22 @@ const engineStub = `(() => {
         await page.goto(new URL(tactical?'tactical.html':'single.html',base).href);
         await page.waitForFunction(()=>!!window.QGHHeadphones);
         assert.equal(await page.evaluate(()=>QGHRadioWorkspace.status().audioEnabled),false);
-        await page.locator('.voice-settings-toggle').click();
-        await page.locator('#pilotAudio').click();
+        await page.locator('#setupPilotReadbacks').click();
         const dialog=page.locator('.headphone-dialog');
         await dialog.waitFor({state:'visible'});
         assert.equal(await page.evaluate(()=>QGHHeadphones.blocksMicrophone()),true);
         assert.equal(await page.locator('.headphone-enable').isDisabled(),true);
         const bounds=await dialog.boundingBox();
         assert.ok(bounds.x>=0 && bounds.x+bounds.width<=width+1 && bounds.y>=0 && bounds.y+bounds.height<=height+1);
-        await page.getByRole('button',{name:'TEST HEADPHONE AUDIO',exact:true}).click();
+        await page.getByRole('button',{name:/^TEST HEADPHONE AUDIO/}).click();
         await page.locator('#headphoneConfirmed').check();
         await page.screenshot({path:path.join(output,`${tactical?'tactical':'single'}-${width}.png`)});
         await page.getByRole('button',{name:'ENABLE PILOT REPLIES',exact:true}).click();
         assert.equal(await page.evaluate(()=>QGHRadioWorkspace.status().audioEnabled),true);
         assert.equal(await page.evaluate(()=>QGHHeadphones.blocksMicrophone()),false);
+        await page.locator('.voice-settings-toggle').click();
+        assert.equal(await page.locator('#pilotAudio').isChecked(),true);
+        await page.locator('.voice-settings-toggle').click();
         if(us) await page.locator(tactical?'#tProcedureUs':'#us').click();
         await page.locator(tactical?'#tStart':'#startExercise').click();
         // Random U/S exercises can begin in a turn. Preserve the existing
@@ -71,9 +73,7 @@ const engineStub = `(() => {
         // A device change does not disable manual flight instructions.
         await page.evaluate(tactical=>document.getElementById(tactical?'tAdvance':'advanceFlight').click(),tactical);
         await page.locator('.voice-settings-toggle').click();
-        await page.locator('#pilotAudio').click();
-        assert.equal(await page.locator('.headphone-enable').isDisabled(),true);
-        await page.getByRole('button',{name:'KEEP MUTED',exact:true}).click();
+        assert.equal(await page.locator('#pilotAudio').isHidden(),true);
         assert.equal(await page.evaluate(()=>QGHHeadphones.blocksMicrophone()),false);
         assert.deepEqual(errors,[]);
         await page.close(); flows++;

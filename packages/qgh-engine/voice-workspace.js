@@ -1878,7 +1878,7 @@
       mutePilot.type = 'button';
       mutePilot.className = 'voice-mute-pilot';
       mutePilot.textContent = 'MUTE PILOT REPLIES';
-      const isPilotSetupStage = () => /:(?:setup)$/.test(currentVoiceContext());
+      const isPilotSetupStage = () => activeScreen(pageKind() === 'tactical' ? 'tSetup' : 'setup');
       const requestPilotReadbacks = () => {
         if (!isPilotSetupStage()) {
           setStatus('SET UP PILOT REPLIES BEFORE START', 'neutral');

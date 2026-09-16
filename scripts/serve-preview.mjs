@@ -4,6 +4,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 const sourcePreview = process.argv.includes('--source');
+const pwaPreview = process.argv.includes('--pwa');
 const root = resolve(import.meta.dirname, sourcePreview ? '../packages/qgh-engine' : '../apps/web/dist');
 const port = Number(process.argv[2] || 4271);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
@@ -18,7 +19,7 @@ http.createServer(async (request, response) => {
     // are being rendered. It is not a substitute for a verified distribution.
     let bytes = await readFile(sourcePreview && pathname === '/app-version.json'
       ? resolve(import.meta.dirname, '../apps/web/static/app-version.json') : file);
-    if (extname(file) === '.html') bytes = Buffer.from(bytes.toString().replace(/<script\b[^>]*src="pwa-register\.js[^" ]*"[^>]*><\/script>/g, ''));
+    if (extname(file) === '.html' && !pwaPreview) bytes = Buffer.from(bytes.toString().replace(/<script\b[^>]*src="pwa-register\.js[^" ]*"[^>]*><\/script>/g, ''));
     if (extname(file) === '.mp4' && request.headers.range) {
       const match = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range);
       const start = match && match[1] ? Number(match[1]) : match && match[2] ? Math.max(0, bytes.length - Number(match[2])) : NaN;

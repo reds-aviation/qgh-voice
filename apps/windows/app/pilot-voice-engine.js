@@ -16,6 +16,7 @@
   ]);
   const PREPARE_TIMEOUT_MS = 120000;
   const GENERATION_TIMEOUT_MS = 5000;
+  const AUDIO_RECOVERY_TIMEOUT_MS = 8000;
   // The pre-rendered bank contains reusable phrases and individual number clips.
   // A short readback can therefore contain more natural clip duration than its
   // nominal word count allows.  Correct its *actual* duration at playback so
@@ -23,6 +24,11 @@
   const PILOT_DEFAULT_WPM = 100;
   const PILOT_SUPPORTED_WPM = Object.freeze([100, 130, 170]);
   const MAX_PACE_CORRECTION = 6.75;
+  // Closing a phone's microphone can switch its wired-headphone output route
+  // after the input AudioContext has closed. Key the output with a short silent
+  // lead so the first spoken sample is not sent during that route change.
+  const OUTPUT_ROUTE_LEAD_SECONDS = 0.24;
+  const OUTPUT_FADE_SECONDS = 0.01;
   let state = 'unprepared';
   let worker = null;
   let context = null;
@@ -31,6 +37,7 @@
   let active = null;
   let serial = 0;
   let generationTimer = null;
+  let recoveryTimer = null;
 
   function available() {
     return typeof root.Worker === 'function'
@@ -62,6 +69,51 @@
   function clearGenerationTimer() {
     if (generationTimer !== null) root.clearTimeout(generationTimer);
     generationTimer = null;
+  }
+
+  function clearRecoveryTimer() {
+    if (recoveryTimer !== null) root.clearTimeout(recoveryTimer);
+    recoveryTimer = null;
+  }
+
+  function playbackError(pending, error) {
+    if (active !== pending) return;
+    active = null;
+    clearRecoveryTimer();
+    stopAudio();
+    notify(pending.onerror, error);
+  }
+
+  function boundRecovery(pending) {
+    clearRecoveryTimer();
+    recoveryTimer = root.setTimeout(() => playbackError(pending,
+      new Error('Pilot audio was interrupted. Test your headphones again.')), AUDIO_RECOVERY_TIMEOUT_MS);
+  }
+
+  function recovered(pending) {
+    if (active !== pending || !pending.recovering || context.state !== 'running') return;
+    pending.recovering = false;
+    clearRecoveryTimer();
+    notify(pending.onresume, { remainingSeconds: Math.max(0, pending.endAt - context.currentTime) });
+  }
+
+  function contextChanged() {
+    const pending = active;
+    if (!pending || !audio) return;
+    if (context.state === 'running') { recovered(pending); return; }
+    if (context.state === 'closed') {
+      playbackError(pending, new Error('Pilot audio was closed. Test your headphones again.'));
+      return;
+    }
+    if (pending.recovering || root.document?.visibilityState === 'hidden') return;
+    // A phone may interrupt the output context as its microphone route closes.
+    // Resume this source at its existing audio-clock position, not from word one.
+    pending.recovering = true;
+    boundRecovery(pending);
+    notify(pending.onpause);
+    try {
+      Promise.resolve(context.resume()).then(() => recovered(pending), error => playbackError(pending, error));
+    } catch (error) { playbackError(pending, error); }
   }
 
   function spokenWordCount(text) {
@@ -97,6 +149,7 @@
     serial += 1;
     active = null;
     clearGenerationTimer();
+    clearRecoveryTimer();
     stopAudio();
     try { worker?.postMessage({ type: 'cancel', token: serial }); } catch (_) { /* Failed worker is reset on its error. */ }
   }
@@ -146,33 +199,75 @@
     if (message.type !== 'audio') return;
     clearGenerationTimer();
     const pending = active;
+    let playback;
+    try { playback = preparePlayback(pending, message); }
+    catch (error) { playbackError(pending, error); return; }
+    const play = () => {
+      if (active !== pending) return;
+      clearRecoveryTimer();
+      startPlayback(pending, playback);
+    };
+    const resumeAndPlay = () => {
+      if (active !== pending) return;
+      if (context.state === 'running') { play(); return; }
+      try {
+        Promise.resolve(context.resume()).then(play, error => playbackError(pending, error));
+      } catch (error) { playbackError(pending, error); }
+    };
+    // Stop/cancel synchronously invalidates recognition, but closing its audio
+    // hardware is asynchronous. Wait for that release before waking pilot output.
+    const waitForInput = root.QGHVoiceWorkspace?.whenInputAudioReleased;
+    if (waitForInput || context.state !== 'running') {
+      boundRecovery(pending);
+      try { Promise.resolve(waitForInput?.()).then(resumeAndPlay, error => playbackError(pending, error)); }
+      catch (error) { playbackError(pending, error); }
+    } else play();
+  }
+
+  function preparePlayback(pending, message) {
+    const samples = message.samples instanceof Float32Array ? message.samples : new Float32Array(message.samples);
+    if (!samples.length || message.sampleRate !== 24000) throw new Error('Invalid pilot audio');
+    const pace = paceFor(pending.text, samples.length, message.sampleRate, pending.targetWpm);
+    // Keep the lead at the same wall-clock length at every selected pace.
+    // Assemble before microphone closure completes, so that route release
+    // does not also have to wait for a large PCM copy.
+    const leadSamples = Math.ceil(OUTPUT_ROUTE_LEAD_SECONDS * message.sampleRate * pace);
+    const durationSeconds = (leadSamples + samples.length) / message.sampleRate / pace;
+    const buffer = context.createBuffer(1, leadSamples + samples.length, message.sampleRate);
+    buffer.copyToChannel(samples, 0, leadSamples);
+    // Soften the step out of silence without dropping the beginning of the
+    // assembled clip. Samples beyond this 10 ms ramp remain byte-for-byte.
+    const channel = buffer.getChannelData(0);
+    const fadeSamples = Math.min(samples.length, Math.ceil(OUTPUT_FADE_SECONDS * message.sampleRate));
+    for (let index = 0; index < fadeSamples; index += 1) {
+      channel[leadSamples + index] *= (index + 1) / fadeSamples;
+    }
+    return { buffer, pace, durationSeconds };
+  }
+
+  function startPlayback(pending, playback) {
     try {
       if (context.state !== 'running') throw new Error('Pilot audio is suspended. Test pilot voice again.');
-      const samples = message.samples instanceof Float32Array ? message.samples : new Float32Array(message.samples);
-      if (!samples.length || message.sampleRate !== 24000) throw new Error('Invalid pilot audio');
-      const buffer = context.createBuffer(1, samples.length, message.sampleRate);
-      buffer.copyToChannel(samples, 0);
       audio = context.createBufferSource();
-      audio.buffer = buffer;
-      const pace = paceFor(pending.text, samples.length, message.sampleRate, pending.targetWpm);
+      audio.buffer = playback.buffer;
       // The correction only shortens an over-long assembled reply. It never
       // slows a naturally brisk clip, and does not affect flight or D/F timing.
-      audio.playbackRate.value = pace;
+      audio.playbackRate.value = playback.pace;
       audio.connect(context.destination);
       const playing = audio;
+      pending.endAt = context.currentTime + playback.durationSeconds;
       playing.onended = () => {
         playing.disconnect();
         if (audio === playing) audio = null;
         if (active?.token !== pending.token) return;
+        clearRecoveryTimer();
         active = null;
         notify(pending.onend);
       };
       playing.start();
-      notify(pending.onstart, { durationSeconds: samples.length / message.sampleRate / pace });
+      notify(pending.onstart, { durationSeconds: playback.durationSeconds });
     } catch (error) {
-      active = null;
-      stopAudio();
-      notify(pending.onerror, error);
+      playbackError(pending, error);
     }
   }
 
@@ -184,7 +279,8 @@
       // by the explicit headphone test, including Safari and installed PWAs.
       if (!context || context.state === 'closed') {
         const AudioContext = root.AudioContext || root.webkitAudioContext;
-        context = new AudioContext();
+        context = new AudioContext({ latencyHint: 'playback' });
+        context.addEventListener?.('statechange', contextChanged);
       }
       resume = context.resume();
     } catch (error) { return Promise.reject(error); }

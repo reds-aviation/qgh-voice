@@ -10,7 +10,7 @@ const { pathToFileURL } = require('node:url');
 const engineSource = fs.readFileSync(path.join(__dirname, '..', 'pilot-voice-engine.js'), 'utf8');
 
 function loadRuntime(options = {}) {
-  const state = { workers: [], contexts: [], audio: [], timers: new Map() };
+  const state = { workers: [], contexts: [], buffers: [], audio: [], timers: new Map() };
   class Worker {
     constructor(url, settings) { this.url = url; this.settings = settings; this.messages = []; state.workers.push(this); }
     postMessage(message) { this.messages.push(message); }
@@ -22,7 +22,16 @@ function loadRuntime(options = {}) {
     addEventListener(type, callback) { this.listeners[type] = callback; }
     changeState(value) { this.state = value; this.listeners.statechange?.(); }
     resume() { this.resumed = true; if (!options.deferResume) this.state = options.suspended ? 'suspended' : 'running'; return Promise.resolve(); }
-    createBuffer(channels, length, sampleRate) { return { channels, length, sampleRate, copyToChannel() {} }; }
+    createBuffer(channels, length, sampleRate) {
+      const buffer = { channels, length, sampleRate, samples: new Float32Array(length),
+        copyToChannel(samples, channel, offset = 0) {
+          assert.equal(channel, 0);
+          this.samples.set(samples, offset);
+        },
+        getChannelData(channel) { assert.equal(channel, 0); return this.samples; } };
+      state.buffers.push(buffer);
+      return buffer;
+    }
     createBufferSource() {
       const node = { playbackRate: { value: 1 }, connect() {}, disconnect() { this.disconnected = true; }, start() { this.started = true; }, stop() { this.stopped = true; } };
       state.audio.push(node);
@@ -89,6 +98,7 @@ test('exercise reply waits for microphone route teardown before starting output'
   const events = [];
   runtime.api.speak({ text: 'Roger turning right two three zero Falcon one one', onstart: () => events.push('start') });
   worker.emit({ type: 'audio', token: worker.messages.at(-1).token, samples: new Float32Array(24000), sampleRate: 24000 });
+  assert.equal(runtime.state.buffers.length, 1, 'PCM is prepared while microphone teardown is pending');
   assert.equal(runtime.state.audio.length, 0, 'the old microphone route must finish closing first');
   runtime.state.contexts[0].state = 'suspended';
   release();
@@ -123,7 +133,7 @@ test('transient audio interruption resumes the same source without losing the mi
   context.currentTime = 1;
   context.changeState('interrupted');
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(events, ['start', 'pause', ['resume', 4]]);
+  assert.deepEqual(events, ['start', 'pause', ['resume', 4.24]]);
   assert.equal(runtime.state.audio.length, 1, 'resume the existing buffer, never replay its prefix');
   assert.equal(runtime.state.audio[0].stopped, undefined);
   runtime.state.audio[0].onended();
@@ -179,10 +189,16 @@ test('cancel drops delayed synthesis and silences audio without completion callb
   assert.deepEqual(events, ['start']);
 });
 
-test('onstart reports pace-corrected audio duration after playback begins', async () => {
+test('output route has a bounded silent lead without discarding the first spoken sample', async () => {
   const runtime = loadRuntime();
   const worker = await ready(runtime);
   const events = [];
+  const samples = new Float32Array(30000);
+  samples[0] = 0.5;
+  samples[1] = -0.25;
+  samples[239] = 0.4;
+  samples[240] = -0.75;
+  samples[29999] = 0.25;
   runtime.api.speak({ text: 'Raven, steady.',
     onstart: playback => {
       assert.equal(runtime.state.audio.at(-1).started, true);
@@ -192,12 +208,22 @@ test('onstart reports pace-corrected audio duration after playback begins', asyn
     onend: () => events.push('end')
   });
   const token = worker.messages.at(-1).token;
-  worker.emit({ type: 'audio', token, samples: new Float32Array(30000), sampleRate: 24000 });
-  assert.deepEqual(events, [1.2]);
+  worker.emit({ type: 'audio', token, samples, sampleRate: 24000 });
+  const buffer = runtime.state.audio.at(-1).buffer;
+  assert.equal(buffer.length, 36000);
+  assert.equal(buffer.samples[5999], 0);
+  assert.equal(buffer.samples[6000], Math.fround(0.5 / 240));
+  assert.equal(buffer.samples[6001], Math.fround(-0.25 * 2 / 240));
+  assert.equal(buffer.samples[6239], Math.fround(0.4));
+  assert.equal(buffer.samples[6240], -0.75);
+  assert.equal(buffer.samples.at(-1), 0.25);
+  assert.equal(samples[0], 0.5, 'the worker PCM is not modified');
+  assert.equal(samples[240], -0.75);
+  assert.deepEqual(events, [1.44]);
   assert.equal(runtime.state.audio.at(-1).playbackRate.value, 1.25 / 1.2);
   assert.equal(runtime.state.timers.size, 0, 'generation watchdog clears before playback');
   runtime.state.audio.at(-1).onended();
-  assert.deepEqual(events, [1.2, 'end']);
+  assert.deepEqual(events, [1.44, 'end']);
 });
 
 test('assembled short readbacks follow the selected operational WPM target', async () => {
@@ -209,8 +235,9 @@ test('assembled short readbacks follow the selected operational WPM target', asy
   // 6.18 seconds is the observed uncorrected duration of this seven-word
   // assembled U/S reply in the packaged bank.
   worker.emit({ type: 'audio', token, samples: new Float32Array(Math.round(6.18 * 24000)), sampleRate: 24000 });
-  assert.equal(duration, 7 * 60 / 170);
-  assert.equal(runtime.state.audio.at(-1).playbackRate.value, 6.18 / duration);
+  const speechDuration = 7 * 60 / 170;
+  assert.ok(duration >= speechDuration + 0.24 && duration < speechDuration + 0.241);
+  assert.equal(runtime.state.audio.at(-1).playbackRate.value, 6.18 / speechDuration);
 });
 
 test('a replacement transmission rejects stale audio and stale errors', async () => {

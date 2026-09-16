@@ -24,6 +24,11 @@
   const PILOT_DEFAULT_WPM = 100;
   const PILOT_SUPPORTED_WPM = Object.freeze([100, 130, 170]);
   const MAX_PACE_CORRECTION = 6.75;
+  // Closing a phone's microphone can switch its wired-headphone output route
+  // after the input AudioContext has closed. Key the output with a short silent
+  // lead so the first spoken sample is not sent during that route change.
+  const OUTPUT_ROUTE_LEAD_SECONDS = 0.24;
+  const OUTPUT_FADE_SECONDS = 0.01;
   let state = 'unprepared';
   let worker = null;
   let context = null;
@@ -194,10 +199,13 @@
     if (message.type !== 'audio') return;
     clearGenerationTimer();
     const pending = active;
+    let playback;
+    try { playback = preparePlayback(pending, message); }
+    catch (error) { playbackError(pending, error); return; }
     const play = () => {
       if (active !== pending) return;
       clearRecoveryTimer();
-      startPlayback(pending, message);
+      startPlayback(pending, playback);
     };
     const resumeAndPlay = () => {
       if (active !== pending) return;
@@ -216,22 +224,38 @@
     } else play();
   }
 
-  function startPlayback(pending, message) {
+  function preparePlayback(pending, message) {
+    const samples = message.samples instanceof Float32Array ? message.samples : new Float32Array(message.samples);
+    if (!samples.length || message.sampleRate !== 24000) throw new Error('Invalid pilot audio');
+    const pace = paceFor(pending.text, samples.length, message.sampleRate, pending.targetWpm);
+    // Keep the lead at the same wall-clock length at every selected pace.
+    // Assemble before microphone closure completes, so that route release
+    // does not also have to wait for a large PCM copy.
+    const leadSamples = Math.ceil(OUTPUT_ROUTE_LEAD_SECONDS * message.sampleRate * pace);
+    const durationSeconds = (leadSamples + samples.length) / message.sampleRate / pace;
+    const buffer = context.createBuffer(1, leadSamples + samples.length, message.sampleRate);
+    buffer.copyToChannel(samples, 0, leadSamples);
+    // Soften the step out of silence without dropping the beginning of the
+    // assembled clip. Samples beyond this 10 ms ramp remain byte-for-byte.
+    const channel = buffer.getChannelData(0);
+    const fadeSamples = Math.min(samples.length, Math.ceil(OUTPUT_FADE_SECONDS * message.sampleRate));
+    for (let index = 0; index < fadeSamples; index += 1) {
+      channel[leadSamples + index] *= (index + 1) / fadeSamples;
+    }
+    return { buffer, pace, durationSeconds };
+  }
+
+  function startPlayback(pending, playback) {
     try {
       if (context.state !== 'running') throw new Error('Pilot audio is suspended. Test pilot voice again.');
-      const samples = message.samples instanceof Float32Array ? message.samples : new Float32Array(message.samples);
-      if (!samples.length || message.sampleRate !== 24000) throw new Error('Invalid pilot audio');
-      const buffer = context.createBuffer(1, samples.length, message.sampleRate);
-      buffer.copyToChannel(samples, 0);
       audio = context.createBufferSource();
-      audio.buffer = buffer;
-      const pace = paceFor(pending.text, samples.length, message.sampleRate, pending.targetWpm);
+      audio.buffer = playback.buffer;
       // The correction only shortens an over-long assembled reply. It never
       // slows a naturally brisk clip, and does not affect flight or D/F timing.
-      audio.playbackRate.value = pace;
+      audio.playbackRate.value = playback.pace;
       audio.connect(context.destination);
       const playing = audio;
-      pending.endAt = context.currentTime + samples.length / message.sampleRate / pace;
+      pending.endAt = context.currentTime + playback.durationSeconds;
       playing.onended = () => {
         playing.disconnect();
         if (audio === playing) audio = null;
@@ -241,7 +265,7 @@
         notify(pending.onend);
       };
       playing.start();
-      notify(pending.onstart, { durationSeconds: samples.length / message.sampleRate / pace });
+      notify(pending.onstart, { durationSeconds: playback.durationSeconds });
     } catch (error) {
       playbackError(pending, error);
     }

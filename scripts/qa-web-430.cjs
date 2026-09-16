@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const base = process.env.QGH_QA_URL || 'http://127.0.0.1:4213/';
 const out = path.resolve('artifacts/v4.3.0');
-const viewports = [[1366,768],[1920,1080],[768,1024],[412,915],[360,800],[915,412],[683,384],[360,640]];
+const viewports = [[1366,768],[1920,1080],[768,1024],[320,568],[360,800],[375,667],[390,844],[412,915],[430,932],[915,412],[683,384],[360,640]];
 fs.mkdirSync(out, { recursive: true });
 
 async function main() {
@@ -32,19 +32,20 @@ async function main() {
       const ack = page.locator(tactical ? '#tVoiceCommandAck' : '#voiceCommandAck');
       assert.match(await ack.textContent(), /^HEARD ·/);
       await page.waitForTimeout(280);
-      assert.match(await ack.textContent(), /^APPLIED ·/);
+      assert.match(await ack.textContent(), /^(APPLIED|PILOT) ·/);
       const geometry = await page.evaluate(() => {
         const dock = document.querySelector('.voice-dock').getBoundingClientRect();
         const app = document.querySelector('.app, .tactical-app');
         const active = document.querySelector('.screen.active, .tactical-screen.active');
         return { overflow: document.documentElement.scrollWidth > innerWidth + 1 || app.scrollWidth > app.clientWidth + 1,
           dockInside: dock.left >= 0 && dock.right <= innerWidth + 1 && dock.top >= 0 && dock.bottom <= innerHeight + 1,
-          separatePhoneDock: innerWidth > 600 || innerWidth > innerHeight || app.getBoundingClientRect().bottom <= dock.top,
+          separatePhoneDock: innerWidth > 600 || innerWidth > innerHeight ||
+            parseFloat(getComputedStyle(app).paddingBottom) >= dock.height + 8,
           active: active.id };
       });
       assert.equal(geometry.overflow, false, `${name}: no horizontal overflow`);
       assert.equal(geometry.dockInside, true, `${name}: dock inside viewport`);
-      assert.equal(geometry.separatePhoneDock, true, `${name}: reserved phone dock`);
+      assert.equal(geometry.separatePhoneDock, true, `${name}: reserved phone dock ${JSON.stringify(geometry)}`);
       if ((width === 360 || width === 1366) && !us) await page.screenshot({path:path.join(out,`${name}-exercise.png`)});
       // Manual operation must continue after a routed voice call, with no microphone/model requirement.
       await page.locator(tactical ? '#tAdvance' : '#advanceFlight').click();
