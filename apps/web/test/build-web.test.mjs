@@ -18,6 +18,32 @@ const outputFiles = directory => absoluteFiles(directory)
   .map(file => relative(outputRoot, file).replaceAll('\\', '/'))
   .sort();
 
+const instructorLedFiles = [
+  'index.html',
+  'instructor.html',
+  'student.html',
+  'suite.css',
+  'suite-core.js',
+  'suite-instructor.js',
+  'suite-review.js',
+  'suite-sensors.js',
+  'suite-session.js',
+  'suite-student.js',
+  'simulator-core.js',
+  'procedure-core.js',
+  'fonts/ibm-plex-mono-500.ttf',
+  'fonts/ibm-plex-sans-400.ttf',
+  'fonts/ibm-plex-sans-600.ttf',
+  'fonts/OFL-1.1.txt',
+  'manifest.webmanifest',
+  'service-worker.js',
+  'pwa-register.js',
+  'pwa.css',
+  'app-version.json',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+].sort();
+
 test('web build creates an allowlisted PWA package', () => {
   const expectedFiles = [
     'index.html',
@@ -95,7 +121,13 @@ test('web build creates an allowlisted PWA package', () => {
     assert.equal(existsSync(resolve(outputRoot, relativePath)), true, `${relativePath} is present`);
   }
 
-  assert.deepEqual(outputFiles(outputRoot), expectedFiles, 'web output contains only the approved engine and PWA files');
+  const allOutput = outputFiles(outputRoot);
+  const qghOutput = allOutput.filter(path => !path.startsWith('instructor-led/'));
+  const instructorOutput = allOutput
+    .filter(path => path.startsWith('instructor-led/'))
+    .map(path => path.slice('instructor-led/'.length));
+  assert.deepEqual(qghOutput, expectedFiles, 'root output contains only the approved individual-practice PWA files');
+  assert.deepEqual(instructorOutput, instructorLedFiles, 'instructor-led output is the isolated allowlisted beta package');
   assert.equal(existsSync(resolve(outputRoot, '__qgh-web-build-probe__.txt')), false, 'unlisted static content is excluded');
 
   assert.equal(existsSync(resolve(outputRoot, 'screens')), false, 'stale duplicate screens are excluded');
@@ -110,6 +142,8 @@ test('web build creates an allowlisted PWA package', () => {
   const environment = readFileSync(resolve(outputRoot, 'web-environment.js'), 'utf8');
   const distribution = readFileSync(resolve(outputRoot, 'web-distribution.js'), 'utf8');
   const headers = readFileSync(resolve(outputRoot, '_headers'), 'utf8');
+  const instructorEntry = readFileSync(resolve(outputRoot, 'instructor-led', 'index.html'), 'utf8');
+  const instructorWorker = readFileSync(resolve(outputRoot, 'instructor-led', 'service-worker.js'), 'utf8');
   const { version } = JSON.parse(readFileSync(resolve(outputRoot, 'app-version.json'), 'utf8'));
   for (const html of [entry, guide, single, tactical]) {
     const versionedAssets = [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)];
@@ -120,6 +154,8 @@ test('web build creates an allowlisted PWA package', () => {
   }
   assert.match(entry, /manifest\.webmanifest/);
   assert.match(entry, /QGH_WEB_DISTRIBUTION/);
+  assert.match(entry, /INDIVIDUAL PRACTICE/);
+  assert.match(entry, /href="instructor-led\/index\.html"/);
   assert.match(guide, /manifest\.webmanifest/);
   assert.match(guide, /pwa-register\.js/);
   assert.match(single, /worker-src 'self'/);
@@ -149,4 +185,7 @@ test('web build creates an allowlisted PWA package', () => {
   assert.match(environment, /appassets\.androidplatform\.net/);
   assert.match(distribution, /url\.protocol === 'https:'/);
   assert.match(headers, /\/service-worker\.js\s+! Content-Security-Policy\s+Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'/);
+  assert.match(instructorEntry, /BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS/);
+  assert.match(instructorEntry, /href="\.\.\/index\.html"/);
+  assert.match(instructorWorker, /reds-atc-suite-/);
 });

@@ -65,6 +65,7 @@ artifacts/
 
 # Generated hosted web package and local preview state
 apps/web/dist/
+apps/suite-web/dist/
 packages/qgh-engine/state/
 packages/qgh-engine/screens/
 docs/qa/v5-media-captures/masters/

@@ -1,0 +1,1122 @@
+(function initialiseInstructor() {
+  'use strict';
+  const Core = globalThis.ATCSuiteCore;
+  const Sensors = globalThis.ATCSuiteSensors;
+  const Session = globalThis.ATCSuiteSession;
+  if (!Core || !Sensors || !Session) return;
+
+  const byId = id => document.getElementById(id);
+  const family = byId('exerciseFamily');
+  const procedure = byId('procedureType');
+  const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
+  const DEFAULT_TRAINING_TIME_RATE = 5;
+  const state = {
+    simulation: null, session: null, sensor: null, review: null, sra: null,
+    running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
+    dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
+    lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
+    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false
+  };
+
+  function number(id) { return Number(byId(id).value); }
+  function pad(value) { return String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0'); }
+  function clock(seconds) { const total = Math.max(0, Math.floor(seconds)); return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`; }
+  function modeLabel(mode) { return ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || mode; }
+
+  function normaliseTrainingTimeRate(value) {
+    const candidate = Number(value);
+    return TRAINING_TIME_RATES.includes(candidate) ? candidate : DEFAULT_TRAINING_TIME_RATE;
+  }
+
+  function setTrainingTimeRate(value) {
+    const rate = normaliseTrainingTimeRate(value);
+    state.trainingTimeRate = rate;
+    byId('trainingTimeRate').value = String(rate);
+    byId('trainingRateStatus').textContent = `SIMULATION · ${rate}×`;
+    return rate;
+  }
+
+  // This deliberately scales elapsed *wall time* before flight stepping. The
+  // flight model still receives physical simulation seconds, so configured
+  // ground speed, turn rate and turn radius retain their relationship.
+  function advanceWallElapsed(elapsedSeconds) {
+    if (!state.running) return 0;
+    const elapsed = Number.isFinite(elapsedSeconds) ? Math.min(1, Math.max(0, elapsedSeconds)) : 0;
+    state.accumulator += elapsed * state.trainingTimeRate;
+    let advanced = 0;
+    while (state.accumulator >= .25) {
+      advanceBy(.25);
+      state.accumulator -= .25;
+      advanced += .25;
+    }
+    return advanced;
+  }
+
+  setTrainingTimeRate(byId('trainingTimeRate').value);
+  byId('trainingTimeRate').addEventListener('change', event => setTrainingTimeRate(event.currentTarget.value));
+
+  function configureFields() {
+    const mode = family.value;
+    const radarMode = ['surveillance', 'sra'].includes(mode);
+    byId('procedureField').hidden = mode !== 'qgh';
+    byId('scanPresetField').hidden = !radarMode;
+    byId('radarProfileField').hidden = !radarMode;
+    byId('parRefreshField').hidden = mode !== 'par';
+    byId('approachAircraftField').hidden = !['sra', 'par'].includes(mode);
+    byId('parTransferGateField').hidden = mode !== 'surveillance';
+    for (const id of ['extendedCentrelineField', 'extendedCentrelineRangeField', 'centrelineTickField', 'localLfaField', 'localLfaRadiusField']) {
+      byId(id).hidden = !radarMode;
+    }
+    byId('sraDescentProfileField').hidden = mode !== 'sra';
+    syncRoster();
+    for (const row of byId('aircraftRoster').children) {
+      const radarReturn = [...row.querySelectorAll('input, select')][2];
+      if (!radarReturn) continue;
+      radarReturn.disabled = !radarMode;
+      radarReturn.setAttribute('aria-disabled', String(!radarMode));
+    }
+    byId('setupPreview').textContent = `QTE ${pad(number('initialBearing'))} · ${number('initialRange')} NM · HDG ${pad(number('initialHeading'))}`;
+  }
+
+  function syncRoster() {
+    const container = byId('aircraftRoster');
+    if (!state.rosterRows.length) state.rosterRows = [...container.children];
+    const count = Math.max(1, Math.min(24, Math.trunc(number('aircraftCount')) || 1));
+    const fields = [
+      ['callsign', 'callsign', '101'], ['squawk', 'four digit octal squawk', '4300'], ['radarReturn', 'radar return', 'primary'], ['aircraftType', 'type', 'fighter'], ['initialBearing', 'initial QTE', '65'],
+      ['initialRange', 'initial range', '25'], ['initialHeading', 'initial heading', '225'],
+      ['initialAltitude', 'altitude', '12000'], ['initialSpeed', 'speed', '240'], ['turnRate', 'rate of turn', '3'], ['verticalRate', 'vertical rate feet per minute', '1000']
+    ];
+    while (state.rosterRows.length < count) {
+      const index = state.rosterRows.length, row = state.rosterRows[0].cloneNode(true);
+      const defaults = {
+        callsign: 101 + index, squawk: automaticSquawkFor(index), initialBearing: (65 + index * 13) % 360,
+        initialRange: 25 + index, initialHeading: (225 + index * 13) % 360,
+        initialAltitude: 12000 + index * 1000, radarReturn: defaultRadarReturn(byId('radarProfile').value)
+      };
+      row.dataset.aircraftIndex = String(index);
+      [...row.querySelectorAll('input, select')].forEach((input, column) => {
+        input.id = `${fields[column][0]}-${index + 1}`;
+        input.setAttribute('aria-label', `Aircraft ${index + 1} ${fields[column][1]}`);
+        input.value = String(defaults[fields[column][0]] ?? fields[column][2]);
+      });
+      state.rosterRows.push(row);
+    }
+    if (container.children.length !== count) container.replaceChildren(...state.rosterRows.slice(0, count));
+    syncRadarReturnDefaults();
+    const approach = byId('approachAircraft'), selected = approach.value;
+    const options = state.rosterRows.slice(0, count).map((row, index) => {
+      const option = document.createElement('option'); option.value = `AC${index + 1}`;
+      option.textContent = row.querySelector('input').value || `Aircraft ${index + 1}`; return option;
+    });
+    approach.replaceChildren(...options);
+    approach.value = options.some(option => option.value === selected) ? selected : 'AC1';
+  }
+
+  // The global profile selects the automatic roster default. An instructor can
+  // deliberately override an individual return to create a mixed primary / SSR
+  // training picture without losing that decision when the roster is resized.
+  function defaultRadarReturn(profile) {
+    return profile === 'correlated' ? 'mode-s' : 'primary';
+  }
+
+  function normaliseRadarReturn(value, profile) {
+    const radarReturn = String(value || defaultRadarReturn(profile)).trim().toLowerCase();
+    if (!['primary', 'mode-a', 'mode-s'].includes(radarReturn)) throw new Error('Each radar return must be Primary, Mode A or Mode S.');
+    return radarReturn;
+  }
+
+  function syncRadarReturnDefaults() {
+    const defaultReturn = defaultRadarReturn(byId('radarProfile').value);
+    for (const row of byId('aircraftRoster').children) {
+      const radarReturn = [...row.querySelectorAll('input, select')][2];
+      if (!radarReturn || radarReturn.dataset?.radarReturnAuto === 'false') continue;
+      radarReturn.value = defaultReturn;
+      if (radarReturn.dataset) radarReturn.dataset.radarReturnAuto = 'true';
+    }
+  }
+
+  // The training representation uses no real location or aerodrome data.
+  // When enabled, the LFA is an instructor-defined regular local boundary
+  // around the simulated station, not a published airspace boundary.
+  function radarEnvironmentInput(mode) {
+    if (!['surveillance', 'sra'].includes(mode)) return null;
+    const localBoundary = byId('localLfaEnabled').checked === true
+      ? Array.from({ length: 8 }, (_, index) => ({ bearingDeg: index * 45, rangeNm: number('localLfaRadius') }))
+      : [];
+    return {
+      runwayOrientationDeg: number('runwayOrientation'),
+      extendedCentreline: byId('extendedCentreline').checked === true,
+      extendedCentrelineNm: number('extendedCentrelineNm'),
+      centrelineTickNm: number('centrelineTickNm'),
+      lfaBoundary: localBoundary,
+      sraDescentProfile: mode === 'sra' && byId('sraDescentProfile').checked === true
+    };
+  }
+
+  // Automatic assignments stay in a normal training range; they never allocate
+  // 7500, 7600 or 7700. An instructor may deliberately enter any valid octal
+  // code to model a specific classroom scenario.
+  function automaticSquawkFor(index) {
+    return (0o4300 + index).toString(8).padStart(4, '0');
+  }
+
+  function normaliseSquawk(value) {
+    const squawk = String(value || '').trim();
+    if (!/^[0-7]{4}$/.test(squawk)) throw new Error('Each transponder code must use exactly four octal digits (0–7).');
+    return squawk;
+  }
+
+  function trainingSurveillanceFor(index, mode, radarReturn, squawk) {
+    if (!['surveillance', 'sra'].includes(mode) || radarReturn === 'primary') return null;
+    if (radarReturn === 'mode-a') return { secondary: true, squawk };
+    return { secondary: true, modeS: true, squawk,
+      modeSId: (0xA10000 + index).toString(16).toUpperCase().padStart(6, '0') };
+  }
+
+  function scenarioInput() {
+    const mode = family.value;
+    const profile = byId('radarProfile').value;
+    const radarEnvironment = radarEnvironmentInput(mode);
+    const squawks = new Set();
+    const aircraft = [...byId('aircraftRoster').children].map((row, index) => {
+      const controls = [...row.querySelectorAll('input, select')];
+      const inputs = controls.map(input => input.value);
+      const squawk = normaliseSquawk(String(inputs[1] || '').trim() || automaticSquawkFor(index));
+      // Empty fields mean the instructor chose automatic allocation. Make the
+      // result visible before session creation rather than silently hiding it.
+      if (!String(inputs[1] || '').trim()) controls[1].value = squawk;
+      if (squawks.has(squawk)) throw new Error('Each aircraft needs a unique four-digit octal transponder code.');
+      squawks.add(squawk);
+      const radarReturn = normaliseRadarReturn(inputs[2], profile);
+      const surveillance = trainingSurveillanceFor(index, mode, radarReturn, squawk);
+      return { aircraftId: `AC${index + 1}`, callsign: inputs[0], aircraftType: inputs[3], initialQteDeg: Number(inputs[4]),
+        initialRangeNm: Number(inputs[5]), initialHeadingDeg: Number(inputs[6]), altitudeFt: Number(inputs[7]),
+        speedKt: Number(inputs[8]), rateDegPerSecond: Number(inputs[9]), verticalRateFpm: Number(inputs[10]),
+        // Always retain the code in instructor truth. The optional secondary
+        // response below is what governs the controller/student picture.
+        transponderCode: squawk,
+        ...(surveillance ? { surveillance } : {}) };
+    });
+    const surveillanceProfile = ['surveillance', 'sra'].includes(mode) && aircraft.some(item => item.surveillance?.secondary === true)
+      ? 'correlated'
+      : 'primary';
+    return {
+      aircraft, approachAircraft: byId('approachAircraft').value,
+      exerciseFamily: mode,
+      qghProcedure: procedure.value === 'us-compass' ? 'us' : 'normal',
+      callsign: byId('callsign').value,
+      initialQteDeg: number('initialBearing'), initialRangeNm: number('initialRange'),
+      initialHeadingDeg: number('initialHeading'), altitudeFt: number('initialAltitude'),
+      speedKt: number('initialSpeed'), rateDegPerSecond: number('turnRate'),
+      verticalRateFpm: 1000, runwayOrientationDeg: number('runwayOrientation'),
+      finalTrackDeg: number('finalTrack'), surveillanceProfile,
+      sensorProfile: mode === 'par' ? `${byId('parRefresh').value}hz` : `${byId('scanPreset').value}rpm`,
+      parRefreshHz: Number(byId('parRefresh').value), parTransferGateNm: number('parTransferGate'),
+      ...(radarEnvironment ? { radarEnvironment } : {})
+    };
+  }
+
+  function publicMetadata(input) {
+    const rpm = Number(byId('scanPreset').value);
+    const approachAircraft = input.aircraft.find(aircraft => aircraft.aircraftId === input.approachAircraft);
+    return {
+      mode: input.exerciseFamily,
+      procedure: input.qghProcedure,
+      callsign: input.callsign,
+      aircraftCount: input.aircraft.length,
+      approachCallsign: approachAircraft?.callsign || input.callsign,
+      glidepathDeg: 3,
+      radarProfile: input.surveillanceProfile,
+      equipmentLabel: input.exerciseFamily === 'par' ? 'DP-RDR-8044-inspired training representation'
+        : ['surveillance', 'sra'].includes(input.exerciseFamily) ? 'ATCR-33S-inspired training representation' : 'HRDF training representation',
+      trainingReference: 'Co-aligned training references; zero magnetic variation',
+      runwayOrientation: input.runwayOrientationDeg,
+      finalTrack: input.finalTrackDeg,
+      ...(['surveillance', 'sra'].includes(input.exerciseFamily) ? { scanRpm: rpm, revisitSeconds: 60 / rpm, historyCount: 3 } : {}),
+      ...(input.exerciseFamily === 'par' ? { parRefreshHz: Number(byId('parRefresh').value), historyCount: 3 } : {}),
+      ...(input.radarEnvironment ? { radarEnvironment: input.radarEnvironment } : {}),
+      ...(['sra', 'par'].includes(input.exerciseFamily) && approachAircraft ? {
+        approachSpeedKt: approachAircraft.speedKt, approachAircraftType: approachAircraft.aircraftType
+      } : {})
+    };
+  }
+
+  function publicMetadataForSimulation(simulation = state.simulation) {
+    const scenario = simulation.scenario;
+    const approachAircraft = simulation.aircraftList.find(item => item.id === scenario.parApproachAircraftId);
+    const mode = scenario.exerciseFamily;
+    const metadata = {
+      mode,
+      procedure: scenario.qghProcedure,
+      callsign: simulation.aircraft.callsign,
+      aircraftCount: simulation.aircraftList.length,
+      approachCallsign: approachAircraft?.callsign || simulation.aircraft.callsign,
+      glidepathDeg: 3,
+      radarProfile: scenario.surveillanceProfile,
+      equipmentLabel: mode === 'par' ? 'DP-RDR-8044-inspired training representation'
+        : ['surveillance', 'sra'].includes(mode) ? 'ATCR-33S-inspired training representation' : 'HRDF training representation',
+      trainingReference: 'Co-aligned training references; zero magnetic variation',
+      runwayOrientation: scenario.runwayOrientationDeg,
+      finalTrack: scenario.finalTrackDeg
+    };
+    if (['surveillance', 'sra'].includes(mode)) {
+      metadata.scanRpm = Number(state.sensor?.rpm || 12);
+      metadata.revisitSeconds = Number(state.sensor?.revisitSeconds || 5);
+      metadata.historyCount = 3;
+      if (scenario.radarEnvironment) metadata.radarEnvironment = scenario.radarEnvironment;
+    }
+    if (mode === 'par') {
+      metadata.parRefreshHz = Number(scenario.parRefreshHz || 1);
+      metadata.historyCount = 3;
+    }
+    if (['sra', 'par'].includes(mode) && approachAircraft) {
+      metadata.approachSpeedKt = approachAircraft.speedKt;
+      metadata.approachAircraftType = approachAircraft.type;
+    }
+    return metadata;
+  }
+
+  function createSensor(input) {
+    if (input.exerciseFamily === 'qgh') return Sensors.createDfSensor({ holdSeconds: 2 });
+    if (input.exerciseFamily === 'par') return Sensors.createParSensor({
+      refreshHz: Number(input.parRefreshHz ?? byId('parRefresh').value), runwayHeadingDeg: input.finalTrackDeg,
+      source: input.approachAircraft ?? input.parApproachAircraftId,
+      startSeconds: Number(input.startSeconds ?? 0), touchdown: { x: 0, y: 0, altitudeFt: 0 },
+      glidepathDeg: 3, maxRangeNm: 20, history: 3
+    });
+    state.sra = input.exerciseFamily === 'sra' ? Sensors.createSraReferences({ runwayHeadingDeg: input.finalTrackDeg, terminationRangeNm: .5 }) : null;
+    return Sensors.createSurveillanceSensor({ rpm: Number(byId('scanPreset').value),
+      profile: input.surveillanceProfile, sra: input.exerciseFamily === 'sra', history: 3, maxRangeNm: 100 });
+  }
+
+  function configureActiveControls() {
+    if (!state.simulation) return;
+    const mode = state.simulation.scenario.exerciseFamily;
+    const us = mode === 'qgh' && state.simulation.scenario.qghProcedure === 'us';
+    const radarMode = mode !== 'qgh';
+    const approachMode = ['sra', 'par'].includes(mode);
+    byId('normalCommands').hidden = us; byId('usCommands').hidden = !us;
+    byId('continueHeading').hidden = us;
+    byId('reportHeading').hidden = us;
+    byId('radarApproachCommands').hidden = !radarMode;
+    byId('transmitDf').hidden = radarMode;
+    byId('continueApproach').hidden = !approachMode;
+    byId('reportRunwayVisual').hidden = !approachMode;
+    byId('missedApproach').hidden = !approachMode;
+    byId('parTransferActions').hidden = mode !== 'surveillance';
+    byId('approachControlLabel').textContent = mode === 'par' ? 'PAR APPROACH ACTIONS'
+      : mode === 'sra' ? 'SRA APPROACH ACTIONS' : 'SURVEILLANCE ACTIONS';
+    byId('approachControlHint').textContent = approachMode
+      ? 'Heading, descent, visual acquisition and missed-approach training controls.'
+      : 'Position reports remain tied to the discrete surveillance picture.';
+  }
+
+  function onSessionEvent(event) {
+    const snapshot = event.snapshot;
+    if (event.kind === 'join-requested') {
+      state.pendingClient = event.clientId;
+      byId('studentStatus').textContent = 'JOIN REQUEST RECEIVED';
+      byId('studentDetail').textContent = 'Admit this controller position when ready.';
+      byId('admitStudent').hidden = false; byId('rejectStudent').hidden = false;
+    } else if (event.kind === 'student-admitted') {
+      byId('studentStatus').textContent = 'ADMITTED · NOT READY';
+      byId('studentDetail').textContent = 'Waiting for the controller position to confirm Ready.';
+      byId('admitStudent').hidden = true; byId('rejectStudent').hidden = true;
+    } else if (event.kind === 'student-ready') {
+      byId('studentStatus').textContent = 'POSITION READY';
+      byId('studentDetail').textContent = 'The exercise can now start.';
+      byId('startExercise').disabled = false;
+    } else if (event.kind === 'student-disconnected') {
+      byId('studentStatus').textContent = 'POSITION DISCONNECTED';
+    } else if (event.kind === 'terminated') {
+      byId('studentStatus').textContent = 'SESSION CLOSED';
+    }
+    if (snapshot) byId('sessionPin').textContent = snapshot.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
+  }
+
+  function createSession(event) {
+    event.preventDefault();
+    if (!byId('scenarioForm').reportValidity()) return;
+    try {
+      const input = scenarioInput();
+      state.simulation = Core.setLifecycle(Core.createState(input), 'ready');
+      state.sensor = createSensor(input);
+      state.review = Sensors.createReviewTimeline();
+      state.review.recordTruth(truthForReview());
+      state.session = Session.createInstructorSession({
+        publicMetadata: publicMetadata(input), storage: localStorage,
+        transportFactory: channelName => Session.createLocalSessionTransport({ channelName }),
+        onEvent: onSessionEvent
+      });
+      byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
+      byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = false;
+      byId('modeKicker').textContent = modeLabel(input.exerciseFamily);
+      byId('scopeLabel').textContent = input.exerciseFamily === 'qgh' ? 'CONTINUOUS TRUTH · D/F PREVIEW' : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
+      byId('truthCallsign').textContent = input.callsign;
+      renderAircraftTabs(); refreshSelectionInputs();
+      configureActiveControls();
+      byId('startExercise').disabled = true;
+      updateAll();
+      window.open('student.html', '_blank', 'noopener');
+    } catch (error) { byId('setupPreview').textContent = error.message; }
+  }
+
+  function truthForSensor(simulation = state.simulation) {
+    return { aircraft: simulation.aircraftList.map(aircraft => ({ id: aircraft.id, callsign: aircraft.callsign,
+      position: { xNm: aircraft.position.xNm, yNm: aircraft.position.yNm },
+      altitudeFt: aircraft.altitudeFt, headingDeg: aircraft.headingDeg,
+      ...(aircraft.surveillance ? { surveillance: aircraft.surveillance } : {}) })),
+      simulationSeconds: simulation.simulationSeconds };
+  }
+
+  function publishCurrentObservation() {
+    if (!state.session || !state.sensor || !state.simulation) return;
+    const mode = state.simulation.scenario.exerciseFamily;
+    let observation;
+    if (mode === 'qgh') observation = state.sensor.studentObservation('qdm', state.simulation.simulationSeconds, truthForSensor());
+    else if (mode === 'par') observation = state.sensor.studentObservation();
+    else observation = state.sensor.studentObservation(state.sra);
+    state.latestObservation = observation;
+    state.session.publishObservation({ mode, ...observation }, state.simulation.simulationSeconds);
+    const signature = mode === 'qgh'
+      ? `${state.simulation.simulationSeconds}:${observation.status}:${observation.callsign ?? ''}:${observation.bearingDeg ?? ''}`
+      : mode === 'par' ? observation.timestamp : (observation.plots || []).map(plot => `${plot.trackId}:${plot.timestamp}`).join('|') || observation.plot?.timestamp;
+    if (signature != null && signature !== state.lastRecordedObservation
+      && observation && (observation.plots?.length || observation.plot || observation.bearingDeg != null || observation.rangeNm != null)) {
+      state.review.recordObservation(mode, { ...observation, timestamp: state.simulation.simulationSeconds });
+      state.lastRecordedObservation = signature;
+    }
+  }
+
+  function advanceSensors(fromState, toState) {
+    const mode = toState.scenario.exerciseFamily;
+    const time = toState.simulationSeconds;
+    if (mode === 'qgh') {
+      const df = state.sensor.read(time, truthForSensor(toState));
+      if (df.phase === 'live') state.sensor.update(truthForSensor(toState), time);
+      publishCurrentObservation();
+      return;
+    }
+    const first = truthForSensor(fromState), second = truthForSensor(toState);
+    const from = fromState.simulationSeconds, duration = Math.max(.0001, time - from);
+    state.sensor.advance(time, sampleTime => {
+      const fraction = Math.max(0, Math.min(1, (sampleTime - from) / duration));
+      return { aircraft: second.aircraft.map((b, index) => {
+        const a = first.aircraft[index];
+        const turn = ((b.headingDeg - a.headingDeg + 540) % 360) - 180;
+        return { id: b.id, callsign: b.callsign,
+          position: { xNm: a.position.xNm + (b.position.xNm - a.position.xNm) * fraction,
+            yNm: a.position.yNm + (b.position.yNm - a.position.yNm) * fraction },
+          headingDeg: (a.headingDeg + turn * fraction + 360) % 360,
+          altitudeFt: a.altitudeFt + (b.altitudeFt - a.altitudeFt) * fraction,
+          ...(b.surveillance || a.surveillance ? { surveillance: b.surveillance || a.surveillance } : {}) };
+      }), simulationSeconds: sampleTime };
+    });
+    publishCurrentObservation();
+  }
+
+  function advanceBy(seconds) {
+    if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return;
+    const steps = Math.round(seconds / .25);
+    for (let index = 0; index < steps; index += 1) {
+      const previous = state.simulation;
+      state.simulation = Core.advance(state.simulation, .25);
+      if (state.transmission && state.simulation.simulationSeconds >= state.transmission.expiresAt) finishTransmission();
+      state.review.recordTruth(truthForReview());
+      advanceSensors(previous, state.simulation);
+    }
+    updateAll();
+  }
+
+  function truthForReview() {
+    return { timestamp: state.simulation.simulationSeconds, aircraft: state.simulation.aircraftList.map(a => ({
+      id: a.id, callsign: a.callsign, xNm: a.position.xNm, yNm: a.position.yNm,
+      headingDeg: a.headingDeg, altitudeFt: a.altitudeFt })) };
+  }
+
+  function frame(timestamp) {
+    if (state.previousFrame == null) state.previousFrame = timestamp;
+    const elapsed = Math.min(1, Math.max(0, (timestamp - state.previousFrame) / 1000));
+    state.previousFrame = timestamp;
+    advanceWallElapsed(elapsed);
+    if (state.reviewPlaying) {
+      state.reviewTime = Math.min(state.simulation.simulationSeconds, state.reviewTime + elapsed * number('reviewSpeed'));
+      if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewPlaying = false;
+      drawReview(state.review.snapshot());
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function transferSelectedToPar() {
+    if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return false;
+    const status = Core.parTransferStatus(state.simulation);
+    if (!status.eligible) {
+      byId('commandStatus').textContent = status.message;
+      updateAll();
+      return false;
+    }
+    // A handover is an instructor display transition, not a pilot RT call. End
+    // any prior transmission before changing the student observation schema.
+    finishTransmission();
+    const result = Core.transferToPar(state.simulation);
+    if (!result.outcome.accepted) {
+      byId('commandStatus').textContent = result.outcome.error;
+      updateAll();
+      return false;
+    }
+    state.simulation = result.state;
+    const scenario = state.simulation.scenario;
+    state.sensor = createSensor({
+      exerciseFamily: 'par', finalTrackDeg: scenario.finalTrackDeg,
+      parApproachAircraftId: scenario.parApproachAircraftId, parRefreshHz: scenario.parRefreshHz,
+      startSeconds: state.simulation.simulationSeconds
+    });
+    state.sra = null;
+    state.latestObservation = null;
+    state.lastRecordedObservation = null;
+    const metadata = publicMetadataForSimulation();
+    const sent = state.session?.updatePublicMetadata?.(metadata, state.simulation.simulationSeconds);
+    state.review.recordEvent({ timestamp: result.outcome.timestamp, kind: 'par-transfer',
+      aircraftId: result.outcome.aircraftId,
+      xNm: state.simulation.aircraft.position.xNm, yNm: state.simulation.aircraft.position.yNm,
+      readback: `TRANSFERRED ${state.simulation.aircraft.callsign} TO PAR · ${status.approachRangeNm.toFixed(1)} NM` });
+    byId('commandStatus').textContent = sent === false
+      ? 'PAR handover applied locally; controller position is unavailable.'
+      : `TRANSFERRED ${state.simulation.aircraft.callsign} TO PAR · ${status.approachRangeNm.toFixed(1)} NM`;
+    byId('transferToPar').classList.add('executed');
+    setTimeout(() => byId('transferToPar')?.classList.remove('executed'), 900);
+    byId('modeKicker').textContent = modeLabel('par');
+    byId('scopeLabel').textContent = 'CONTINUOUS TRUTH · PAR PREVIEW';
+    configureActiveControls();
+    publishCurrentObservation();
+    updateAll();
+    return true;
+  }
+
+  function command(input, controlId) {
+    if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) {
+      return { outcome: { accepted: false, error: 'Exercise must be running or paused before a command can be issued.' } };
+    }
+    const result = Core.applyCommand(state.simulation, input);
+    if (!result.outcome.accepted) { byId('commandStatus').textContent = result.outcome.error; return result; }
+    finishTransmission();
+    state.simulation = result.state;
+    // The SRA descent aid presents the designated approach aircraft's current
+    // configured speed. Refresh only when a speed command can affect that
+    // public training cue; the underlying aircraft physics remains unchanged.
+    if (input.type === 'set-speed' && ['sra', 'par'].includes(state.simulation.scenario.exerciseFamily)) {
+      state.session?.updatePublicMetadata?.(publicMetadataForSimulation(), state.simulation.simulationSeconds);
+    }
+    state.review.recordEvent({ timestamp: result.outcome.timestamp, kind: 'command', command: result.outcome.command,
+      aircraftId: result.outcome.readback.aircraftId,
+      xNm: state.simulation.aircraftList.find(a => a.id === result.outcome.readback.aircraftId)?.position.xNm,
+      yNm: state.simulation.aircraftList.find(a => a.id === result.outcome.readback.aircraftId)?.position.yNm,
+      readback: result.outcome.readback.text });
+    byId('commandStatus').textContent = result.outcome.readback.text;
+    document.querySelectorAll('.command-deck button').forEach(button => button.classList.remove('executed'));
+    byId(controlId)?.classList.add('executed');
+    clearTimeout(state.readbackTimer);
+    state.session.publishCaption(result.outcome.readback.text, state.simulation.simulationSeconds);
+    state.transmission = { id: result.outcome.readback.id, aircraftId: result.outcome.readback.aircraftId,
+      expiresAt: state.simulation.simulationSeconds + 1.4, controlId };
+    if (state.simulation.scenario.exerciseFamily === 'qgh') beginDfTransmission(result.outcome.readback.id, result.outcome.readback.aircraftId);
+    state.readbackTimer = setTimeout(() => { finishTransmission(); updateAll(); }, 1400);
+    updateAll();
+    return result;
+  }
+
+  function beginDfTransmission(readbackId, aircraftId) {
+    clearTimeout(state.dfTimer);
+    state.sensor.beginTransmission({ transmissionId: readbackId, source: aircraftId }, truthForSensor(), state.simulation.simulationSeconds);
+    publishCurrentObservation();
+  }
+
+  function finishTransmission() {
+    if (!state.transmission) return;
+    const active = state.transmission;
+    state.transmission = null; clearTimeout(state.readbackTimer);
+    state.simulation = Core.finishReadback(state.simulation, active.id);
+    byId(active.controlId)?.classList.remove('executed');
+    endDfTransmission();
+  }
+
+  function endDfTransmission() {
+    if (!state.sensor || state.simulation?.scenario.exerciseFamily !== 'qgh') return;
+    state.sensor.endTransmission(truthForSensor(), state.simulation.simulationSeconds);
+    publishCurrentObservation();
+  }
+
+  function startExercise() {
+    if (!state.session || !state.simulation || ['running', 'paused', 'review'].includes(state.simulation.lifecycle)) return false;
+    if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
+    state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null;
+    byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
+    setPhase('running'); updateAll();
+    return true;
+  }
+
+  function pauseExercise() {
+    if (!state.session || !state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return false;
+    if (state.running) {
+      state.running = false; state.session.pause(state.simulation.simulationSeconds);
+      state.simulation = Core.setLifecycle(state.simulation, 'paused'); byId('pauseExercise').textContent = 'RESUME';
+    } else {
+      state.session.resume(state.simulation.simulationSeconds); state.simulation = Core.setLifecycle(state.simulation, 'running');
+      state.running = true; state.previousFrame = null; byId('pauseExercise').textContent = 'PAUSE';
+    }
+    updateAll();
+    return true;
+  }
+
+  function terminateExercise() {
+    if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return;
+    state.running = false; finishTransmission(); clearTimeout(state.readbackTimer); endDfTransmission();
+    state.simulation = Core.setLifecycle(state.simulation, 'review');
+    state.session.terminate('exercise-terminated', state.simulation.simulationSeconds);
+    updateAll();
+    state.reviewTime = state.simulation.simulationSeconds; state.reviewPlaying = false;
+    byId('reviewScrub').max = String(state.reviewTime);
+    byId('activeWorkspace').hidden = true; byId('reviewScreen').hidden = false; setPhase('review'); renderReview();
+  }
+
+  function setPhase(name) { document.querySelectorAll('[data-phase]').forEach(item => item.classList.toggle('active', item.dataset.phase === name)); }
+
+  function refreshSelectionInputs() {
+    const aircraft = state.simulation.aircraft;
+    byId('liveSpeed').value = String(Math.round(aircraft.speedKt));
+    byId('altitudeInput').value = String(Math.round(aircraft.altitudeFt));
+    byId('turnHeadingInput').value = String(Math.round(aircraft.headingDeg) % 360);
+  }
+
+  function renderAircraftTabs() {
+    const buttons = state.simulation.aircraftList.map(aircraft => {
+      const button = document.createElement('button'); button.type = 'button';
+      button.textContent = aircraft.callsign; button.dataset.aircraftId = aircraft.id;
+      button.setAttribute('aria-label', `Control aircraft ${aircraft.callsign}`);
+      button.addEventListener('click', () => selectAircraft(aircraft.id)); return button;
+    });
+    byId('aircraftRosterTabs').replaceChildren(...buttons);
+  }
+
+  function selectAircraft(aircraftId) {
+    if (!state.simulation || state.simulation.lifecycle === 'review') return;
+    state.simulation = Core.selectAircraft(state.simulation, aircraftId);
+    refreshSelectionInputs(); updateAll();
+  }
+
+  function updateAll() {
+    if (!state.simulation) return;
+    const snapshot = Core.truthSnapshot(state.simulation), a = snapshot.aircraft, b = snapshot.bearing;
+    byId('truthCallsign').textContent = a.callsign;
+    for (const button of byId('aircraftRosterTabs').children) {
+      const selected = button.dataset.aircraftId === a.id;
+      button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
+    }
+    const controllable = ['running', 'paused'].includes(snapshot.lifecycle);
+    document.querySelectorAll('.command-grid button, .command-grid input, .command-grid select').forEach(control => { control.disabled = !controllable; });
+    byId('pauseExercise').disabled = !controllable; byId('terminateExercise').disabled = !controllable;
+    const transfer = snapshot.scenario.exerciseFamily === 'surveillance'
+      ? Core.parTransferStatus(state.simulation) : null;
+    byId('parTransferActions').hidden = !transfer;
+    if (transfer) {
+      byId('parTransferGateStatus').textContent = transfer.message;
+      byId('transferToPar').disabled = !controllable || !transfer.eligible;
+      byId('transferToPar').title = transfer.message;
+      byId('transferToPar').setAttribute('aria-describedby', 'parTransferGateStatus');
+    }
+    byId('truthHeading').textContent = `${pad(a.headingDeg)}°`;
+    byId('truthBearing').textContent = `${pad(b.qteDeg)}°`;
+    byId('truthRange').textContent = `${b.rangeNm.toFixed(1)} NM`;
+    byId('truthAltitude').textContent = `${Math.round(a.altitudeFt).toLocaleString()} FT`;
+    byId('truthSpeed').textContent = `${Math.round(a.speedKt)} KT`;
+    byId('truthTurn').textContent = a.turn.mode === 'straight' ? 'STRAIGHT' : `${a.turn.side.toUpperCase()} · ${a.turn.mode.toUpperCase()}`;
+    byId('truthSquawk').textContent = a.transponderCode || a.surveillance?.squawk || '—';
+    byId('truthSurveillance').textContent = a.surveillance?.secondary === true
+      ? a.surveillance.modeS === true ? 'SECONDARY · MODE S' : 'SECONDARY'
+      : 'PRIMARY / NONE';
+    byId('instructorClock').textContent = clock(snapshot.simulationSeconds);
+    byId('exerciseState').textContent = snapshot.lifecycle.toUpperCase();
+    byId('modeKicker').textContent = modeLabel(snapshot.scenario.exerciseFamily);
+    byId('scopeLabel').textContent = snapshot.scenario.exerciseFamily === 'qgh'
+      ? 'CONTINUOUS TRUTH · D/F PREVIEW'
+      : snapshot.scenario.exerciseFamily === 'par' ? 'CONTINUOUS TRUTH · PAR PREVIEW'
+        : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
+    byId('sensorPreview').textContent = sensorStatus();
+    drawTruth(byId('instructorScope'), state.simulation, state.latestObservation);
+    updateInspection();
+    renderNewEvents();
+  }
+
+  function sensorStatus() {
+    const mode = state.simulation.scenario.exerciseFamily, observation = state.latestObservation;
+    if (!observation) return 'STUDENT SENSOR READY';
+    if (mode === 'qgh') return `${String(observation.status || 'idle').toUpperCase()} · ${observation.bearingDeg == null ? '---' : pad(observation.bearingDeg) + '°'}`;
+    if (mode === 'par') return `${String(observation.trackState || 'lost').toUpperCase()} · ${observation.rangeNm == null ? 'NO RANGE' : observation.rangeNm.toFixed(1) + ' NM'}`;
+    return observation.plots?.length ? `${observation.plots.length} PLOTS · DISCRETE SENSOR PICTURE`
+      : observation.plot ? `PLOT · ${observation.plot.rangeNm.toFixed(1)} NM` : 'AWAITING BEAM CROSSING';
+  }
+
+  function renderNewEvents() {
+    const events = state.simulation.events;
+    if (events.length === state.lastRenderedEvent) return;
+    const log = byId('eventLog');
+    events.slice(state.lastRenderedEvent).forEach(event => {
+      const item = document.createElement('li'); const time = document.createElement('time'); const text = document.createElement('span');
+      time.textContent = clock(event.timestamp); text.textContent = event.type.replaceAll('_', ' ') + (event.text ? ` · ${event.text}` : '');
+      item.append(time, text); log.prepend(item);
+    });
+    state.lastRenderedEvent = events.length;
+  }
+
+  function drawBase(context, canvas, maxRange, runway, finalTrack = runway) {
+    const width = canvas.width, height = canvas.height, cx = width / 2, cy = height / 2;
+    context.clearRect(0, 0, width, height); context.fillStyle = '#071b1d'; context.fillRect(0, 0, width, height);
+    context.strokeStyle = '#1d5551'; context.lineWidth = 1; context.fillStyle = '#79aaa4'; context.font = '16px IBM Plex Mono';
+    for (let range = 10; range <= maxRange; range += 10) { const radius = range / maxRange * Math.min(width, height) * .44; context.beginPath(); context.arc(cx, cy, radius, 0, Math.PI * 2); context.stroke(); context.fillText(`${range}`, cx + 4, cy - radius + 17); }
+    context.beginPath(); context.moveTo(cx, 22); context.lineTo(cx, height - 22); context.moveTo(22, cy); context.lineTo(width - 22, cy); context.stroke();
+    const scale = Math.min(width, height) * .44 / maxRange;
+    const finalAngle = finalTrack * Math.PI / 180, length = Math.min(width, height) * .42;
+    context.strokeStyle = '#758f82'; context.lineWidth = 1; context.setLineDash([7, 8]);
+    context.beginPath(); context.moveTo(cx - Math.sin(finalAngle) * length, cy + Math.cos(finalAngle) * length);
+    context.lineTo(cx + Math.sin(finalAngle) * length, cy - Math.cos(finalAngle) * length); context.stroke(); context.setLineDash([]);
+    const angle = runway * Math.PI / 180, runwayHalfLength = Math.max(6, scale * .8);
+    context.strokeStyle = '#d5dec8'; context.lineWidth = 6; context.beginPath();
+    context.moveTo(cx - Math.sin(angle) * runwayHalfLength, cy + Math.cos(angle) * runwayHalfLength);
+    context.lineTo(cx + Math.sin(angle) * runwayHalfLength, cy - Math.cos(angle) * runwayHalfLength); context.stroke();
+    context.fillStyle = '#b8d1ca'; context.fillText(`RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
+    return { cx, cy, scale };
+  }
+
+  function displayRange() {
+    const simulation = state.simulation;
+    return Math.max(30, ...simulation.aircraftList.map(a => Math.hypot(a.position.xNm, a.position.yNm) * 1.3),
+      ...Object.values(simulation.truthTrails).map(trail => Math.hypot(trail[0].xNm, trail[0].yNm) * 1.3));
+  }
+
+  function drawAircraft(context, transform, aircraft, selected) {
+    const x = transform.cx + aircraft.xNm * transform.scale, y = transform.cy + aircraft.yNm * transform.scale;
+    if (selected) { context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.arc(x, y, 22, 0, Math.PI * 2); context.stroke(); }
+    context.save(); context.translate(x, y); context.rotate(aircraft.headingDeg * Math.PI / 180);
+    context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.beginPath(); context.moveTo(0, -14);
+    context.lineTo(9, 10); context.lineTo(0, 6); context.lineTo(-9, 10); context.closePath(); context.fill(); context.restore();
+    context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.font = '16px IBM Plex Mono'; context.fillText(aircraft.callsign, x + 16, y - 12);
+  }
+
+  function drawPlots(context, transform, observation) {
+    for (const plot of observation?.plots || (observation?.plot ? [observation.plot] : [])) {
+      const rad = plot.azimuthDeg * Math.PI / 180, r = plot.rangeNm * transform.scale;
+      context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath();
+      context.arc(transform.cx + Math.sin(rad) * r, transform.cy - Math.cos(rad) * r, 7, 0, Math.PI * 2); context.stroke();
+    }
+  }
+
+  function drawTruth(canvas, simulation, observation) {
+    const context = canvas.getContext('2d');
+    const transform = drawBase(context, canvas, displayRange(), simulation.scenario.runwayOrientationDeg, simulation.scenario.finalTrackDeg);
+    state.scopeTransform = transform;
+    for (const aircraft of simulation.aircraftList) {
+      const selected = aircraft.id === simulation.selectedAircraftId, trail = simulation.truthTrails[aircraft.id];
+      if (byId('historyDots').checked && trail.length > 1) {
+        context.strokeStyle = selected ? '#2bd1c6' : '#387d77'; context.lineWidth = selected ? 2 : 1; context.beginPath();
+        trail.forEach((point, index) => { const x = transform.cx + point.xNm * transform.scale, y = transform.cy + point.yNm * transform.scale; index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.stroke();
+      }
+      drawAircraft(context, transform, { ...aircraft, ...aircraft.position }, selected);
+    }
+    if (simulation.scenario.exerciseFamily === 'qgh') {
+      const signal = state.sensor.read(simulation.simulationSeconds, truthForSensor());
+      const source = simulation.aircraftList.find(a => a.id === signal.source);
+      if (signal.phase === 'live' && source) {
+        context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.moveTo(transform.cx, transform.cy);
+        context.lineTo(transform.cx + source.position.xNm * transform.scale, transform.cy + source.position.yNm * transform.scale); context.stroke();
+      }
+    }
+    drawPlots(context, transform, observation);
+  }
+
+  function inspectScope(event, select = false) {
+    if (!state.simulation || !state.scopeTransform) return;
+    const canvas = byId('instructorScope'), bounds = canvas.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) * canvas.width / bounds.width;
+    const y = (event.clientY - bounds.top) * canvas.height / bounds.height, t = state.scopeTransform;
+    const nearest = state.simulation.aircraftList.map(a => ({ a,
+      distance: Math.hypot(x - t.cx - a.position.xNm * t.scale, y - t.cy - a.position.yNm * t.scale) }))
+      .sort((a, b) => a.distance - b.distance)[0];
+    const hitRadius = 26 * canvas.width / bounds.width;
+    state.inspectedAircraftId = nearest?.distance <= hitRadius ? nearest.a.id : null;
+    if (select && state.inspectedAircraftId) selectAircraft(state.inspectedAircraftId);
+    updateInspection();
+  }
+
+  function updateInspection() {
+    const aircraft = state.simulation.aircraftList.find(a => a.id === state.inspectedAircraftId);
+    if (!aircraft) { byId('scopeInspection').textContent = 'Point to an aircraft to inspect; click or tap to select.'; return; }
+    const bearing = Core.bearingFromPosition(aircraft.position);
+    const surveillance = aircraft.surveillance?.secondary === true
+      ? ` · SQWK ${aircraft.transponderCode || aircraft.surveillance.squawk || '—'}${aircraft.surveillance.modeS === true ? ' · MODE S' : ''}`
+      : ` · SQWK ${aircraft.transponderCode || '—'} · PRIMARY / NONE`;
+    byId('scopeInspection').textContent = `${aircraft.callsign} · QDM ${pad(bearing.qdmDeg)}° · QTE ${pad(bearing.qteDeg)}° · HDG ${pad(aircraft.headingDeg)}° · ${bearing.rangeNm.toFixed(1)} NM · ${Math.round(aircraft.altitudeFt).toLocaleString()} FT${surveillance}`;
+  }
+
+  function renderReview() {
+    const record = state.review.snapshot(), simulation = state.simulation;
+    byId('reviewMode').textContent = modeLabel(simulation.scenario.exerciseFamily);
+    byId('reviewDuration').textContent = clock(simulation.simulationSeconds);
+    byId('reviewCommandCount').textContent = String(record.events.length);
+    byId('reviewObservationCount').textContent = String(record.observations.length);
+    const bearing = Core.bearingFromPosition(simulation.aircraft.position);
+    byId('reviewEndState').textContent = `${simulation.aircraftList.length} AIRCRAFT · ${simulation.aircraft.callsign}: ${bearing.rangeNm.toFixed(1)} NM`;
+    drawReview(record);
+  }
+
+  function drawReview(record) {
+    const canvas = byId('reviewScope'), context = canvas.getContext('2d');
+    const transform = drawBase(context, canvas, displayRange(), state.simulation.scenario.runwayOrientationDeg, state.simulation.scenario.finalTrackDeg);
+    const enabled = Object.fromEntries([...document.querySelectorAll('[data-review-layer]')].map(control => [control.dataset.reviewLayer, control.checked]));
+    const truth = record.truth.filter(item => item.timestamp <= state.reviewTime);
+    const events = record.events.filter(item => item.timestamp <= state.reviewTime);
+    if (enabled.truth) {
+      const tracks = new Map();
+      for (const sample of truth) for (const aircraft of sample.aircraft || []) {
+        if (!tracks.has(aircraft.id)) tracks.set(aircraft.id, []);
+        tracks.get(aircraft.id).push(aircraft);
+      }
+      for (const points of tracks.values()) {
+        context.strokeStyle = '#2bd1c6'; context.lineWidth = 2; context.beginPath();
+        points.forEach((point, index) => { const x = transform.cx + point.xNm * transform.scale, y = transform.cy + point.yNm * transform.scale; index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.stroke();
+        drawAircraft(context, transform, points[points.length - 1], false);
+      }
+    }
+    if (enabled.observations) {
+      const observations = record.observations.filter(item => item.timestamp <= state.reviewTime);
+      for (const item of observations) drawPlots(context, transform, item);
+      const last = observations[observations.length - 1];
+      if (last?.sensor === 'qgh' && last.bearingDeg != null) {
+        const rad = (last.bearingDeg + (last.bearingType === 'qdm' ? 180 : 0)) * Math.PI / 180;
+        context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.moveTo(transform.cx, transform.cy);
+        context.lineTo(transform.cx + Math.sin(rad) * canvas.height * .44, transform.cy - Math.cos(rad) * canvas.height * .44); context.stroke();
+      }
+      if (last?.sensor === 'par') {
+        context.fillStyle = '#efa93a'; context.font = '16px IBM Plex Mono';
+        context.fillText(`PAR ${last.trackState} · ${last.rangeNm == null ? 'NO RANGE' : last.rangeNm.toFixed(1) + ' NM'}`, 25, 30);
+        const az = last.azimuth?.deviationDeg, el = last.elevation?.deviationDeg;
+        context.fillText(`AZ ${az == null ? '—' : az.toFixed(2) + '°'} · ELEV ${el == null ? '—' : el.toFixed(2) + '°'}`, 25, 52);
+      }
+    }
+    const list = byId('reviewEvents'); list.replaceChildren();
+    if (enabled.events) for (const event of events.slice().reverse()) {
+      const item = document.createElement('li'); item.textContent = `${clock(event.timestamp)} · ${event.readback || event.kind}`; list.append(item);
+      if (Number.isFinite(event.xNm) && Number.isFinite(event.yNm)) {
+        context.fillStyle = '#ffb9a5'; context.fillRect(transform.cx + event.xNm * transform.scale - 4, transform.cy + event.yNm * transform.scale - 4, 8, 8);
+      }
+    }
+    byId('reviewScrub').value = String(state.reviewTime); byId('reviewTime').textContent = clock(state.reviewTime);
+    byId('reviewPlay').textContent = state.reviewPlaying ? 'PAUSE' : 'PLAY';
+  }
+
+  function isEditableKeyboardTarget(target) {
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    return Boolean(target.closest?.('input, select, textarea, [contenteditable], [role="textbox"]'));
+  }
+
+  function isShortcutInteractionTarget(target) {
+    return isEditableKeyboardTarget(target)
+      || Boolean(target?.closest?.('button, a, summary, [role="button"]'));
+  }
+
+  function commandFeedback(message, accepted) {
+    const output = byId('keyboardCommandStatus');
+    if (!output) return;
+    output.textContent = message;
+    output.setAttribute('data-state', accepted === true ? 'accepted' : accepted === false ? 'rejected' : 'ready');
+  }
+
+  function commandAccepted(message) { return { accepted: true, message }; }
+  function commandRejected(message) { return { accepted: false, message }; }
+
+  function selectedAircraftLabel() {
+    return state.simulation?.aircraft?.callsign || 'selected aircraft';
+  }
+
+  function isControllableLifecycle() {
+    return Boolean(state.simulation && ['running', 'paused'].includes(state.simulation.lifecycle));
+  }
+
+  // The command bar intentionally accepts a small, documented grammar. It does
+  // not infer free-form language, call signs or intent: that keeps keyboard
+  // training deterministic and prevents a partially typed instruction acting.
+  function parseKeyboardCommand(value) {
+    const text = String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!text) return commandRejected('Type HELP to see the accepted command-bar grammar.');
+    if (text === 'HELP' || text === '?') return { accepted: true, action: 'help' };
+    const direct = {
+      'DF': 'transmit', 'D/F': 'transmit', 'TRANSMIT DF': 'transmit', 'TRANSMIT D/F': 'transmit', 'TRANSMIT FOR DF': 'transmit', 'TRANSMIT FOR D/F': 'transmit',
+      'REPORT': 'report', 'REPORT HEADING': 'report-heading',
+      'REPORT POSITION': 'report-position', 'ADVANCE': 'advance',
+      'ADVANCE 1': 'advance', 'ADVANCE 1 MIN': 'advance', 'CONTINUE': 'continue',
+      'VISUAL': 'visual', 'MISSED': 'missed', 'NEXT': 'next', 'NEXT AIRCRAFT': 'next',
+      'PREV': 'previous', 'PREVIOUS': 'previous', 'PREV AIRCRAFT': 'previous',
+      'START': 'start', 'PAUSE': 'pause', 'RESUME': 'resume', 'TRANSFER PAR': 'transfer-par',
+      'LEFT NOW': 'turn-left-now', 'RIGHT NOW': 'turn-right-now', 'STOP': 'stop-turn', 'STOP TURN': 'stop-turn'
+    };
+    if (direct[text]) return { accepted: true, action: direct[text] };
+    const heading = text.match(/^(?:TURN\s+)?(L|LEFT|R|RIGHT)(?:\s+HEADING)?\s+(\d{1,3})$/);
+    if (heading) return { accepted: true, action: 'turn-heading', side: /^L/.test(heading[1]) ? 'left' : 'right', headingDeg: Number(heading[2]) };
+    const speed = text.match(/^(SPD|SPEED)\s+(\d{1,3})$/);
+    if (speed) return { accepted: true, action: 'set-speed', speedKt: Number(speed[2]) };
+    const altitude = text.match(/^(ALT|ALTITUDE)\s+(\d{1,5})$/);
+    if (altitude) return { accepted: true, action: 'set-altitude', altitudeFt: Number(altitude[2]) };
+    const vertical = text.match(/^(CLIMB|DESCEND|MAINTAIN)(?:\s+TO|\s+AT)?\s+(\d{1,5})$/);
+    if (vertical) return { accepted: true, action: 'set-altitude', altitudeFt: Number(vertical[2]), verticalMode: vertical[1].toLowerCase() };
+    return commandRejected('Not recognised. Use HELP for exact aliases; the command bar does not guess.');
+  }
+
+  function validateBarNumber(value, label, minimum, maximum, increment) {
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+      return commandRejected(`${label} must be a whole number from ${minimum} to ${maximum}.`);
+    }
+    if (increment && value % increment !== 0) return commandRejected(`${label} must use ${increment}-unit increments.`);
+    return commandAccepted('VALID');
+  }
+
+  function invokeCoreCommand(input, controlId) {
+    const result = command(input, controlId);
+    if (!result?.outcome?.accepted) return commandRejected(result?.outcome?.error || 'Command was not applied.');
+    return commandAccepted(`${selectedAircraftLabel()} · ${result.outcome.readback.text}`);
+  }
+
+  function selectRelativeAircraft(direction) {
+    if (!state.simulation || state.simulation.lifecycle === 'review') return commandRejected('Aircraft selection is unavailable after termination.');
+    const aircraft = state.simulation.aircraftList;
+    const index = aircraft.findIndex(item => item.id === state.simulation.selectedAircraftId);
+    selectAircraft(aircraft[(index + direction + aircraft.length) % aircraft.length].id);
+    return commandAccepted(`SELECTED ${selectedAircraftLabel()}`);
+  }
+
+  function requireControllable() {
+    return isControllableLifecycle() ? null : commandRejected('Exercise must be running or paused before issuing this command.');
+  }
+
+  function isUsCompass() {
+    return state.simulation?.scenario.exerciseFamily === 'qgh' && state.simulation.scenario.qghProcedure === 'us';
+  }
+
+  function performInstructorAction(plan) {
+    if (!state.simulation) return commandRejected('Create a local session before using instructor controls.');
+    if (plan.action === 'help') {
+      byId('keyboardShortcuts').open = true;
+      return commandAccepted('OPENED THE SHORTCUT AND COMMAND REFERENCE.');
+    }
+    if (plan.action === 'next') return selectRelativeAircraft(1);
+    if (plan.action === 'previous') return selectRelativeAircraft(-1);
+    if (plan.action === 'start') {
+      if (state.simulation.lifecycle !== 'ready') return commandRejected('START is available only while the exercise is Ready.');
+      return startExercise() ? commandAccepted('EXERCISE STARTED.') : commandRejected(byId('commandStatus').textContent || 'Controller position must be Ready.');
+    }
+    if (plan.action === 'pause') {
+      if (state.simulation.lifecycle !== 'running') return commandRejected('PAUSE is available only while the exercise is running.');
+      return pauseExercise() ? commandAccepted('EXERCISE PAUSED.') : commandRejected('Exercise could not be paused.');
+    }
+    if (plan.action === 'resume') {
+      if (state.simulation.lifecycle !== 'paused') return commandRejected('RESUME is available only while the exercise is paused.');
+      return pauseExercise() ? commandAccepted('EXERCISE RESUMED.') : commandRejected('Exercise could not be resumed.');
+    }
+    if (plan.action === 'lifecycle-toggle') {
+      if (state.simulation.lifecycle === 'ready') return performInstructorAction({ action: 'start' });
+      if (state.simulation.lifecycle === 'running') return performInstructorAction({ action: 'pause' });
+      if (state.simulation.lifecycle === 'paused') return performInstructorAction({ action: 'resume' });
+      return commandRejected('Start, pause and resume are unavailable after termination.');
+    }
+
+    const unavailable = requireControllable();
+    if (unavailable) return unavailable;
+    const mode = state.simulation.scenario.exerciseFamily;
+    const us = isUsCompass();
+    if (plan.action === 'turn-heading') {
+      const validity = validateBarNumber(plan.headingDeg, 'Heading', 0, 359);
+      if (!validity.accepted) return validity;
+      if (us) return commandRejected('Use LEFT NOW, RIGHT NOW or STOP in U/S Compass QGH.');
+      byId('turnHeadingInput').value = String(plan.headingDeg);
+      return invokeCoreCommand({ type: 'turn-to-heading', side: plan.side, headingDeg: plan.headingDeg }, plan.side === 'left' ? 'turnLeftHeading' : 'turnRightHeading');
+    }
+    if (plan.action === 'turn-left-now' || plan.action === 'turn-right-now') {
+      if (!us) return commandRejected('NOW turns are available only in U/S Compass QGH.');
+      const side = plan.action === 'turn-left-now' ? 'left' : 'right';
+      return invokeCoreCommand({ type: 'turn-now', side }, side === 'left' ? 'turnLeftNow' : 'turnRightNow');
+    }
+    if (plan.action === 'stop-turn') {
+      if (!us) return commandRejected('STOP is available only in U/S Compass QGH.');
+      return invokeCoreCommand({ type: 'stop-turn' }, 'stopTurnNow');
+    }
+    if (plan.action === 'set-speed') {
+      const validity = validateBarNumber(plan.speedKt, 'Speed', 60, 600, 5);
+      if (!validity.accepted) return validity;
+      byId('liveSpeed').value = String(plan.speedKt);
+      return invokeCoreCommand({ type: 'set-speed', speedKt: plan.speedKt }, 'liveSpeed');
+    }
+    if (plan.action === 'set-altitude') {
+      const validity = validateBarNumber(plan.altitudeFt, 'Altitude', 500, 45000, 100);
+      if (!validity.accepted) return validity;
+      const difference = plan.altitudeFt - state.simulation.aircraft.altitudeFt;
+      const inferredDirection = Math.abs(difference) < .01 ? 'maintain' : difference > 0 ? 'climb' : 'descend';
+      const direction = plan.verticalMode || inferredDirection;
+      if (plan.verticalMode && direction !== inferredDirection) {
+        return commandRejected(`${plan.verticalMode.toUpperCase()} does not match the selected aircraft's current altitude.`);
+      }
+      byId('altitudeInput').value = String(plan.altitudeFt);
+      return invokeCoreCommand({ type: 'set-altitude', direction, altitudeFt: plan.altitudeFt }, direction === 'climb' ? 'climbTo' : direction === 'descend' ? 'descendTo' : 'altitudeInput');
+    }
+    if (plan.action === 'transmit') {
+      if (mode !== 'qgh') return commandRejected('D/F transmit is available only in QGH.');
+      return invokeCoreCommand({ type: 'transmit' }, 'transmitDf');
+    }
+    if (plan.action === 'report-heading') {
+      if (us) return commandRejected('Heading reports are unavailable in U/S Compass QGH.');
+      return invokeCoreCommand({ type: 'report-heading' }, 'reportHeading');
+    }
+    if (plan.action === 'report-position') {
+      if (mode === 'qgh') return commandRejected('Position reports are available only in Surveillance, SRA or PAR.');
+      return invokeCoreCommand({ type: 'report-position' }, 'reportPosition');
+    }
+    if (plan.action === 'report') return mode === 'qgh'
+      ? performInstructorAction({ action: 'report-heading' })
+      : performInstructorAction({ action: 'report-position' });
+    if (plan.action === 'advance') {
+      advanceBy(60);
+      return commandAccepted(`ADVANCED ONE MINUTE · ${selectedAircraftLabel()} REMAINS SELECTED.`);
+    }
+    if (plan.action === 'continue') {
+      if (us) return commandRejected('CONTINUE is unavailable in U/S Compass QGH.');
+      if (['sra', 'par'].includes(mode)) return invokeCoreCommand({ type: 'continue-approach' }, 'continueApproach');
+      return invokeCoreCommand({ type: 'continue-heading', headingDeg: number('turnHeadingInput') }, 'continueHeading');
+    }
+    if (plan.action === 'visual') {
+      if (!['sra', 'par'].includes(mode)) return commandRejected('VISUAL is available only in SRA or PAR.');
+      return invokeCoreCommand({ type: 'report-runway-visual' }, 'reportRunwayVisual');
+    }
+    if (plan.action === 'missed') {
+      if (!['sra', 'par'].includes(mode)) return commandRejected('MISSED is available only in SRA or PAR.');
+      const target = Math.min(45000, Math.ceil((state.simulation.aircraft.altitudeFt + 3000) / 100) * 100);
+      byId('altitudeInput').value = String(target);
+      return invokeCoreCommand({ type: 'set-altitude', direction: 'climb', altitudeFt: target }, 'missedApproach');
+    }
+    if (plan.action === 'transfer-par') {
+      if (mode !== 'surveillance') return commandRejected('TRANSFER PAR is available only from Surveillance Vectoring.');
+      return transferSelectedToPar()
+        ? commandAccepted(`TRANSFERRED ${selectedAircraftLabel()} TO PAR.`)
+        : commandRejected(byId('commandStatus').textContent || 'Selected aircraft is not eligible for PAR transfer.');
+    }
+    return commandRejected('This command is not available in the current mode.');
+  }
+
+  function executeKeyboardCommand(rawValue = byId('keyboardCommandInput').value) {
+    const parsed = parseKeyboardCommand(rawValue);
+    const result = parsed.accepted ? performInstructorAction(parsed) : parsed;
+    commandFeedback(`${result.accepted ? 'APPLIED' : 'REJECTED'} · ${result.message || 'NO ACTION'}`, result.accepted);
+    if (result.accepted && parsed.action !== 'help') byId('keyboardCommandInput').value = '';
+    return result;
+  }
+
+  function shortcutActionForKey(key) {
+    const us = isUsCompass();
+    if (key === '[') return { action: 'previous' };
+    if (key === ']') return { action: 'next' };
+    if (key === ' ' || key === 'spacebar') return { action: 'lifecycle-toggle' };
+    if (key === 'a') return us ? { action: 'turn-left-now' } : { action: 'turn-heading', side: 'left', headingDeg: number('turnHeadingInput') };
+    if (key === 'd') return us ? { action: 'turn-right-now' } : { action: 'turn-heading', side: 'right', headingDeg: number('turnHeadingInput') };
+    if (key === 'x') return { action: 'stop-turn' };
+    if (key === 't') return { action: 'transmit' };
+    if (key === 'h') return { action: 'report-heading' };
+    if (key === 'p') return { action: 'report-position' };
+    if (key === 'c') return { action: 'continue' };
+    if (key === 'v') return { action: 'visual' };
+    if (key === 'm') return { action: 'missed' };
+    if (key === 'g') return { action: 'advance' };
+    return null;
+  }
+
+  function handleShortcut(event) {
+    if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey
+      || isShortcutInteractionTarget(event.target) || byId('trainingGuide').open || !state.simulation || state.simulation.lifecycle === 'review') return;
+    const plan = shortcutActionForKey(String(event.key || '').toLowerCase());
+    if (!plan) return;
+    event.preventDefault();
+    const result = performInstructorAction(plan);
+    if (!result.accepted) commandFeedback(`REJECTED · ${result.message}`, false);
+    else commandFeedback(`APPLIED · ${result.message}`, true);
+  }
+
+  function showGuideStep(step) {
+    state.guideStep = Math.max(0, Math.min(4, step));
+    document.querySelectorAll('[data-guide-step]').forEach(item => { item.hidden = Number(item.dataset.guideStep) !== state.guideStep; });
+    byId('guideProgress').textContent = `${state.guideStep + 1} / 5`;
+    byId('previousGuideStep').disabled = state.guideStep === 0;
+    byId('nextGuideStep').textContent = state.guideStep === 4 ? 'FINISH' : 'NEXT';
+  }
+
+  function closeGuide() {
+    byId('trainingGuide').close(); byId('openTrainingGuide').focus();
+  }
+
+  function handleSetupInput(event) {
+    const target = event.target;
+    if (typeof target?.id === 'string' && (target.id === 'radarReturn' || /^radarReturn-\d+$/.test(target.id))) {
+      target.dataset.radarReturnAuto = 'false';
+    }
+    configureFields();
+  }
+
+  family.addEventListener('change', configureFields); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
+  byId('copyPin').addEventListener('click', () => navigator.clipboard?.writeText(state.session.pin));
+  byId('admitStudent').addEventListener('click', () => state.pendingClient && state.session.admit(state.pendingClient));
+  byId('rejectStudent').addEventListener('click', () => state.pendingClient && state.session.reject(state.pendingClient));
+  byId('startExercise').addEventListener('click', startExercise); byId('pauseExercise').addEventListener('click', pauseExercise); byId('terminateExercise').addEventListener('click', terminateExercise);
+  byId('executeKeyboardCommand').addEventListener('click', () => executeKeyboardCommand());
+  byId('keyboardCommandInput').addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.isComposing) return;
+    event.preventDefault(); executeKeyboardCommand();
+  });
+  byId('turnLeftHeading').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'left', headingDeg: number('turnHeadingInput') }, 'turnLeftHeading'));
+  byId('turnRightHeading').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'right', headingDeg: number('turnHeadingInput') }, 'turnRightHeading'));
+  byId('turnLeftNow').addEventListener('click', () => command({ type: 'turn-now', side: 'left' }, 'turnLeftNow'));
+  byId('turnRightNow').addEventListener('click', () => command({ type: 'turn-now', side: 'right' }, 'turnRightNow'));
+  byId('stopTurnNow').addEventListener('click', () => command({ type: 'stop-turn' }, 'stopTurnNow'));
+  byId('transmitDf').addEventListener('click', () => command({ type: 'transmit' }, 'transmitDf'));
+  byId('reportHeading').addEventListener('click', () => command({ type: 'report-heading' }, 'reportHeading'));
+  byId('continueHeading').addEventListener('click', () => command({ type: 'continue-heading', headingDeg: number('turnHeadingInput') }, 'continueHeading'));
+  byId('climbTo').addEventListener('click', () => command({ type: 'set-altitude', direction: 'climb', altitudeFt: number('altitudeInput') }, 'climbTo'));
+  byId('descendTo').addEventListener('click', () => command({ type: 'set-altitude', direction: 'descend', altitudeFt: number('altitudeInput') }, 'descendTo'));
+  byId('reportPosition').addEventListener('click', () => command({ type: 'report-position' }, 'reportPosition'));
+  byId('continueApproach').addEventListener('click', () => command({ type: 'continue-approach' }, 'continueApproach'));
+  byId('reportRunwayVisual').addEventListener('click', () => command({ type: 'report-runway-visual' }, 'reportRunwayVisual'));
+  byId('transferToPar').addEventListener('click', transferSelectedToPar);
+  byId('missedApproach').addEventListener('click', () => {
+    if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return;
+    const target = Math.min(45000, Math.ceil((state.simulation.aircraft.altitudeFt + 3000) / 100) * 100);
+    byId('altitudeInput').value = target;
+    command({ type: 'set-altitude', direction: 'climb', altitudeFt: target }, 'missedApproach');
+  });
+  byId('advanceMinute').addEventListener('click', () => advanceBy(60));
+  byId('liveSpeed').addEventListener('change', () => command({ type: 'set-speed', speedKt: number('liveSpeed') }, 'liveSpeed'));
+  byId('historyDots').addEventListener('change', updateAll);
+  byId('instructorScope').addEventListener('pointermove', event => inspectScope(event));
+  byId('instructorScope').addEventListener('click', event => inspectScope(event, true));
+  byId('instructorScope').addEventListener('pointerleave', () => { state.inspectedAircraftId = null; if (state.simulation) updateInspection(); });
+  document.addEventListener('keydown', handleShortcut);
+  byId('openTrainingGuide').addEventListener('click', () => { showGuideStep(0); byId('trainingGuide').showModal(); });
+  byId('closeTrainingGuide').addEventListener('click', closeGuide);
+  byId('skipTrainingGuide').addEventListener('click', closeGuide);
+  byId('previousGuideStep').addEventListener('click', () => showGuideStep(state.guideStep - 1));
+  byId('nextGuideStep').addEventListener('click', () => state.guideStep === 4 ? closeGuide() : showGuideStep(state.guideStep + 1));
+  byId('reviewScrub').addEventListener('input', () => { state.reviewPlaying = false; state.reviewTime = number('reviewScrub'); drawReview(state.review.snapshot()); });
+  byId('reviewPlay').addEventListener('click', () => {
+    if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewTime = 0;
+    state.reviewPlaying = !state.reviewPlaying; drawReview(state.review.snapshot());
+  });
+  byId('newScenario').addEventListener('click', () => location.reload()); byId('restartExercise').addEventListener('click', () => location.reload());
+  document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
+  window.addEventListener('beforeunload', () => state.session?.close());
+  setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
+  configureFields(); requestAnimationFrame(frame);
+})();

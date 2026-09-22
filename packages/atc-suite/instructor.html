@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#007d7d">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>Reds ATC Suite · Instructor</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="suite.css">
+  <script defer src="simulator-core.js"></script>
+  <script defer src="procedure-core.js"></script>
+  <script defer src="suite-core.js"></script>
+  <script defer src="suite-sensors.js"></script>
+  <script defer src="suite-session.js"></script>
+  <script defer src="suite-review.js"></script>
+  <script defer src="suite-instructor.js"></script>
+</head>
+<body>
+  <main class="shell shell--wide">
+    <header class="site-header">
+      <div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a><span class="role-pill">INSTRUCTOR</span><button class="guide-open" id="openTrainingGuide" type="button">TRAINING GUIDE</button></div>
+      <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
+    </header>
+
+    <section class="setup-panel" id="setupPanel">
+      <div class="section-title"><span>SCENARIO</span><h1>Build the exercise</h1><p>Bearing and heading are independent. Training references use zero magnetic variation.</p></div>
+      <form id="scenarioForm" class="setup-form">
+        <label>EXERCISE FAMILY<select id="exerciseFamily" name="family">
+          <option value="qgh">QGH / DIRECTION FINDING</option><option value="surveillance">SURVEILLANCE VECTORING</option>
+          <option value="sra">SURVEILLANCE RADAR APPROACH</option><option value="par">PRECISION APPROACH RADAR</option>
+        </select></label>
+        <label id="procedureField">QGH PROCEDURE<select id="procedureType" name="procedure"><option value="normal">NORMAL QGH</option><option value="us-compass">U/S COMPASS QGH</option></select></label>
+        <label>AIRCRAFT COUNT · 1–24<input id="aircraftCount" name="aircraftCount" type="number" min="1" max="24" value="1" inputmode="numeric"></label>
+        <label>RUNWAY ORIENTATION · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
+        <label>FINAL APPROACH TRACK · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
+        <label id="scanPresetField" hidden>SCAN PRESET<select id="scanPreset"><option value="10">10 RPM · 6 SEC</option><option value="12" selected>12 RPM · 5 SEC</option><option value="15">15 RPM · 4 SEC</option></select></label>
+        <label id="radarProfileField" hidden>RADAR ENVIRONMENT<select id="radarProfile"><option value="primary">PRIMARY · + PLOTS</option><option value="correlated">SECONDARY · □ SSR PLOTS</option></select></label>
+        <label id="parRefreshField" hidden>PAR TRAINING REFRESH<select id="parRefresh"><option value="1">1 HZ</option><option value="5">5 HZ</option></select></label>
+        <label id="approachAircraftField" hidden>DESIGNATED APPROACH AIRCRAFT<select id="approachAircraft"><option value="AC1">101</option></select></label>
+        <label id="parTransferGateField" hidden>PAR TRANSFER GATE · NM<input id="parTransferGate" type="number" min="1" max="20" step=".5" value="10" inputmode="decimal"></label>
+        <label class="setup-check" id="extendedCentrelineField" hidden><input id="extendedCentreline" type="checkbox" checked><span>EXTENDED CENTRELINE &amp; NM MARKS</span></label>
+        <label id="extendedCentrelineRangeField" hidden>EXTENDED CENTRELINE · NM<input id="extendedCentrelineNm" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
+        <label id="centrelineTickField" hidden>DISTANCE MARKS · NM<select id="centrelineTickNm"><option value="1">1 NM</option><option value="2" selected>2 NM</option><option value="5">5 NM</option></select></label>
+        <label class="setup-check" id="localLfaField" hidden><input id="localLfaEnabled" type="checkbox"><span>LOCAL TRAINING LFA BOUNDARY</span></label>
+        <label id="localLfaRadiusField" hidden>LOCAL LFA RADIUS · NM<input id="localLfaRadius" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
+        <label class="setup-check" id="sraDescentProfileField" hidden><input id="sraDescentProfile" type="checkbox" checked><span>SRA 3° DESCENT TRAINING GUIDE</span></label>
+        <div class="roster-editor">
+          <div class="roster-editor-head"><div><span>AIRCRAFT ROSTER</span><b>INITIAL TRUTH INPUT</b></div><small>Aircraft start with distinct bearings, ranges and headings, 1,000 ft vertical separation, and automatic four-digit octal squawks. Radar returns default to the selected environment and remain editable per aircraft.</small></div>
+          <div class="roster-table" role="table" aria-label="Initial aircraft truth inputs">
+            <div class="roster-row roster-row--head" role="row"><span>CALLSIGN</span><span>SQUAWK</span><span>RADAR RETURN</span><span>TYPE</span><span>QTE °</span><span>RANGE NM</span><span>HEADING °M</span><span>ALTITUDE FT</span><span>SPEED KT</span><span>TURN °/S</span><span>VERTICAL FT/MIN</span></div>
+            <div id="aircraftRoster" class="roster-body">
+              <div class="roster-row" data-aircraft-index="0" role="row">
+                <input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign">
+                <input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code">
+                <select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select>
+                <select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select>
+                <input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE">
+                <input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range">
+                <input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading">
+                <input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude">
+                <input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed">
+                <input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn">
+                <input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="setup-preview" aria-live="polite"><span>START</span><b id="setupPreview">QTE 065 · 25 NM · HDG 225</b></div>
+        <button class="primary-action" id="createSession" type="submit">CREATE LOCAL SESSION</button>
+      </form>
+    </section>
+
+    <section class="active-workspace" id="activeWorkspace" hidden>
+      <aside class="session-rail" aria-label="Session management">
+        <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small>Same-browser tabs only</small><button id="copyPin" type="button">COPY PIN</button></div>
+        <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Open Student position in another tab and enter this PIN.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>REJECT</button><button id="admitStudent" type="button" class="primary" hidden>ADMIT</button></div></div>
+        <nav class="phase-list" aria-label="Exercise progress"><b class="active" data-phase="ready">1 · READY</b><b data-phase="running">2 · RUNNING</b><b data-phase="review">3 · REVIEW</b></nav>
+        <button id="newScenario" type="button">← NEW SCENARIO</button>
+      </aside>
+
+      <section class="instructor-main">
+        <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor truth display</h1></div><div class="status-stack"><b id="exerciseState">READY</b><time id="instructorClock">00:00</time><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Speeds the training clock only; aircraft speed and turn radius remain unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></div></header>
+        <div class="instructor-console">
+          <div class="console-center">
+            <div class="console-toolbar" aria-label="Aircraft selection">
+              <div class="console-toolbar-label"><span>CONTROLLED AIRCRAFT</span><small>SWIPE OR SCROLL TO SWITCH</small></div>
+              <nav class="aircraft-tabs" id="aircraftRosterTabs" aria-label="Select aircraft to control"></nav>
+            </div>
+            <div class="truth-layout">
+              <div class="scope-card">
+                <div class="card-head"><div><span>AUTHORITATIVE AIRCRAFT PICTURE</span><b id="scopeLabel">CONTINUOUS TRUTH</b></div><label class="switch"><input id="historyDots" type="checkbox" checked><span>TRUTH TRAIL</span></label></div>
+                <canvas id="instructorScope" width="900" height="700" aria-label="Instructor aircraft truth display"></canvas>
+                <p id="scopeInspection" class="scope-inspection" aria-live="polite">Point to an aircraft to inspect; click or tap to select.</p>
+                <div class="scope-legend"><span><i class="legend-truth"></i>TRUTH</span><span><i class="legend-observed"></i>STUDENT OBSERVATION</span><span><i class="legend-runway"></i>RUNWAY / FINAL</span></div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="console-control-rail" aria-label="Selected aircraft controls">
+            <div class="telemetry-card"><span>AIRCRAFT</span><strong id="truthCallsign">FALCON 11</strong><dl><div><dt>HEADING</dt><dd id="truthHeading">225°</dd></div><div><dt>QTE</dt><dd id="truthBearing">065°</dd></div><div><dt>RANGE</dt><dd id="truthRange">25.0 NM</dd></div><div><dt>ALTITUDE</dt><dd id="truthAltitude">12,000 FT</dd></div><div><dt>SPEED</dt><dd id="truthSpeed">240 KT</dd></div><div><dt>TURN</dt><dd id="truthTurn">LEVEL</dd></div><div><dt>SQUAWK</dt><dd id="truthSquawk">—</dd></div><div><dt>SSR</dt><dd id="truthSurveillance">—</dd></div></dl><p id="sensorPreview">STUDENT SENSOR READY</p></div>
+
+            <section class="command-deck" aria-label="Instructor aircraft controls">
+          <div class="deck-head"><div><span>CONTROL INPUT</span><strong id="commandStatus">Awaiting instructor action</strong></div><div class="lifecycle-actions"><button id="startExercise" class="primary" type="button" aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">START</button><button id="pauseExercise" type="button" disabled aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">PAUSE</button><button id="terminateExercise" class="danger" type="button" disabled title="Deliberate button action only">TERMINATE</button></div></div>
+          <div class="keyboard-command-bar" aria-label="Deterministic keyboard command entry">
+            <label for="keyboardCommandInput">COMMAND BAR<input id="keyboardCommandInput" type="text" autocomplete="off" spellcheck="false" placeholder="L 230 · SPD 240 · NEXT" aria-describedby="keyboardCommandHint"></label>
+            <button id="executeKeyboardCommand" type="button">EXECUTE</button>
+            <p id="keyboardCommandHint">Selected aircraft only · deterministic aliases</p>
+            <output id="keyboardCommandStatus" aria-live="polite">TYPE HELP FOR THE ACCEPTED COMMANDS</output>
+            <details class="keyboard-shortcuts" id="keyboardShortcuts"><summary>KEYBOARD SHORTCUTS &amp; COMMANDS</summary>
+              <div class="shortcut-legend"><span><kbd>[</kbd><kbd>]</kbd> Previous / next aircraft</span><span><kbd>Space</kbd> Start · pause · resume</span><span><kbd>A</kbd><kbd>D</kbd> Left / right turn</span><span><kbd>X</kbd> Stop U/S turn</span><span><kbd>T</kbd> D/F transmit</span><span><kbd>H</kbd> Heading report</span><span><kbd>P</kbd> Position report</span><span><kbd>C</kbd> Continue approach</span><span><kbd>V</kbd> Runway visual</span><span><kbd>M</kbd> Missed approach</span><span><kbd>G</kbd> Advance one minute</span></div>
+              <p><b>Command bar:</b> <code>L 230</code> or <code>TURN LEFT HEADING 230</code>, <code>SPD 240</code>, <code>ALT 7000</code>, <code>CLIMB 7000</code>, <code>DESCEND 5000</code>, <code>DF</code>, <code>REPORT</code>, <code>ADVANCE</code>, <code>CONTINUE</code>, <code>VISUAL</code>, <code>MISSED</code>, <code>NEXT</code>, <code>PREV</code>, <code>START</code>, <code>PAUSE</code>, <code>RESUME</code>, and <code>TRANSFER PAR</code>. U/S Compass accepts <code>LEFT NOW</code>, <code>RIGHT NOW</code>, and <code>STOP</code>.</p>
+              <p>Shortcuts never act while a text, number, select, or command-bar field is focused. Termination remains a deliberate button action.</p>
+            </details>
+          </div>
+          <div class="command-grid" id="normalCommands">
+            <button id="turnLeftHeading" type="button" aria-keyshortcuts="A" title="Keyboard shortcut: A when no input is active">TURN LEFT</button><label>ASSIGNED HEADING<input id="turnHeadingInput" type="number" min="0" max="359" value="230"></label><button id="turnRightHeading" type="button" aria-keyshortcuts="D" title="Keyboard shortcut: D when no input is active">TURN RIGHT</button>
+          </div>
+          <div class="command-grid command-grid--three" id="usCommands" hidden><button id="turnLeftNow" type="button" aria-keyshortcuts="A" title="Keyboard shortcut: A when no input is active">TURN LEFT NOW</button><button id="stopTurnNow" type="button" aria-keyshortcuts="X" title="Keyboard shortcut: X when no input is active">STOP TURN NOW</button><button id="turnRightNow" type="button" aria-keyshortcuts="D" title="Keyboard shortcut: D when no input is active">TURN RIGHT NOW</button></div>
+          <div class="command-grid command-grid--actions"><button id="transmitDf" class="accent" type="button" aria-keyshortcuts="T" title="Keyboard shortcut: T when no input is active">TRANSMIT FOR D/F</button><button id="reportHeading" type="button" aria-keyshortcuts="H" title="Keyboard shortcut: H when no input is active">REPORT HEADING</button><button id="advanceMinute" type="button" aria-keyshortcuts="G" title="Keyboard shortcut: G when no input is active">ADVANCE · 1 MIN</button><label>LIVE SPEED · KT<input id="liveSpeed" type="number" min="60" max="600" step="5" value="240"></label></div>
+          <div class="command-grid command-grid--vertical"><label>ALTITUDE · FT<input id="altitudeInput" type="number" min="500" max="45000" step="100" value="10000"></label><button id="climbTo" type="button">CLIMB TO</button><button id="descendTo" type="button">DESCEND TO</button><button id="continueHeading" type="button">CONTINUE HEADING</button></div>
+          <div class="approach-actions" id="radarApproachCommands" hidden>
+            <div><span id="approachControlLabel">RADAR TRAINING ACTIONS</span><small id="approachControlHint">Mode-specific actions use the same authoritative aircraft state.</small></div>
+            <div class="command-grid command-grid--approach">
+              <button id="reportPosition" type="button" aria-keyshortcuts="P" title="Keyboard shortcut: P when no input is active">REPORT POSITION</button>
+              <button id="continueApproach" type="button" aria-keyshortcuts="C" title="Keyboard shortcut: C when no input is active">CONTINUE APPROACH</button>
+              <button id="reportRunwayVisual" type="button" aria-keyshortcuts="V" title="Keyboard shortcut: V when no input is active">REPORT RUNWAY VISUAL</button>
+              <button id="missedApproach" class="danger" type="button" aria-keyshortcuts="M" title="Keyboard shortcut: M when no input is active">MISSED APPROACH · CLIMB</button>
+            </div>
+          </div>
+          <div class="approach-actions" id="parTransferActions" hidden>
+            <div><span>PAR HANDOVER</span><small id="parTransferGateStatus" aria-live="polite">Select an inbound aircraft within the configured PAR transfer gate.</small></div>
+            <div class="command-grid command-grid--approach"><button id="transferToPar" type="button" title="Use the command bar: TRANSFER PAR">TRANSFER SELECTED AIRCRAFT TO PAR</button></div>
+          </div>
+            </section>
+          </aside>
+        </div>
+
+        <section class="event-card"><div class="card-head"><div><span>EVENT HISTORY</span><b>AUTHORITATIVE TIME</b></div></div><ol id="eventLog"><li><time>00:00</time><span>Scenario configured. Waiting for controller position.</span></li></ol></section>
+      </section>
+    </section>
+
+    <section class="review-screen" id="reviewScreen" hidden>
+      <header class="workspace-head"><div><span class="eyebrow">DEBRIEF</span><h1>Truth versus observation</h1></div><button id="restartExercise" class="primary" type="button">RESTART EXERCISE</button></header>
+      <div class="review-grid"><div class="scope-card"><canvas id="reviewScope" width="1000" height="720" aria-label="Exercise review"></canvas><div class="review-controls"><label><input type="checkbox" data-review-layer="truth" checked> TRUTH</label><label><input type="checkbox" data-review-layer="observations" checked> STUDENT OBSERVATIONS</label><label><input type="checkbox" data-review-layer="events" checked> COMMANDS</label></div><div class="review-playback"><button id="reviewPlay" type="button">PLAY</button><label>REPLAY SPEED<select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0"><output id="reviewTime">00:00</output></div></div><div class="review-summary"><span>EXERCISE SUMMARY</span><strong id="reviewMode">QGH</strong><dl><div><dt>DURATION</dt><dd id="reviewDuration">00:00</dd></div><div><dt>COMMANDS</dt><dd id="reviewCommandCount">0</dd></div><div><dt>OBSERVATIONS</dt><dd id="reviewObservationCount">0</dd></div><div><dt>TRACK END</dt><dd id="reviewEndState">—</dd></div></dl><ol id="reviewEvents"></ol></div></div>
+    </section>
+    <p class="equipment-note">Each sensor view is an inspired training representation of publicly described functions, not an operational equipment replica.</p>
+    <dialog class="training-guide" id="trainingGuide" aria-labelledby="guideTitle">
+      <div class="guide-card">
+        <header><div><span>GUIDED FAMILIARISATION</span><b id="guideProgress">1 / 5</b></div><button id="closeTrainingGuide" type="button" aria-label="Close training guide">×</button></header>
+        <div class="guide-step" data-guide-step="0"><small>STEP 01 · ROLES</small><h2 id="guideTitle">Instructor truth. Controller observation.</h2><p>You configure and control every aircraft. The controller position receives only the selected sensor picture—never hidden coordinates, heading, truth trail or instructor controls.</p><div class="guide-visual guide-visual--split"><b>INSTRUCTOR<br><span>CONTINUOUS TRUTH</span></b><i>→</i><b>CONTROLLER<br><span>SENSOR-LIMITED</span></b></div></div>
+        <div class="guide-step" data-guide-step="1" hidden><small>STEP 02 · FLEET</small><h2>Build and select 1–24 aircraft</h2><p>Edit each aircraft’s callsign, type, QTE, range, heading, altitude, speed, turn rate and vertical rate. Select a callsign tab or aircraft symbol before applying a command. PAR keeps tracking the designated approach aircraft when you select another aircraft to control.</p><div class="guide-keys"><kbd>[</kbd><span>Previous aircraft</span><kbd>]</kbd><span>Next aircraft</span></div></div>
+        <div class="guide-step" data-guide-step="2" hidden><small>STEP 03 · COMMANDS</small><h2>Fast keyboard control</h2><p>Shortcuts work only when no text, number, select, or command-bar field is active. They always apply to the selected aircraft. Buttons remain fully usable, and termination remains a deliberate button action.</p><div class="guide-keys"><kbd>[</kbd><span>Previous aircraft</span><kbd>]</kbd><span>Next aircraft</span><kbd>A</kbd><span>Left turn / left now in U/S</span><kbd>D</kbd><span>Right turn / right now in U/S</span><kbd>X</kbd><span>Stop U/S turn</span><kbd>T</kbd><span>Transmit D/F in QGH</span><kbd>H</kbd><span>Report heading</span><kbd>P</kbd><span>Report position</span><kbd>C</kbd><span>Continue approach</span><kbd>V</kbd><span>Report runway visual</span><kbd>M</kbd><span>Missed approach climb</span><kbd>G</kbd><span>Advance one minute</span><kbd>Space</kbd><span>Start / pause / resume</span></div><p>Use the command bar for exact typed aliases: <code>L 230</code> or <code>TURN LEFT HEADING 230</code>, <code>SPD 240</code>, <code>ALT 7000</code>, <code>CLIMB 7000</code>, <code>DESCEND 5000</code>, <code>DF</code>, <code>REPORT</code>, <code>ADVANCE</code>, <code>CONTINUE</code>, <code>VISUAL</code>, <code>MISSED</code>, <code>NEXT</code>, <code>PREV</code>, <code>START</code>, <code>PAUSE</code>, <code>RESUME</code>, or <code>TRANSFER PAR</code>. U/S Compass accepts only <code>LEFT NOW</code>, <code>RIGHT NOW</code>, and <code>STOP</code> for turns.</p></div>
+        <div class="guide-step" data-guide-step="3" hidden><small>STEP 04 · SENSOR FLOW</small><h2>Use the right picture</h2><p>QGH shows D/F during a pilot transmission and a two-second hold. Surveillance and SRA plot on beam crossing. PAR samples its designated aircraft. Set the aircraft speed and command descent as required; the aircraft does not automatically follow the displayed glidepath.</p><div class="guide-mode-row"><span>QGH<br><b>QDM / QTE</b></span><span>SRA<br><b>DISCRETE PLOTS</b></span><span>PAR<br><b>AZ / ELEVATION</b></span></div></div>
+        <div class="guide-step" data-guide-step="4" hidden><small>STEP 05 · LOCAL SESSION</small><h2>Admit, start, control, review</h2><p>Create a PIN, admit the second browser tab, wait for Ready, then start. Termination freezes the exercise and aligns truth, observations, commands and replies for debrief.</p><div class="guide-visual"><b>PIN</b><i>→</i><b>ADMIT</b><i>→</i><b>READY</b><i>→</i><b>RUN</b><i>→</i><b>REVIEW</b></div></div>
+        <footer><button id="skipTrainingGuide" type="button">SKIP GUIDE</button><div><button id="previousGuideStep" type="button" disabled>BACK</button><button id="nextGuideStep" class="primary" type="button">NEXT</button></div></footer>
+      </div>
+    </dialog>
+  </main>
+  <script defer src="pwa-register.js"></script>
+</body>
+</html>

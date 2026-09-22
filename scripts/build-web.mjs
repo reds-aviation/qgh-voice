@@ -1,4 +1,4 @@
-import { access, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -8,6 +8,8 @@ const engineRoot = resolve(repositoryRoot, 'packages', 'qgh-engine');
 const webRoot = resolve(repositoryRoot, 'apps', 'web');
 const staticRoot = resolve(webRoot, 'static');
 const outputRoot = resolve(webRoot, 'dist');
+const suiteWebOutputRoot = resolve(repositoryRoot, 'apps', 'suite-web', 'dist');
+const instructorLedOutputRoot = resolve(outputRoot, 'instructor-led');
 
 const engineFiles = [
   'index.html',
@@ -111,6 +113,18 @@ const webDistribution = version => `
         </dialog>
 `;
 
+const webInstructorGateway = `
+        <!-- QGH_WEB_INSTRUCTOR_GATEWAY -->
+        <nav class="entry-program-tabs" aria-label="Training route">
+          <a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>
+          <a class="entry-program-tab entry-program-tab--beta" href="instructor-led/index.html">INSTRUCTOR-LED <span>BETA</span></a>
+        </nav>
+`;
+
+const webInstructorGatewayNote = `
+        <p class="entry-beta-note">Instructor-led radar training is available as a separate beta for user trials.</p>
+`;
+
 function assertReplaced(html, target, replacement, pageName) {
   if (!html.includes(target)) {
     throw new Error(`Could not locate the expected ${pageName} insertion point.`);
@@ -138,9 +152,15 @@ function addPwaMarkup(pageName, source, version) {
     html = assertReplaced(html, '</head>', `${webHead(version)}</head>`, pageName);
   }
 
-  if (pageName === 'index.html' && !html.includes('QGH_WEB_DISTRIBUTION')) {
-    const quote = '        <p class="entry-quote">“Order in the air begins with clarity on the ground.”</p>';
-    html = assertReplaced(html, quote, `${quote}${webDistribution(version)}`, pageName);
+  if (pageName === 'index.html') {
+    if (!html.includes('QGH_WEB_INSTRUCTOR_GATEWAY')) {
+      const intro = '        <header class="entry-intro">';
+      html = assertReplaced(html, intro, `${webInstructorGateway}${intro}`, pageName);
+    }
+    if (!html.includes('QGH_WEB_DISTRIBUTION')) {
+      const quote = '        <p class="entry-quote">“Order in the air begins with clarity on the ground.”</p>';
+      html = assertReplaced(html, quote, `${quote}${webInstructorGatewayNote}${webDistribution(version)}`, pageName);
+    }
   }
 
   if (!html.includes('pwa-register.js')) {
@@ -187,6 +207,26 @@ async function applyVersionToServiceWorker(version) {
     throw new Error('The service worker is missing its version token.');
   }
   await writeFile(workerPath, worker.replaceAll('__QGH_VERSION__', version), 'utf8');
+}
+
+async function buildInstructorLedSuite() {
+  // The instructor-led beta is built as its own PWA first. Copying that
+  // allowlisted package into a subdirectory gives it a separate service-worker
+  // scope, cache namespace and install identity without widening the existing
+  // QGH application's offline cache boundary.
+  await import('./build-suite-web.mjs');
+  await cp(suiteWebOutputRoot, instructorLedOutputRoot, {
+    recursive: true,
+    force: true,
+  });
+
+  for (const page of ['index.html', 'instructor.html', 'student.html', 'service-worker.js']) {
+    try {
+      await access(resolve(instructorLedOutputRoot, page));
+    } catch {
+      throw new Error(`Instructor-led beta build is missing required output: ${page}`);
+    }
+  }
 }
 
 async function build() {
@@ -243,6 +283,8 @@ async function build() {
       throw new Error(`Web build is missing required output: ${relativePath}`);
     }
   }));
+
+  await buildInstructorLedSuite();
 
   console.log(`Built QGH Simulator v${version} web package at ${outputRoot}`);
 }

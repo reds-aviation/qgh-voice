@@ -2,7 +2,7 @@
 
 Offline-first QGH training simulator for Windows, Android, iPhone, iPad, and modern web browsers.
 
-Public web release: **v5.0.4 - Pilot Readback Stability**. [Open the GitHub Pages simulator](https://reds-aviation.github.io/qgh-voice/) or read the [release checks](docs/qa/v5.0.4-web-release.md). Windows and Android packages are built and distributed separately; the web release does not update installed native apps.
+Individual Practice is **v5.0.5 - Instructor-led Beta Gateway**. Its QGH workflow is unchanged; the gateway simply adds the separate [Instructor-led ATC Training Suite beta](https://reds-aviation.github.io/qgh-voice/instructor-led/) for user trials. [Open the GitHub Pages simulator](https://reds-aviation.github.io/qgh-voice/) or read the [v5.0.5 release checks](docs/qa/v5.0.5-instructor-led-beta-release.md). Windows and Android packages are built and distributed separately; this web publication does not update installed native apps.
 
 See [USER_GUIDE.md](USER_GUIDE.md) for installation, exercise, replay, tactical, and voice-control guidance.
 
@@ -16,6 +16,7 @@ The simulator provides Normal QGH and U/S Compass exercises, live D/F homing and
 | apps/android | Android | Local Android WebView application |
 | apps/web | Web, iPhone, and iPad | Hosted Progressive Web App build layer and supported Apple-device route |
 | packages/qgh-engine | Shared | Canonical HTML, CSS, JavaScript, and local fonts |
+| packages/atc-suite | Web beta | Instructor-led QGH/D/F, surveillance/SRA and PAR training suite |
 
 Windows and Android package the canonical files from `packages/qgh-engine`. The hosted PWA is the supported iPhone and iPad route for this release.
 
@@ -39,12 +40,16 @@ node --test $tests .\apps\web\test\*.test.mjs
 
 The generated `apps/web/dist` directory supports a browser-installed PWA on desktop and phones. Wait for the initial offline download to finish before going offline. Exercise data remains in memory and is intentionally cleared by a page reload. Browser voice recognition has one additional, user-selected first-time step: open **VOICE** and select **SET UP OFFLINE VOICE** while online to cache the self-hosted Vosk model (about 40 MB). The bundled male pilot replies require a fresh headphone test and user confirmation each session; no hardware-detection guarantee is made. The public PWA is published independently at `https://reds-aviation.github.io/qgh-voice/` after its Pages workflow completes. See [docs/WEB_PWA_DEPLOYMENT.md](docs/WEB_PWA_DEPLOYMENT.md) for hosting and installation instructions.
 
+### Instructor-led beta
+
+The instructor-led beta is packaged under `/instructor-led/` within the GitHub Pages site, with its own PWA cache and install identity. It supports instructor and controller positions in two tabs of the same browser profile, seeded scenarios, QGH/D/F, surveillance/SRA and PAR training views, plus primary, Mode A and Mode S training returns. It is a beta training representation, not an operational or certified ATC system; separate-device networking, operational data feeds and physical-device acceptance remain outside this beta.
+
 ### Versioned releases
 
 The PWA release record at 'apps/web/static/app-version.json' is shared by every platform. Set every platform's version together, then verify it before building:
 
 ~~~powershell
-.\scripts\Set-QghReleaseVersion.ps1 -Version 5.0.4 -AndroidVersionCode 34
+.\scripts\Set-QghReleaseVersion.ps1 -Version 5.0.5 -AndroidVersionCode 35
 node .\scripts\verify-release-version.mjs
 ~~~
 

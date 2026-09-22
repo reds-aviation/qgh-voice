@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#007d7d">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'">
+  <title>Reds ATC Training Suite</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="suite.css">
+</head>
+<body class="entry-page">
+  <main class="shell">
+    <header class="site-header">
+      <div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a></div>
+      <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
+    </header>
+
+    <section class="entry-hero">
+      <div>
+        <span class="eyebrow">INSTRUCTOR · CONTROLLER TRAINING</span>
+        <h1>One shared airspace.<br>Three training perspectives.</h1>
+        <p>Configure 1–24 aircraft. The instructor controls the exercise; the trainee works from the selected sensor picture.</p>
+      </div>
+      <div class="mode-orbit" aria-label="Training families">
+        <div><b>01</b><span>QGH / D/F</span></div>
+        <div><b>02</b><span>SURVEILLANCE / SRA</span></div>
+        <div><b>03</b><span>PAR</span></div>
+      </div>
+    </section>
+
+    <section class="role-grid" aria-labelledby="chooseRole">
+      <div class="section-title"><span>START</span><h2 id="chooseRole">Choose your position</h2></div>
+      <a class="role-card role-card--instructor" href="instructor.html">
+        <span class="role-index">01</span>
+        <div><small>CONTROL &amp; SUPERVISE</small><h3>Instructor console</h3><p>Set the scenario, admit the trainee, control the aircraft and review truth against observations.</p></div>
+        <b>OPEN →</b>
+      </a>
+      <a class="role-card" href="student.html">
+        <span class="role-index">02</span>
+        <div><small>JOIN WITH SESSION PIN</small><h3>Controller position</h3><p>Work from HRDF, surveillance/SRA or PAR information without seeing the hidden aircraft truth.</p></div>
+        <b>JOIN →</b>
+      </a>
+    </section>
+
+    <section class="capability-note">
+      <strong>BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · 0.2.2-beta.1</strong>
+      <p>Instructor and trainee currently open two tabs in the same browser profile. This beta does not connect separate devices. Equipment views are training representations—not operational replicas.</p>
+    </section>
+  </main>
+  <script defer src="pwa-register.js"></script>
+</body>
+</html>

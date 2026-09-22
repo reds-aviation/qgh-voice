@@ -195,3 +195,57 @@
   .entry-web-install,
   .entry-native-downloads a { transition: none; }
 }
+/* Web-only release gateway. Native packages retain their existing entry view
+   until they deliberately bundle the instructor-led beta. */
+.entry-program-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 28px;
+}
+
+.entry-program-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid var(--entry-line);
+  border-radius: 999px;
+  color: var(--entry-accent-dark);
+  padding: 8px 13px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .09em;
+  text-decoration: none;
+}
+
+.entry-program-tab:hover,
+.entry-program-tab:focus-visible {
+  border-color: var(--entry-accent);
+  outline: none;
+}
+
+.entry-program-tab--active {
+  border-color: var(--entry-accent);
+  background: var(--entry-accent);
+  color: #fff;
+}
+
+.entry-program-tab--beta span {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 2px 5px;
+  font-size: 8px;
+}
+
+.entry-beta-note {
+  margin: 12px 0 0;
+  color: var(--entry-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+  .entry-program-tabs { margin-bottom: 22px; }
+}

@@ -1,8 +1,8 @@
 {
   "name": "Reds QGH Simulator",
-  "releaseName": "v5.0.4 · Pilot Readback Stability",
+  "releaseName": "v5.0.5 · Instructor-led Beta Gateway",
   "releaseStage": "public-release",
-  "version": "5.0.4",
-  "androidVersionCode": 34,
-  "updated": "2026-09-16"
+  "version": "5.0.5",
+  "androidVersionCode": 35,
+  "updated": "2026-09-22"
 }

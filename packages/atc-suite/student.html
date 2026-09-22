@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#007d7d">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>Reds ATC Suite · Controller Position</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="suite.css">
+  <script defer src="suite-session.js"></script>
+  <script defer src="suite-student.js"></script>
+</head>
+<body>
+  <main class="shell shell--student">
+    <header class="site-header"><div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a><span class="role-pill">CONTROLLER POSITION</span></div><time id="studentClock" class="header-clock">00:00</time></header>
+
+    <section class="join-panel" id="joinPanel">
+      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><p>This local candidate connects two tabs in the same browser. It does not yet connect separate devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
+    </section>
+
+    <section class="waiting-panel" id="waitingPanel" hidden><div class="waiting-pulse" aria-hidden="true"></div><span class="eyebrow">JOIN REQUEST SENT</span><h1>Waiting for instructor</h1><p id="waitingMessage">Your display will open after the instructor admits this position.</p><button id="cancelJoin" type="button">CANCEL</button></section>
+
+    <section class="ready-panel" id="readyPanel" hidden><div><span class="eyebrow">POSITION ADMITTED</span><h1 id="readyMode">QGH / DIRECTION FINDING</h1><p>The sensor display will remain blank until the instructor starts the exercise.</p></div><label class="audio-option"><input id="studentAudio" type="checkbox"><span><b>OPTIONAL PILOT AUDIO</b><small id="audioAvailability">Uses an installed device voice. Captions remain authoritative.</small></span></label><button id="studentReady" class="primary-action" type="button">POSITION READY</button></section>
+
+    <section class="student-workspace active-workspace" id="studentWorkspace" hidden>
+      <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span></div></header>
+
+      <output id="studentCaption" class="pilot-caption" aria-live="polite"><small>PILOT</small><strong>Awaiting transmission</strong></output>
+
+      <section class="student-mode qgh-student" id="qghStudentView">
+        <div class="df-console"><header><span>DIRECTION FINDING DISPLAY</span><b id="dfSignalState">NO SIGNAL</b></header><div class="df-readout"><small id="dfModeLabel">QDM · HOMING</small><strong id="dfBearing">---</strong><span id="dfCallsign">AIRCRAFT · NO TRANSMISSION</span></div><div class="segmented" role="group" aria-label="D/F display mode"><button id="selectQdm" aria-pressed="true" type="button">QDM · HOMING</button><button id="selectQte" aria-pressed="false" type="button">QTE · TRUE BEARING</button></div></div>
+      </section>
+
+      <section class="student-mode radar-student" id="radarStudentView" hidden>
+        <div class="scope-card radar-scope">
+          <header><div><span id="radarTitle">SURVEILLANCE DISPLAY</span><b>ATCR-33S inspired · training representation</b></div><div class="instrument-controls"><label>RANGE<select id="radarRange"><option value="10">10 NM</option><option value="20">20 NM</option><option value="40" selected>40 NM</option><option value="60">60 NM</option><option value="100">100 NM</option></select></label><label>HISTORY<select id="radarHistory"><option value="0">OFF</option><option value="3" selected>3 PLOTS</option><option value="5">5 PLOTS</option></select></label><details class="scope-display-controls" id="radarScopeControls"><summary>SCOPE <span id="radarScopeControlStatus">DECLUTTERED</span></summary><div class="scope-control-panel"><fieldset id="radarLabelFieldset"><legend>SSR DATA LABELS</legend><div class="scope-toggle-grid"><label><input id="radarLabelCallsign" type="checkbox"> CALLSIGN</label><label><input id="radarLabelSquawk" type="checkbox"> SQUAWK</label><label><input id="radarLabelModeS" type="checkbox"> SSR / MODE S</label><label><input id="radarLabelLevel" type="checkbox"> LEVEL</label><label><input id="radarLabelSpeed" type="checkbox"> GROUND SPEED</label><label><input id="radarLabelHeading" type="checkbox"> HEADING</label><label><input id="radarLabelBearingRange" type="checkbox"> BEARING / RANGE</label></div><small id="radarLabelHelp">Labels are shown only beside cooperative square returns.</small></fieldset><fieldset id="radarAidFieldset"><legend>INSTRUCTOR-PROVIDED AIDS</legend><div class="scope-toggle-grid"><label><input id="radarOverlayCentreline" type="checkbox" checked> EXTENDED CENTRELINE</label><label><input id="radarOverlayDescent" type="checkbox" checked> SRA 3° DESCENT CUES</label></div><small id="radarAidHelp">An aid can be hidden locally only when the instructor has provided it.</small></fieldset></div></details></div></header>
+          <canvas id="radarScope" width="1000" height="800" aria-label="North-up surveillance radar. Only sampled beam-crossing returns are plotted."></canvas>
+          <aside class="radar-inspection" id="radarInspection" hidden aria-live="polite" aria-label="Selected cooperative surveillance target">
+            <header id="radarInspectionHandle"><span>SSR / MODE S DETAIL</span><button id="closeRadarInspection" type="button" aria-label="Close target detail">×</button></header>
+            <dl><div><dt>CALLSIGN</dt><dd id="inspectTrack">—</dd></div><div><dt>MODE A / SQUAWK</dt><dd id="inspectSquawk">—</dd></div><div><dt>LEVEL</dt><dd id="inspectAltitude">—</dd></div><div><dt>GROUND SPEED</dt><dd id="inspectGroundSpeed">—</dd></div><div><dt>HEADING</dt><dd id="inspectHeading">—</dd></div><div><dt>BEARING / RANGE</dt><dd id="inspectBearingRange">—</dd></div><div><dt>MODE S</dt><dd id="inspectModeS">—</dd></div></dl>
+            <small>Cooperative training data only · heading and ground speed are sampled track estimates · drag this panel to reposition.</small>
+          </aside>
+          <div class="radar-status"><span id="scanRate">12 RPM · 5 SEC REVISIT</span><span id="radarProfileStatus">PRIMARY ONLY</span><span id="lastPlot">NO PLOT</span></div>
+          <p class="instrument-note" id="radarGuideNote">North up · sampled returns only · range rings in NM · runway symbol schematic</p>
+        </div>
+      </section>
+
+      <section class="student-mode par-student" id="parStudentView" hidden>
+        <header><div><span>PRECISION APPROACH RADAR</span><b>DP-RDR-8044 inspired · training representation</b></div><div class="instrument-controls"><label>RANGE<select id="parRangeScale"><option value="10" selected>10 NM</option><option value="20">20 NM</option></select></label><label>HISTORY<select id="parHistory"><option value="0">OFF</option><option value="3" selected>3 PLOTS</option><option value="5">5 PLOTS</option></select></label></div></header>
+        <div class="par-summary"><span id="parTrackState">NO TRACK</span><span id="parSampleStatus">AWAITING SAMPLE</span></div>
+        <div class="par-panels"><div><h2>ELEVATION <span id="parGlidepathLabel">3.0° GLIDEPATH · HEIGHT ABOVE TOUCHDOWN</span></h2><canvas id="parElevation" width="1000" height="300" aria-label="Sampled elevation: height above touchdown in feet versus approach range in nautical miles."></canvas></div><div><h2>AZIMUTH <span>LATERAL DISPLACEMENT · CENTRELINE</span></h2><canvas id="parAzimuth" width="1000" height="300" aria-label="Sampled azimuth: lateral displacement in nautical miles versus approach range. Positive is right of centreline."></canvas></div></div>
+        <footer><span id="parRange">RANGE —</span><span id="parLateral">CENTRELINE —</span><span id="parVertical">GLIDEPATH —</span></footer>
+        <p class="instrument-note">Shared approach-range scale · discrete samples · nominal ±1° lateral and ±0.5° glidepath bands are training guides, not safety limits or equipment specifications. Refresh is a training setting.</p>
+      </section>
+    </section>
+
+    <section class="orientation-gate" id="orientationGate" hidden><div class="rotate-symbol" aria-hidden="true">↻</div><h1>More display width required</h1><p>Rotate this device to landscape, or use a tablet or desktop, for surveillance, SRA and PAR training.</p></section>
+
+    <section class="student-ended" id="studentEnded" hidden><span class="eyebrow">EXERCISE COMPLETE</span><h1>Instructor review in progress</h1><p>Your sensor picture is frozen at the last valid observation.</p><a class="primary-action" href="student.html">LEAVE SESSION</a></section>
+  </main>
+  <script defer src="pwa-register.js"></script>
+</body>
+</html>
