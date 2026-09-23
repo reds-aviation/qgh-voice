@@ -3,6 +3,7 @@
   const Core = globalThis.ATCSuiteCore;
   const Sensors = globalThis.ATCSuiteSensors;
   const Session = globalThis.ATCSuiteSession;
+  const Display = globalThis.ATCSuiteDisplay;
   if (!Core || !Sensors || !Session) return;
 
   const byId = id => document.getElementById(id);
@@ -15,8 +16,94 @@
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
-    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false
+    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false,
+    studentWindow: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false
   };
+
+  const radioNow = () => performance.now() / 1000;
+
+  function suspendExercise(message) {
+    state.running = false; state.accumulator = 0;
+    if (state.simulation?.lifecycle === 'running') {
+      state.session.pause(state.simulation.simulationSeconds);
+      state.simulation = Core.setLifecycle(state.simulation, 'paused');
+    }
+    byId('pauseExercise').textContent = 'RESUME';
+    byId('commandStatus').textContent = message;
+    state.runtimeError = message; state.dirty = true;
+  }
+
+  // Scheduling and painting have separate owners. Ordinary background timer
+  // delays are accounted for; a long suspension explicitly pauses the lesson.
+  function runtimeTick(timestamp = performance.now()) {
+    const elapsed = state.previousTick == null ? 0 : Math.max(0, (timestamp - state.previousTick) / 1000);
+    state.previousTick = timestamp;
+    try {
+      if (state.running && elapsed > 2) suspendExercise('BROWSER SUSPENDED · exercise paused. Select Resume when ready.');
+      else advanceWallElapsed(elapsed);
+      if (state.transmission && radioNow() >= state.transmission.expiresAt) finishTransmission();
+      if (state.simulation && state.sensor && ['running', 'paused'].includes(state.simulation.lifecycle)) publishCurrentObservation();
+    } catch (error) {
+      suspendExercise(`SENSOR UPDATE FAILED · ${error.message}. Exercise paused.`);
+    }
+  }
+
+  function setStudentDisplayStatus(message, status = '') {
+    const output = byId('studentDisplayStatus');
+    output.textContent = message;
+    if (status) output.dataset.state = status;
+    else delete output.dataset.state;
+  }
+
+  function openStudentDisplay() {
+    if (!Display) {
+      setStudentDisplayStatus('STUDENT DISPLAY MODULE UNAVAILABLE · reload this page and try again.', 'attention');
+      return { ok: false, reason: 'unsupported', window: null };
+    }
+    const windowMissing = !state.studentWindow || state.studentWindow.closed;
+    if (!windowMissing) {
+      try { state.studentWindow.focus(); } catch (_) { /* Browser focus policy may decline. */ }
+      setStudentDisplayStatus('STUDENT DISPLAY OPEN · enter the PIN there, or move it to a second display.');
+      return { ok: true, reason: 'focused', window: state.studentWindow };
+    }
+    const opened = Display.openStudentWindow({ url: 'student.html' });
+    if (!opened.ok) {
+      setStudentDisplayStatus(opened.reason === 'popup-blocked'
+        ? 'POP-UP BLOCKED · allow pop-ups, then select Open / Focus.'
+        : 'STUDENT DISPLAY COULD NOT OPEN SAFELY · reload this page and try again.', 'attention');
+      return opened;
+    }
+    state.studentWindow = opened.window;
+    setStudentDisplayStatus('STUDENT DISPLAY OPEN · enter the PIN there, or move it to a second display.');
+    return opened;
+  }
+
+  async function moveStudentDisplay() {
+    const opened = openStudentDisplay();
+    if (!opened.ok) return opened;
+    // Opening a pop-up and requesting screen-placement permission may each
+    // consume browser activation. A newly opened display therefore asks the
+    // instructor to press Move once more; an existing display is positioned
+    // by this direct, permission-bearing action.
+    if (opened.reason === 'opened') {
+      setStudentDisplayStatus('STUDENT DISPLAY OPEN · select Move to Second Display once more to place it.');
+      return opened;
+    }
+    const result = await Display.placeOnExternalScreen(state.studentWindow);
+    if (result.reason === 'external-display') {
+      setStudentDisplayStatus(`STUDENT DISPLAY PLACED ON SECOND SCREEN${result.label ? ` · ${result.label}` : ''}.`, 'external');
+    } else if (result.reason === 'single-display') {
+      setStudentDisplayStatus('STUDENT DISPLAY OPEN · one screen detected; move or resize it manually.');
+    } else if (result.reason === 'permission-needed') {
+      setStudentDisplayStatus('STUDENT DISPLAY OPEN · allow window-placement access, then select this control again.', 'attention');
+    } else if (result.reason === 'window-closed') {
+      state.studentWindow = null;
+      setStudentDisplayStatus('STUDENT DISPLAY CLOSED · select Open / Move to reopen it.', 'attention');
+    } else {
+      setStudentDisplayStatus('STUDENT DISPLAY OPEN · automatic placement is unavailable; move it manually.');
+    }
+    return result;
+  }
 
   function number(id) { return Number(byId(id).value); }
   function pad(value) { return String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0'); }
@@ -36,12 +123,16 @@
     return rate;
   }
 
+  function resetTrainingTimeRate(mode) {
+    return setTrainingTimeRate(mode === 'qgh' ? DEFAULT_TRAINING_TIME_RATE : 1);
+  }
+
   // This deliberately scales elapsed *wall time* before flight stepping. The
   // flight model still receives physical simulation seconds, so configured
   // ground speed, turn rate and turn radius retain their relationship.
   function advanceWallElapsed(elapsedSeconds) {
     if (!state.running) return 0;
-    const elapsed = Number.isFinite(elapsedSeconds) ? Math.min(1, Math.max(0, elapsedSeconds)) : 0;
+    const elapsed = Number.isFinite(elapsedSeconds) ? Math.max(0, elapsedSeconds) : 0;
     state.accumulator += elapsed * state.trainingTimeRate;
     let advanced = 0;
     while (state.accumulator >= .25) {
@@ -314,6 +405,15 @@
 
   function onSessionEvent(event) {
     const snapshot = event.snapshot;
+    if (event.kind === 'pilot-playback' && event.transmissionId === state.transmission?.id) {
+      if (event.phase === 'started' && !state.transmission.audioStarted) {
+        state.transmission.audioStarted = true; state.transmission.expiresAt = radioNow() + 30;
+      }
+      else if (event.phase === 'ended') finishTransmission();
+      else if (event.phase === 'unavailable') state.transmission.expiresAt = Math.min(state.transmission.expiresAt, radioNow() + state.transmission.captionSeconds);
+    }
+    if (event.kind === 'student-ready') state.radioAudio = event.audioMode === 'audio';
+    if (event.kind === 'student-preferences') state.radioAudio = event.preferences.audioEnabled;
     if (event.kind === 'join-requested') {
       state.pendingClient = event.clientId;
       byId('studentStatus').textContent = 'JOIN REQUEST RECEIVED';
@@ -329,6 +429,10 @@
       byId('startExercise').disabled = false;
     } else if (event.kind === 'student-disconnected') {
       byId('studentStatus').textContent = 'POSITION DISCONNECTED';
+      if (state.running) suspendExercise('STUDENT DISCONNECTED · exercise paused. Reconnect before resuming.');
+    } else if (event.kind === 'student-rejoined') {
+      byId('studentStatus').textContent = 'POSITION RECONNECTED';
+      byId('studentDetail').textContent = 'Student display restored. Audio starts muted after refresh.';
     } else if (event.kind === 'terminated') {
       byId('studentStatus').textContent = 'SESSION CLOSED';
     }
@@ -340,6 +444,7 @@
     if (!byId('scenarioForm').reportValidity()) return;
     try {
       const input = scenarioInput();
+      resetTrainingTimeRate(input.exerciseFamily);
       state.simulation = Core.setLifecycle(Core.createState(input), 'ready');
       state.sensor = createSensor(input);
       state.review = Sensors.createReviewTimeline();
@@ -358,7 +463,7 @@
       configureActiveControls();
       byId('startExercise').disabled = true;
       updateAll();
-      window.open('student.html', '_blank', 'noopener');
+      openStudentDisplay();
     } catch (error) { byId('setupPreview').textContent = error.message; }
   }
 
@@ -374,11 +479,11 @@
     if (!state.session || !state.sensor || !state.simulation) return;
     const mode = state.simulation.scenario.exerciseFamily;
     let observation;
-    if (mode === 'qgh') observation = state.sensor.studentObservation('qdm', state.simulation.simulationSeconds, truthForSensor());
+    if (mode === 'qgh') observation = state.sensor.studentObservation('qdm', radioNow(), truthForSensor());
     else if (mode === 'par') observation = state.sensor.studentObservation();
     else observation = state.sensor.studentObservation(state.sra);
-    state.latestObservation = observation;
     state.session.publishObservation({ mode, ...observation }, state.simulation.simulationSeconds);
+    state.latestObservation = observation;
     const signature = mode === 'qgh'
       ? `${state.simulation.simulationSeconds}:${observation.status}:${observation.callsign ?? ''}:${observation.bearingDeg ?? ''}`
       : mode === 'par' ? observation.timestamp : (observation.plots || []).map(plot => `${plot.trackId}:${plot.timestamp}`).join('|') || observation.plot?.timestamp;
@@ -393,8 +498,8 @@
     const mode = toState.scenario.exerciseFamily;
     const time = toState.simulationSeconds;
     if (mode === 'qgh') {
-      const df = state.sensor.read(time, truthForSensor(toState));
-      if (df.phase === 'live') state.sensor.update(truthForSensor(toState), time);
+      const df = state.sensor.read(radioNow(), truthForSensor(toState));
+      if (df.phase === 'live') state.sensor.update(truthForSensor(toState), radioNow());
       publishCurrentObservation();
       return;
     }
@@ -422,11 +527,10 @@
     for (let index = 0; index < steps; index += 1) {
       const previous = state.simulation;
       state.simulation = Core.advance(state.simulation, .25);
-      if (state.transmission && state.simulation.simulationSeconds >= state.transmission.expiresAt) finishTransmission();
       state.review.recordTruth(truthForReview());
       advanceSensors(previous, state.simulation);
     }
-    updateAll();
+    state.dirty = true;
   }
 
   function truthForReview() {
@@ -436,16 +540,16 @@
   }
 
   function frame(timestamp) {
+    requestAnimationFrame(frame);
     if (state.previousFrame == null) state.previousFrame = timestamp;
     const elapsed = Math.min(1, Math.max(0, (timestamp - state.previousFrame) / 1000));
     state.previousFrame = timestamp;
-    advanceWallElapsed(elapsed);
+    if (state.dirty) { state.dirty = false; updateAll(); }
     if (state.reviewPlaying) {
       state.reviewTime = Math.min(state.simulation.simulationSeconds, state.reviewTime + elapsed * number('reviewSpeed'));
       if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewPlaying = false;
       drawReview(state.review.snapshot());
     }
-    requestAnimationFrame(frame);
   }
 
   function transferSelectedToPar() {
@@ -517,18 +621,18 @@
     document.querySelectorAll('.command-deck button').forEach(button => button.classList.remove('executed'));
     byId(controlId)?.classList.add('executed');
     clearTimeout(state.readbackTimer);
-    state.session.publishCaption(result.outcome.readback.text, state.simulation.simulationSeconds);
+    const captionSeconds = Math.max(3, Math.min(15, result.outcome.readback.text.split(/\s+/).length * 60 / 130 + 1));
     state.transmission = { id: result.outcome.readback.id, aircraftId: result.outcome.readback.aircraftId,
-      expiresAt: state.simulation.simulationSeconds + 1.4, controlId };
+      expiresAt: radioNow() + (state.radioAudio ? 30 : captionSeconds), captionSeconds, controlId };
     if (state.simulation.scenario.exerciseFamily === 'qgh') beginDfTransmission(result.outcome.readback.id, result.outcome.readback.aircraftId);
-    state.readbackTimer = setTimeout(() => { finishTransmission(); updateAll(); }, 1400);
+    state.session.publishCaption(result.outcome.readback.text, state.simulation.simulationSeconds, state.transmission.id);
     updateAll();
     return result;
   }
 
   function beginDfTransmission(readbackId, aircraftId) {
     clearTimeout(state.dfTimer);
-    state.sensor.beginTransmission({ transmissionId: readbackId, source: aircraftId }, truthForSensor(), state.simulation.simulationSeconds);
+    state.sensor.beginTransmission({ transmissionId: readbackId, source: aircraftId }, truthForSensor(), radioNow());
     publishCurrentObservation();
   }
 
@@ -543,14 +647,14 @@
 
   function endDfTransmission() {
     if (!state.sensor || state.simulation?.scenario.exerciseFamily !== 'qgh') return;
-    state.sensor.endTransmission(truthForSensor(), state.simulation.simulationSeconds);
+    state.sensor.endTransmission(truthForSensor(), radioNow());
     publishCurrentObservation();
   }
 
   function startExercise() {
     if (!state.session || !state.simulation || ['running', 'paused', 'review'].includes(state.simulation.lifecycle)) return false;
     if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
-    state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null;
+    state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
     setPhase('running'); updateAll();
     return true;
@@ -562,7 +666,8 @@
       state.running = false; state.session.pause(state.simulation.simulationSeconds);
       state.simulation = Core.setLifecycle(state.simulation, 'paused'); byId('pauseExercise').textContent = 'RESUME';
     } else {
-      state.session.resume(state.simulation.simulationSeconds); state.simulation = Core.setLifecycle(state.simulation, 'running');
+      if (!state.session.resume(state.simulation.simulationSeconds)) return false;
+      state.simulation = Core.setLifecycle(state.simulation, 'running'); state.previousTick = performance.now(); state.runtimeError = null;
       state.running = true; state.previousFrame = null; byId('pauseExercise').textContent = 'PAUSE';
     }
     updateAll();
@@ -724,7 +829,7 @@
       drawAircraft(context, transform, { ...aircraft, ...aircraft.position }, selected);
     }
     if (simulation.scenario.exerciseFamily === 'qgh') {
-      const signal = state.sensor.read(simulation.simulationSeconds, truthForSensor());
+      const signal = state.sensor.read(radioNow(), truthForSensor());
       const source = simulation.aircraftList.find(a => a.id === signal.source);
       if (signal.phase === 'live' && source) {
         context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.moveTo(transform.cx, transform.cy);
@@ -850,16 +955,7 @@
     const text = String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
     if (!text) return commandRejected('Type HELP to see the accepted command-bar grammar.');
     if (text === 'HELP' || text === '?') return { accepted: true, action: 'help' };
-    const direct = {
-      'DF': 'transmit', 'D/F': 'transmit', 'TRANSMIT DF': 'transmit', 'TRANSMIT D/F': 'transmit', 'TRANSMIT FOR DF': 'transmit', 'TRANSMIT FOR D/F': 'transmit',
-      'REPORT': 'report', 'REPORT HEADING': 'report-heading',
-      'REPORT POSITION': 'report-position', 'ADVANCE': 'advance',
-      'ADVANCE 1': 'advance', 'ADVANCE 1 MIN': 'advance', 'CONTINUE': 'continue',
-      'VISUAL': 'visual', 'MISSED': 'missed', 'NEXT': 'next', 'NEXT AIRCRAFT': 'next',
-      'PREV': 'previous', 'PREVIOUS': 'previous', 'PREV AIRCRAFT': 'previous',
-      'START': 'start', 'PAUSE': 'pause', 'RESUME': 'resume', 'TRANSFER PAR': 'transfer-par',
-      'LEFT NOW': 'turn-left-now', 'RIGHT NOW': 'turn-right-now', 'STOP': 'stop-turn', 'STOP TURN': 'stop-turn'
-    };
+    const direct = globalThis.ATCSuiteCommandReference.direct;
     if (direct[text]) return { accepted: true, action: direct[text] };
     const heading = text.match(/^(?:TURN\s+)?(L|LEFT|R|RIGHT)(?:\s+HEADING)?\s+(\d{1,3})$/);
     if (heading) return { accepted: true, action: 'turn-heading', side: /^L/.test(heading[1]) ? 'left' : 'right', headingDeg: Number(heading[2]) };
@@ -1067,10 +1163,22 @@
     configureFields();
   }
 
-  family.addEventListener('change', configureFields); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
+  family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
   byId('copyPin').addEventListener('click', () => navigator.clipboard?.writeText(state.session.pin));
+  byId('openStudentDisplay').addEventListener('click', openStudentDisplay);
+  byId('moveStudentDisplay').addEventListener('click', () => { void moveStudentDisplay(); });
   byId('admitStudent').addEventListener('click', () => state.pendingClient && state.session.admit(state.pendingClient));
   byId('rejectStudent').addEventListener('click', () => state.pendingClient && state.session.reject(state.pendingClient));
+  byId('releaseStudent').addEventListener('click', () => {
+    if (!state.session?.releaseStudent()) return;
+    state.running = false; finishTransmission();
+    state.simulation = Core.setLifecycle(state.simulation, 'ready');
+    state.accumulator = 0; state.radioAudio = false;
+    byId('studentStatus').textContent = 'SEAT RELEASED';
+    byId('studentDetail').textContent = 'The exercise is stopped. Open a Student Display and join with this PIN.';
+    byId('startExercise').disabled = true; byId('pauseExercise').disabled = true;
+    byId('pauseExercise').textContent = 'PAUSE'; updateAll();
+  });
   byId('startExercise').addEventListener('click', startExercise); byId('pauseExercise').addEventListener('click', pauseExercise); byId('terminateExercise').addEventListener('click', terminateExercise);
   byId('executeKeyboardCommand').addEventListener('click', () => executeKeyboardCommand());
   byId('keyboardCommandInput').addEventListener('keydown', event => {
@@ -1118,5 +1226,6 @@
   document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
   window.addEventListener('beforeunload', () => state.session?.close());
   setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
+  setInterval(runtimeTick, 100);
   configureFields(); requestAnimationFrame(frame);
 })();

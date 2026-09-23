@@ -11,7 +11,17 @@ test('instructor setup contains all manual scenario inputs and lifecycle control
   for (const id of ['exerciseFamily', 'procedureType', 'callsign', 'initialBearing', 'initialRange',
     'initialHeading', 'initialAltitude', 'initialSpeed', 'turnRate', 'runwayOrientation',
     'finalTrack', 'createSession', 'admitStudent', 'startExercise', 'pauseExercise',
-    'terminateExercise', 'restartExercise']) assert.match(page, new RegExp(`id="${id}"`));
+    'terminateExercise', 'restartExercise', 'openStudentDisplay', 'moveStudentDisplay',
+    'studentDisplayStatus']) assert.match(page, new RegExp(`id="${id}"`));
+});
+
+test('instructor offers a dedicated same-browser student window and second-display placement', () => {
+  const page = html();
+  assert.match(page, /Same browser · dedicated student window/);
+  assert.match(page, /OPEN \/ FOCUS/);
+  assert.match(page, /MOVE TO SECOND DISPLAY/);
+  assert.match(page, /aria-live="polite"/);
+  assert.doesNotMatch(page, /Same-browser tabs only/);
 });
 
 test('instructor page labels equipment views as training representations', () => {

@@ -9,6 +9,7 @@ const page = readFileSync(join(__dirname, '..', 'student.html'), 'utf8');
 
 function harness(mode = 'surveillance', options = {}) {
   const { metadata: metadataOverrides = {}, ...speech } = options;
+  const playback = [], snapshotOverrides = {};
   const elements = new Map(), windowEvents = {};
   let onEvent, portrait = false;
   const context = () => new Proxy({ marks: [], labels: [], textDraws: [], strokes: [], path: [], dash: [], beginPath() { this.path = []; }, moveTo(x, y) { this.path.push({ x, y }); }, lineTo(x, y) { this.path.push({ x, y }); }, setLineDash(dash) { this.dash = [...dash]; }, stroke() { this.strokes.push({ path: [...this.path], dash: [...this.dash] }); }, arc(x, y, r) { this.marks.push({ x, y, r, alpha: this.globalAlpha }); }, fillText(text, x, y) { this.labels.push(text); this.textDraws.push({ text, x, y, width: this.measureText(text).width }); }, clearRect() { this.marks = []; this.labels = []; this.textDraws = []; this.strokes = []; }, measureText(text) { return { width: text.length * 8.4 }; } }, { get: (target, key) => key in target ? target[key] : () => {} });
@@ -17,12 +18,12 @@ function harness(mode = 'surveillance', options = {}) {
     return elements.get(id);
   };
   const metadata = { mode, callsign: '101', approachCallsign: '202', runwayOrientation: 230, finalTrack: 230, glidepathDeg: 3, scanRpm: 12, revisitSeconds: 5, ...metadataOverrides };
-  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: () => ({ matches: portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences() {}, snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running' }) }; } } };
+  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: () => ({ matches: portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences() {}, pilotPlayback: (id, phase) => playback.push({id,phase}), snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running', ...snapshotOverrides }) }; } } };
   vm.runInNewContext(source, sandbox);
   node('joinSession').events.click();
   const emit = observation => onEvent({ kind: 'observation', observation });
   const start = () => onEvent({ kind: 'lifecycle' });
-  return { node, emit, start, event: kind => onEvent({ kind }), caption: caption => onEvent({ kind: 'caption', caption }), windowEvent: (name, event) => windowEvents[name]?.(event), portrait: value => { portrait = value; windowEvents.resize(); } };
+  return { node, emit, start, playback, rawEvent: onEvent, snapshot: snapshotOverrides, event: kind => onEvent({ kind }), caption: (caption, transmissionId) => onEvent({ kind: 'caption', caption, transmissionId }), windowEvent: (name, event) => windowEvents[name]?.(event), portrait: value => { portrait = value; windowEvents.resize(); } };
 }
 const plot = (trackId, timestamp, rangeNm = 8) => ({ trackId, timestamp, rangeNm, azimuthDeg: 90 });
 const returns = h => h.node('radarScope').ctx.strokes.filter(stroke => (
@@ -59,6 +60,45 @@ test('DF mode toggle is safe before observation and labels the transmitting call
   assert.doesNotThrow(() => h.node('selectQte').events.click());
   h.emit({ bearingDeg: 40, bearingType: 'qte', callsign: '202', transmissionState: 'pilot', status: 'live' });
   assert.match(h.node('dfCallsign').textContent, /^202/);
+});
+
+test('pilot playback reports lifecycle and ignores callbacks from cancelled replies', () => {
+  const spoken = [], speechSynthesis = {getVoices:()=>[{lang:'en-GB',localService:true}], cancel(){}, speak:u=>spoken.push(u), addEventListener(){}};
+  const h = harness('qgh',{speechSynthesis,SpeechSynthesisUtterance:function(text){this.text=text;}});
+  h.node('studentAudio').checked = true;
+  h.caption('First reply','first'); spoken[0].onstart();
+  h.caption('Second reply','second');
+  spoken[0].onend(); spoken[0].onerror(); spoken[1].onstart(); spoken[1].onend();
+  assert.deepEqual(h.playback, [{id:'first',phase:'started'},{id:'first',phase:'unavailable'},{id:'second',phase:'started'},{id:'second',phase:'ended'}]);
+  h.node('studentAudio').checked = false;
+  h.caption('Muted reply','third');
+  assert.deepEqual(h.playback.at(-1),{id:'third',phase:'unavailable'});
+});
+
+test('mode handover clears the prior sensor picture before drawing the replacement', () => {
+  const h = harness('surveillance'); h.start(); h.emit({plots:[plot('a',20)]});
+  h.snapshot.publicMetadata = {mode:'par', glidepathDeg:3}; h.snapshot.observation = null;
+  h.rawEvent({kind:'public-metadata',publicMetadata:h.snapshot.publicMetadata});
+  assert.equal(h.node('parElevation').ctx.marks.length, 0);
+  assert.match(h.node('parRange').textContent, /—/);
+  assert.match(h.node('pictureFreshness').textContent, /AWAITING PICTURE/);
+});
+
+test('freshness distinguishes stalled flight, stale picture, pause and a normal absent DF signal', () => {
+  const h = harness('qgh');
+  h.emit({status:'idle',transmissionState:'idle'});
+  assert.equal(h.node('pictureFreshness').textContent,'NO SIGNAL · READY');
+  h.snapshot.lastHostSeenAt = Date.now(); h.snapshot.lastProgressAt = Date.now()-8000;
+  h.event('host-heartbeat'); assert.equal(h.node('pictureFreshness').textContent,'SIMULATION STALLED');
+  h.snapshot.lastProgressAt = Date.now(); h.snapshot.lastObservationAt = Date.now()-8000;
+  h.event('host-heartbeat'); assert.equal(h.node('pictureFreshness').textContent,'PICTURE STALE');
+  h.snapshot.state = 'paused'; h.event('lifecycle');
+  assert.equal(h.node('pictureFreshness').textContent,'PAUSED · PICTURE HELD');
+});
+
+test('student north bearing never paints 360 after rounding', () => {
+  const h = harness('qgh'); h.emit({bearingDeg:359.6,bearingType:'qdm',status:'live',transmissionState:'pilot'});
+  assert.equal(h.node('dfBearing').textContent,'000°');
 });
 
 test('PAR orders elevation above azimuth and reports off-scale instead of clamping a target to the edge', () => {

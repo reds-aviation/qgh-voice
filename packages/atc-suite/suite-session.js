@@ -18,6 +18,7 @@
     READY: 'ready',
     STUDENT_HEARTBEAT: 'student-heartbeat',
     PREFERENCES: 'preferences',
+    PILOT_PLAYBACK: 'pilot-playback',
     ADMISSION_GRANTED: 'admission-granted',
     ADMISSION_REJECTED: 'admission-rejected',
     LIFECYCLE: 'lifecycle',
@@ -31,7 +32,7 @@
 
   const STUDENT_TYPES = new Set([
     TYPES.JOIN_REQUEST, TYPES.REJOIN_REQUEST, TYPES.READY,
-    TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES
+    TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK
   ]);
   const INSTRUCTOR_TYPES = new Set([
     TYPES.ADMISSION_GRANTED, TYPES.ADMISSION_REJECTED, TYPES.LIFECYCLE,
@@ -44,7 +45,8 @@
     [TYPES.REJOIN_REQUEST]: ['clientId', 'pin', 'seatToken'],
     [TYPES.READY]: ['clientId', 'seatToken', 'audioMode'],
     [TYPES.STUDENT_HEARTBEAT]: ['clientId', 'seatToken'],
-    [TYPES.PREFERENCES]: ['clientId', 'seatToken', 'captions', 'audioEnabled']
+    [TYPES.PREFERENCES]: ['clientId', 'seatToken', 'captions', 'audioEnabled'],
+    [TYPES.PILOT_PLAYBACK]: ['clientId', 'seatToken', 'transmissionId', 'phase']
   });
   const INSTRUCTOR_PAYLOAD_KEYS = Object.freeze({
     [TYPES.ADMISSION_GRANTED]: ['seatToken', 'rejoined', 'publicMetadata'],
@@ -52,7 +54,7 @@
     [TYPES.LIFECYCLE]: ['state'],
     [TYPES.PUBLIC_METADATA]: ['publicMetadata'],
     [TYPES.OBSERVATION]: ['observation'],
-    [TYPES.CAPTION]: ['caption'],
+    [TYPES.CAPTION]: ['caption', 'transmissionId'],
     [TYPES.HOST_HEARTBEAT]: ['state'],
     [TYPES.STUDENT_DISCONNECTED]: ['reason'],
     [TYPES.TERMINATED]: ['reason']
@@ -234,11 +236,13 @@
       return { ok: false, reason: 'invalid-pin' };
     }
     if (message.type === TYPES.JOIN_REQUEST && message.payload.seat !== 'controller') return { ok: false, reason: 'invalid-seat' };
-    if ([TYPES.REJOIN_REQUEST, TYPES.READY, TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES].includes(message.type)
+    if ([TYPES.REJOIN_REQUEST, TYPES.READY, TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK].includes(message.type)
       && !text(message.payload.seatToken, 64)) return { ok: false, reason: 'invalid-seat-token' };
     if (message.type === TYPES.READY && !['audio', 'captions'].includes(message.payload.audioMode)) {
       return { ok: false, reason: 'invalid-audio-mode' };
     }
+    if (message.type === TYPES.PILOT_PLAYBACK && (!text(message.payload.transmissionId, 120)
+      || !['started', 'ended', 'unavailable'].includes(message.payload.phase))) return { ok: false, reason: 'invalid-playback' };
     if (message.type === TYPES.PREFERENCES
       && (typeof message.payload.captions !== 'boolean' || typeof message.payload.audioEnabled !== 'boolean')) {
       return { ok: false, reason: 'invalid-preferences' };
@@ -524,7 +528,7 @@
     const sessionId = options.sessionId || generateHex(16, cryptoSource);
     const senderId = options.senderId || `host_${generateHex(8, cryptoSource)}`;
     const channelName = options.channelName || `${CHANNEL_PREFIX}${sessionId}`;
-    const expiresAt = createdAt + PIN_TTL_MS;
+    let expiresAt = createdAt + PIN_TTL_MS;
     let publicMetadata = sanitizePublicMetadata(options.publicMetadata || { mode: 'qgh' });
     const transport = options.transport || transportFrom(options.transportFactory, channelName);
     const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
@@ -534,6 +538,7 @@
     let admitted = null;
     let waiting = new Map();
     let endedReason = null;
+    let latestObservation = null;
     let unsubscribe;
     const inboundRevision = new Map();
     writeDiscovery(options.storage, { pin, sessionId, channelName, createdAt, expiresAt });
@@ -602,6 +607,7 @@
         admitted.disconnected = false;
         send(TYPES.ADMISSION_GRANTED, { seatToken: admitted.seatToken, rejoined: true, publicMetadata }, admitted.clientId);
         send(TYPES.LIFECYCLE, { state }, admitted.clientId);
+        if (latestObservation) send(TYPES.OBSERVATION, { observation: latestObservation }, admitted.clientId);
         event('student-rejoined', { clientId: admitted.clientId });
         return { ok: true };
       }
@@ -619,6 +625,8 @@
       } else if (message.type === TYPES.PREFERENCES) {
         admitted.preferences = { captions: message.payload.captions !== false, audioEnabled: message.payload.audioEnabled === true };
         event('student-preferences', { clientId: admitted.clientId, preferences: admitted.preferences });
+      } else if (message.type === TYPES.PILOT_PLAYBACK) {
+        event('pilot-playback', { transmissionId: message.payload.transmissionId, phase: message.payload.phase });
       } else if (message.type === TYPES.STUDENT_HEARTBEAT) event('student-heartbeat', { clientId: admitted.clientId });
       return { ok: true };
     }
@@ -666,6 +674,7 @@
         radarProfile: publicMetadata.radarProfile
       });
       send(TYPES.OBSERVATION, { observation: safe }, admitted.clientId);
+      latestObservation = safe;
       return safe;
     }
 
@@ -676,15 +685,17 @@
     function updatePublicMetadata(metadata, time = simulationTime) {
       if (!admitted || !['running', 'paused'].includes(state)) return false;
       advanceTime(time);
-      publicMetadata = sanitizePublicMetadata(metadata);
+      const nextMetadata = sanitizePublicMetadata(metadata);
+      if (nextMetadata.mode !== publicMetadata.mode || nextMetadata.radarProfile !== publicMetadata.radarProfile) latestObservation = null;
+      publicMetadata = nextMetadata;
       send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
       return publicMetadata;
     }
 
-    function publishCaption(caption, time = simulationTime) {
+    function publishCaption(caption, time = simulationTime, transmissionId) {
       if (!admitted || !text(caption, 240) || !['running', 'paused'].includes(state)) return false;
       advanceTime(time);
-      send(TYPES.CAPTION, { caption }, admitted.clientId);
+      send(TYPES.CAPTION, { caption, ...(text(transmissionId, 120) ? { transmissionId } : {}) }, admitted.clientId);
       return true;
     }
 
@@ -729,9 +740,19 @@
       transport.close?.();
     }
 
+    function releaseStudent() {
+      if (!admitted || ['terminated', 'expired'].includes(state)) return false;
+      send(TYPES.TERMINATED, { reason: 'seat-released' }, admitted.clientId);
+      admitted = null; state = 'waiting'; waiting.clear();
+      expiresAt = now() + PIN_TTL_MS;
+      writeDiscovery(options.storage, { pin, sessionId, channelName, createdAt, expiresAt });
+      event('seat-released');
+      return true;
+    }
+
     unsubscribe = transport.subscribe(receive);
     return Object.freeze({ pin, sessionId, channelName, senderId, admit, reject, start, pause, resume,
-      publishObservation, updatePublicMetadata, publishCaption, heartbeat, terminate, expire, tick, receive, close, snapshot });
+      publishObservation, updatePublicMetadata, publishCaption, heartbeat, terminate, expire, tick, receive, close, snapshot, releaseStudent });
   }
 
   function createStudentSession(options = {}) {
@@ -739,15 +760,22 @@
     const cryptoSource = secureSource(options.crypto);
     const pin = String(options.pin || '');
     const discovery = options.discovery || readDiscovery(options.storage, pin, now());
-    const clientId = options.clientId || `student_${generateHex(8, cryptoSource)}`;
+    const recoveryKey = `reds.atc-suite.seat.${pin}`;
+    let recovery = null;
+    try { recovery = JSON.parse(options.recoveryStorage?.getItem(recoveryKey) || 'null'); } catch (_) {}
+    if (!recovery || recovery.sessionId !== discovery?.sessionId || !safeId(recovery.clientId)
+      || !text(recovery.seatToken, 64) || !Number.isSafeInteger(recovery.revision) || recovery.revision < 0) recovery = null;
+    const clientId = recovery?.clientId || options.clientId || `student_${generateHex(8, cryptoSource)}`;
     const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
     let transport = options.transport || null;
     let state = discovery ? 'joining' : 'rejected';
-    let revision = 0;
+    let revision = recovery?.revision || 0;
     let simulationTime = 0;
     let lastInstructorRevision = 0;
     let lastHostSeenAt = discovery ? now() : null;
-    let seatToken = null;
+    let lastObservationAt = null;
+    let lastProgressAt = null;
+    let seatToken = recovery?.seatToken || null;
     let publicMetadata = null;
     let observation = null;
     let caption = null;
@@ -759,9 +787,16 @@
 
     function snapshot() {
       return deepFreeze({ clientId, sessionId, channelName, state, simulationTime, publicMetadata,
-        observation, caption, reason, admitted: Boolean(seatToken) });
+        observation, caption, reason, admitted: Boolean(seatToken), lastHostSeenAt, lastObservationAt, lastProgressAt });
     }
     function event(kind, details = {}) { onEvent(deepFreeze({ kind, ...details, snapshot: snapshot() })); }
+
+    function saveRecovery() {
+      try {
+        if (seatToken) options.recoveryStorage?.setItem(recoveryKey, JSON.stringify({ sessionId, clientId, seatToken, revision }));
+        else options.recoveryStorage?.removeItem(recoveryKey);
+      } catch (_) { /* Storage denial leaves manual PIN admission available. */ }
+    }
 
     function send(type, payload) {
       if (!transport || !sessionId) return false;
@@ -770,6 +805,7 @@
         simulationTime, sentAt: now(), payload: { clientId, ...payload } });
       const validation = validateStudentMessage(message, { sessionId });
       if (!validation.ok) throw new Error(`Invalid student message: ${validation.reason}`);
+      saveRecovery();
       transport.post(message);
       return message;
     }
@@ -781,27 +817,31 @@
       if (message.revision <= lastInstructorRevision) return { ok: false, reason: 'stale-revision' };
       if (message.simulationTime < simulationTime) return { ok: false, reason: 'stale-simulation-time' };
       lastInstructorRevision = message.revision;
+      if (message.simulationTime > simulationTime) lastProgressAt = now();
       simulationTime = message.simulationTime;
       lastHostSeenAt = now();
       if (message.type === TYPES.ADMISSION_REJECTED) {
         state = 'rejected'; reason = 'unable-to-join'; seatToken = null;
+        saveRecovery();
         event('join-rejected');
       } else if (message.type === TYPES.ADMISSION_GRANTED) {
         if (!text(message.payload.seatToken, 64)) return { ok: false, reason: 'invalid-seat-token' };
         seatToken = message.payload.seatToken;
+        saveRecovery();
         publicMetadata = sanitizePublicMetadata(message.payload.publicMetadata || {});
         state = 'admitted'; reason = null;
         event(message.payload.rejoined ? 'rejoined' : 'admitted');
       } else if (message.type === TYPES.PUBLIC_METADATA) {
         if (!seatToken) return { ok: false, reason: 'state-before-admission' };
-        publicMetadata = sanitizePublicMetadata(message.payload.publicMetadata || {});
-        // The previous observation has a different schema (e.g. radar plot to
-        // PAR azimuth/elevation) and must never be reused under the new mode.
-        observation = null;
+        const nextMetadata = sanitizePublicMetadata(message.payload.publicMetadata || {});
+        if (nextMetadata.mode !== publicMetadata?.mode || nextMetadata.radarProfile !== publicMetadata?.radarProfile) observation = null;
+        if (!observation) lastObservationAt = null;
+        publicMetadata = nextMetadata;
         event('public-metadata', { publicMetadata });
       } else if (message.type === TYPES.LIFECYCLE) {
         if (!['admitted', 'ready', 'running', 'paused'].includes(message.payload.state)) return { ok: false, reason: 'invalid-lifecycle' };
         if (!seatToken) return { ok: false, reason: 'state-before-admission' };
+        if (message.payload.state === 'running' && state !== 'running') lastProgressAt = now();
         state = message.payload.state;
         event('lifecycle', { state });
       } else if (message.type === TYPES.OBSERVATION) {
@@ -810,17 +850,21 @@
           mode: publicMetadata && publicMetadata.mode,
           radarProfile: publicMetadata && publicMetadata.radarProfile
         }); }
-        catch (_) { return { ok: false, reason: 'unsafe-observation' }; }
+        catch (_) { event('observation-rejected', { reason: 'unsafe-observation' }); return { ok: false, reason: 'unsafe-observation' }; }
+        lastObservationAt = now();
         event('observation', { observation });
       } else if (message.type === TYPES.CAPTION) {
         if (!seatToken || !text(message.payload.caption, 240)) return { ok: false, reason: 'invalid-caption' };
         caption = message.payload.caption;
-        event('caption', { caption });
+        event('caption', { caption, transmissionId: message.payload.transmissionId });
       } else if (message.type === TYPES.STUDENT_DISCONNECTED) {
         state = 'disconnected'; reason = message.payload.reason || 'disconnected'; event('disconnected', { reason });
       } else if (message.type === TYPES.TERMINATED) {
         state = 'terminated'; reason = message.payload.reason || 'terminated'; seatToken = null; observation = null;
+        saveRecovery();
         event('terminated', { reason });
+      } else if (message.type === TYPES.HOST_HEARTBEAT) {
+        event('host-heartbeat');
       }
       return { ok: true };
     }
@@ -828,6 +872,7 @@
     function requestJoin() {
       if (!discovery || !transport) { state = 'rejected'; reason = 'unable-to-join'; event('join-rejected'); return false; }
       if (now() >= discovery.expiresAt) { state = 'rejected'; reason = 'unable-to-join'; event('join-rejected'); return false; }
+      if (seatToken) return rejoin();
       state = 'waiting';
       return send(TYPES.JOIN_REQUEST, { pin, seat: 'controller' });
     }
@@ -841,6 +886,9 @@
         audioEnabled: values.audioEnabled === true }) : false;
     }
     function rejoin() { return seatToken ? send(TYPES.REJOIN_REQUEST, { pin, seatToken }) : false; }
+    function pilotPlayback(transmissionId, phase) {
+      return seatToken ? send(TYPES.PILOT_PLAYBACK, { seatToken, transmissionId, phase }) : false;
+    }
     function tick() {
       if (lastHostSeenAt != null && !['terminated', 'rejected', 'disconnected'].includes(state)
         && now() - lastHostSeenAt > HEARTBEAT_TIMEOUT_MS) {
@@ -851,7 +899,7 @@
     function close() { if (unsubscribe) unsubscribe(); transport?.close?.(); }
     if (transport) unsubscribe = transport.subscribe(receive);
     return Object.freeze({ clientId, sessionId, channelName, requestJoin, ready, heartbeat,
-      preferences, rejoin, receive, tick, close, snapshot });
+      preferences, rejoin, pilotPlayback, receive, tick, close, snapshot });
   }
 
   return Object.freeze({

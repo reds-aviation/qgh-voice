@@ -4,9 +4,9 @@
   if (!Session) return;
   const byId = id => document.getElementById(id);
   const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null,
-    radarInspection: null, radarDrag: null };
+    radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false };
   const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.floor(Math.max(0, seconds)) % 60).padStart(2, '0')}`;
-  const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360)).padStart(3, '0');
+  const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0');
   const modeLabel = mode => ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || 'CONTROLLER POSITION';
   const radarLabelFields = [
     ['callsign', 'radarLabelCallsign'], ['squawk', 'radarLabelSquawk'], ['modeS', 'radarLabelModeS'], ['level', 'radarLabelLevel'],
@@ -19,26 +19,30 @@
   }
 
   function onSessionEvent(event) {
+    const priorMode = state.metadata?.mode, priorProfile = state.metadata?.radarProfile;
     const snapshot = event.snapshot || state.session?.snapshot();
     if (snapshot) {
       state.metadata = snapshot.publicMetadata || state.metadata;
-      state.observation = snapshot.observation || state.observation;
+      if (Object.hasOwn(snapshot, 'observation')) state.observation = snapshot.observation;
       state.simulationTime = Number(snapshot.simulationTime) || 0;
       byId('studentClock').textContent = clock(snapshot.simulationTime);
     }
     if (event.kind === 'admitted' || event.kind === 'rejoined') {
+      byId('studentReady').disabled = false; byId('studentReady').textContent = 'READY';
       show('readyPanel'); byId('readyMode').textContent = modeLabel(state.metadata.mode);
+      if (event.kind === 'rejoined') setPilotAudio(false);
     } else if (event.kind === 'join-rejected') {
       show('joinPanel'); byId('joinStatus').textContent = 'Unable to join. Check the PIN and active instructor session.';
     } else if (event.kind === 'lifecycle') {
       renderLifecycle(snapshot.state);
     } else if (event.kind === 'public-metadata') {
-      const priorMode = state.metadata?.mode;
       state.metadata = event.publicMetadata || snapshot?.publicMetadata || state.metadata;
       // A transfer changes the observation schema. Do not briefly paint an old
       // surveillance plot in a newly selected PAR display. A same-mode update
       // (such as the configured SRA approach speed) keeps the live picture.
-      if (priorMode && state.metadata?.mode !== priorMode) state.observation = null;
+      if (priorMode && (state.metadata?.mode !== priorMode || state.metadata?.radarProfile !== priorProfile)) {
+        state.observation = null; state.renderedAt = null; cancelPilotAudio();
+      }
       if (!byId('studentWorkspace').hidden) {
         renderWorkspaceMode();
         renderObservation();
@@ -46,11 +50,14 @@
     } else if (event.kind === 'observation') {
       state.observation = event.observation; renderObservation();
     } else if (event.kind === 'caption') {
-      renderCaption(event.caption);
+      renderCaption(event.caption, event.transmissionId);
+    } else if (event.kind === 'observation-rejected') {
+      state.pictureError = true;
     } else if (event.kind === 'disconnected') {
       setPilotAudio(false);
       byId('connectionState').textContent = 'DISCONNECTED'; byId('studentExerciseState').textContent = 'PICTURE FROZEN';
     } else if (event.kind === 'terminated') { setPilotAudio(false); show('studentEnded'); }
+    renderFreshness(snapshot);
   }
 
   function requestJoin() {
@@ -58,9 +65,12 @@
     if (!/^\d{6}$/.test(pin)) { byId('joinStatus').textContent = 'Enter all six digits.'; return; }
     state.session?.close();
     state.session = Session.createStudentSession({ pin, storage: localStorage,
+      recoveryStorage: typeof sessionStorage === 'undefined' ? undefined : sessionStorage,
       transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
-    if (state.session.requestJoin()) { show('waitingPanel'); byId('waitingMessage').textContent = `Session ${pin.slice(0, 3)} ${pin.slice(3)} · waiting for admission.`; }
-    else byId('joinStatus').textContent = 'No active local session matches that PIN.';
+    try { sessionStorage.setItem('reds.atc-suite.last-pin', pin); } catch (_) {}
+    show('waitingPanel'); byId('waitingMessage').textContent = `Session ${pin.slice(0, 3)} ${pin.slice(3)} · waiting for admission.`;
+    if (state.session.requestJoin()) { /* Admission events determine the next panel. */ }
+    else { show('joinPanel'); byId('joinStatus').textContent = 'No active local session matches that PIN.'; }
   }
 
   function ready() {
@@ -96,16 +106,25 @@
     byId('orientationGate').hidden = !narrow || byId('studentWorkspace').hidden;
   }
 
-  function renderCaption(caption) {
+  function renderCaption(caption, transmissionId) {
     const box = byId('studentCaption'); box.querySelector('strong').textContent = caption;
     cancelPilotAudio();
     const voice = localVoice();
     if (byId('studentAudio').checked && voice) {
+      const generation = state.audioGeneration;
+      state.activeTransmission = transmissionId || null;
+      const notify = phase => {
+        if (generation !== state.audioGeneration || !state.activeTransmission) return;
+        state.session?.pilotPlayback?.(state.activeTransmission, phase);
+        if (phase !== 'started') state.activeTransmission = null;
+      };
       const utterance = new SpeechSynthesisUtterance(caption); utterance.rate = 1.15; utterance.pitch = .9;
       utterance.voice = voice;
-      utterance.onerror = () => { byId('audioAvailability').textContent = 'Device audio unavailable. Continue with pilot captions.'; };
-      speechSynthesis.speak(utterance);
-    }
+      utterance.onstart = () => notify('started');
+      utterance.onend = () => notify('ended');
+      utterance.onerror = () => { notify('unavailable'); byId('audioAvailability').textContent = 'Device audio unavailable. Continue with pilot captions.'; };
+      try { speechSynthesis.speak(utterance); } catch (_) { notify('unavailable'); }
+    } else if (transmissionId) state.session?.pilotPlayback?.(transmissionId, 'unavailable');
   }
 
   function localVoice() {
@@ -127,7 +146,12 @@
     if (!available) cancelPilotAudio();
   }
 
-  function cancelPilotAudio() { if ('speechSynthesis' in globalThis) speechSynthesis.cancel(); }
+  function cancelPilotAudio() {
+    const transmissionId = state.activeTransmission;
+    state.activeTransmission = null; state.audioGeneration += 1;
+    if ('speechSynthesis' in globalThis) speechSynthesis.cancel();
+    if (transmissionId) state.session?.pilotPlayback?.(transmissionId, 'unavailable');
+  }
 
   function setPilotAudio(enabled) {
     byId('studentAudio').checked = Boolean(enabled && localVoice());
@@ -138,9 +162,33 @@
 
   function renderObservation() {
     if (!state.metadata) return;
-    if (state.metadata.mode === 'qgh') renderDf();
-    else if (state.metadata.mode === 'par') renderPar();
-    else renderRadar();
+    try {
+      if (state.metadata.mode === 'qgh') renderDf();
+      else if (state.metadata.mode === 'par') renderPar();
+      else renderRadar();
+      state.renderedAt = Date.now(); state.pictureError = false;
+    } catch (_) { state.pictureError = true; }
+    renderFreshness();
+  }
+
+  function renderFreshness(snapshot = state.session?.snapshot()) {
+    if (!snapshot) return;
+    const now = Date.now(), running = snapshot.state === 'running';
+    const stale = value => value != null && now - value > 6500;
+    let label = 'AWAITING PICTURE';
+    if (snapshot.state === 'disconnected') label = 'PICTURE FROZEN · RECONNECT';
+    else if (state.pictureError) label = 'PICTURE ERROR · RECONNECT';
+    else if (snapshot.state === 'paused') label = 'PAUSED · PICTURE HELD';
+    else if (running && stale(snapshot.lastProgressAt)) label = 'SIMULATION STALLED';
+    else if (running && (stale(snapshot.lastObservationAt) || stale(state.renderedAt))) label = 'PICTURE STALE';
+    else if (state.observation) label = state.metadata?.mode === 'qgh'
+      ? (state.observation.status === 'idle' ? 'NO SIGNAL · READY' : 'D/F PICTURE CURRENT')
+      : (state.metadata?.mode === 'par' ? (state.observation.timestamp == null ? 'AWAITING PAR SAMPLE' : 'PAR PICTURE CURRENT')
+        : (currentRadarPlots().length ? 'RADAR PICTURE CURRENT' : 'AWAITING SCAN · NO RETURNS'));
+    byId('pictureFreshness').textContent = label;
+    if (snapshot.state !== 'disconnected' && snapshot.lastHostSeenAt != null) {
+      byId('connectionState').textContent = stale(snapshot.lastHostSeenAt) ? 'LINK DELAYED' : 'CONNECTED';
+    }
   }
 
   function renderDf() {
@@ -628,6 +676,10 @@
   byId('radarOverlayDescent').checked = true;
   byId('joinPin').addEventListener('input', event => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6); });
   byId('joinSession').addEventListener('click', requestJoin); byId('joinPin').addEventListener('keydown', event => { if (event.key === 'Enter') requestJoin(); });
+  byId('reconnectStudent').addEventListener('click', () => {
+    cancelPilotAudio();
+    if (!state.session?.rejoin()) requestJoin();
+  });
   byId('cancelJoin').addEventListener('click', () => { state.session?.close(); state.session = null; show('joinPanel'); });
   byId('studentReady').addEventListener('click', ready); byId('selectQdm').addEventListener('click', () => changeDf('qdm')); byId('selectQte').addEventListener('click', () => changeDf('qte'));
   for (const control of ['radarHistory', 'radarRange', 'parRangeScale', 'parHistory', ...radarLabelFields.map(([, id]) => id), 'radarOverlayCentreline', 'radarOverlayDescent']) byId(control).addEventListener('change', renderObservation);
@@ -642,4 +694,11 @@
   addEventListener('resize', () => state.metadata && chooseMode(state.metadata.mode)); addEventListener('orientationchange', () => setTimeout(() => state.metadata && chooseMode(state.metadata.mode), 100));
   addEventListener('beforeunload', () => { cancelPilotAudio(); state.session?.close(); });
   state.heartbeat = setInterval(() => { state.session?.heartbeat(); state.session?.tick(); }, 4000);
+  setInterval(renderFreshness, 1000);
+  try {
+    const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');
+    if (/^\d{6}$/.test(savedPin || '') && sessionStorage.getItem(`reds.atc-suite.seat.${savedPin}`)) {
+      byId('joinPin').value = savedPin; requestJoin();
+    }
+  } catch (_) { /* Manual PIN entry works without session storage. */ }
 })();

@@ -290,7 +290,7 @@
       observation.levelFt = point.altitudeFt == null ? null : Math.round(point.altitudeFt / 100) * 100;
       // A sampled track estimate, not avionics truth. The student UI labels
       // both fields as training track-derived data and can hide them.
-      if (options.trackDerived?.headingDeg != null) observation.headingDeg = Math.round(normalize(options.trackDerived.headingDeg));
+      if (options.trackDerived?.headingDeg != null) observation.headingDeg = normalize(Math.round(normalize(options.trackDerived.headingDeg)));
       if (options.trackDerived?.groundSpeedKt != null) observation.groundSpeedKt = Math.round(options.trackDerived.groundSpeedKt);
       observation.surveillance = point.surveillance;
     }

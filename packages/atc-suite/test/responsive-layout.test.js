@@ -23,4 +23,5 @@ test('instructor console preserves a compact, scrollable aircraft selector and a
   assert.match(css, /@media\s*\(min-width:\s*1200px\)[\s\S]*?\.instructor-console\s*\{[^}]*grid-template-columns:[^}]*330px/s);
   assert.match(css, /@media\s*\(min-width:\s*1200px\)[\s\S]*?\.console-control-rail\s*\{[^}]*position:\s*sticky/s);
   assert.match(css, /@media\s*\(max-width:\s*680px\)[\s\S]*?\.console-control-rail\s*\{[^}]*grid-template-columns:\s*1fr/s);
+  assert.match(css, /@media\s*\(max-width:\s*680px\)[\s\S]*?\.session-card-actions\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });

@@ -3,9 +3,19 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const Sensors = require('../suite-sensors.js');
+const Session = require('../suite-session.js');
 
 const stationary = () => ({ id: 'A1', callsign: '430', position: { xNm: 0, yNm: -20 }, altitudeFt: 7000,
   headingDeg: 225, speedKt: 240, surveillance: { secondary: true, modeS: true, squawk: '4301', modeSId: 'A1B2C3' } });
+
+test('a northbound correlated track rounds 359.6 degrees to 000 and remains publishable', () => {
+  const sensor = Sensors.createSurveillanceSensor({ rpm:15, profile:'correlated' });
+  const angle = 359.6 * Math.PI / 180;
+  sensor.advance(12.1, seconds => ({ ...stationary(), position:{ xNm: Math.sin(angle)*seconds*240/3600, yNm:-20-Math.cos(angle)*seconds*240/3600 } }));
+  const picture = sensor.studentObservation();
+  assert.equal(picture.plot.headingDeg, 0);
+  assert.doesNotThrow(() => Session.sanitizeStudentObservation(picture,{mode:'surveillance',radarProfile:'correlated-training'}));
+});
 
 test('10, 12 and 15 RPM presets emit only beam-crossing plots at nominal revisits', () => {
   for (const [rpm, revisit] of [[10, 6], [12, 5], [15, 4]]) {

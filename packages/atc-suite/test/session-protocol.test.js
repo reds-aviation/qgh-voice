@@ -37,9 +37,9 @@ function harness(options = {}) {
       finalTrack: 230, trainingReference: 'Co-aligned; zero variation modelled' },
     onEvent: event => instructorEvents.push(event)
   });
-  function student(clientId = 'student_00000001', pin = '431230', events = []) {
+  function student(clientId = 'student_00000001', pin = '431230', events = [], recoveryStorage) {
     return Session.createStudentSession({ now, storage, transportFactory, crypto: deterministicCrypto(91),
-      clientId, pin, onEvent: event => events.push(event) });
+      clientId, pin, recoveryStorage, onEvent: event => events.push(event) });
   }
   return { now, storage, hub, transportFactory, instructor, instructorEvents, student,
     setTime: value => { time = value; }, advance: value => { time += value; } };
@@ -81,6 +81,56 @@ test('local session performs join, instructor admission, ready, run, pause, resu
   assert.equal(student.snapshot().observation, null);
   assert.equal(Session.readDiscovery(h.storage, '431230', h.now()), null, 'Terminating invalidates the PIN');
   assert.ok(events.some(event => event.kind === 'observation'));
+});
+
+test('student reload restores its authorized seat, monotonic revision and paused observation', () => {
+  const h = harness(), recovery = memoryStorage();
+  const first = h.student('student_00000001', '431230', [], recovery);
+  first.requestJoin(); h.instructor.admit(first.clientId); first.ready(); h.instructor.start();
+  h.instructor.publishObservation({ mode:'qgh', status:'held', transmissionState:'held', bearingType:'qdm', bearingDeg:148, callsign:'431' }, 20);
+  h.instructor.pause(20); first.heartbeat(); first.close();
+  const restored = h.student('student_00000099', '431230', [], recovery);
+  assert.equal(restored.clientId, first.clientId);
+  assert.equal(restored.requestJoin().type, Session.TYPES.REJOIN_REQUEST);
+  assert.equal(restored.snapshot().state, 'paused');
+  assert.equal(restored.snapshot().simulationTime, 20);
+  assert.equal(restored.snapshot().observation.bearingDeg, 148);
+  assert.ok(!h.instructorEvents.some(e => e.kind === 'message-rejected'));
+  h.instructor.terminate(); assert.equal(recovery.entries().length, 0);
+});
+
+test('released seat invalidates the old token and renews admission after the original PIN lifetime', () => {
+  const h = harness(), first = h.student();
+  first.requestJoin(); h.instructor.admit(first.clientId); first.ready(); h.instructor.start();
+  h.advance(Session.PIN_TTL_MS + 100);
+  assert.equal(h.instructor.releaseStudent(), true);
+  assert.equal(first.snapshot().state, 'terminated');
+  assert.equal(first.rejoin(), false);
+  const second = h.student('student_00000002');
+  second.requestJoin(); assert.equal(h.instructor.admit(second.clientId), true);
+  second.ready(); assert.equal(h.instructor.start(), true);
+});
+
+test('pilot playback acknowledgements carry the immutable transmission ID without changing flight time', () => {
+  const h = harness(), events = [], student = h.student('student_00000001', '431230', events);
+  student.requestJoin(); h.instructor.admit(student.clientId); student.ready('audio'); h.instructor.start(10);
+  h.instructor.publishCaption('Turning right 230, 431', 10, 'reply-1');
+  assert.equal(events.find(e => e.kind === 'caption').transmissionId, 'reply-1');
+  for (const phase of ['started','ended','unavailable']) student.pilotPlayback('reply-1',phase);
+  assert.deepEqual(h.instructorEvents.filter(e => e.kind === 'pilot-playback').map(e => e.phase), ['started','ended','unavailable']);
+  assert.equal(h.instructor.snapshot().simulationTime, 10);
+  assert.throws(() => student.pilotPlayback('reply-1','invented'), /Invalid student message/);
+});
+
+test('fresh heartbeats cannot disguise a frozen picture or stopped flight clock', () => {
+  const h = harness(), student = h.student();
+  student.requestJoin(); h.instructor.admit(student.clientId); student.ready(); h.instructor.start();
+  h.instructor.publishObservation({mode:'qgh',status:'idle',transmissionState:'idle'}, 2);
+  const before = student.snapshot(); h.advance(8000); h.instructor.heartbeat(2);
+  const after = student.snapshot();
+  assert.equal(after.lastHostSeenAt, h.now());
+  assert.equal(after.lastObservationAt, before.lastObservationAt);
+  assert.equal(after.lastProgressAt, before.lastProgressAt);
 });
 
 test('join remains pending until admission and a second controller seat is rejected', () => {

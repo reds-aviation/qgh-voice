@@ -25,7 +25,7 @@ function harness(options = {}) {
   let source = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'")) +
     '\n globalThis.fixture = { state, parseKeyboardCommand, performInstructorAction, executeKeyboardCommand, handleShortcut, selectAircraft };})();';
-  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {},
+  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     setTimeout() { return 1; }, clearTimeout() {}, performance: { now: () => 0 }, console };
   vm.runInNewContext(source, context);
   const aircraft = [
@@ -54,6 +54,17 @@ test('command bar accepts only its deterministic documented grammar', () => {
   assert.equal(h.parseKeyboardCommand('transfer par').action, 'transfer-par');
   assert.equal(h.parseKeyboardCommand('turn right when ready').accepted, false);
   assert.equal(h.parseKeyboardCommand('L 360').headingDeg, 360, 'range is rejected by execution validation, not coerced');
+});
+
+test('every generated guide alias is understood by the actual command parser', () => {
+  const h = harness(), reference = require('../suite-command-reference.js');
+  for (const row of reference.commands) for (const alias of row.aliases) {
+    const result = h.parseKeyboardCommand(alias.toLowerCase());
+    assert.equal(result.accepted, true, alias); assert.equal(result.action, row.action, alias);
+  }
+  for (const command of ['R 230','RIGHT HEADING 230','SPEED 240','ALTITUDE 7000','MAINTAIN AT 7000','CLIMB TO 7000','DESCEND AT 5000','HELP','?']) {
+    assert.equal(h.parseKeyboardCommand(command).accepted, true, command);
+  }
 });
 
 test('instructor page exposes an accessible command bar and its safe shortcut reference', () => {

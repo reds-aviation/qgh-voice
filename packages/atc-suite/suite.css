@@ -111,6 +111,12 @@ input:invalid { border-color: var(--red); }
 .session-card, .student-card { display: grid; gap: 12px; padding: 22px; }
 .session-card strong { font: 500 2rem 'IBM Plex Mono', monospace; letter-spacing: .14em; }
 .session-card small, .student-card p { color: var(--muted); line-height: 1.45; }
+.session-card-actions { display: grid; grid-template-columns: .7fr 1.3fr; gap: 8px; }
+.session-card-actions button { min-width: 0; padding-inline: 9px; font-size: .62rem; line-height: 1.35; }
+.session-card-actions .display-move-action { grid-column: 1 / -1; }
+.display-status { display: block; min-height: 2.8em; padding: 10px 11px; border-radius: 9px; color: var(--muted); background: var(--teal-soft); font: 500 .62rem 'IBM Plex Mono', monospace; line-height: 1.45; letter-spacing: .03em; }
+.display-status[data-state="external"] { color: #0a615c; background: #e2f3e9; }
+.display-status[data-state="attention"] { color: #8c3c33; background: #fff0ed; }
 .student-card strong { font-size: .94rem; }
 .button-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .phase-list { display: grid; border-left: 1px solid var(--line); margin: 12px 0 10px 12px; }
@@ -412,6 +418,7 @@ body.narrow-radar .orientation-gate { display: grid !important; }
   .console-control-rail { grid-template-columns: 1fr; }
   .setup-preview { min-height: 58px; }
   .session-rail { grid-template-columns: 1fr; }
+  .session-card-actions { grid-template-columns: 1fr; }
   .phase-list, .session-rail > #newScenario { grid-column: auto; }
   .workspace-head, .student-head { align-items: flex-start; padding: 18px 0; }
   .workspace-head { gap: 12px; }
@@ -460,3 +467,13 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+/* The version-linked beta manual remains readable on phones and in print. */
+.beta-guide { max-width: 1060px; }
+.beta-guide section { margin: 2rem 0; scroll-margin-top: 1rem; }
+.beta-guide p, .beta-guide li { line-height: 1.7; }
+.beta-guide li { margin-bottom: .65rem; }
+.beta-guide code { overflow-wrap: anywhere; }
+.guide-table-wrap { overflow-x: auto; }
+.beta-guide table { width: 100%; border-collapse: collapse; }
+.beta-guide th, .beta-guide td { padding: .8rem; border-bottom: 1px solid #b9cac7; text-align: left; vertical-align: top; }
+.beta-guide td:first-child { width: 38%; }

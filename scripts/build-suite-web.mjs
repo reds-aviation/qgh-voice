@@ -1,6 +1,7 @@
 import { access, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import commandReference from '../packages/atc-suite/suite-command-reference.js';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const suiteRoot = resolve(repositoryRoot, 'packages', 'atc-suite');
@@ -14,8 +15,11 @@ const suiteFiles = [
   'index.html',
   'instructor.html',
   'student.html',
+  'training-guide.html',
+  'suite-command-reference.js',
   'suite.css',
   'suite-core.js',
+  'suite-display.js',
   'suite-instructor.js',
   'suite-review.js',
   'suite-sensors.js',
@@ -41,7 +45,7 @@ const sharedIcons = [
   'icon-192.png',
   'icon-512.png',
 ];
-const pageFiles = ['index.html', 'instructor.html', 'student.html'];
+const pageFiles = ['index.html', 'instructor.html', 'student.html', 'training-guide.html'];
 
 async function copyFrom(sourceRoot, relativePath, destinationPath = relativePath) {
   const destination = resolve(outputRoot, destinationPath);
@@ -59,7 +63,9 @@ async function readSuiteVersion() {
 }
 
 function preparePage(source, version) {
-  let html = source;
+  const escape = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+  let html = source.replaceAll('__ATC_GUIDE_VERSION__', version).replace('<!-- BETA_DIRECT_COMMANDS -->',
+    commandReference.commands.map(row => `<tr><td>${row.aliases.map(alias => `<code>${escape(alias)}</code>`).join(' / ')}</td><td>${escape(row.description)}</td></tr>`).join('\n'));
   if (!html.includes('pwa.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="pwa.css">\n</head>');
   }

@@ -10,6 +10,7 @@ import {
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 import test from 'node:test';
+import commandReference from '../../../packages/atc-suite/suite-command-reference.js';
 
 const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
 const outputRoot = resolve(repositoryRoot, 'apps', 'suite-web', 'dist');
@@ -20,8 +21,11 @@ const expectedFiles = [
   'index.html',
   'instructor.html',
   'student.html',
+  'training-guide.html',
+  'suite-command-reference.js',
   'suite.css',
   'suite-core.js',
+  'suite-display.js',
   'suite-instructor.js',
   'suite-review.js',
   'suite-sensors.js',
@@ -78,8 +82,12 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
   const { version } = JSON.parse(readFileSync(resolve(outputRoot, 'app-version.json'), 'utf8'));
   const sourceVersion = JSON.parse(readFileSync(resolve(repositoryRoot, 'apps/suite-web/static/app-version.json'), 'utf8')).version;
   assert.equal(version, sourceVersion);
+  const guide = readFileSync(resolve(outputRoot, 'training-guide.html'), 'utf8');
+  assert.ok(guide.includes(`BETA TRAINING GUIDE · ${version}`));
+  assert.ok(!guide.includes('BETA_DIRECT_COMMANDS') && !guide.includes('__ATC_GUIDE_VERSION__'));
+  for (const row of commandReference.commands) for (const alias of row.aliases) assert.ok(guide.includes(`<code>${alias}</code>`), `Guide includes executable alias ${alias}`);
 
-  for (const page of ['index.html', 'instructor.html', 'student.html']) {
+  for (const page of ['index.html', 'instructor.html', 'student.html', 'training-guide.html']) {
     const html = readFileSync(resolve(outputRoot, page), 'utf8');
     const localAssets = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css)\?v=([^"]+))"/g)];
     assert.ok(localAssets.length > 0, `${page} contains version-qualified local assets`);

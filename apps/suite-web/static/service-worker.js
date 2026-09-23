@@ -12,8 +12,11 @@ const APP_SHELL = [
   './index.html',
   './instructor.html',
   './student.html',
+  './training-guide.html',
+  './suite-command-reference.js',
   './suite.css',
   './suite-core.js',
+  './suite-display.js',
   './suite-instructor.js',
   './suite-review.js',
   './suite-sensors.js',
@@ -36,7 +39,7 @@ const APP_SHELL_PATHS = new Set(
   APP_SHELL.map(asset => new URL(asset, self.registration.scope).pathname)
 );
 const PAGE_SHELL_PATHS = new Set(
-  ['./', './index.html', './instructor.html', './student.html']
+  ['./', './index.html', './instructor.html', './student.html', './training-guide.html']
     .map(page => new URL(page, self.registration.scope).pathname)
 );
 let cachePromise;

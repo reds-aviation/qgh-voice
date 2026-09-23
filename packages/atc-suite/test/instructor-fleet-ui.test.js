@@ -7,6 +7,7 @@ const Core = require('../suite-core.js');
 const Sensors = require('../suite-sensors.js');
 
 function harness() {
+  let wallMs = 0;
   const nodes = new Map();
   const canvasContext = new Proxy({}, { get(target, key) { return target[key] || (() => {}); } });
   const document = { getElementById(id) {
@@ -20,9 +21,9 @@ function harness() {
     setAttribute() {}, addEventListener() {}, append() {} }; } };
   let source = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, truthForSensor, advanceSensors, advanceBy, advanceWallElapsed, setTrainingTimeRate, normaliseTrainingTimeRate, scenarioInput, publicMetadata, publicMetadataForSimulation, createSensor, command, transferSelectedToPar, syncRoster, finishTransmission, selectAircraft, updateAll, handleShortcut, drawReview};})();';
-  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {},
-    setTimeout() { return 1; }, clearTimeout() {}, performance: { now: () => 0 }, console };
+    '\n globalThis.fixture = {state, runtimeTick, frame, onSessionEvent, truthForSensor, advanceSensors, advanceBy, advanceWallElapsed, setTrainingTimeRate, resetTrainingTimeRate, normaliseTrainingTimeRate, scenarioInput, publicMetadata, publicMetadataForSimulation, createSensor, command, transferSelectedToPar, syncRoster, finishTransmission, selectAircraft, updateAll, handleShortcut, drawReview};})();';
+  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
+    setTimeout() { return 1; }, clearTimeout() {}, requestAnimationFrame() {}, performance: { now: () => wallMs }, console };
   vm.runInNewContext(source, context);
   const aircraft = Array.from({ length: 24 }, (_, index) => ({ aircraftId: `AC${index + 1}`, callsign: String(101 + index),
     initialQteDeg: 30 + index, initialRangeNm: 20, initialHeadingDeg: 210,
@@ -30,8 +31,8 @@ function harness() {
   context.fixture.state.simulation = Core.createState({ aircraft, runwayOrientationDeg: 230, finalTrackDeg: 230 });
   context.fixture.state.sensor = Sensors.createDfSensor({ holdSeconds: 2 });
   context.fixture.state.review = Sensors.createReviewTimeline();
-  context.fixture.state.session = { publishObservation() {}, publishCaption() {} };
-  return { ...context.fixture, node: document.getElementById };
+  context.fixture.state.session = { publishObservation() {}, publishCaption() {}, pause() { return true; } };
+  return { ...context.fixture, node: document.getElementById, wall: ms => { wallMs = ms; } };
 }
 
 test('sensor truth contains every aircraft independently of control selection', () => {
@@ -216,9 +217,65 @@ test('selection preserves transmitting source and frames do not replace typed sp
   assert.equal(h.node('altitudeInput').value, '8300');
   h.advanceBy(60);
   assert.equal(h.state.simulation.simulationSeconds, 60);
-  assert.equal(h.state.sensor.read(60).phase, 'idle');
+  assert.equal(h.state.sensor.read(0).phase, 'live', 'flight advance must not consume radio wall time');
+  h.wall(16000); h.runtimeTick();
   assert.equal(h.state.transmission, null);
+  assert.equal(h.state.sensor.read(16).phase, 'held');
+  assert.equal(h.state.sensor.read(18.01).phase, 'idle');
   assert.equal(h.state.review.snapshot().truth.at(-1).aircraft.length, 24);
+});
+
+test('runtime advances without animation frames and pauses explicitly after browser suspension', () => {
+  const h = harness();
+  h.state.simulation = Core.setLifecycle(h.state.simulation, 'running'); h.state.running = true;
+  h.state.previousTick = 0; h.wall(1500); h.runtimeTick();
+  assert.equal(h.state.simulation.simulationSeconds, 7.5, '1.5 seconds at 5x must not be clamped to 1');
+  h.frame(1500); h.frame(2000);
+  assert.equal(h.state.simulation.simulationSeconds, 7.5, 'painting has no authority to advance flight');
+  h.wall(10000); h.runtimeTick();
+  assert.equal(h.state.simulation.simulationSeconds, 7.5);
+  assert.equal(h.state.simulation.lifecycle, 'paused');
+  assert.match(h.node('commandStatus').textContent, /SUSPENDED/);
+});
+
+test('radar defaults to real-time while QGH retains 5x and optional instructor acceleration remains available', () => {
+  const h = harness();
+  assert.equal(h.resetTrainingTimeRate('qgh'), 5);
+  for (const mode of ['surveillance','sra','par']) {
+    assert.equal(h.resetTrainingTimeRate(mode), 1);
+    assert.equal(h.setTrainingTimeRate(5), 5);
+    assert.equal(h.setTrainingTimeRate(10), 10);
+  }
+  assert.equal(h.resetTrainingTimeRate('qgh'), 5);
+});
+
+test('DF follows current pilot playback then holds for two wall seconds at every flight speed', () => {
+  for (const rate of [1, 5, 10]) {
+    const h = harness(); h.setTrainingTimeRate(rate);
+    h.state.simulation = Core.setLifecycle(h.state.simulation, 'running'); h.state.running = true; h.state.radioAudio = true;
+    h.command({ type: 'transmit' }, 'transmitDf');
+    const id = h.state.transmission.id;
+    h.onSessionEvent({kind: 'pilot-playback', transmissionId: id, phase: 'started'});
+    h.state.previousTick = 0;
+    for (let ms = 1000; ms <= 5000; ms += 1000) { h.wall(ms); h.runtimeTick(); }
+    assert.equal(h.state.sensor.read(5).phase, 'live');
+    assert.equal(h.state.simulation.simulationSeconds, rate * 5);
+    h.onSessionEvent({kind: 'pilot-playback', transmissionId: id, phase: 'ended'});
+    assert.equal(h.state.sensor.read(6.99).phase, 'held');
+    assert.equal(h.state.sensor.read(7.01).phase, 'idle');
+  }
+});
+
+test('obsolete playback completion cannot release a newer transmission and sensor errors pause safely', () => {
+  const h = harness(); h.state.simulation = Core.setLifecycle(h.state.simulation, 'running');
+  h.command({type:'transmit'}, 'transmitDf'); const old = h.state.transmission.id;
+  h.command({type:'report-heading'}, 'reportHeading'); const fresh = h.state.transmission.id;
+  h.onSessionEvent({kind:'pilot-playback', transmissionId:old, phase:'ended'});
+  assert.equal(h.state.transmission.id, fresh);
+  h.state.session.publishObservation = () => { throw new Error('test-invalid-observation'); };
+  h.runtimeTick();
+  assert.equal(h.state.simulation.lifecycle, 'paused');
+  assert.match(h.node('commandStatus').textContent, /SENSOR UPDATE FAILED/);
 });
 
 test('surveillance samples interpolate every aircraft across a simulation step', () => {

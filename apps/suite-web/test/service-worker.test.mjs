@@ -52,7 +52,7 @@ function createWorkerHarness({ cachedResponse = null, cacheNames = [], networkFa
   return { calls, handlers };
 }
 
-test('install precaches the complete local two-tab shell', async () => {
+test('install precaches the complete local two-position shell', async () => {
   const harness = createWorkerHarness();
   let installation;
   harness.handlers.get('install')({ waitUntil: value => { installation = value; } });
@@ -65,8 +65,11 @@ test('install precaches the complete local two-tab shell', async () => {
     './index.html',
     './instructor.html',
     './student.html',
+    './training-guide.html',
+    './suite-command-reference.js',
     './suite.css',
     './suite-core.js',
+    './suite-display.js',
     './suite-instructor.js',
     './suite-review.js',
     './suite-sensors.js',

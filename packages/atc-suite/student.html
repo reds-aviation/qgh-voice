@@ -13,10 +13,10 @@
 </head>
 <body>
   <main class="shell shell--student">
-    <header class="site-header"><div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a><span class="role-pill">CONTROLLER POSITION</span></div><time id="studentClock" class="header-clock">00:00</time></header>
+    <header class="site-header"><div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a><span class="role-pill">CONTROLLER POSITION</span><a href="training-guide.html" target="_blank" rel="noopener">BETA GUIDE ↗</a></div><time id="studentClock" class="header-clock">00:00</time></header>
 
     <section class="join-panel" id="joinPanel">
-      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><p>This local candidate connects two tabs in the same browser. It does not yet connect separate devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
+      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><p>This local candidate connects the Instructor and Student Display windows in the same browser. It does not yet connect separate devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
     </section>
 
     <section class="waiting-panel" id="waitingPanel" hidden><div class="waiting-pulse" aria-hidden="true"></div><span class="eyebrow">JOIN REQUEST SENT</span><h1>Waiting for instructor</h1><p id="waitingMessage">Your display will open after the instructor admits this position.</p><button id="cancelJoin" type="button">CANCEL</button></section>
@@ -24,7 +24,7 @@
     <section class="ready-panel" id="readyPanel" hidden><div><span class="eyebrow">POSITION ADMITTED</span><h1 id="readyMode">QGH / DIRECTION FINDING</h1><p>The sensor display will remain blank until the instructor starts the exercise.</p></div><label class="audio-option"><input id="studentAudio" type="checkbox"><span><b>OPTIONAL PILOT AUDIO</b><small id="audioAvailability">Uses an installed device voice. Captions remain authoritative.</small></span></label><button id="studentReady" class="primary-action" type="button">POSITION READY</button></section>
 
     <section class="student-workspace active-workspace" id="studentWorkspace" hidden>
-      <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span></div></header>
+      <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><button id="reconnectStudent" type="button">RECONNECT</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span><span id="pictureFreshness" role="status">AWAITING PICTURE</span></div></header>
 
       <output id="studentCaption" class="pilot-caption" aria-live="polite"><small>PILOT</small><strong>Awaiting transmission</strong></output>
 
