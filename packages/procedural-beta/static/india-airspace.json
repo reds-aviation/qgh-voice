@@ -1,0 +1,2794 @@
+[
+  {
+    "id": "hindan",
+    "name": "Hindan",
+    "origin": {
+      "latitude": 28.70666667,
+      "longitude": 77.35944444
+    },
+    "areas": [
+      {
+        "name": "VIR 91 B HINDAN · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 170",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 28.61666667,
+            "longitude": 77.82361111
+          },
+          {
+            "latitude": 28.58333333,
+            "longitude": 77.81527778
+          },
+          {
+            "latitude": 28.58333333,
+            "longitude": 78.79861111
+          },
+          {
+            "latitude": 28.8,
+            "longitude": 78.83194444
+          },
+          {
+            "latitude": 28.8,
+            "longitude": 78.98194444
+          },
+          {
+            "latitude": 29.05833333,
+            "longitude": 79.05694444
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR91(A) [HINDAN] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 28.61722222,
+            "longitude": 77.82527778
+          },
+          {
+            "latitude": 28.65220241,
+            "longitude": 77.83419008
+          },
+          {
+            "latitude": 28.68783567,
+            "longitude": 77.83885421
+          },
+          {
+            "latitude": 28.72368889,
+            "longitude": 77.84000738
+          },
+          {
+            "latitude": 28.75949612,
+            "longitude": 77.83763743
+          },
+          {
+            "latitude": 28.79499151,
+            "longitude": 77.83175833
+          },
+          {
+            "latitude": 28.82991123,
+            "longitude": 77.82241025
+          },
+          {
+            "latitude": 28.86399547,
+            "longitude": 77.80965927
+          },
+          {
+            "latitude": 28.89699039,
+            "longitude": 77.79359705
+          },
+          {
+            "latitude": 28.92865002,
+            "longitude": 77.77434023
+          },
+          {
+            "latitude": 28.95873812,
+            "longitude": 77.75202964
+          },
+          {
+            "latitude": 28.98702996,
+            "longitude": 77.7268293
+          },
+          {
+            "latitude": 29.01331408,
+            "longitude": 77.69892529
+          },
+          {
+            "latitude": 29.03777778,
+            "longitude": 77.66888889
+          },
+          {
+            "latitude": 29.71666667,
+            "longitude": 78.23194444
+          },
+          {
+            "latitude": 29.36666667,
+            "longitude": 79.1625
+          },
+          {
+            "latitude": 29.05833333,
+            "longitude": 79.05694444
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VIDX-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 19 MAR 2026). Aerodrome magnetic variation as printed in AD 2.2: 0.75 DEG E (2016)/ NIL. This is not verified VOR transmitter declination and is not assigned to the VOR station. AD 2.17 says ATS airspace not established; no CTR is invented. VIR155(A) is deliberately omitted because its Yamuna riverbank segment requires a separately verified geographic trace.",
+    "station": {
+      "name": "HND HINDAN DVOR/DME",
+      "type": "vor",
+      "frequency": "113.400 MHz",
+      "latitude": 28.70527778,
+      "longitude": 77.36416667
+    },
+    "icao": "VIDX"
+  },
+  {
+    "id": "pune",
+    "name": "Pune",
+    "origin": {
+      "latitude": 18.58333333,
+      "longitude": 73.91944444
+    },
+    "areas": [
+      {
+        "name": "Pune MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 080",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 18.91861111,
+            "longitude": 73.91583333
+          },
+          {
+            "latitude": 18.91861111,
+            "longitude": 74.72083333
+          },
+          {
+            "latitude": 18.85229002,
+            "longitude": 74.74829327
+          },
+          {
+            "latitude": 18.78387317,
+            "longitude": 74.76928321
+          },
+          {
+            "latitude": 18.71400724,
+            "longitude": 74.78400544
+          },
+          {
+            "latitude": 18.64320494,
+            "longitude": 74.79235978
+          },
+          {
+            "latitude": 18.57198525,
+            "longitude": 74.79429301
+          },
+          {
+            "latitude": 18.50086953,
+            "longitude": 74.78979904
+          },
+          {
+            "latitude": 18.43037772,
+            "longitude": 74.77891869
+          },
+          {
+            "latitude": 18.36102458,
+            "longitude": 74.76173917
+          },
+          {
+            "latitude": 18.29331595,
+            "longitude": 74.73839324
+          },
+          {
+            "latitude": 18.2277451,
+            "longitude": 74.70905804
+          },
+          {
+            "latitude": 18.16478918,
+            "longitude": 74.67395359
+          },
+          {
+            "latitude": 18.10490583,
+            "longitude": 74.63334108
+          },
+          {
+            "latitude": 18.04852991,
+            "longitude": 74.58752081
+          },
+          {
+            "latitude": 17.99607044,
+            "longitude": 74.53682994
+          },
+          {
+            "latitude": 17.94790767,
+            "longitude": 74.48163994
+          },
+          {
+            "latitude": 17.90439044,
+            "longitude": 74.42235395
+          },
+          {
+            "latitude": 17.86583369,
+            "longitude": 74.35940374
+          },
+          {
+            "latitude": 17.83251631,
+            "longitude": 74.29324675
+          },
+          {
+            "latitude": 17.80467914,
+            "longitude": 74.22436272
+          },
+          {
+            "latitude": 17.7825233,
+            "longitude": 74.1532504
+          },
+          {
+            "latitude": 17.76277778,
+            "longitude": 74.08111111
+          },
+          {
+            "latitude": 18.39694444,
+            "longitude": 73.62527778
+          },
+          {
+            "latitude": 18.42150299,
+            "longitude": 73.60929543
+          },
+          {
+            "latitude": 18.44726501,
+            "longitude": 73.59557937
+          },
+          {
+            "latitude": 18.47405596,
+            "longitude": 73.58426173
+          },
+          {
+            "latitude": 18.50167513,
+            "longitude": 73.57542841
+          },
+          {
+            "latitude": 18.52991556,
+            "longitude": 73.56914683
+          },
+          {
+            "latitude": 18.55856548,
+            "longitude": 73.56546535
+          },
+          {
+            "latitude": 18.58740998,
+            "longitude": 73.56441291
+          },
+          {
+            "latitude": 18.61623256,
+            "longitude": 73.56599873
+          },
+          {
+            "latitude": 18.6448168,
+            "longitude": 73.57021224
+          },
+          {
+            "latitude": 18.67294793,
+            "longitude": 73.57702309
+          },
+          {
+            "latitude": 18.70041451,
+            "longitude": 73.58638139
+          },
+          {
+            "latitude": 18.72700996,
+            "longitude": 73.59821796
+          },
+          {
+            "latitude": 18.75253418,
+            "longitude": 73.6124449
+          },
+          {
+            "latitude": 18.77679502,
+            "longitude": 73.62895618
+          },
+          {
+            "latitude": 18.79960979,
+            "longitude": 73.64762842
+          },
+          {
+            "latitude": 18.82080659,
+            "longitude": 73.66832178
+          },
+          {
+            "latitude": 18.84022564,
+            "longitude": 73.69088103
+          },
+          {
+            "latitude": 18.85772054,
+            "longitude": 73.71513672
+          },
+          {
+            "latitude": 18.87315932,
+            "longitude": 73.74090638
+          },
+          {
+            "latitude": 18.8864255,
+            "longitude": 73.767996
+          },
+          {
+            "latitude": 18.89741897,
+            "longitude": 73.79620142
+          },
+          {
+            "latitude": 18.90605673,
+            "longitude": 73.82530996
+          },
+          {
+            "latitude": 18.91227357,
+            "longitude": 73.85510196
+          },
+          {
+            "latitude": 18.91602256,
+            "longitude": 73.88535256
+          }
+        ],
+        "notes": "Published military control zone, Class D. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VAR37 [PUNE] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 18.6675,
+            "longitude": 73.49944444
+          },
+          {
+            "latitude": 19.00083333,
+            "longitude": 73.8325
+          },
+          {
+            "latitude": 19.33416667,
+            "longitude": 74.99916667
+          },
+          {
+            "latitude": 19.2675,
+            "longitude": 75.5325
+          },
+          {
+            "latitude": 17.33444444,
+            "longitude": 76.64888889
+          },
+          {
+            "latitude": 17.00111111,
+            "longitude": 76.66555556
+          },
+          {
+            "latitude": 16.83444444,
+            "longitude": 75.66583333
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VAPO-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 19 MAR 2026). Aerodrome magnetic variation as printed in AD 2.2: 0.59 DEG W (2015) /0.3333 DEG E. This is not verified VOR transmitter declination and is not assigned to the VOR station.",
+    "station": {
+      "name": "PPN PUNE DVOR/DME",
+      "type": "vor",
+      "frequency": "114.600 MHz",
+      "latitude": 18.58455556,
+      "longitude": 73.91243056
+    },
+    "icao": "VAPO"
+  },
+  {
+    "id": "jodhpur",
+    "name": "Jodhpur",
+    "origin": {
+      "latitude": 26.25722222,
+      "longitude": 73.05166667
+    },
+    "areas": [
+      {
+        "name": "Jodhpur MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 100",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "circle": {
+          "latitude": 26.25027778,
+          "longitude": 73.03277778,
+          "radiusNm": 25
+        },
+        "notes": "Published military control zone, Class D. Published circle; centre and nautical-mile radius retained."
+      },
+      {
+        "name": "VIR 156-A Jodhpur (1) · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "10000 FT",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.41694444,
+            "longitude": 72.99944444
+          },
+          {
+            "latitude": 26.33361111,
+            "longitude": 71.99944444
+          },
+          {
+            "latitude": 27.00027778,
+            "longitude": 71.99944444
+          },
+          {
+            "latitude": 27.13361111,
+            "longitude": 72.36611111
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR 156-E Jodhpur (5) · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "10000 FT AMSL",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.08361111,
+            "longitude": 73.29944444
+          },
+          {
+            "latitude": 26.20027778,
+            "longitude": 73.19944444
+          },
+          {
+            "latitude": 26.28361111,
+            "longitude": 73.4325
+          },
+          {
+            "latitude": 26.18361111,
+            "longitude": 73.71583333
+          },
+          {
+            "latitude": 26.08361111,
+            "longitude": 73.41583333
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR156(B) [Jodhpur-2] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 25.18361111,
+            "longitude": 73.9325
+          },
+          {
+            "latitude": 25.96694444,
+            "longitude": 73.36583333
+          },
+          {
+            "latitude": 26.36694444,
+            "longitude": 74.76583333
+          },
+          {
+            "latitude": 26.18361111,
+            "longitude": 74.7825
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR156(C) [JODHPUR (3)] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 24.95027778,
+            "longitude": 73.4325
+          },
+          {
+            "latitude": 25.28361111,
+            "longitude": 71.99944444
+          },
+          {
+            "latitude": 25.88361111,
+            "longitude": 72.04944444
+          },
+          {
+            "latitude": 25.91694444,
+            "longitude": 72.99944444
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR156(D) [JODHPUR (4)] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.53361111,
+            "longitude": 72.98277778
+          },
+          {
+            "latitude": 26.60027778,
+            "longitude": 73.28277778
+          },
+          {
+            "latitude": 27.41694444,
+            "longitude": 74.56583333
+          },
+          {
+            "latitude": 27.41694444,
+            "longitude": 73.5325
+          },
+          {
+            "latitude": 27.13361111,
+            "longitude": 72.36611111
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VIJO-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 11 JUN 2026). No numeric aerodrome magnetic variation supplied in the reviewed AD 2.2 entry.",
+    "station": {
+      "name": "JDP JODHPUR VOR/DME",
+      "type": "vor",
+      "frequency": "116.200 MHz",
+      "latitude": 26.24950556,
+      "longitude": 73.04325833
+    },
+    "icao": "VIJO"
+  },
+  {
+    "id": "chandigarh",
+    "name": "Chandigarh",
+    "origin": {
+      "latitude": 30.67444444,
+      "longitude": 76.78944444
+    },
+    "areas": [
+      {
+        "name": "Chandigarh MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 200",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 30.71638889,
+            "longitude": 76.39888889
+          },
+          {
+            "latitude": 30.74420753,
+            "longitude": 76.40551864
+          },
+          {
+            "latitude": 30.77150936,
+            "longitude": 76.41454337
+          },
+          {
+            "latitude": 30.798051,
+            "longitude": 76.42624597
+          },
+          {
+            "latitude": 30.82363906,
+            "longitude": 76.44054335
+          },
+          {
+            "latitude": 30.84808694,
+            "longitude": 76.45733329
+          },
+          {
+            "latitude": 30.87121624,
+            "longitude": 76.47649512
+          },
+          {
+            "latitude": 30.89285803,
+            "longitude": 76.49789057
+          },
+          {
+            "latitude": 30.91285414,
+            "longitude": 76.52136472
+          },
+          {
+            "latitude": 30.93105834,
+            "longitude": 76.54674718
+          },
+          {
+            "latitude": 30.94733741,
+            "longitude": 76.57385323
+          },
+          {
+            "latitude": 30.96157216,
+            "longitude": 76.60248526
+          },
+          {
+            "latitude": 30.97365832,
+            "longitude": 76.63243417
+          },
+          {
+            "latitude": 30.98350731,
+            "longitude": 76.66348096
+          },
+          {
+            "latitude": 30.99104694,
+            "longitude": 76.69539832
+          },
+          {
+            "latitude": 30.99622191,
+            "longitude": 76.72795242
+          },
+          {
+            "latitude": 30.99899428,
+            "longitude": 76.76090457
+          },
+          {
+            "latitude": 30.9993437,
+            "longitude": 76.79401309
+          },
+          {
+            "latitude": 30.99726761,
+            "longitude": 76.82703512
+          },
+          {
+            "latitude": 30.99278124,
+            "longitude": 76.85972845
+          },
+          {
+            "latitude": 30.9859175,
+            "longitude": 76.89185336
+          },
+          {
+            "latitude": 30.97672671,
+            "longitude": 76.92317441
+          },
+          {
+            "latitude": 30.96527628,
+            "longitude": 76.95346224
+          },
+          {
+            "latitude": 30.95165011,
+            "longitude": 76.98249531
+          },
+          {
+            "latitude": 30.93594803,
+            "longitude": 77.01006149
+          },
+          {
+            "latitude": 30.91828503,
+            "longitude": 77.03595971
+          },
+          {
+            "latitude": 30.89879039,
+            "longitude": 77.0600014
+          },
+          {
+            "latitude": 30.87760669,
+            "longitude": 77.0820119
+          },
+          {
+            "latitude": 30.85488879,
+            "longitude": 77.10183173
+          },
+          {
+            "latitude": 30.83080264,
+            "longitude": 77.11931771
+          },
+          {
+            "latitude": 30.80552405,
+            "longitude": 77.13434402
+          },
+          {
+            "latitude": 30.7792374,
+            "longitude": 77.14680304
+          },
+          {
+            "latitude": 30.75213426,
+            "longitude": 77.15660612
+          },
+          {
+            "latitude": 30.724412,
+            "longitude": 77.16368415
+          },
+          {
+            "latitude": 30.6962723,
+            "longitude": 77.167988
+          },
+          {
+            "latitude": 30.66791973,
+            "longitude": 77.16948881
+          },
+          {
+            "latitude": 30.63956019,
+            "longitude": 77.16817817
+          },
+          {
+            "latitude": 30.61139948,
+            "longitude": 77.16406804
+          },
+          {
+            "latitude": 30.58364178,
+            "longitude": 77.15719065
+          },
+          {
+            "latitude": 30.55648814,
+            "longitude": 77.14759815
+          },
+          {
+            "latitude": 30.53013511,
+            "longitude": 77.13536222
+          },
+          {
+            "latitude": 30.50477326,
+            "longitude": 77.12057345
+          },
+          {
+            "latitude": 30.48333333,
+            "longitude": 77.09861111
+          }
+        ],
+        "notes": "Published military control zone, Class D. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VIR150 [CHANDIGARH 1(A)] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 30.70805556,
+            "longitude": 76.41555556
+          },
+          {
+            "latitude": 30.65805556,
+            "longitude": 76.38222222
+          },
+          {
+            "latitude": 30.90805556,
+            "longitude": 75.86555556
+          },
+          {
+            "latitude": 30.96638889,
+            "longitude": 75.83222222
+          },
+          {
+            "latitude": 30.96638889,
+            "longitude": 76.51555556
+          },
+          {
+            "latitude": 31.71638889,
+            "longitude": 77.21527778
+          },
+          {
+            "latitude": 31.56638889,
+            "longitude": 77.99861111
+          },
+          {
+            "latitude": 30.5,
+            "longitude": 77.99861111
+          },
+          {
+            "latitude": 30.45,
+            "longitude": 77.61527778
+          },
+          {
+            "latitude": 30.18333333,
+            "longitude": 77.36527778
+          },
+          {
+            "latitude": 30.38333333,
+            "longitude": 77.01527778
+          },
+          {
+            "latitude": 30.37373708,
+            "longitude": 76.98359046
+          },
+          {
+            "latitude": 30.36136961,
+            "longitude": 76.95429497
+          },
+          {
+            "latitude": 30.35117266,
+            "longitude": 76.92390085
+          },
+          {
+            "latitude": 30.3432183,
+            "longitude": 76.89262322
+          },
+          {
+            "latitude": 30.33756275,
+            "longitude": 76.86068329
+          },
+          {
+            "latitude": 30.33424596,
+            "longitude": 76.82830683
+          },
+          {
+            "latitude": 30.33329136,
+            "longitude": 76.79572257
+          },
+          {
+            "latitude": 30.3347057,
+            "longitude": 76.76316067
+          },
+          {
+            "latitude": 30.33847898,
+            "longitude": 76.73085115
+          },
+          {
+            "latitude": 30.34458456,
+            "longitude": 76.69902229
+          },
+          {
+            "latitude": 30.35297928,
+            "longitude": 76.66789908
+          },
+          {
+            "latitude": 30.36360383,
+            "longitude": 76.63770167
+          },
+          {
+            "latitude": 30.37638309,
+            "longitude": 76.60864385
+          },
+          {
+            "latitude": 30.39122671,
+            "longitude": 76.58093159
+          },
+          {
+            "latitude": 30.40802966,
+            "longitude": 76.55476158
+          },
+          {
+            "latitude": 30.42667301,
+            "longitude": 76.53031989
+          },
+          {
+            "latitude": 30.44702474,
+            "longitude": 76.50778063
+          },
+          {
+            "latitude": 30.46894064,
+            "longitude": 76.48730474
+          },
+          {
+            "latitude": 30.49226532,
+            "longitude": 76.46903884
+          },
+          {
+            "latitude": 30.51683328,
+            "longitude": 76.45311415
+          },
+          {
+            "latitude": 30.54247007,
+            "longitude": 76.43964555
+          },
+          {
+            "latitude": 30.56899353,
+            "longitude": 76.42873072
+          },
+          {
+            "latitude": 30.59621503,
+            "longitude": 76.4204494
+          },
+          {
+            "latitude": 30.62394082,
+            "longitude": 76.41486276
+          },
+          {
+            "latitude": 30.65197339,
+            "longitude": 76.41201293
+          },
+          {
+            "latitude": 30.6801129,
+            "longitude": 76.41192261
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VICG-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 02 OCT 2025). Aerodrome magnetic variation as printed in AD 2.2: 1.71 DEG E (2022)/ NIL. This is not verified VOR transmitter declination and is not assigned to the VOR station. Hill flying area VIR151 is outside this representative LFA subset. Source centres for MCTR and LFA differ by one longitude minute; each published value was retained.",
+    "station": {
+      "name": "CHG CHANDIGARH VOR/DME",
+      "type": "vor",
+      "frequency": "116.500 MHz",
+      "latitude": 30.68221389,
+      "longitude": 76.76673889
+    },
+    "icao": "VICG"
+  },
+  {
+    "id": "gwalior",
+    "name": "Gwalior",
+    "origin": {
+      "latitude": 26.29194444,
+      "longitude": 78.22694444
+    },
+    "areas": [
+      {
+        "name": "Gwalior MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 160",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "circle": {
+          "latitude": 26.28361111,
+          "longitude": 78.23194444,
+          "radiusNm": 15
+        },
+        "notes": "Published military control zone, Class D. Published circle; centre and nautical-mile radius retained."
+      },
+      {
+        "name": "VIR 153 C Gwalior - III · LFA",
+        "kind": "restricted",
+        "floorLabel": "FL 160",
+        "ceilingLabel": "FL 280",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "circle": {
+          "latitude": 26.28361111,
+          "longitude": 78.23194444,
+          "radiusNm": 15
+        },
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published circle; centre and nautical-mile radius retained."
+      },
+      {
+        "name": "VIR143 [GWALIOR] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.56694444,
+            "longitude": 78.38194444
+          },
+          {
+            "latitude": 27.50027778,
+            "longitude": 78.48194444
+          },
+          {
+            "latitude": 27.58361111,
+            "longitude": 78.14861111
+          },
+          {
+            "latitude": 26.70027778,
+            "longitude": 78.26527778
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VIR153(A) [GWALIOR-I] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.33472222,
+            "longitude": 77.95944444
+          },
+          {
+            "latitude": 26.23361111,
+            "longitude": 77.13222222
+          },
+          {
+            "latitude": 25.88361111,
+            "longitude": 76.74888889
+          },
+          {
+            "latitude": 25.85027778,
+            "longitude": 76.53222222
+          },
+          {
+            "latitude": 25.16694444,
+            "longitude": 76.23222222
+          },
+          {
+            "latitude": 24.56722222,
+            "longitude": 76.18222222
+          },
+          {
+            "latitude": 24.36722222,
+            "longitude": 76.76555556
+          },
+          {
+            "latitude": 24.51722222,
+            "longitude": 76.76555556
+          },
+          {
+            "latitude": 24.46722222,
+            "longitude": 77.51527778
+          },
+          {
+            "latitude": 25.41694444,
+            "longitude": 77.63194444
+          },
+          {
+            "latitude": 26.13472222,
+            "longitude": 78.00805556
+          },
+          {
+            "latitude": 26.15228755,
+            "longitude": 77.99503939
+          },
+          {
+            "latitude": 26.17066838,
+            "longitude": 77.98352468
+          },
+          {
+            "latitude": 26.18985457,
+            "longitude": 77.97377464
+          },
+          {
+            "latitude": 26.20970981,
+            "longitude": 77.96585942
+          },
+          {
+            "latitude": 26.23009294,
+            "longitude": 77.95983625
+          },
+          {
+            "latitude": 26.25085899,
+            "longitude": 77.95574898
+          },
+          {
+            "latitude": 26.27186018,
+            "longitude": 77.95362771
+          },
+          {
+            "latitude": 26.29294698,
+            "longitude": 77.95348864
+          },
+          {
+            "latitude": 26.31396918,
+            "longitude": 77.95533382
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VIR153(B) [GWALIOR-II] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 26.03361111,
+            "longitude": 78.23194444
+          },
+          {
+            "latitude": 25.65027778,
+            "longitude": 78.48194444
+          },
+          {
+            "latitude": 25.71694444,
+            "longitude": 78.74861111
+          },
+          {
+            "latitude": 26.00027778,
+            "longitude": 79.16527778
+          },
+          {
+            "latitude": 26.18361111,
+            "longitude": 79.74833333
+          },
+          {
+            "latitude": 26.85027778,
+            "longitude": 80.065
+          },
+          {
+            "latitude": 27.21694444,
+            "longitude": 79.28166667
+          },
+          {
+            "latitude": 27.50027778,
+            "longitude": 78.48194444
+          },
+          {
+            "latitude": 26.49944444,
+            "longitude": 78.37416667
+          },
+          {
+            "latitude": 26.48690398,
+            "longitude": 78.39404791
+          },
+          {
+            "latitude": 26.47351111,
+            "longitude": 78.41315059
+          },
+          {
+            "latitude": 26.45868151,
+            "longitude": 78.43087698
+          },
+          {
+            "latitude": 26.44252779,
+            "longitude": 78.44709303
+          },
+          {
+            "latitude": 26.42517256,
+            "longitude": 78.46167632
+          },
+          {
+            "latitude": 26.40674751,
+            "longitude": 78.47451696
+          },
+          {
+            "latitude": 26.38739237,
+            "longitude": 78.48551843
+          },
+          {
+            "latitude": 26.36725385,
+            "longitude": 78.49459829
+          },
+          {
+            "latitude": 26.34648452,
+            "longitude": 78.50168877
+          },
+          {
+            "latitude": 26.32524165,
+            "longitude": 78.50673726
+          },
+          {
+            "latitude": 26.30368601,
+            "longitude": 78.50970668
+          },
+          {
+            "latitude": 26.28198063,
+            "longitude": 78.51057576
+          },
+          {
+            "latitude": 26.2602896,
+            "longitude": 78.50933909
+          },
+          {
+            "latitude": 26.23877679,
+            "longitude": 78.50600719
+          },
+          {
+            "latitude": 26.21760467,
+            "longitude": 78.50060637
+          },
+          {
+            "latitude": 26.196933,
+            "longitude": 78.4931785
+          },
+          {
+            "latitude": 26.17691772,
+            "longitude": 78.48378069
+          },
+          {
+            "latitude": 26.15770972,
+            "longitude": 78.47248476
+          },
+          {
+            "latitude": 26.13945374,
+            "longitude": 78.45937674
+          },
+          {
+            "latitude": 26.12228727,
+            "longitude": 78.44455619
+          },
+          {
+            "latitude": 26.10633955,
+            "longitude": 78.42813539
+          },
+          {
+            "latitude": 26.09173059,
+            "longitude": 78.41023855
+          },
+          {
+            "latitude": 26.07857027,
+            "longitude": 78.39100081
+          },
+          {
+            "latitude": 26.06695757,
+            "longitude": 78.37056725
+          },
+          {
+            "latitude": 26.05697976,
+            "longitude": 78.3490918
+          },
+          {
+            "latitude": 26.04871185,
+            "longitude": 78.32673609
+          },
+          {
+            "latitude": 26.04221594,
+            "longitude": 78.30366826
+          },
+          {
+            "latitude": 26.03754085,
+            "longitude": 78.28006169
+          },
+          {
+            "latitude": 26.03472167,
+            "longitude": 78.25609374
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VIGR-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 19 MAR 2026). Aerodrome magnetic variation as printed in AD 2.2: 0.00 DEG (1995) /0.00. This is not verified VOR transmitter declination and is not assigned to the VOR station.",
+    "station": {
+      "name": "GWA GWALIOR DVOR/DME",
+      "type": "vor",
+      "frequency": "112.800 MHz",
+      "latitude": 26.28444444,
+      "longitude": 78.21277778
+    },
+    "icao": "VIGR"
+  },
+  {
+    "id": "agra",
+    "name": "Agra",
+    "origin": {
+      "latitude": 27.15916667,
+      "longitude": 77.96055556
+    },
+    "areas": [
+      {
+        "name": "Agra MCTR",
+        "kind": "control-zone",
+        "floorLabel": "Not stated in ENR 2.1 entry",
+        "ceilingLabel": "FL 150",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 27.20611111,
+            "longitude": 77.31444444
+          },
+          {
+            "latitude": 27.25494013,
+            "longitude": 77.32049337
+          },
+          {
+            "latitude": 27.30291502,
+            "longitude": 77.33257371
+          },
+          {
+            "latitude": 27.34981299,
+            "longitude": 77.34917222
+          },
+          {
+            "latitude": 27.39529892,
+            "longitude": 77.37017596
+          },
+          {
+            "latitude": 27.43904739,
+            "longitude": 77.39544003
+          },
+          {
+            "latitude": 27.48074503,
+            "longitude": 77.42478844
+          },
+          {
+            "latitude": 27.52009279,
+            "longitude": 77.45801525
+          },
+          {
+            "latitude": 27.55680816,
+            "longitude": 77.49488597
+          },
+          {
+            "latitude": 27.59062726,
+            "longitude": 77.53513916
+          },
+          {
+            "latitude": 27.62130678,
+            "longitude": 77.57848825
+          },
+          {
+            "latitude": 27.64862579,
+            "longitude": 77.62462359
+          },
+          {
+            "latitude": 27.67238742,
+            "longitude": 77.67321472
+          },
+          {
+            "latitude": 27.6924203,
+            "longitude": 77.72391272
+          },
+          {
+            "latitude": 27.70857985,
+            "longitude": 77.77635284
+          },
+          {
+            "latitude": 27.7207494,
+            "longitude": 77.8301572
+          },
+          {
+            "latitude": 27.75027778,
+            "longitude": 77.88194444
+          },
+          {
+            "latitude": 27.55027778,
+            "longitude": 78.44861111
+          },
+          {
+            "latitude": 27.46694444,
+            "longitude": 78.49861111
+          },
+          {
+            "latitude": 27.58361111,
+            "longitude": 78.14861111
+          },
+          {
+            "latitude": 26.70027778,
+            "longitude": 78.23194444
+          },
+          {
+            "latitude": 26.63361111,
+            "longitude": 77.89861111
+          },
+          {
+            "latitude": 27.21694444,
+            "longitude": 77.49861111
+          }
+        ],
+        "notes": "Published military control zone, Class D. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary. The source entry gives FL 150 but omits a lower-limit value; no lower limit was inferred."
+      },
+      {
+        "name": "VIR142 [Agra (A)] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 25.88361111,
+            "longitude": 76.74888889
+          },
+          {
+            "latitude": 26.18361111,
+            "longitude": 76.34888889
+          },
+          {
+            "latitude": 26.88361111,
+            "longitude": 76.49888889
+          },
+          {
+            "latitude": 27.18361111,
+            "longitude": 76.93222222
+          },
+          {
+            "latitude": 27.21694444,
+            "longitude": 77.49861111
+          },
+          {
+            "latitude": 26.63361111,
+            "longitude": 77.89861111
+          },
+          {
+            "latitude": 26.23361111,
+            "longitude": 77.13222222
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VIAG-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 09 JUL 2026). Aerodrome magnetic variation as printed in AD 2.2: 0.25 DEG W (1995) /0.016 DEG E. This is not verified VOR transmitter declination and is not assigned to the VOR station.",
+    "station": {
+      "name": "AGG AGRA VOR/DME",
+      "type": "vor",
+      "frequency": "112.000 MHz",
+      "latitude": 27.15728056,
+      "longitude": 77.95655278
+    },
+    "icao": "VIAG"
+  },
+  {
+    "id": "sirsa",
+    "name": "Sirsa",
+    "origin": {
+      "latitude": 29.56,
+      "longitude": 75.00694444
+    },
+    "areas": [
+      {
+        "name": "Sirsa MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 070",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "circle": {
+          "latitude": 29.56,
+          "longitude": 75.00694444,
+          "radiusNm": 20
+        },
+        "notes": "Published military control zone, Class D. Published circle; centre and nautical-mile radius retained."
+      },
+      {
+        "name": "VIR149(C) [SIRSA] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 29.99222222,
+            "longitude": 74.83861111
+          },
+          {
+            "latitude": 28.89583333,
+            "longitude": 75.07638889
+          },
+          {
+            "latitude": 28.88333333,
+            "longitude": 74.25
+          },
+          {
+            "latitude": 29.25,
+            "longitude": 74.4
+          },
+          {
+            "latitude": 29.60833333,
+            "longitude": 74.33333333
+          },
+          {
+            "latitude": 29.96666667,
+            "longitude": 74.58333333
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. Origin is the published MCTR circle centre; no public VOR verified. A trainer DF reference here would be a simulator construct, not a published radio aid."
+  },
+  {
+    "id": "jamnagar",
+    "name": "Jamnagar",
+    "origin": {
+      "latitude": 22.46611111,
+      "longitude": 70.01744444
+    },
+    "areas": [
+      {
+        "name": "Jamnagar MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 22.78388889,
+            "longitude": 69.68305556
+          },
+          {
+            "latitude": 22.78388889,
+            "longitude": 70.19972222
+          },
+          {
+            "latitude": 22.26722222,
+            "longitude": 70.48305556
+          },
+          {
+            "latitude": 22.23209025,
+            "longitude": 70.46465853
+          },
+          {
+            "latitude": 22.20110022,
+            "longitude": 70.43913053
+          },
+          {
+            "latitude": 22.17222676,
+            "longitude": 70.41086075
+          },
+          {
+            "latitude": 22.14567756,
+            "longitude": 70.38005414
+          },
+          {
+            "latitude": 22.12164347,
+            "longitude": 70.34693351
+          },
+          {
+            "latitude": 22.10029717,
+            "longitude": 70.31173792
+          },
+          {
+            "latitude": 22.08179196,
+            "longitude": 70.27472099
+          },
+          {
+            "latitude": 22.06626069,
+            "longitude": 70.23614909
+          },
+          {
+            "latitude": 22.0538148,
+            "longitude": 70.19629945
+          },
+          {
+            "latitude": 22.04454358,
+            "longitude": 70.15545825
+          },
+          {
+            "latitude": 22.03851354,
+            "longitude": 70.11391854
+          },
+          {
+            "latitude": 22.03576791,
+            "longitude": 70.07197828
+          },
+          {
+            "latitude": 22.03632638,
+            "longitude": 70.02993819
+          },
+          {
+            "latitude": 22.04018495,
+            "longitude": 69.9880997
+          },
+          {
+            "latitude": 22.04731594,
+            "longitude": 69.94676284
+          },
+          {
+            "latitude": 22.05766823,
+            "longitude": 69.90622413
+          },
+          {
+            "latitude": 22.07116755,
+            "longitude": 69.86677454
+          },
+          {
+            "latitude": 22.08771704,
+            "longitude": 69.82869744
+          },
+          {
+            "latitude": 22.10719794,
+            "longitude": 69.79226661
+          },
+          {
+            "latitude": 22.12947038,
+            "longitude": 69.75774432
+          },
+          {
+            "latitude": 22.15437438,
+            "longitude": 69.72537946
+          },
+          {
+            "latitude": 22.18173099,
+            "longitude": 69.69540579
+          },
+          {
+            "latitude": 22.2113435,
+            "longitude": 69.66804026
+          },
+          {
+            "latitude": 22.24299889,
+            "longitude": 69.64348144
+          },
+          {
+            "latitude": 22.27646926,
+            "longitude": 69.62190805
+          },
+          {
+            "latitude": 22.3115135,
+            "longitude": 69.60347768
+          },
+          {
+            "latitude": 22.34787898,
+            "longitude": 69.58832559
+          },
+          {
+            "latitude": 22.38530334,
+            "longitude": 69.57656369
+          },
+          {
+            "latitude": 22.42351639,
+            "longitude": 69.56827963
+          },
+          {
+            "latitude": 22.46224198,
+            "longitude": 69.56353617
+          },
+          {
+            "latitude": 22.50120008,
+            "longitude": 69.56237057
+          },
+          {
+            "latitude": 22.54010869,
+            "longitude": 69.5647943
+          },
+          {
+            "latitude": 22.57868598,
+            "longitude": 69.57079281
+          },
+          {
+            "latitude": 22.61665224,
+            "longitude": 69.5803256
+          },
+          {
+            "latitude": 22.65373198,
+            "longitude": 69.59332638
+          },
+          {
+            "latitude": 22.68965594,
+            "longitude": 69.60970353
+          },
+          {
+            "latitude": 22.72416301,
+            "longitude": 69.62934063
+          },
+          {
+            "latitude": 22.7570022,
+            "longitude": 69.65209726
+          }
+        ],
+        "notes": "Published military control zone, Class D. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VAR42(A) [JAMNAGAR] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 22.78388889,
+            "longitude": 69.67361111
+          },
+          {
+            "latitude": 22.7522476,
+            "longitude": 69.64853205
+          },
+          {
+            "latitude": 22.71897267,
+            "longitude": 69.62612249
+          },
+          {
+            "latitude": 22.68405098,
+            "longitude": 69.60688761
+          },
+          {
+            "latitude": 22.64773911,
+            "longitude": 69.59096624
+          },
+          {
+            "latitude": 22.61030363,
+            "longitude": 69.57847256
+          },
+          {
+            "latitude": 22.57201914,
+            "longitude": 69.56949539
+          },
+          {
+            "latitude": 22.53316623,
+            "longitude": 69.56409757
+          },
+          {
+            "latitude": 22.49402943,
+            "longitude": 69.56231557
+          },
+          {
+            "latitude": 22.4548951,
+            "longitude": 69.56415938
+          },
+          {
+            "latitude": 22.41604933,
+            "longitude": 69.56961246
+          },
+          {
+            "latitude": 22.37777587,
+            "longitude": 69.57863197
+          },
+          {
+            "latitude": 22.34035406,
+            "longitude": 69.59114918
+          },
+          {
+            "latitude": 22.3040568,
+            "longitude": 69.60707005
+          },
+          {
+            "latitude": 22.26914859,
+            "longitude": 69.62627597
+          },
+          {
+            "latitude": 22.23588361,
+            "longitude": 69.64862471
+          },
+          {
+            "latitude": 22.2045039,
+            "longitude": 69.6739515
+          },
+          {
+            "latitude": 22.17523763,
+            "longitude": 69.70207027
+          },
+          {
+            "latitude": 22.14829748,
+            "longitude": 69.73277502
+          },
+          {
+            "latitude": 22.12387909,
+            "longitude": 69.76584139
+          },
+          {
+            "latitude": 22.10215971,
+            "longitude": 69.8010282
+          },
+          {
+            "latitude": 22.08329691,
+            "longitude": 69.83807928
+          },
+          {
+            "latitude": 22.06742749,
+            "longitude": 69.87672526
+          },
+          {
+            "latitude": 22.0546665,
+            "longitude": 69.91668551
+          },
+          {
+            "latitude": 22.04510643,
+            "longitude": 69.95767012
+          },
+          {
+            "latitude": 22.03881653,
+            "longitude": 69.99938199
+          },
+          {
+            "latitude": 22.03584238,
+            "longitude": 70.04151886
+          },
+          {
+            "latitude": 22.03620553,
+            "longitude": 70.08377551
+          },
+          {
+            "latitude": 22.03990334,
+            "longitude": 70.12584586
+          },
+          {
+            "latitude": 22.04690902,
+            "longitude": 70.16742516
+          },
+          {
+            "latitude": 22.05717183,
+            "longitude": 70.20821209
+          },
+          {
+            "latitude": 22.07061739,
+            "longitude": 70.24791093
+          },
+          {
+            "latitude": 22.08714826,
+            "longitude": 70.28623362
+          },
+          {
+            "latitude": 22.10664458,
+            "longitude": 70.32290182
+          },
+          {
+            "latitude": 22.12896495,
+            "longitude": 70.35764885
+          },
+          {
+            "latitude": 22.15394743,
+            "longitude": 70.39022166
+          },
+          {
+            "latitude": 22.18141064,
+            "longitude": 70.42038259
+          },
+          {
+            "latitude": 22.21115512,
+            "longitude": 70.44791111
+          },
+          {
+            "latitude": 22.24296469,
+            "longitude": 70.47260545
+          },
+          {
+            "latitude": 22.27666667,
+            "longitude": 70.49416667
+          },
+          {
+            "latitude": 22.25406875,
+            "longitude": 70.49773966
+          },
+          {
+            "latitude": 22.23194243,
+            "longitude": 70.50392341
+          },
+          {
+            "latitude": 22.21038753,
+            "longitude": 70.5121303
+          },
+          {
+            "latitude": 22.1895623,
+            "longitude": 70.52229918
+          },
+          {
+            "latitude": 22.16961954,
+            "longitude": 70.53435457
+          },
+          {
+            "latitude": 22.15070555,
+            "longitude": 70.54820727
+          },
+          {
+            "latitude": 22.13295898,
+            "longitude": 70.56375501
+          },
+          {
+            "latitude": 22.11650992,
+            "longitude": 70.58088324
+          },
+          {
+            "latitude": 22.10147885,
+            "longitude": 70.59946593
+          },
+          {
+            "latitude": 22.08797589,
+            "longitude": 70.61936656
+          },
+          {
+            "latitude": 22.07609988,
+            "longitude": 70.64043906
+          },
+          {
+            "latitude": 22.06593776,
+            "longitude": 70.66252891
+          },
+          {
+            "latitude": 22.0575639,
+            "longitude": 70.68547426
+          },
+          {
+            "latitude": 22.05103957,
+            "longitude": 70.7091071
+          },
+          {
+            "latitude": 22.04527778,
+            "longitude": 70.73305556
+          },
+          {
+            "latitude": 20.80083333,
+            "longitude": 71.46611111
+          },
+          {
+            "latitude": 20.7675,
+            "longitude": 71.14972222
+          },
+          {
+            "latitude": 21.27777778,
+            "longitude": 70.62305556
+          },
+          {
+            "latitude": 21.3175,
+            "longitude": 70.66638889
+          },
+          {
+            "latitude": 21.53388889,
+            "longitude": 70.58305556
+          },
+          {
+            "latitude": 21.65055556,
+            "longitude": 70.08305556
+          },
+          {
+            "latitude": 21.86722222,
+            "longitude": 69.96638889
+          },
+          {
+            "latitude": 21.83388889,
+            "longitude": 69.58305556
+          },
+          {
+            "latitude": 21.75055556,
+            "longitude": 69.44972222
+          },
+          {
+            "latitude": 22.23388889,
+            "longitude": 68.91666667
+          },
+          {
+            "latitude": 22.46722222,
+            "longitude": 69.08333333
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VAR42(B) [JAMNAGAR] · LFA",
+        "kind": "restricted",
+        "floorLabel": "FL 110",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 21.75055556,
+            "longitude": 69.44972222
+          },
+          {
+            "latitude": 21.83388889,
+            "longitude": 69.58305556
+          },
+          {
+            "latitude": 21.86722222,
+            "longitude": 69.96638889
+          },
+          {
+            "latitude": 21.65055556,
+            "longitude": 70.08305556
+          },
+          {
+            "latitude": 21.53388889,
+            "longitude": 70.58305556
+          },
+          {
+            "latitude": 21.3175,
+            "longitude": 70.66638889
+          },
+          {
+            "latitude": 20.95083333,
+            "longitude": 70.26638889
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      },
+      {
+        "name": "VAR 42-C Jamnagar · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "3000 FT",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 21.65055556,
+            "longitude": 70.08305556
+          },
+          {
+            "latitude": 21.56722222,
+            "longitude": 70.48305556
+          },
+          {
+            "latitude": 21.46722222,
+            "longitude": 70.39972222
+          },
+          {
+            "latitude": 21.46661291,
+            "longitude": 70.37682233
+          },
+          {
+            "latitude": 21.47528006,
+            "longitude": 70.36268379
+          },
+          {
+            "latitude": 21.48278344,
+            "longitude": 70.34779577
+          },
+          {
+            "latitude": 21.48906736,
+            "longitude": 70.33226862
+          },
+          {
+            "latitude": 21.49408519,
+            "longitude": 70.31621751
+          },
+          {
+            "latitude": 21.4977997,
+            "longitude": 70.2997615
+          },
+          {
+            "latitude": 21.5001833,
+            "longitude": 70.28302272
+          },
+          {
+            "latitude": 21.50121831,
+            "longitude": 70.26612542
+          },
+          {
+            "latitude": 21.50089705,
+            "longitude": 70.24919501
+          },
+          {
+            "latitude": 21.49922189,
+            "longitude": 70.23235719
+          },
+          {
+            "latitude": 21.49620527,
+            "longitude": 70.21573693
+          },
+          {
+            "latitude": 21.49186959,
+            "longitude": 70.19945759
+          },
+          {
+            "latitude": 21.48624702,
+            "longitude": 70.18363996
+          },
+          {
+            "latitude": 21.4793793,
+            "longitude": 70.16840137
+          },
+          {
+            "latitude": 21.47131738,
+            "longitude": 70.1538548
+          },
+          {
+            "latitude": 21.46212108,
+            "longitude": 70.14010807
+          },
+          {
+            "latitude": 21.45185863,
+            "longitude": 70.12726297
+          },
+          {
+            "latitude": 21.44060612,
+            "longitude": 70.11541459
+          },
+          {
+            "latitude": 21.42844701,
+            "longitude": 70.10465052
+          },
+          {
+            "latitude": 21.41547142,
+            "longitude": 70.09505029
+          },
+          {
+            "latitude": 21.40177552,
+            "longitude": 70.08668473
+          },
+          {
+            "latitude": 21.38746079,
+            "longitude": 70.07961545
+          },
+          {
+            "latitude": 21.37263325,
+            "longitude": 70.07389444
+          },
+          {
+            "latitude": 21.35740271,
+            "longitude": 70.06956364
+          },
+          {
+            "latitude": 21.3418819,
+            "longitude": 70.06665467
+          },
+          {
+            "latitude": 21.32618569,
+            "longitude": 70.06518861
+          },
+          {
+            "latitude": 21.31043019,
+            "longitude": 70.06517583
+          },
+          {
+            "latitude": 21.29473191,
+            "longitude": 70.06661597
+          },
+          {
+            "latitude": 21.27920693,
+            "longitude": 70.06949791
+          },
+          {
+            "latitude": 21.26396998,
+            "longitude": 70.07379991
+          },
+          {
+            "latitude": 21.24913364,
+            "longitude": 70.07948974
+          },
+          {
+            "latitude": 21.23480749,
+            "longitude": 70.08652496
+          },
+          {
+            "latitude": 21.22109732,
+            "longitude": 70.09485325
+          },
+          {
+            "latitude": 21.20810433,
+            "longitude": 70.10441278
+          },
+          {
+            "latitude": 21.19592442,
+            "longitude": 70.11513268
+          },
+          {
+            "latitude": 21.18464744,
+            "longitude": 70.12693359
+          },
+          {
+            "latitude": 21.17435658,
+            "longitude": 70.13972822
+          },
+          {
+            "latitude": 21.16512774,
+            "longitude": 70.15342202
+          },
+          {
+            "latitude": 21.15702896,
+            "longitude": 70.16791387
+          },
+          {
+            "latitude": 21.15011994,
+            "longitude": 70.1830968
+          },
+          {
+            "latitude": 21.14445161,
+            "longitude": 70.19885882
+          },
+          {
+            "latitude": 21.14006575,
+            "longitude": 70.21508371
+          },
+          {
+            "latitude": 21.13699468,
+            "longitude": 70.23165186
+          },
+          {
+            "latitude": 21.13526103,
+            "longitude": 70.24844118
+          },
+          {
+            "latitude": 21.13487756,
+            "longitude": 70.26532794
+          },
+          {
+            "latitude": 21.13584712,
+            "longitude": 70.28218772
+          },
+          {
+            "latitude": 21.13416667,
+            "longitude": 70.29972222
+          },
+          {
+            "latitude": 20.95083333,
+            "longitude": 70.26638889
+          },
+          {
+            "latitude": 21.3175,
+            "longitude": 69.73305556
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published JNR VOR location; an aerodrome reference point was not independently verified.",
+    "station": {
+      "name": "JNR JAMNAGAR VOR/DME",
+      "type": "vor",
+      "frequency": "117.900 MHz",
+      "latitude": 22.46611111,
+      "longitude": 70.01744444
+    }
+  },
+  {
+    "id": "bareilly",
+    "name": "Bareilly",
+    "origin": {
+      "latitude": 28.42138889,
+      "longitude": 79.44916667
+    },
+    "areas": [
+      {
+        "name": "Bareilly MCTR",
+        "kind": "control-zone",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 145",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%202.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 28.01083333,
+            "longitude": 79.56722222
+          },
+          {
+            "latitude": 28.32555556,
+            "longitude": 78.99638889
+          },
+          {
+            "latitude": 28.36004935,
+            "longitude": 78.98812296
+          },
+          {
+            "latitude": 28.39516186,
+            "longitude": 78.98422651
+          },
+          {
+            "latitude": 28.43043853,
+            "longitude": 78.98372137
+          },
+          {
+            "latitude": 28.46562617,
+            "longitude": 78.98661456
+          },
+          {
+            "latitude": 28.50047196,
+            "longitude": 78.99288866
+          },
+          {
+            "latitude": 28.53472531,
+            "longitude": 79.00250189
+          },
+          {
+            "latitude": 28.56813962,
+            "longitude": 79.01538824
+          },
+          {
+            "latitude": 28.60047412,
+            "longitude": 79.03145795
+          },
+          {
+            "latitude": 28.63149558,
+            "longitude": 79.05059799
+          },
+          {
+            "latitude": 28.66098007,
+            "longitude": 79.07267286
+          },
+          {
+            "latitude": 28.68871452,
+            "longitude": 79.09752548
+          },
+          {
+            "latitude": 28.71449839,
+            "longitude": 79.12497825
+          },
+          {
+            "latitude": 28.73814507,
+            "longitude": 79.15483437
+          },
+          {
+            "latitude": 28.7594833,
+            "longitude": 79.18687918
+          },
+          {
+            "latitude": 28.77835843,
+            "longitude": 79.22088173
+          },
+          {
+            "latitude": 28.79463361,
+            "longitude": 79.25659646
+          },
+          {
+            "latitude": 28.80819074,
+            "longitude": 79.29376503
+          },
+          {
+            "latitude": 28.81893143,
+            "longitude": 79.33211817
+          },
+          {
+            "latitude": 28.82677769,
+            "longitude": 79.37137776
+          },
+          {
+            "latitude": 28.83167253,
+            "longitude": 79.41125884
+          },
+          {
+            "latitude": 28.83358039,
+            "longitude": 79.4514718
+          },
+          {
+            "latitude": 28.83248742,
+            "longitude": 79.49172451
+          },
+          {
+            "latitude": 28.82840155,
+            "longitude": 79.53172457
+          },
+          {
+            "latitude": 28.82135246,
+            "longitude": 79.57118145
+          },
+          {
+            "latitude": 28.81139137,
+            "longitude": 79.60980872
+          },
+          {
+            "latitude": 28.79859059,
+            "longitude": 79.64732619
+          },
+          {
+            "latitude": 28.78304306,
+            "longitude": 79.683462
+          },
+          {
+            "latitude": 28.76486158,
+            "longitude": 79.71795463
+          },
+          {
+            "latitude": 28.74417801,
+            "longitude": 79.75055486
+          },
+          {
+            "latitude": 28.72114229,
+            "longitude": 79.78102761
+          },
+          {
+            "latitude": 28.69592126,
+            "longitude": 79.80915364
+          },
+          {
+            "latitude": 28.66666667,
+            "longitude": 79.83166667
+          },
+          {
+            "latitude": 28.16333333,
+            "longitude": 79.83166667
+          },
+          {
+            "latitude": 28.1361843,
+            "longitude": 79.80581312
+          },
+          {
+            "latitude": 28.11110079,
+            "longitude": 79.77740577
+          },
+          {
+            "latitude": 28.08823275,
+            "longitude": 79.7466952
+          },
+          {
+            "latitude": 28.06774447,
+            "longitude": 79.71390346
+          },
+          {
+            "latitude": 28.0497831,
+            "longitude": 79.67926712
+          },
+          {
+            "latitude": 28.03447753,
+            "longitude": 79.6430356
+          },
+          {
+            "latitude": 28.02193757,
+            "longitude": 79.60546945
+          }
+        ],
+        "notes": "Published military control zone, Class D. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VIR147(A) [BAREILLY-I] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 28.61666667,
+            "longitude": 79.03194444
+          },
+          {
+            "latitude": 29,
+            "longitude": 79.06527778
+          },
+          {
+            "latitude": 29,
+            "longitude": 79.28583333
+          },
+          {
+            "latitude": 28.98604851,
+            "longitude": 79.28951735
+          },
+          {
+            "latitude": 28.97247194,
+            "longitude": 79.29474112
+          },
+          {
+            "latitude": 28.95933796,
+            "longitude": 79.30127756
+          },
+          {
+            "latitude": 28.94674355,
+            "longitude": 79.30907793
+          },
+          {
+            "latitude": 28.93478167,
+            "longitude": 79.3180842
+          },
+          {
+            "latitude": 28.92354056,
+            "longitude": 79.32822952
+          },
+          {
+            "latitude": 28.91310313,
+            "longitude": 79.33943872
+          },
+          {
+            "latitude": 28.90354634,
+            "longitude": 79.35162883
+          },
+          {
+            "latitude": 28.89494063,
+            "longitude": 79.36470976
+          },
+          {
+            "latitude": 28.88734941,
+            "longitude": 79.37858489
+          },
+          {
+            "latitude": 28.88082862,
+            "longitude": 79.39315184
+          },
+          {
+            "latitude": 28.87542628,
+            "longitude": 79.40830321
+          },
+          {
+            "latitude": 28.87118218,
+            "longitude": 79.42392731
+          },
+          {
+            "latitude": 28.86812757,
+            "longitude": 79.43990906
+          },
+          {
+            "latitude": 28.86628495,
+            "longitude": 79.45613076
+          },
+          {
+            "latitude": 28.86566787,
+            "longitude": 79.47247296
+          },
+          {
+            "latitude": 28.86628088,
+            "longitude": 79.48881537
+          },
+          {
+            "latitude": 28.86811948,
+            "longitude": 79.50503766
+          },
+          {
+            "latitude": 28.87117011,
+            "longitude": 79.5210204
+          },
+          {
+            "latitude": 28.87541033,
+            "longitude": 79.53664588
+          },
+          {
+            "latitude": 28.8808089,
+            "longitude": 79.55179899
+          },
+          {
+            "latitude": 28.88732607,
+            "longitude": 79.56636806
+          },
+          {
+            "latitude": 28.89491384,
+            "longitude": 79.58024565
+          },
+          {
+            "latitude": 28.9035163,
+            "longitude": 79.59332936
+          },
+          {
+            "latitude": 28.91307006,
+            "longitude": 79.60552257
+          },
+          {
+            "latitude": 28.9235047,
+            "longitude": 79.61673514
+          },
+          {
+            "latitude": 28.93474329,
+            "longitude": 79.62688411
+          },
+          {
+            "latitude": 28.94670293,
+            "longitude": 79.63589426
+          },
+          {
+            "latitude": 28.9592954,
+            "longitude": 79.64369871
+          },
+          {
+            "latitude": 28.97242775,
+            "longitude": 79.65023942
+          },
+          {
+            "latitude": 28.98600303,
+            "longitude": 79.6554676
+          },
+          {
+            "latitude": 29,
+            "longitude": 79.65888889
+          },
+          {
+            "latitude": 28.16694444,
+            "longitude": 80.89833333
+          },
+          {
+            "latitude": 28.15027778,
+            "longitude": 80.98166667
+          },
+          {
+            "latitude": 27.62027778,
+            "longitude": 80.80777778
+          },
+          {
+            "latitude": 27.65527778,
+            "longitude": 80.72277778
+          },
+          {
+            "latitude": 27.58361111,
+            "longitude": 80.69833333
+          },
+          {
+            "latitude": 27.40027778,
+            "longitude": 80.53166667
+          },
+          {
+            "latitude": 28.01222222,
+            "longitude": 79.56527778
+          },
+          {
+            "latitude": 28.02363029,
+            "longitude": 79.60435483
+          },
+          {
+            "latitude": 28.03706175,
+            "longitude": 79.64253406
+          },
+          {
+            "latitude": 28.0533657,
+            "longitude": 79.67925464
+          },
+          {
+            "latitude": 28.07241965,
+            "longitude": 79.71424
+          },
+          {
+            "latitude": 28.09408038,
+            "longitude": 79.74722618
+          },
+          {
+            "latitude": 28.11818498,
+            "longitude": 79.77796385
+          },
+          {
+            "latitude": 28.14455205,
+            "longitude": 79.80622011
+          },
+          {
+            "latitude": 28.17305556,
+            "longitude": 79.83166667
+          },
+          {
+            "latitude": 28.66138889,
+            "longitude": 79.83166667
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VIR147(B) [BAREILLY-II] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 28.01222222,
+            "longitude": 79.56527778
+          },
+          {
+            "latitude": 28.33333333,
+            "longitude": 78.98194444
+          },
+          {
+            "latitude": 28.36576902,
+            "longitude": 78.97856683
+          },
+          {
+            "latitude": 28.39804643,
+            "longitude": 78.97541892
+          },
+          {
+            "latitude": 28.43044145,
+            "longitude": 78.97513209
+          },
+          {
+            "latitude": 28.46275803,
+            "longitude": 78.97771069
+          },
+          {
+            "latitude": 28.49480037,
+            "longitude": 78.98314173
+          },
+          {
+            "latitude": 28.52637419,
+            "longitude": 78.99139485
+          },
+          {
+            "latitude": 28.55728786,
+            "longitude": 79.00242247
+          },
+          {
+            "latitude": 28.5873536,
+            "longitude": 79.01616003
+          },
+          {
+            "latitude": 28.61666667,
+            "longitude": 79.03194444
+          },
+          {
+            "latitude": 28.66138889,
+            "longitude": 79.83166667
+          },
+          {
+            "latitude": 28.17305556,
+            "longitude": 79.83166667
+          },
+          {
+            "latitude": 28.14455205,
+            "longitude": 79.80622011
+          },
+          {
+            "latitude": 28.11818498,
+            "longitude": 79.77796385
+          },
+          {
+            "latitude": 28.09408038,
+            "longitude": 79.74722618
+          },
+          {
+            "latitude": 28.07241965,
+            "longitude": 79.71424
+          },
+          {
+            "latitude": 28.0533657,
+            "longitude": 79.67925464
+          },
+          {
+            "latitude": 28.03706175,
+            "longitude": 79.64253406
+          },
+          {
+            "latitude": 28.02363029,
+            "longitude": 79.60435483
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees. Display approximation: published arcs sampled at no more than 5-degree bearing increments on a spherical Earth; source endpoint coordinates retained. Not a surveyed or operational boundary."
+      },
+      {
+        "name": "VIR155(B) [BAREILLY] · LFA",
+        "kind": "restricted",
+        "floorLabel": "GND",
+        "ceilingLabel": "FL 325",
+        "source": "India AIP",
+        "reference": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%205.1-en-GB.html",
+        "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+        "points": [
+          {
+            "latitude": 29.5,
+            "longitude": 78.74861111
+          },
+          {
+            "latitude": 30.1,
+            "longitude": 78.31527778
+          },
+          {
+            "latitude": 30.81638889,
+            "longitude": 78.24861111
+          },
+          {
+            "latitude": 31.11638889,
+            "longitude": 79.08166667
+          },
+          {
+            "latitude": 30.2,
+            "longitude": 80.265
+          },
+          {
+            "latitude": 29.41666667,
+            "longitude": 79.99833333
+          }
+        ],
+        "notes": "Published restricted area used for local flying; this display category does not mean unrestricted access. Published polygon vertices converted from DMS to decimal degrees."
+      }
+    ],
+    "source": "https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-AD%202.1VIBY-en-GB.html",
+    "effectiveInfo": "AIP AMDT 08/2026; edition effective 03 SEP 2026; published 23 JUL 2026; retrieved 27 SEP 2026. Static training snapshot; no NOTAM update.",
+    "notes": "Representative subset of public AIP geometry, not a complete airspace or obstacle database. VOR position, identity and frequency: https://aim-india.aai.aero/eaip/eaip-v2-08-2026/eAIP/IN-ENR%204.1-en-GB.html. VOR station declination is not stated in the reviewed entry; magneticVariationDeg is intentionally omitted, not zero. Origin is the published aerodrome reference point (AD 2.2; page effective 27 NOV 2025). No numeric aerodrome magnetic variation supplied in the reviewed AD 2.2 entry.",
+    "station": {
+      "name": "BRL BAREILLY VOR/DME",
+      "type": "vor",
+      "frequency": "115.600 MHz",
+      "latitude": 28.41694444,
+      "longitude": 79.45694444
+    },
+    "icao": "VIBY"
+  }
+]

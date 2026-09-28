@@ -286,6 +286,12 @@ async function build() {
 
   await buildInstructorLedSuite();
 
+  // GitHub Pages opts in. The default Netlify/native distribution is unchanged.
+  if (process.env.QGH_PROCEDURAL_BETA === '1') {
+    const { buildProceduralBeta } = await import('./build-procedural-beta.mjs');
+    await buildProceduralBeta(outputRoot);
+  }
+
   console.log(`Built QGH Simulator v${version} web package at ${outputRoot}`);
 }
 

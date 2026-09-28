@@ -10,9 +10,11 @@ on:
       - apps/android/app/build.gradle.kts
       - packages/qgh-engine/**
       - packages/atc-suite/**
+      - packages/procedural-beta/**
       - apps/suite-web/**
       - scripts/build-web.mjs
       - scripts/build-suite-web.mjs
+      - scripts/build-procedural-beta.mjs
       - scripts/verify-release-version.mjs
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:
@@ -40,7 +42,11 @@ jobs:
         run: node --test packages/qgh-engine/test/*.test.js apps/web/test/*.test.mjs
       - name: Validate instructor-led beta suite
         run: node --test packages/atc-suite/test/*.test.js apps/suite-web/test/*.test.mjs
+      - name: Validate browser procedural engine and student isolation
+        run: node --test packages/procedural-beta/browser.test.mjs
       - name: Build web package
+        env:
+          QGH_PROCEDURAL_BETA: '1'
         run: node scripts/build-web.mjs
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

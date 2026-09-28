@@ -1,0 +1,206 @@
+{
+  "version": "2026.09.28.1",
+  "go": "1.25.0",
+  "files": [
+    {
+      "path": "static/procedural.html",
+      "bytes": 36269,
+      "sha256": "856121c22f6cda100d02e1f0f011e346a9320e091118ed4c958d726cb59aaffd"
+    },
+    {
+      "path": "static/procedural.js",
+      "bytes": 92570,
+      "sha256": "f3581bc963043d8ee0e3e9c1599df89babf3efeff96754dc8bf05df104fb497c"
+    },
+    {
+      "path": "static/procedural.css",
+      "bytes": 16440,
+      "sha256": "f9b4a02b9b9fc42374cd79a0732584870582e4b7e0a709fa602ce01dad945700"
+    },
+    {
+      "path": "static/scope-workspace.css",
+      "bytes": 38642,
+      "sha256": "448ce5aa40e0addf819be2ab493578cccc064d9423f775cafec2f2374d635e46"
+    },
+    {
+      "path": "static/scope-history.js",
+      "bytes": 1414,
+      "sha256": "bc003c606c1d1f9d3e59bc911628e2bc98485d0db117bc3b2a289b029154317c"
+    },
+    {
+      "path": "static/scope-navigation.js",
+      "bytes": 2558,
+      "sha256": "6860243189a9ae03be6079fff74bb58ef981c8e08f7eca12b3d9bd0e43ba80ae"
+    },
+    {
+      "path": "static/chart-workshop.js",
+      "bytes": 23823,
+      "sha256": "29c44e2481fbef8459e9955a09b033cdcb262118742f050e4f4e390632ba19df"
+    },
+    {
+      "path": "static/chart-geometry.js",
+      "bytes": 3868,
+      "sha256": "ac0f7ffe01a570d78e0707a60750bbb47aa7fdc5c0e34a8558a7ec0a01064c50"
+    },
+    {
+      "path": "static/aip-navigation.js",
+      "bytes": 3568,
+      "sha256": "746f5705023df01bf570715a3a95005d9bb4744abe11f6006f0b44e23c7d8525"
+    },
+    {
+      "path": "static/traffic-setup.js",
+      "bytes": 13205,
+      "sha256": "3eb0adce4b29d179fda660d2a0cf15bfd5ae1274233170320f7d80cdab73d700"
+    },
+    {
+      "path": "static/india-airspace.json",
+      "bytes": 87793,
+      "sha256": "ffb347601f259385c2e8deafec1fa81fba1a808a53241ce2fc2bc4fc35934cf8"
+    },
+    {
+      "path": "static/india-aip-enroute.json",
+      "bytes": 4083532,
+      "sha256": "d9fe33acd07e6f7e0e31430157727191090c24354b9b94e429ab1ae7fdb7dc0a"
+    },
+    {
+      "path": "static/favicon.svg",
+      "bytes": 235,
+      "sha256": "c010c19ee9c0b6214ff3519e3cc5b72f1c94076adbb947775a91910bd974e82c"
+    },
+    {
+      "path": "static/procedural-guide.html",
+      "bytes": 30095,
+      "sha256": "c2d701650c96b27f3d564418517ee372bc143574e6fcdcc0e178adfa24dc4244"
+    },
+    {
+      "path": "static/style.css",
+      "bytes": 24942,
+      "sha256": "d9e8000d981b7beba78073612036039d1ce5e634435a5ab97749505f4e033203"
+    },
+    {
+      "path": "static/guide.css",
+      "bytes": 12064,
+      "sha256": "db8d618ada6cf3b11547cd27d056c4e12b49c6d05fccb5c030aae50b472ee2b6"
+    },
+    {
+      "path": "static/guide.js",
+      "bytes": 2654,
+      "sha256": "ac579f08cd862b0cdd2ae11696f74c5eaea69c0918e1ae0a601fede2c3ae6b34"
+    },
+    {
+      "path": "static/suite-guide-chat.js",
+      "bytes": 29048,
+      "sha256": "9507e94d94d76c8c32febbce0bd0e8bd72e3f250c39a3cf3b07003f74fd10474"
+    },
+    {
+      "path": "static/suite-guide-chat.css",
+      "bytes": 6027,
+      "sha256": "913917b9ac8d67f2295469b8cdcce55734a9f63920fea98b20f31e115484d9fa"
+    },
+    {
+      "path": "static/fonts/ibm-plex-mono-500.ttf",
+      "bytes": 129916,
+      "sha256": "4fc14a73ca53ba9d32fd759ae1ca1a3133326035d0dd337862b3ee1633cc156e"
+    },
+    {
+      "path": "static/fonts/ibm-plex-sans-400.ttf",
+      "bytes": 205252,
+      "sha256": "6dbe082463cf749cfa057d45c3048c90f4df031496498e5b5bdfd0b6babb9d16"
+    },
+    {
+      "path": "static/fonts/ibm-plex-sans-600.ttf",
+      "bytes": 205284,
+      "sha256": "5311c66fd6d04ae45671236f7eae667b671c06c1dc7e88d52c206e5fadd0fb21"
+    },
+    {
+      "path": "static/fonts/OFL-1.1.txt",
+      "bytes": 4363,
+      "sha256": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d"
+    },
+    {
+      "path": "static/browser-worker.js",
+      "bytes": 10264,
+      "sha256": "91f141932859af23b361c24892da9ff5fc5a5016dad45b0ff63bd8854b5c9d0f"
+    },
+    {
+      "path": "static/browser-client.js",
+      "bytes": 2272,
+      "sha256": "5eb93a70c0af1a232f52ba87d7e3bdb2129955fc5e7f06672ef5a1286b1761f0"
+    },
+    {
+      "path": "static/procedural-engine.wasm",
+      "bytes": 6226664,
+      "sha256": "d7f2d1fbc031732d73ef681332bfb114d853ac285184a1775933b044868156cc"
+    },
+    {
+      "path": "static/wasm_exec.js",
+      "bytes": 16992,
+      "sha256": "0c949f4996f9a89698e4b5c586de32249c3b69b7baadb64d220073cc04acba14"
+    },
+    {
+      "path": "static/GO-LICENSE.txt",
+      "bytes": 1453,
+      "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    {
+      "path": "engine/internal/procedural/alerts.go",
+      "bytes": 7098,
+      "sha256": "b81e1ea5fea5dd37575ed18fe8f25b4f904b2bd1540d554666a192727ad7ab1e"
+    },
+    {
+      "path": "engine/internal/procedural/airspace.go",
+      "bytes": 2374,
+      "sha256": "d4b073532a61e191c9f778e7caef16fd6c90921bb288977f99f2156a1bfe7d63"
+    },
+    {
+      "path": "engine/internal/procedural/browser_host.go",
+      "bytes": 2340,
+      "sha256": "4fbeceaa3570b91f4c4f1094aacf6cca43d47f897cdbf32a832cd0d7978ed4a1"
+    },
+    {
+      "path": "engine/internal/procedural/commands.go",
+      "bytes": 27195,
+      "sha256": "014313709a32e719952ad17077db81e84f952726903def99b5e0ff4e7f66a597"
+    },
+    {
+      "path": "engine/internal/procedural/host.go",
+      "bytes": 13111,
+      "sha256": "2b2ff84a39bf533b0f38b1e4423597da081b62a629574714997449c990d396cb"
+    },
+    {
+      "path": "engine/internal/procedural/motion.go",
+      "bytes": 15648,
+      "sha256": "160e28b58a9f9780e15f35d2a9313312cf71581fb5d308bdc2086a82a87c81df"
+    },
+    {
+      "path": "engine/internal/procedural/presets.go",
+      "bytes": 6703,
+      "sha256": "d9b5102bd64e1a4bae6be1c5d7e574dfd855c30211329b754511cea7097b983a"
+    },
+    {
+      "path": "engine/internal/procedural/setup.go",
+      "bytes": 5163,
+      "sha256": "e19d0a44cbf1c640bbf4d550df1744ea4ad8b6f473990348225324142145b78e"
+    },
+    {
+      "path": "engine/internal/procedural/types.go",
+      "bytes": 13463,
+      "sha256": "788c1ab1bf359bfc82407baeb31c24cc300eb166fffb419b9ba139fa6b9c0af7"
+    },
+    {
+      "path": "engine/internal/procedural/validation.go",
+      "bytes": 20813,
+      "sha256": "e52cdc35852ed10b3cfad63bd9ef9b0006dda689288f969ab7aa942f3663bc12"
+    },
+    {
+      "path": "engine/cmd/browser/main.go",
+      "bytes": 1332,
+      "sha256": "fa72c13941c747509444b953cfd611d7bd8057b4fe3cda1176205ab1821a3fb5"
+    },
+    {
+      "path": "engine/go.mod",
+      "bytes": 43,
+      "sha256": "8b781e20599db65ff35de356844949837a3e5a6ff4f6047800c645f64b6c3393"
+    }
+  ]
+}
