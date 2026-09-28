@@ -11,6 +11,7 @@ on:
       - packages/qgh-engine/**
       - packages/atc-suite/**
       - packages/procedural-beta/**
+      - packages/site-landing/**
       - apps/suite-web/**
       - scripts/build-web.mjs
       - scripts/build-suite-web.mjs

@@ -19,18 +19,64 @@ export async function buildProceduralBeta(outputRoot) {
     await writeFile(target,data);
   }
   await copyFile(resolve(outputRoot,'procedural-beta/procedural.html'),resolve(outputRoot,'procedural-beta/index.html'));
+  const landingRoot = resolve(root,'packages/site-landing');
+  const landingAssets = ['suite-landing.css','suite-landing-register.js','hero-airspace.png','qgh-towers.png','procedural-airspace.png','aircraft-icon.png','instructor-icon.png'];
+  for (const asset of landingAssets) await copyFile(resolve(landingRoot,asset),resolve(outputRoot,asset));
+
+  // Keep the already-built QGH exercise picker at a stable Pages-only URL.
+  // The shared QGH source, native apps, and default Netlify build are untouched.
   const homePath = resolve(outputRoot,'index.html');
-  let home = await readFile(homePath,'utf8');
-  const marker = '      <div class="entry-credit">';
-  if (!home.includes(marker)) throw new Error('Missing QGH header insertion point');
-  home = home.replace(marker, `      <nav class="entry-beta-links" aria-label="Instructor training"><a href="instructor-led/index.html">Instructor <span>Beta</span></a><a class="procedural-beta-link" href="procedural-beta/">Procedural <span>Beta</span></a></nav>\n${marker}`);
-  home = home.replace('</head>','<link rel="stylesheet" href="pages-beta.css?v=5.0.5&amp;release=5.0.5"></head>');
-  await writeFile(homePath,home);
-  await writeFile(resolve(outputRoot,'pages-beta.css'),'.entry-beta-links{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.entry-beta-links a{display:flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid #c8dfdd;border-radius:9px;color:#075d60;background:#f4fbfa;text-decoration:none;font:600 13px "IBM Plex Sans",sans-serif}.entry-beta-links span{text-transform:uppercase;font-size:9px;letter-spacing:.08em;background:#d6eeeb;padding:3px 5px;border-radius:4px}.entry-beta-links .procedural-beta-link{background:#075d60;color:#fff;border-color:#075d60}.procedural-beta-link span{color:#06484b}.entry-beta-links a:hover{outline:2px solid #279f99;outline-offset:2px}.entry-beta-links a:focus-visible{outline:3px solid #bc7400;outline-offset:3px}.entry-header{gap:22px}@media(max-width:720px){.entry-header{flex-wrap:wrap}.entry-beta-links{order:3;width:100%;margin-left:0}.entry-beta-links a{flex:1;justify-content:center}.entry-credit{margin-left:auto}}');
+  let qgh = await readFile(homePath,'utf8');
+  const individualTab = '<a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>';
+  if (!qgh.includes(individualTab)) throw new Error('Missing QGH navigation tab');
+  qgh = qgh.replace(individualTab,'<a class="entry-program-tab" href="index.html">SUITE HOME</a>');
+  qgh = qgh.replaceAll('Reds QGH Simulator','QGH Simulator').replaceAll('Reds QGH','ATC Training Suite')
+    .replace('INSTALL QGH ON THIS DEVICE','INSTALL ATC SUITE ON THIS DEVICE')
+    .replace('Install QGH Simulator','Install ATC Training Suite');
+  await writeFile(resolve(outputRoot,'qgh.html'),qgh);
+  await copyFile(resolve(landingRoot,'index.html'),homePath);
+
+  for (const page of ['single.html','tactical.html','training-centre.html','user-guide.html']) {
+    const path = resolve(outputRoot,page);
+    let html = await readFile(path,'utf8');
+    html = html.replaceAll('href="index.html"','href="qgh.html"').replaceAll('Reds QGH Simulator','QGH Simulator')
+      .replaceAll('Reds QGH','ATC Training Suite');
+    await writeFile(path,html);
+  }
+  for (const page of ['index.html','instructor.html','student.html','training-guide.html']) {
+    const path = resolve(outputRoot,'instructor-led',page);
+    let html = await readFile(path,'utf8');
+    html = html.replaceAll('<span>REDS</span> ATC TRAINING SUITE','ATC TRAINING SUITE')
+      .replaceAll('REDS ATC TRAINING SUITE','ATC TRAINING SUITE')
+      .replaceAll('Reds ATC Training Suite','ATC Training Suite')
+      .replaceAll('Reds ATC Suite','ATC Suite')
+      .replaceAll('>INDIVIDUAL PRACTICE</a>','>SUITE HOME</a>');
+    await writeFile(path,html);
+  }
+  for (const page of ['procedural.html','index.html','procedural-guide.html']) {
+    const path = resolve(outputRoot,'procedural-beta',page);
+    let html = await readFile(path,'utf8');
+    html = html.replace('<span class="brand-mark">R</span>','<span class="brand-mark">⌖</span>')
+      .replace('REDS · PROCEDURAL TRAINING','ATC · PROCEDURAL TRAINING');
+    await writeFile(path,html);
+  }
+  const manifestPath = resolve(outputRoot,'manifest.webmanifest');
+  const qghManifest = JSON.parse(await readFile(manifestPath,'utf8'));
+  qghManifest.name = 'ATC Training Suite';
+  qghManifest.short_name = 'ATC Suite';
+  qghManifest.start_url = './index.html';
+  await writeFile(manifestPath,JSON.stringify(qghManifest,null,2)+'\n');
+  const distributionPath = resolve(outputRoot,'web-distribution.js');
+  const distribution = await readFile(distributionPath,'utf8');
+  if (!distribution.includes('INSTALL QGH ON THIS DEVICE')) throw new Error('Missing QGH install label');
+  await writeFile(distributionPath,distribution.replaceAll('INSTALL QGH ON THIS DEVICE','INSTALL ATC SUITE ON THIS DEVICE'));
+
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
-  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, '$1-procedural-1$2');
-  sw = sw.replace("  './entry.css',","  './entry.css',\n  './pages-beta.css',");
+  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, '$1-suite-landing-2$2');
+  sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.png',\n  './qgh-towers.png',\n  './procedural-airspace.png',\n  './aircraft-icon.png',\n  './instructor-icon.png',");
+  sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
+  if (!sw.includes("'./qgh.html'") || !sw.includes("'./suite-landing.css'")) throw new Error('QGH offline suite shell was not updated');
   await writeFile(swPath,sw);
-  console.log(`Built GitHub-only Procedural Beta ${manifest.version}`);
+  console.log(`Built GitHub-only ATC Training Suite with Procedural Beta ${manifest.version}`);
 }

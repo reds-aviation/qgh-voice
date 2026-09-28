@@ -1,42 +1,31 @@
-# Voice Rail Design QA — v4.2.1
+# ATC Training Suite landing design QA
 
-## Comparison target
+- Source visual truth: `C:/Users/pc/.codex/generated_images/01a0dd77-8c3a-76a0-89fc-47a34a499b54/exec-c2e89bbf-1bf7-4598-8777-b6ffe4de76b4.png` (selected first/light mockup, 1486 × 1059 px).
+- Implementation: GitHub Pages build at `http://127.0.0.1:8767/` from `apps/web/dist/index.html`.
+- Browser-rendered screenshot evidence: Codex browser captures of tab 23 at 1486 × 1059 CSS px, plus combined comparison captures of tabs 24 and 25. The browser tool provides these captures inline rather than as persistent screenshot files. Local side-by-side fixtures: `apps/web/dist/landing-qa-compare.html` (full view) and `apps/web/dist/landing-qa-cards.html` (QGH card at 1:1), both using `apps/web/dist/landing-qa-reference.png` as the source image. These three fixture files are ignored build artifacts and are not deployed.
+- Viewport and normalization: source 1486 × 1059 px; implementation 1486 × 1059 CSS px at device pixel ratio 1. No density scaling for the original full-view review. The full side-by-side view scales both to 743 × 530, and the focused QGH card view shows both at 1:1.
+- State: desktop suite landing with no hover, dialog, or exercise in progress. A separate 390 × 844 CSS px mobile capture checked responsive layout.
 
-- **Source visual truth:** `C:\Users\pc\.codex\generated_images\01a02f24-5131-7bd1-97e2-7eb79662c04c\exec-cfdd1737-a7ef-4aee-a4b8-a54ddcc1cc06.png` (1487 × 1058 px). The selected target is its right-edge voice rail only. The user explicitly required the live exercise window itself to remain unchanged, so the source mock's other layout regions are out of scope.
-- **Implementation capture:** Codex In-app Browser capture, tab 16, `http://127.0.0.1:4209/single.html`, 1264 × 708 px browser-content capture, desktop state, local voice not yet set up.
-- **Normalization:** The comparison is limited to the rail component and its clearance from the exercise UI; full-page pixel matching is intentionally not applicable because the existing exercise UI is a protected surface.
+## Findings and comparison history
 
-## Evidence and checks
+1. Initial mobile capture exposed joined words where desktop line breaks were hidden (`decisionsthat`, `practice,plus`). Added spaces before the breaks, rebuilt, and captured the 390 px page again. The heading and subtitle now wrap as readable words; no horizontal overflow remains.
+2. Navigation review found that the installed app could bypass the new suite landing and first-time visitors would not register its offline shell. The Pages-only manifest now names ATC Training Suite and starts at `index.html`. A small landing registration script registers the existing service worker without starting the QGH pilot voice download. The rebuilt root shows the manifest and script, and the browser console has no errors.
+3. Focused full-view and QGH-card comparisons show matching hierarchy, card placement, type scale, two QGH branches, beta badges, and pale airspace art. The generated airspace art omits the mockup's tiny aircraft data labels; this is acceptable P3 decoration, not an exercise readout.
 
-- Full-view evidence confirms the Single QGH setup card remains unchanged and the 68 px teal voice rail sits in the right gutter rather than over a simulator control.
-- Focused region evidence confirms a vertical teal rail, clear `PTT`, `VOICE`, move affordance, compact readiness state, and a settings panel that appears only after the user requests it.
-- Keyboard PTT, pointer PTT, continuous listening, D/F routing, empty-result feedback, movable position persistence, and manual-control fallback are covered by the local test suite.
+## Required fidelity surfaces
 
-## Findings
+- Typography: bundled Plex Sans and Plex Mono closely reproduce the selected hierarchy and labels. No clipped desktop text; mobile headings wrap cleanly.
+- Spacing/layout: header, hero, section transition, cards, and footer match the reference proportions at 1486 × 1059. The two QGH links remain separately clickable; the cards stack at mobile width.
+- Colors/tokens: warm white, navy, steel blue, teal, and restrained saffron/green accents match the selected light direction.
+- Images: original generated hero, QGH towers, procedural radar, and two icons are sharp and contain no baked-in text or official insignia. All image requests completed in the browser.
+- Copy/content: suite title, training link, creator details, QGH branches, beta labels, and procedural areas match the approved flow. No Reds identity appears on the new landing.
 
-- **[P1 — fixed] Voice setup opened automatically and covered the live view.** The setup card now stays closed until `VOICE` is selected.
-- **[P1 — fixed] Recognition feedback could expand across the exercise interface.** Feedback is now a two-line, time-limited status inside the edge rail; full wording remains available to assistive technology and as the control title.
-- **[P2 — fixed] Continuous mode opened a second floating assistant panel.** Continuous state is now represented within the rail, while its existing manual stop/toggle behavior remains available.
-- **[P2 — fixed] Previous large-dock positions could carry forward into the new rail.** The saved position key was advanced to a new generation.
+## Primary interactions checked
 
-## Fidelity surfaces
-
-- **Fonts and typography:** Existing IBM Plex Sans / Mono hierarchy is retained; rail labels are compact but readable, with accessible names on every control.
-- **Spacing and layout rhythm:** The rail is narrow, rounded, edge-aligned, and outside the protected exercise layout. Settings and destructive-command confirmation open only on deliberate interaction.
-- **Colors and visual tokens:** The existing QGH teal, ivory, navy, and status colors are retained with high contrast.
-- **Image and asset fidelity:** The selected voice-rail concept requires no new product image asset. Existing application identity assets remain unchanged.
-- **Copy and content:** `PTT`, `VOICE`, `MOVE`, readiness, listening, and short acceptance messages are intentionally terse to avoid obstructing controller work.
-
-## Implementation checklist
-
-- [x] Preserve the existing Normal and U/S exercise windows.
-- [x] Add a compact movable edge voice rail.
-- [x] Keep PTT and continuous mode accessible.
-- [x] Keep manual simulator controls independent of voice status.
-- [x] Prevent setup/feedback overlays from opening automatically over the exercise view.
-
-## Follow-up polish
-
-- [P3] Confirm the preferred default rail position on a physical phone after installation; the rail remains movable and respects safe-area insets.
+- QGH Individual opens the existing Single/Tactical selector; its Suite Home link returns to the landing.
+- QGH Instructor-led opens the instructor/controller selector and its Suite Home link returns.
+- Procedural opens the procedural training entry.
+- Browser console showed no errors on these pages.
+- Existing QGH, instructor-led, and procedural automated checks passed: 508 + 172 + 1.
 
 final result: passed

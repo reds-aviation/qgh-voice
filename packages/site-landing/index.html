@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f8f5">
+  <meta name="description" content="ATC Training Suite: individual and instructor-led QGH practice, plus procedural control training.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>ATC Training Suite</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-title" content="ATC Training Suite">
+  <link rel="stylesheet" href="suite-landing.css">
+  <script defer src="suite-landing-register.js"></script>
+</head>
+<body>
+  <div class="suite-page">
+    <header class="suite-header">
+      <div class="suite-header-left">
+        <a class="suite-brand" href="./" aria-label="ATC Training Suite home">ATC TRAINING SUITE</a>
+        <span class="header-divider" aria-hidden="true"></span>
+        <a class="training-link" href="training-centre.html">TRAINING CENTRE</a>
+      </div>
+      <div class="creator-credit"><span>CREATED BY</span><strong>Flt Lt Balaram Reddy</strong><span>SERVICE NO. 38703</span></div>
+    </header>
+
+    <main>
+      <section class="suite-hero" aria-labelledby="hero-heading">
+        <div class="hero-copy">
+          <p class="hero-kicker">PRACTICE <span aria-hidden="true">│</span> BUILD JUDGEMENT <span aria-hidden="true">│</span> KEEP TRAFFIC MOVING</p>
+          <div class="accent-rule" aria-hidden="true"><span></span><span></span></div>
+          <h1 id="hero-heading">Train the decisions <br>that keep traffic moving.</h1>
+          <p class="hero-summary">Individual and instructor-led QGH practice, <br>plus procedural control training.</p>
+        </div>
+        <div class="hero-caption hero-caption-left" aria-hidden="true"><span></span>DISCIPLINE IN THE AIRSPACE<br>SKILLS FOR A SAFER TOMORROW</div>
+        <div class="hero-caption hero-caption-right" aria-hidden="true">PEOPLE<br>PROCEDURES<br>PERSPECTIVE<br>SAFER SKIES<span></span></div>
+      </section>
+
+      <section class="simulator-selection" aria-labelledby="simulator-heading">
+        <div class="selection-heading"><h2 id="simulator-heading">CHOOSE YOUR SIMULATOR</h2><span class="selection-line" aria-hidden="true"></span><span class="selection-motto">PRACTICE TODAY. A SAFER TOMORROW.</span></div>
+        <div class="simulator-grid">
+          <article class="simulator-card qgh-card" aria-labelledby="qgh-heading">
+            <div class="card-topline"><span class="card-index">01</span><span class="card-stripe card-stripe-saffron" aria-hidden="true"></span></div>
+            <h3 id="qgh-heading">QGH</h3>
+            <div class="qgh-divider" aria-hidden="true"></div>
+            <div class="qgh-paths">
+              <a class="path-card" href="qgh.html" aria-label="Open QGH Individual Practice: Single Aircraft or Tactical">
+                <img src="aircraft-icon.png" alt="" width="48" height="48">
+                <span class="path-content"><strong>INDIVIDUAL PRACTICE</strong><small>Single Aircraft · Tactical</small></span>
+                <span class="path-action">OPEN INDIVIDUAL <span aria-hidden="true">→</span></span>
+              </a>
+              <a class="path-card" href="instructor-led/" aria-label="Open QGH Instructor-led beta">
+                <img src="instructor-icon.png" alt="" width="48" height="48">
+                <span class="path-content"><strong>INSTRUCTOR-LED <em class="beta-badge beta-badge-small">BETA</em></strong><small>Instructor · Controller</small></span>
+                <span class="path-action">OPEN INSTRUCTOR-LED <span aria-hidden="true">→</span></span>
+              </a>
+            </div>
+          </article>
+
+          <article class="simulator-card procedural-card" aria-labelledby="procedural-heading">
+            <div class="card-topline"><span class="card-index">02</span><span class="card-stripe card-stripe-green" aria-hidden="true"></span><span class="beta-badge procedural-beta">BETA</span></div>
+            <h3 id="procedural-heading">PROCEDURAL</h3>
+            <p>Aerodrome <span>·</span> Approach <span>·</span> Area</p>
+            <a class="procedural-link" href="procedural-beta/">OPEN PROCEDURAL <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="suite-footer"><span>INDEPENDENT ATC TRAINING SIMULATOR</span><span>HIGHER STANDARDS. BRIGHTER SKIES. <i aria-hidden="true"></i></span></footer>
+  </div>
+</body>
+</html>
