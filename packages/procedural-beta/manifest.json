@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.28.1",
+  "version": "2026.09.29.1",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 36269,
-      "sha256": "856121c22f6cda100d02e1f0f011e346a9320e091118ed4c958d726cb59aaffd"
+      "bytes": 36591,
+      "sha256": "cea2583d6b750f257d768fbd96a2c4ad86192efb7c073bc6c5efd13f15186602"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 92570,
-      "sha256": "f3581bc963043d8ee0e3e9c1599df89babf3efeff96754dc8bf05df104fb497c"
+      "bytes": 93345,
+      "sha256": "aa839fd1c61a79d03cc1eeeac2628ff86f006778ed8c6080ef120a13648a2206"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 38642,
-      "sha256": "448ce5aa40e0addf819be2ab493578cccc064d9423f775cafec2f2374d635e46"
+      "bytes": 42292,
+      "sha256": "b1e1040fe99260f0ab3ab67016e98f0425d0a3c598d065e1cd136d68873be877"
     },
     {
       "path": "static/scope-history.js",
@@ -49,8 +49,8 @@
     },
     {
       "path": "static/traffic-setup.js",
-      "bytes": 13205,
-      "sha256": "3eb0adce4b29d179fda660d2a0cf15bfd5ae1274233170320f7d80cdab73d700"
+      "bytes": 13337,
+      "sha256": "551ebd550bd327fa459b0589aa7c97fc56c5b5d7e6f0c739f179855b163e6988"
     },
     {
       "path": "static/india-airspace.json",

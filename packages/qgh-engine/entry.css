@@ -355,3 +355,22 @@ body {
   .entry-option { min-height: 132px; padding: 18px; }
   .entry-quote { margin-top: 16px; padding-top: 14px; }
 }
+
+/* Keep the route back to the suite visible without crowding the exercise choice. */
+.entry-brand { flex-wrap: wrap; row-gap: 6px; }
+.entry-intro p {
+  max-width: 580px;
+  margin: 12px 0 0;
+  color: var(--entry-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.entry-option-copy strong { line-height: 1.25; }
+.entry-option-action { font-size: 11px; font-weight: 600; }
+@media (max-width: 680px) {
+  .entry-brand { align-items: center; gap: 4px 10px; }
+  .entry-brand h1 { flex-basis: 100%; }
+  .entry-guide-link { border-left: 0; padding-left: 0; min-height: 24px; }
+  .entry-guide-link + .entry-guide-link { border-left: 1px solid var(--entry-line); padding-left: 10px; }
+  .entry-intro p { font-size: 14px; }
+}

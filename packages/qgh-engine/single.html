@@ -29,12 +29,17 @@
 <body>
   <main class="app">
     <header class="app-header">
-      <div class="brand"><h1>QGH SIMULATOR</h1><a class="mode-home-link" href="index.html">CHANGE QGH TYPE</a><a class="mode-home-link" href="user-guide.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
+      <div class="brand"><h1>QGH SIMULATOR</h1><a class="mode-home-link" href="index.html">CHANGE QGH TYPE</a><a class="mode-home-link" href="training-centre.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
       <div class="credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
     <section class="screen setup active" id="setup" aria-label="Exercise setup" tabindex="-1">
       <div class="setup-card">
+        <header class="setup-intro">
+          <span>INDIVIDUAL PRACTICE · SINGLE AIRCRAFT</span>
+          <h2>Set up your QGH exercise</h2>
+          <p>Choose the tracks, aircraft and procedure. You can adjust the exercise before you start.</p>
+        </header>
         <div class="fields">
           <div class="field">
             <label for="runway">RUNWAY ORIENTATION · °M</label>
@@ -97,8 +102,11 @@
             </div>
           </div>
         </div>
-        <button class="pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
-        <button class="start" id="startExercise" type="button">START SIMULATOR</button>
+        <div class="setup-actions">
+          <p><strong>Ready to practise?</strong><span>Pilot readbacks are optional; test headphones first if you want audio.</span></p>
+          <button class="pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
+          <button class="start" id="startExercise" type="button">START SINGLE EXERCISE</button>
+        </div>
       </div>
     </section>
 

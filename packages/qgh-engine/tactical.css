@@ -1531,3 +1531,32 @@ select:focus-visible {
   .tactical-rail-item.active { border-color: Highlight; outline: 1px solid Highlight; }
   .tactical-review-toolbar { border-color: CanvasText; box-shadow: none; }
 }
+
+/* Give each setup aircraft a readable boundary and keep the action clear. */
+.tactical-brand { flex-wrap: wrap; row-gap: 4px; }
+.tactical-setup-intro { margin-bottom: var(--t-space-4); border-bottom: 1px solid var(--t-line); padding-bottom: var(--t-space-3); }
+.tactical-setup-intro > span { color: var(--t-accent-dark); font: 500 10px/1.5 'IBM Plex Mono', monospace; letter-spacing: .08em; }
+.tactical-setup-intro h2 { margin: 5px 0 7px; font-size: clamp(23px, 2.4vw, 30px); letter-spacing: -.025em; }
+.tactical-setup-intro p { margin: 0; color: var(--t-muted); font-size: 14px; line-height: 1.5; }
+.tactical-aircraft-row { border: 1px solid var(--t-line); border-radius: 10px; background: #fbfcfa; padding: 11px 10px 11px 24px; }
+.tactical-aircraft-row::before { left: 8px; }
+.tactical-setup-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(220px, auto); align-items: center; gap: var(--t-space-2); margin-top: var(--t-space-4); border-top: 1px solid var(--t-line); padding-top: var(--t-space-4); }
+.tactical-setup-actions p { display: grid; gap: 2px; margin: 0; font-size: 13px; }
+.tactical-setup-actions p span { color: var(--t-muted); font-size: 11px; line-height: 1.4; }
+.tactical-setup-actions .tactical-pilot-readback-setup,
+.tactical-setup-actions .tactical-start { width: auto; min-height: 52px; margin: 0; padding-inline: 14px; }
+.tactical-setup-actions .tactical-start { font-size: 13px; box-shadow: 0 4px 12px rgba(0, 125, 125, .16); }
+.tactical-controls button { min-height: 44px; line-height: 1.25; }
+.tactical-controls .tactical-info-row button,
+.tactical-controls .tactical-heading-row button,
+.tactical-controls .tactical-us-turns button { font-size: 11px; }
+.tactical-controls .tactical-clock button { min-height: 44px; font-size: 10px; }
+@media (max-width: 1120px) { .tactical-setup-actions { grid-template-columns: minmax(0, 1fr) minmax(200px, auto); } .tactical-setup-actions p { grid-column: 1 / -1; } }
+@media (max-width: 920px) { .tactical-aircraft-row { padding: 14px 12px 14px 25px; } .tactical-aircraft-row::before { left: 8px; } }
+@media (max-width: 600px) {
+  .tactical-setup-intro h2 { font-size: 22px; }
+  .tactical-setup-actions { grid-template-columns: 1fr; }
+  .tactical-setup-actions p { grid-column: auto; }
+  .tactical-setup-actions .tactical-pilot-readback-setup,
+  .tactical-setup-actions .tactical-start { width: 100%; }
+}

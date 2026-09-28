@@ -239,6 +239,23 @@ test('SRA shows a calculated 3 degree descent training guide without changing ra
   assert.match(h.node('radarGuideNote').textContent, /not safety limits or clearances/i);
 });
 
+test('SRA retains distance ticks while spacing long descent labels at wide ranges', () => {
+  const h = harness('sra', { metadata: { radarEnvironment: { sraDescentProfile: true } } });
+  h.node('radarRange').value = '40';
+  h.emit({ overlays: { centrelineDeg: 90 }, plots: [] });
+  const context = h.node('radarScope').ctx;
+  const labels = context.textDraws.filter(draw => /\d+ NM · [\d,]+ FT AAL/.test(draw.text));
+  assert.ok(labels.length >= 2, 'the 3° altitude reference remains available');
+  for (let index = 0; index < labels.length; index += 1) {
+    for (let other = index + 1; other < labels.length; other += 1) {
+      const a = labels[index], b = labels[other];
+      assert.ok(a.x + a.width + 8 <= b.x || b.x + b.width + 8 <= a.x || Math.abs(a.y - b.y) >= 25,
+        `descent cue ${a.text} must not cover ${b.text}`);
+    }
+  }
+  assert.ok(context.strokes.filter(stroke => stroke.dash.join() === '').length >= 10, 'distance ticks remain visible');
+});
+
 test('primary returns use plus symbols while correlated SSR squares open only the safe cooperative detail card', () => {
   const h = harness('surveillance', { metadata: { radarProfile: 'correlated-training' } });
   const primary = { ...plot('T1', 20), callsign: 'PRIMARY', altitudeFt: 9000 };

@@ -108,6 +108,7 @@ export function createTrafficSetup(host) {
         const row = element('div', 'roster-row');
         row.setAttribute('role', 'row');
         row.dataset.aircraftIndex = String(index);
+        row.dataset.aircraftNumber = String(index + 1);
         const inputs = {};
         const addCell = (key, label, input) => {
             const cell = element('div', 'roster-cell');
@@ -145,6 +146,7 @@ export function createTrafficSetup(host) {
         return { element: row, inputs };
     }
     function syncControls() {
+        roster.classList.toggle('roster-editor--cards', visibleCount <= 2);
         while (rows.length < visibleCount)
             rows.push(addRow(rows.length));
         form.querySelectorAll('input, select, button').forEach(control => {

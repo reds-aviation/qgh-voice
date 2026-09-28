@@ -10,3 +10,27 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 .video-chapters{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);max-width:100%}.video-chapters select{width:100%;min-width:0;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px;border-radius:7px;font-size:16px}
 @media print{.site-header,.section-nav,.catalogue-tools,.catalogue-count button,.video-results,.action-row,footer,.skip-link{display:none!important}body{background:#fff;font-size:11pt}.training-layout{display:block;padding:0}.section{margin:0 0 20px;padding:0 0 15px}.guide-card,.call-card{break-inside:avoid;box-shadow:none}.call-results{display:block}.call-card{margin-bottom:10px}a{color:#000}h1{font-size:28pt}h2{font-size:20pt}details{display:block}details>p,details>dl{display:block!important}}
+
+/* Navigation stays readable on desktop and advertises sideways topics on phones. */
+.header-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px 18px; }
+.topic-nav-wrap { position: sticky; top: 24px; align-self: start; min-width: 0; }
+.topic-nav-wrap .section-nav { position: static; }
+.mobile-topic-hint { display: none; }
+.topic-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 24px; }
+.topic-shortcuts > span { margin-right: 5px; color: var(--muted); font: 11px PlexMono, monospace; letter-spacing: .08em; }
+.topic-shortcuts a { display: inline-flex; align-items: center; min-height: 38px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); padding: 6px 13px; font-size: 13px; font-weight: 600; text-decoration: none; }
+.topic-shortcuts a:hover { border-color: var(--accent); background: var(--tint); }
+@media (max-width: 800px) {
+  .topic-nav-wrap { position: static; margin-bottom: 28px; }
+  .mobile-topic-hint { display: flex; justify-content: space-between; gap: 12px; margin: 0 0 7px; color: var(--muted); font: 11px PlexMono, monospace; letter-spacing: .02em; }
+  .mobile-topic-hint span { color: var(--accent-dark); }
+  .topic-nav-wrap .section-nav { margin-bottom: 0; border-bottom: 1px solid var(--line); padding-bottom: 12px; scroll-snap-type: x proximity; }
+  .section-nav a { scroll-snap-align: start; }
+}
+@media (max-width: 520px) {
+  .header-links { gap: 3px 9px; }
+  .header-links .back-link { font-size: 11px; }
+  .topic-shortcuts { gap: 7px; }
+  .topic-shortcuts a { min-height: 44px; font-size: 12px; }
+}
+@media print { .topic-nav-wrap, .topic-shortcuts { display: none !important; } }

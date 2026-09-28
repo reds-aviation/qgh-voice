@@ -51,11 +51,11 @@ test('instructor roster exposes a per-aircraft primary, Mode A and Mode S return
   assert.match(page, /<option value="mode-s">MODE S · □<\/option>/);
 });
 
-test('instructor keeps aircraft selection and the control rail adjacent to the truth scope', () => {
+test('instructor keeps aircraft selection, lifecycle and command controls beside the truth scope', () => {
   const page = html();
-  assert.match(page, /class="console-toolbar"[\s\S]*id="aircraftRosterTabs"/);
+  assert.match(page, /class="console-toolbar"[\s\S]*id="aircraftRosterTabs"[\s\S]*id="startExercise"[\s\S]*id="pauseExercise"[\s\S]*id="terminateExercise"/);
   assert.match(page, /class="console-center"[\s\S]*id="instructorScope"/);
-  assert.match(page, /class="console-control-rail"[\s\S]*id="truthCallsign"[\s\S]*class="command-deck"/);
+  assert.match(page, /class="console-control-rail"[\s\S]*class="command-deck"[\s\S]*id="truthCallsign"/);
 });
 
 test('instructor live console exposes clearly labelled practical training time rates', () => {

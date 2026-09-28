@@ -178,12 +178,16 @@ function storeDraftIfDirty() {
 function tab(name, open = true) {
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     document.querySelectorAll('.tab-content').forEach(p => p.hidden = p.id !== `tab-${name}`);
-    text('drawer-title', { strip: 'Flight strips', pilot: 'Aircraft controls', build: 'Airspace workshop', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: 'Declutter scope', feedback: 'Feedback' }[name] || name);
+    text('drawer-title', { strip: 'Flight strips', pilot: 'Aircraft controls', build: 'Airspace workshop', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope', feedback: 'Feedback' }[name] || name);
     $('work-panel').hidden = !open;
-    if (open)
+    document.body.classList.toggle('drawer-open', open);
+    if (open) {
         drawerReturn = document.activeElement;
+        if (window.innerWidth < 1050)
+            requestAnimationFrame(() => $('work-panel').scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    }
 }
-function closeDrawer() { $('work-panel').hidden = true; drawerReturn?.focus(); }
+function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open'); drawerReturn?.focus(); }
 function setStage(next) {
     stage = next;
     for (const id of ['entry', 'setup', 'waiting', 'desk'])
@@ -193,6 +197,8 @@ function setStage(next) {
     document.body.classList.toggle('exercise-running', next === 'desk' && !!view?.running);
     document.body.classList.toggle('instructor-desk', session?.role === 'instructor');
     document.body.classList.toggle('student-desk', session?.role === 'student');
+    if (next !== 'desk')
+        document.body.classList.remove('drawer-open');
     $('back-flow').hidden = !session || next === 'entry';
     $('return-desk').hidden = !session || next !== 'entry';
 }
@@ -244,6 +250,8 @@ function enter(s, startPolling = true) {
     setStage(s.role === 'instructor' ? 'desk' : 'waiting');
     $('signout').hidden = false;
     const instructor = s.role === 'instructor';
+    document.querySelectorAll('[data-tab="layers"]').forEach(el => { el.textContent = instructor ? 'Declutter' : 'Chart layers'; });
+    text('layer-heading-title', instructor ? 'Show what you need.' : 'Instructor-set chart layers');
     text('edge-pin', instructor ? '······' : '');
     text('role', instructor ? 'INSTRUCTOR / PSEUDO-PILOT' : 'STUDENT / PROCEDURAL CONTROLLER');
     text('scope-title', instructor ? 'INSTRUCTOR TRUTH · CONTINUOUS TRAFFIC' : 'PROCEDURAL PICTURE · D/F ONLY');
@@ -874,7 +882,7 @@ function draw() {
         ctx.drawImage(mapImage, -w * m.originXPct / 100, -h * m.originYPct / 100, w, h);
         ctx.restore();
     }
-    ctx.font = '11px PlexMono,monospace';
+    ctx.font = '12px PlexMono,monospace';
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#363c40';
     ctx.fillStyle = '#8c969e';
@@ -903,7 +911,8 @@ function draw() {
     }
     if (display.areas)
         drawAreas(ctx, (view.areas || []).filter(a => !hiddenAreas.has(a.id)), p, display.areaLabels ? (range > 100 ? 'name' : 'full') : false);
-    const navigationLabels = [];
+    const stationLabel = (env.stationName || 'NAV0').split(' ')[0];
+    const navigationLabels = [{ x: stationX + 5, y: stationY - 22, width: ctx.measureText(stationLabel).width + 8, height: 18 }];
     if (display.routes) {
         const labelledRoutes = new Set();
         const fixesById = new Map(view.fixes.map(f => [f.id, f]));
@@ -993,7 +1002,7 @@ function draw() {
     ctx.beginPath();
     ctx.arc(stationX, stationY, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillText((env.stationName || 'NAV0').split(' ')[0], stationX + 8, stationY - 8);
+    ctx.fillText(stationLabel, stationX + 8, stationY - 8);
     if (session?.role === 'instructor') {
         const labels = [];
         for (const a of view.aircraft || []) {
@@ -1128,7 +1137,7 @@ function drawTrafficLabels(labels, width, height) {
         const lines = [a.callsign];
         if (active)
             lines.push(Math.round(a.altitudeFt) + ' FT  ' + Math.round(a.speedKt) + ' KT', pad(a.headingDeg) + '°T ' + a.mode.toUpperCase());
-        const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 10, h = lines.length * 13 + 5;
+        const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 10, h = lines.length * 15 + 5;
         let box;
         for (const dy of [-18, 25, -55, 60, -92, 98])
             for (const dx of [14, -w - 14, 45, -w - 45]) {
@@ -1156,7 +1165,7 @@ function drawTrafficLabels(labels, width, height) {
         ctx.fillRect(box.x, box.y, w, h);
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
-        lines.forEach((t, i) => ctx.fillText(t, box.x + 5, box.y + 11 + i * 13));
+        lines.forEach((t, i) => ctx.fillText(t, box.x + 5, box.y + 13 + i * 15));
         ctx.restore();
     }
 }

@@ -3,7 +3,7 @@
   --desk-header-height: 38px;
   --desk-exercise-height: 42px;
   --scope-instrument-width: 168px;
-  --scope-tools-width: 116px;
+  --scope-tools-width: 128px;
   --radar-chrome: #1b1e21;
   --radar-panel: #16191c;
   --radar-line: #454c52;
@@ -27,6 +27,7 @@ button:disabled { cursor: not-allowed; }
 
 body.desk-open {
   height: 100dvh; overflow: hidden; background: #111416; color: var(--radar-text);
+  --desk-drawer-width: clamp(340px, 32vw, 420px);
   --paper: #1c2024; --ink: #e7ecef; --line: #454c52; --muted: #a8b0b7; --teal: #a1c9da;
 }
 body.desk-open.exercise-running { --desk-header-height: 0px; }
@@ -85,6 +86,11 @@ body.desk-open #clock-controls button { min-height: 29px; padding: 5px 9px; font
 body.desk-open #clock-controls .primary { background: #355a66; border-color: #83aebd; color: #fff; }
 body.desk-open #clock-controls #terminate { color: #ffc1b6; border-color: #8d514f; background: #3b272c; }
 body.desk-open .workspace { display: block; height: 100%; min-height: 0; min-width: 0; }
+/* The tools take their own width, so the whole plot stays visible when they open. */
+@media (min-width: 1050px) {
+  body.desk-open.drawer-open .workspace { width: calc(100% - var(--desk-drawer-width)); }
+  body.desk-open #work-panel { width: var(--desk-drawer-width); }
+}
 body.desk-open .fleet-panel,
 body.desk-open .desk-footer { display: none; }
 body.desk-open .scope-panel {
@@ -123,7 +129,7 @@ body.desk-open .scope-toolbar {
   flex-direction: row; flex-wrap: nowrap; border-bottom: 1px solid var(--radar-line);
   background: #1c2024; color: #cbd3d9;
 }
-body.desk-open .scope-toolbar > span { flex: 1; min-width: 0; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.desk-open .scope-toolbar > span { flex: 1; min-width: 0; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.desk-open .scope-toolbar > div { flex: 0 0 auto; width: auto; min-width: 0; gap: 6px; }
 body.desk-open .scope-toolbar button,
 body.desk-open .scope-toolbar select { min-height: 25px; font-size: 11px; padding: 3px 7px; background: #2a3036; border-color: #5c666f; color: #e6ebee; }
@@ -144,7 +150,7 @@ body.desk-open .scope-toolbar select { min-height: 25px; font-size: 11px; paddin
   gap: 10px; padding: 0 10px; background: #23282d; border-bottom: 1px solid #59636c;
 }
 #scope-traffic-bar > .eyebrow,
-#scope-traffic-bar > span { align-self: center; flex-shrink: 0; font-size: 10px; color: #b9c5ce; }
+#scope-traffic-bar > span { align-self: center; flex-shrink: 0; font-size: 11px; color: #b9c5ce; }
 #scope-traffic-bar .fleet {
   flex: 1; display: flex; align-items: stretch; min-width: 0;
   max-height: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
@@ -157,8 +163,8 @@ body.desk-open .scope-toolbar select { min-height: 25px; font-size: 11px; paddin
 }
 #scope-traffic-bar .fleet button:hover { background: #353e46; }
 #scope-traffic-bar .fleet button.selected { background: #354550; border-bottom-color: #ffe08a; color: #fff2cb; }
-#scope-traffic-bar .fleet b { font-size: 12px; white-space: nowrap; }
-#scope-traffic-bar .fleet small { margin: 0; font-size: 10px; white-space: nowrap; color: #b2bec6; }
+#scope-traffic-bar .fleet b { font-size: 13px; white-space: nowrap; }
+#scope-traffic-bar .fleet small { margin: 0; font-size: 11px; white-space: nowrap; color: #b2bec6; }
 
 body.desk-open .instrument-dock,
 body.desk-open .instrument-dock.right {
@@ -177,11 +183,11 @@ body.desk-open .instrument-dock .homing.right {
   background: #111416; border-color: #69757e;
 }
 body.desk-open .instrument-dock .homing-head { gap: 3px; }
-body.desk-open .instrument-dock .homing-head strong { font-size: 8px; }
+body.desk-open .instrument-dock .homing-head strong { font-size: 9px; }
 body.desk-open .instrument-dock .homing-head select { width: 52px; min-height: 27px; font-size: 11px; padding: 4px; color: #edf2f4; background: #2a3137; border-color: #7a8790; }
 body.desk-open .instrument-dock #homing-dial { height: 78px; }
 body.desk-open .instrument-dock .bearing strong { font-size: 29px; }
-body.desk-open .instrument-dock #df-source { font-size: 8px; line-height: 1.5; }
+body.desk-open .instrument-dock #df-source { font-size: 9px; line-height: 1.5; }
 body.desk-open .instrument-dock .homing strong { color: var(--radar-text); }
 body.desk-open .instrument-dock .homing .bearing strong { color: #f0e4b8; }
 body.desk-open .instrument-dock #df-source { color: #b8c3cc; }
@@ -191,9 +197,9 @@ body.desk-open .instrument-dock > div { flex: 0 0 auto; width: 100%; }
 body.desk-open #scope-manual-dock {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin;
 }
-body.desk-open .instrument-dock .eyebrow { font-size: 8px; line-height: 1.6; margin-bottom: 5px; color: #bac5cc; }
+body.desk-open .instrument-dock .eyebrow { font-size: 9px; line-height: 1.6; margin-bottom: 5px; color: #bac5cc; }
 body.desk-open .instrument-dock strong { font-size: 14px; color: var(--radar-text); overflow-wrap: anywhere; }
-body.desk-open .instrument-dock p { font-size: 10px; line-height: 1.55; margin: 7px 0; color: #b8c3cc; }
+body.desk-open .instrument-dock p { font-size: 11px; line-height: 1.55; margin: 7px 0; color: #b8c3cc; }
 body.desk-open .instrument-dock .quick-controls {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 9px 0 0;
 }
@@ -215,15 +221,18 @@ body.desk-open .scope-caption { font-size: 9px; left: 10px; right: 10px; bottom:
   min-width: 0; min-height: 0; padding: 8px; overflow-y: auto; scrollbar-width: thin;
   background: var(--radar-panel); border-left: 1px solid var(--radar-line);
 }
+.edge-group { display: grid; gap: 2px; }
+.edge-group + .edge-group { padding-top: 3px; border-top: 1px solid #424c54; }
+.edge-group-label { color: #9eabb5; font: 600 9px PlexMono, monospace; letter-spacing: .1em; padding: 1px 3px; }
 .scope-panel.homing-right .scope-edge-actions { border-left: 0; border-right: 1px solid var(--radar-line); }
 .scope-edge-actions button {
-  display: block; flex: 0 0 auto; width: 100%; min-height: 33px;
-  text-align: left; font-size: 12px; line-height: 1.25; font-weight: 400; padding: 7px 8px;
+  display: block; flex: 0 0 auto; width: 100%; min-height: 27px;
+  text-align: left; font-size: 11px; line-height: 1.2; font-weight: 400; padding: 4px 7px;
   color: #e3e9ee; background: #2a3036; border-color: #596570; border-radius: 5px;
 }
 .scope-edge-actions button:hover,
 .scope-edge-actions button[aria-selected=true] { background: #3b4b56; border-color: #a2b8c6; }
-.scope-edge-actions #edge-pin { display: block; font: 500 13px PlexMono, monospace; color: #f1d79a; margin-top: 3px; }
+.scope-edge-actions #edge-pin { display: inline; font: 500 10px PlexMono, monospace; color: #f1d79a; margin-left: 2px; }
 body.desk-open .scope-flight-controls {
   grid-area: flight; min-width: 0; min-height: 0;
   grid-template-columns: 1.15fr .8fr 1.2fr; gap: 18px; padding: 5px 12px;
@@ -236,7 +245,7 @@ body.desk-open .scope-flight-controls select { margin-top: 4px; font-size: 12px;
 body.desk-open .scope-flight-controls button { min-width: 0; min-height: 31px; font-size: 12px; padding: 5px 9px; background: #333e48; border-color: #768791; color: #e7edf1; }
 body.desk-open .scope-airspace-key {
   grid-area: legend; min-width: 0; min-height: 0; padding: 1px 12px;
-  align-items: center; gap: 4px 14px; flex-wrap: nowrap; font-size: 10px; overflow: hidden;
+  align-items: center; gap: 4px 14px; flex-wrap: nowrap; font-size: 11px; overflow: hidden;
   background: #1c2024; border-color: var(--radar-line);
 }
 body.desk-open .scope-airspace-key > span { white-space: nowrap; }
@@ -292,6 +301,16 @@ body.desk-open #pilot-readback #audio-status { font-size: 9px; line-height: 1.4;
 #work-panel .record-list { max-height: none; }
 #work-panel .record { overflow-wrap: anywhere; }
 #work-panel .tab-content > button { max-width: 100%; }
+#work-panel .transmission-card {
+  padding: 13px; margin: 10px 0 20px; border: 1px solid #748896; border-radius: 8px;
+  background: #243541; box-shadow: 0 5px 16px #0003;
+}
+#work-panel .transmission-card label { margin-top: 0; font-size: 13px; }
+#work-panel .transmission-card textarea { min-height: 63px; }
+#work-panel .transmission-card small { color: #c2d1d9; }
+body.student-desk #work-panel .transmission-card { position: sticky; top: 0; z-index: 2; }
+#work-panel .strip-record { border-top: 1px solid var(--radar-line); padding-top: 4px; }
+#work-panel .strip-record h3 { font-size: 14px; }
 body.desk-open #work-panel { background: var(--radar-panel); color-scheme: dark; }
 body.desk-open #work-panel .drawer-head,
 body.desk-open #work-panel .work-tabs { background: var(--radar-chrome); }
@@ -391,6 +410,29 @@ body.setup-open #main { height: auto; }
   background: #e8ede1; font-size: 11px; font-weight: 600; line-height: 1.45;
 }
 .roster-row--head > span:first-child { z-index: 4; }
+/* One or two aircraft are easier to scan as complete flight cards. */
+.roster-editor--cards .roster-scroll { max-height: none; overflow: visible; }
+.roster-editor--cards .roster-table,
+.roster-editor--cards .roster-row { min-width: 0; }
+.roster-editor--cards .roster-row--head { display: none; }
+.roster-editor--cards .roster-body { display: grid; gap: 15px; padding: 15px; }
+.roster-editor--cards .roster-row {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid #c7d3c1; border-radius: 8px; overflow: hidden; background: var(--paper);
+}
+.roster-editor--cards .roster-row::before {
+  content: "AIRCRAFT " attr(data-aircraft-number); grid-column: 1 / -1;
+  padding: 10px 13px; background: #e8ede1; color: #31564e;
+  font: 600 11px PlexMono, monospace; letter-spacing: .1em;
+}
+.roster-editor--cards .roster-cell { display: block; padding: 10px 12px; border-top: 1px solid #e4e9df; }
+.roster-editor--cards .roster-cell::before {
+  content: attr(data-label); display: block; min-height: 18px; margin-bottom: 6px;
+  font-size: 11px; font-weight: 600; line-height: 1.35; color: #52695d;
+}
+.roster-editor--cards .roster-cell:first-child { position: static; border-right: 0; box-shadow: none; padding-left: 12px; }
+.roster-editor--cards .roster-cell:last-child { justify-content: initial; }
+.roster-editor--cards .roster-cell input { width: 100%; }
 .setup-actions {
   position: sticky; bottom: 0; display: flex; gap: 12px; padding: 18px 0 12px;
   background: #f3f1e8f5; border-top: 1px solid transparent; z-index: 5;
@@ -415,6 +457,21 @@ body.setup-open #main { height: auto; }
   body.desk-open .scope-flight-controls button { padding-inline: 7px; }
   .setup-settings { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .setup-settings .setup-field:first-child { grid-column: span 2; }
+}
+@media (max-width: 900px) {
+  .roster-editor--cards .roster-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* On narrower displays the tool panel follows the scope instead of covering it. */
+@media (max-width: 1049px) {
+  body.desk-open.drawer-open { height: auto; min-height: 100dvh; overflow-y: auto; }
+  body.desk-open.drawer-open #main { height: auto; }
+  body.desk-open.drawer-open #desk { height: auto; display: block; }
+  body.desk-open.drawer-open .workspace { height: calc(100dvh - var(--desk-header-height) - var(--desk-exercise-height)); min-height: 420px; }
+  body.desk-open #work-panel {
+    position: relative; top: auto; right: auto; bottom: auto; width: 100%;
+    height: min(560px, 70dvh); min-height: 360px; border-radius: 0; box-shadow: none;
+  }
 }
 
 @media (min-width: 701px) and (max-width: 1000px) {
@@ -505,6 +562,8 @@ body.setup-open #main { height: auto; }
     flex-direction: row; align-items: stretch; gap: 5px; border: 0;
     border-block: 1px solid var(--radar-line); padding: 7px; overflow-x: auto; overflow-y: hidden;
   }
+  .edge-group { display: contents; }
+  .edge-group-label { display: none; }
   .scope-edge-actions button { flex: 0 0 auto; width: auto; min-height: 40px; max-width: 120px; text-align: center; }
   .scope-edge-actions #edge-pin { display: inline; margin-left: 5px; font-size: 11px; }
   body.desk-open .scope-flight-controls { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
@@ -514,6 +573,8 @@ body.setup-open #main { height: auto; }
   body.desk-open .scope-airspace-key { flex-wrap: wrap; overflow: visible; min-height: 36px; padding: 7px 10px; gap: 6px 12px; }
   body.desk-open .scope-airspace-key #station-radial { width: 100%; margin-left: 0; }
   #work-panel { top: var(--desk-header-height); width: min(420px, 96vw); }
+  body.desk-open.drawer-open .workspace { height: auto; min-height: 0; }
+  body.desk-open #work-panel { height: min(560px, 72dvh); min-height: 360px; }
   #work-panel .tab-content { padding: 18px; }
   .setup-panel { padding: 27px 14px 18px; }
   .section-title p { font-size: 14px; }
@@ -524,6 +585,10 @@ body.setup-open #main { height: auto; }
   .setup-actions button { min-width: 0; flex: 1; font-size: 13px; }
   .waiting-panel { margin: 25px 14px; padding: 26px 22px; }
   .waiting-panel h1 { font-size: 29px; }
+}
+
+@media (max-width: 440px) {
+  .roster-editor--cards .roster-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 360px) {

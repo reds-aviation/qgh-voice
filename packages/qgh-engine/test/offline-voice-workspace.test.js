@@ -765,6 +765,13 @@ test('saved dock position recovers into the viewport and can be reset', async ()
     stored: [['qgh-voice-dock-position-v2', JSON.stringify({left:9999, top:9999})]] });
   await flush();
   const dock = env.document.querySelector('.voice-dock');
+  assert.equal(dock.dataset.compact, 'true', 'entry keeps the voice rail clear of setup');
+  assert.equal(dock.style.left, '', 'entry does not reuse an old exercise position');
+  const setup = env.document.createElement('section'); setup.id = 'setup';
+  const console = env.document.createElement('section'); console.id = 'console'; console.className = 'active';
+  env.app.append(setup, console);
+  env.triggerMutations();
+  await flush();
   assert.equal(dock.style.left, '824px');
   assert.equal(dock.style.top, '396px');
   env.document.querySelector('.voice-reset-position').click();

@@ -53,6 +53,8 @@
     status: null,
     feedback: null,
     dock: null,
+    compactToggle: null,
+    compactExpanded: false,
     dragHandle: null,
     dockDrag: null,
     settings: null,
@@ -342,6 +344,7 @@
       : nativeVoiceBridge() ? 'Preparing the bundled voice model on this device. Manual controls remain available.'
       : 'One-time download: approximately 40 MB, only when you choose Setup. Speech is processed on this device, never uploaded. Manual controls always work.';
     if (state.listeningIndicator) state.listeningIndicator.hidden = !(state.continuous && state.listening && !state.processing);
+    syncVoiceDockCompactness();
     positionVoicePopovers();
   }
 
@@ -359,6 +362,25 @@
 
   function phoneDock() {
     return Boolean(root.matchMedia?.('(max-width: 600px) and (orientation: portrait)').matches);
+  }
+
+  function beforeExercise() {
+    return pageKind() === 'entry' || activeScreen('setup') || activeScreen('tSetup');
+  }
+
+  function syncVoiceDockCompactness() {
+    if (!state.dock || !state.compactToggle) return;
+    const quiet = !state.continuous && !state.listening && !state.starting && !state.pressHeld;
+    const mayCompact = beforeExercise() && quiet;
+    const compact = mayCompact && !state.compactExpanded;
+    const changed = state.dock.dataset.compact !== String(compact);
+    state.dock.dataset.compact = String(compact);
+    state.compactToggle.hidden = !mayCompact;
+    state.compactToggle.textContent = compact ? 'VOICE' : 'CLOSE';
+    state.compactToggle.setAttribute('aria-label', compact ? 'Open voice controls' : 'Minimise voice controls');
+    state.compactToggle.setAttribute('aria-expanded', String(!compact));
+    if (compact && changed) setSettingsOpen(false);
+    if (changed) restoreVoiceDockPosition();
   }
 
   function safeArea() {
@@ -423,6 +445,17 @@
     if (!state.dock) return;
     state.dock.dataset.phone = String(phoneDock());
     ['left', 'top', 'right', 'bottom'].forEach(property => { state.dock.style[property] = ''; });
+    if (state.dock.dataset.compact === 'true') {
+      state.dock.dataset.edge = 'bottom';
+      positionVoicePopovers();
+      return;
+    }
+    // Entry and setup never reuse a saved exercise position over their fields.
+    if (beforeExercise()) {
+      state.dock.dataset.edge = 'bottom';
+      positionVoicePopovers();
+      return;
+    }
     const saved = storedDockPosition();
     if (phoneDock()) {
       state.dock.dataset.edge = saved?.edge || 'bottom';
@@ -1802,6 +1835,13 @@
     dock.className = 'voice-dock';
     dock.setAttribute('aria-label', 'Offline voice controls');
 
+    const compactToggle = documentRef.createElement('button');
+    compactToggle.type = 'button';
+    compactToggle.className = 'voice-compact-toggle';
+    compactToggle.textContent = 'VOICE';
+    compactToggle.setAttribute('aria-label', 'Open voice controls');
+    compactToggle.setAttribute('aria-expanded', 'false');
+
     const dragHandle = documentRef.createElement('button');
     dragHandle.type = 'button';
     dragHandle.className = 'voice-drag-handle';
@@ -1954,7 +1994,7 @@
     cancellationButton.textContent = 'CANCEL';
     confirmationActions.append(confirmationButton, cancellationButton);
     confirmation.append(confirmationTitle, confirmationDetail, confirmationActions);
-    dock.append(dragHandle, mic, listeningIndicator, status, settingsToggle, feedback, settings, confirmation);
+    dock.append(compactToggle, dragHandle, mic, listeningIndicator, status, settingsToggle, feedback, settings, confirmation);
     const announcement = documentRef.createElement('div');
     announcement.className = 'voice-announcement voice-command-only';
     announcement.setAttribute('role', 'status');
@@ -1964,11 +2004,17 @@
     documentRef.body.appendChild(dock);
 
     Object.assign(state, {
-      dock, dragHandle, mic, status, feedback, settings, settingsToggle, continuousInput, prepareButton: prepare,
+      dock, compactToggle, dragHandle, mic, status, feedback, settings, settingsToggle, continuousInput, prepareButton: prepare,
       listeningIndicator, engineNote, confirmationPanel: confirmation, confirmationDetail,
       confirmationButton, cancellationButton, lastCallDetail, announcement
     });
     scheduleBrowserBottomInset();
+    compactToggle.addEventListener('click', () => {
+      state.compactExpanded = state.dock.dataset.compact === 'true';
+      syncVoiceDockCompactness();
+      if (state.compactExpanded) state.mic?.focus();
+      else state.compactToggle?.focus();
+    });
     settingsToggle.addEventListener('click', () => {
       const opening = settings.hidden;
       setSettingsOpen(opening);
@@ -2084,7 +2130,11 @@
         const nextScreen = currentVoiceContext();
         const nextContext = recognitionContextSignature();
         if (nextContext === context) return;
-        if (nextScreen !== screen) root.QGHRadioWorkspace?.reset();
+        if (nextScreen !== screen) {
+          state.compactExpanded = false;
+          root.QGHRadioWorkspace?.reset();
+          syncVoiceDockCompactness();
+        }
         reconfigureRecognitionContext(nextContext);
         screen = nextScreen;
         context = nextContext;

@@ -30,12 +30,17 @@
 <body>
   <main class="tactical-app">
     <header class="tactical-app-header">
-      <div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="user-guide.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
+      <div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="training-centre.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
       <div class="tactical-credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
     <section class="tactical-screen tactical-setup active" id="tSetup" aria-label="Tactical exercise setup" tabindex="-1">
       <div class="tactical-setup-card">
+        <header class="tactical-setup-intro">
+          <span>INDIVIDUAL PRACTICE · TACTICAL</span>
+          <h2>Build your tactical exercise</h2>
+          <p>Set the procedure and tracks, then prepare two to four aircraft below.</p>
+        </header>
         <div class="tactical-setup-fields">
           <div class="tactical-field">
             <label for="tRunway">RUNWAY ORIENTATION · °M</label>
@@ -95,8 +100,11 @@
           </section>
         </section>
 
-        <button class="tactical-pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
-        <button class="tactical-start" id="tStart" type="button">START TACTICAL EXERCISE</button>
+        <div class="tactical-setup-actions">
+          <p><strong>Ready to practise?</strong><span>Pilot readbacks are optional; test headphones first if you want audio.</span></p>
+          <button class="tactical-pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
+          <button class="tactical-start" id="tStart" type="button">START TACTICAL EXERCISE</button>
+        </div>
       </div>
     </section>
 

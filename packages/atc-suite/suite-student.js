@@ -581,11 +581,19 @@
     // Use the same instructor-selected interval as the extended centreline so
     // range cues remain consistent across the training scope.
     const markStep = Number.isFinite(environment.centrelineTickNm) ? environment.centrelineTickNm : 2;
+    const cueLabels = [];
     for (let distance = markStep; distance < selectedRadarRange(); distance += markStep) {
       const point = radarTransform(canvas, distance, bearing), dx = Math.cos(angle) * 6, dy = Math.sin(angle) * 6;
       context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
       const height = Math.round((feetPerNm * distance) / 10) * 10;
-      context.fillText(showDescentProfile ? `${distance} NM · ${height.toLocaleString()} FT AAL` : `${distance}`, point.x + 9, point.y + 5);
+      const label = showDescentProfile ? `${distance} NM · ${height.toLocaleString()} FT AAL` : `${distance}`;
+      const labelWidth = context.measureText(label).width;
+      const labelX = Math.max(12, Math.min(point.x + 9, canvas.width - labelWidth - 12));
+      const labelY = Math.max(80, Math.min(point.y + 5, canvas.height - 130));
+      const box = { left: labelX - 5, right: labelX + labelWidth + 5, top: labelY - 18, bottom: labelY + 7 };
+      if (cueLabels.some(prior => box.left < prior.right && box.right > prior.left && box.top < prior.bottom && box.bottom > prior.top)) continue;
+      cueLabels.push(box);
+      context.fillText(label, labelX, labelY);
     }
     if (Number.isFinite(overlays.terminationRangeNm) && overlays.terminationRangeNm <= selectedRadarRange()) {
       const point = radarTransform(canvas, overlays.terminationRangeNm, bearing), dx = Math.cos(angle) * 13, dy = Math.sin(angle) * 13;

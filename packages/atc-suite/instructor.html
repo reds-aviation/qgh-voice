@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
-  <title>Reds ATC Suite · Instructor</title>
+  <title>Instructor Console · ATC Training Suite</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
   <script defer src="simulator-core.js"></script>
@@ -21,7 +21,7 @@
 <body>
   <main class="shell shell--wide">
     <header class="site-header">
-      <div class="header-left"><a class="wordmark" href="index.html"><span>REDS</span> ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">INDIVIDUAL PRACTICE</a><span class="role-pill">INSTRUCTOR</span><button class="guide-open" id="openTrainingGuide" type="button">TRAINING GUIDE</button><a href="training-guide.html" target="_blank" rel="noopener">FULL BETA GUIDE ↗</a></div>
+      <div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><button class="guide-open" id="openTrainingGuide" type="button">TRAINING GUIDE</button><a href="training-guide.html" target="_blank" rel="noopener">FULL BETA GUIDE ↗</a></div>
       <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
     </header>
 
@@ -49,21 +49,20 @@
         <label class="setup-check" id="sraDescentProfileField" hidden><input id="sraDescentProfile" type="checkbox" checked><span>SRA 3° DESCENT TRAINING GUIDE</span></label>
         <div class="roster-editor">
           <div class="roster-editor-head"><div><span>AIRCRAFT ROSTER</span><b>INITIAL TRUTH INPUT</b></div><small>Aircraft start with distinct bearings, ranges and headings, 1,000 ft vertical separation, and automatic four-digit octal squawks. Radar returns default to the selected environment and remain editable per aircraft.</small></div>
-          <div class="roster-table" role="table" aria-label="Initial aircraft truth inputs">
-            <div class="roster-row roster-row--head" role="row"><span>CALLSIGN</span><span>SQUAWK</span><span>RADAR RETURN</span><span>TYPE</span><span>QTE °</span><span>RANGE NM</span><span>HEADING °M</span><span>ALTITUDE FT</span><span>SPEED KT</span><span>TURN °/S</span><span>VERTICAL FT/MIN</span></div>
+          <div class="roster-table" role="list" aria-label="Initial aircraft truth inputs">
             <div id="aircraftRoster" class="roster-body">
-              <div class="roster-row" data-aircraft-index="0" role="row">
-                <input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign">
-                <input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code">
-                <select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select>
-                <select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select>
-                <input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE">
-                <input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range">
-                <input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading">
-                <input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude">
-                <input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed">
-                <input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn">
-                <input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute">
+              <div class="roster-row" data-aircraft-index="0" role="listitem">
+                <label>CALLSIGN<input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign"></label>
+                <label>SQUAWK<input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code"></label>
+                <label>RADAR RETURN<select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select></label>
+                <label>AIRCRAFT TYPE<select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select></label>
+                <label>QTE · °<input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE"></label>
+                <label>RANGE · NM<input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range"></label>
+                <label>HEADING · °M<input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading"></label>
+                <label>ALTITUDE · FT<input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude"></label>
+                <label>SPEED · KT<input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed"></label>
+                <label>TURN · °/S<input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn"></label>
+                <label>VERTICAL · FT/MIN<input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute"></label>
               </div>
             </div>
           </div>
@@ -85,9 +84,10 @@
         <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor truth display</h1></div><div class="status-stack"><b id="exerciseState">READY</b><time id="instructorClock">00:00</time><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Speeds the training clock only; aircraft speed and turn radius remain unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></div></header>
         <div class="instructor-console">
           <div class="console-center">
-            <div class="console-toolbar" aria-label="Aircraft selection">
+            <div class="console-toolbar" aria-label="Aircraft selection and exercise controls">
               <div class="console-toolbar-label"><span>CONTROLLED AIRCRAFT</span><small>SWIPE OR SCROLL TO SWITCH</small></div>
               <nav class="aircraft-tabs" id="aircraftRosterTabs" aria-label="Select aircraft to control"></nav>
+              <div class="lifecycle-actions" aria-label="Exercise controls"><button id="startExercise" class="primary" type="button" aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">START</button><button id="pauseExercise" type="button" disabled aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">PAUSE</button><button id="terminateExercise" class="danger" type="button" disabled title="Deliberate button action only">TERMINATE</button></div>
             </div>
             <div class="truth-layout">
               <div class="scope-card">
@@ -100,10 +100,8 @@
           </div>
 
           <aside class="console-control-rail" aria-label="Selected aircraft controls">
-            <div class="telemetry-card"><span>AIRCRAFT</span><strong id="truthCallsign">FALCON 11</strong><dl><div><dt>HEADING</dt><dd id="truthHeading">225°</dd></div><div><dt>QTE</dt><dd id="truthBearing">065°</dd></div><div><dt>RANGE</dt><dd id="truthRange">25.0 NM</dd></div><div><dt>ALTITUDE</dt><dd id="truthAltitude">12,000 FT</dd></div><div><dt>SPEED</dt><dd id="truthSpeed">240 KT</dd></div><div><dt>TURN</dt><dd id="truthTurn">LEVEL</dd></div><div><dt>SQUAWK</dt><dd id="truthSquawk">—</dd></div><div><dt>SSR</dt><dd id="truthSurveillance">—</dd></div></dl><p id="sensorPreview">STUDENT SENSOR READY</p></div>
-
             <section class="command-deck" aria-label="Instructor aircraft controls">
-          <div class="deck-head"><div><span>CONTROL INPUT</span><strong id="commandStatus">Awaiting instructor action</strong></div><div class="lifecycle-actions"><button id="startExercise" class="primary" type="button" aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">START</button><button id="pauseExercise" type="button" disabled aria-keyshortcuts="Space" title="Keyboard shortcut: Space when no input is active">PAUSE</button><button id="terminateExercise" class="danger" type="button" disabled title="Deliberate button action only">TERMINATE</button></div></div>
+          <div class="deck-head"><div><span>CONTROL INPUT</span><strong id="commandStatus">Awaiting instructor action</strong></div></div>
           <div class="keyboard-command-bar" aria-label="Deterministic keyboard command entry">
             <label for="keyboardCommandInput">COMMAND BAR<input id="keyboardCommandInput" type="text" autocomplete="off" spellcheck="false" placeholder="L 230 · SPD 240 · NEXT" aria-describedby="keyboardCommandHint"></label>
             <button id="executeKeyboardCommand" type="button">EXECUTE</button>
@@ -135,6 +133,7 @@
             <div class="command-grid command-grid--approach"><button id="transferToPar" type="button" title="Use the command bar: TRANSFER PAR">TRANSFER SELECTED AIRCRAFT TO PAR</button></div>
           </div>
             </section>
+            <div class="telemetry-card"><span>AIRCRAFT</span><strong id="truthCallsign">FALCON 11</strong><dl><div><dt>HEADING</dt><dd id="truthHeading">225°</dd></div><div><dt>QTE</dt><dd id="truthBearing">065°</dd></div><div><dt>RANGE</dt><dd id="truthRange">25.0 NM</dd></div><div><dt>ALTITUDE</dt><dd id="truthAltitude">12,000 FT</dd></div><div><dt>SPEED</dt><dd id="truthSpeed">240 KT</dd></div><div><dt>TURN</dt><dd id="truthTurn">LEVEL</dd></div><div><dt>SQUAWK</dt><dd id="truthSquawk">—</dd></div><div><dt>SSR</dt><dd id="truthSurveillance">—</dd></div></dl><p id="sensorPreview">STUDENT SENSOR READY</p></div>
           </aside>
         </div>
 

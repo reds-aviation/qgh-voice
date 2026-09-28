@@ -41,6 +41,20 @@ export async function buildProceduralBeta(outputRoot) {
     let html = await readFile(path,'utf8');
     html = html.replaceAll('href="index.html"','href="qgh.html"').replaceAll('Reds QGH Simulator','QGH Simulator')
       .replaceAll('Reds QGH','ATC Training Suite');
+    const suiteLink = '<a class="mode-home-link" href="./">ATC SUITE</a>';
+    if (page === 'single.html') {
+      const marker = '<div class="brand"><h1>QGH SIMULATOR</h1>';
+      if (!html.includes(marker)) throw new Error('Missing Single QGH header for Pages suite link');
+      html = html.replace(marker, marker + suiteLink);
+    } else if (page === 'tactical.html') {
+      const marker = '<div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1>';
+      if (!html.includes(marker)) throw new Error('Missing Tactical QGH header for Pages suite link');
+      html = html.replace(marker, marker + '<a class="tactical-mode-home" href="./">ATC SUITE</a>');
+    } else if (page === 'training-centre.html') {
+      const marker = '<div class="header-links">';
+      if (!html.includes(marker)) throw new Error('Missing Training Centre header for Pages suite link');
+      html = html.replace(marker, marker + '<a class="back-link" href="./">ATC Suite</a>');
+    }
     await writeFile(path,html);
   }
   for (const page of ['index.html','instructor.html','student.html','training-guide.html']) {
@@ -73,7 +87,7 @@ export async function buildProceduralBeta(outputRoot) {
 
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
-  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, '$1-suite-landing-2$2');
+  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, '$1-suite-landing-3$2');
   sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.png',\n  './qgh-towers.png',\n  './procedural-airspace.png',\n  './aircraft-icon.png',\n  './instructor-icon.png',");
   sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
   if (!sw.includes("'./qgh.html'") || !sw.includes("'./suite-landing.css'")) throw new Error('QGH offline suite shell was not updated');
