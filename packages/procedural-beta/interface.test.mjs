@@ -176,6 +176,7 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   h.context.setCompass(false);h.document.getElementById('quick-more').click();assert.equal(h.document.getElementById('tab-pilot').hidden,false);
   h.context.prepare('student');assert.equal(h.document.getElementById('aircraft-quick-controls').hidden,true);
   assert.ok(h.document.getElementById('instrument-dock').parentElement.classList.contains('scope-panel'));
+  assert.equal(h.document.getElementById('audio-enable').closest('label').parentElement.parentElement.id,'pilot-readback');
   assert.equal(h.document.querySelectorAll('#homing').length,1,'role changes preserve one live homing instrument');
   emit('pointerdown',2,1800);emit('pointerup',2,1830);assert.equal(h.context.commands.length,8);
   h.context.setEnded(true);const notice=h.document.getElementById('exercise-notice');

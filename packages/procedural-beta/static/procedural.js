@@ -1473,6 +1473,9 @@ quickControls.append(actionButton('Release transmission', () => command('interru
 const compactControls = window.matchMedia('(max-height: 740px), (max-width: 1000px)');
 const instrumentHome = document.createComment('student instrument dock');
 $('instrument-dock').before(instrumentHome);
+const audioChoice = $('audio-enable').closest('label');
+const audioChoiceHome = document.createComment('student audio choice');
+audioChoice.before(audioChoiceHome);
 const controlHomes = ['manual', 'flight'].map(kind => {
     const control = $(kind === 'manual' ? 'scope-manual-dock' : 'scope-flight-controls');
     const home = document.createComment(`${kind} controls`);
@@ -1481,6 +1484,8 @@ const controlHomes = ['manual', 'flight'].map(kind => {
 });
 function arrangeControls() {
     const instructor = session?.role === 'instructor';
+    if (instructor) $('scope-manual-dock').append(audioChoice);
+    else audioChoiceHome.after(audioChoice);
     if (instructor) $('instructor-control-shelf').append($('instrument-dock'));
     else instrumentHome.after($('instrument-dock'));
     document.body.classList.toggle('compact-controls', compactControls.matches);

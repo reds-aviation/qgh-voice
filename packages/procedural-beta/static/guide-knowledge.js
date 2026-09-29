@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.20",
+  "revision": "2026.09.29.21",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -98,7 +98,7 @@
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark))\\b",
-      "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and a larger homing display plus a compact, scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel, including speed and altitude controls. The phone radar has a larger reserved area; scroll to reach the lower controls. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
+      "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and a larger homing display plus a compact, scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel, including speed, altitude and Local pilot voice controls. The phone radar has a larger reserved area; scroll to reach the lower controls. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
       "questions": [
         "Where is the homing display?",
         "Where are pilot messages now?",

@@ -960,3 +960,11 @@ body.instructor-desk.controls-collapsed #instructor-control-shelf #aircraft-quic
 @media (max-width:700px) {
   body.instructor-desk #main, body.instructor-desk.drawer-open #main { height:max(920px,calc(var(--usable-height,100dvh) - var(--desk-header-height))); }
 }
+
+body.instructor-desk #compact-manual-slot .audio-choice { min-height:44px; display:flex; align-items:center; gap:8px; margin:10px 0; font-size:13px; }
+body.instructor-desk #compact-manual-slot .audio-choice input { width:20px; height:20px; min-height:20px; }
+@media (max-width:700px) {
+  body.instructor-desk #instructor-control-shelf #pilot-readback > div { flex-wrap:nowrap; margin:0; min-height:12px; }
+  body.instructor-desk #instructor-control-shelf #radio-state { padding:1px 3px; font-size:7px; line-height:1.2; }
+  body.instructor-desk #instructor-control-shelf #pilot-readback .eyebrow { font-size:7px; white-space:nowrap; }
+}
