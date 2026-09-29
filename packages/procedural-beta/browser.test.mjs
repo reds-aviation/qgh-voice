@@ -1,42 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import vm from 'node:vm';
-import {readFileSync} from 'node:fs';
+import { IDBFactory } from 'fake-indexeddb';
 import {webcrypto} from 'node:crypto';
-const folder = new URL('./static/',import.meta.url);
-async function harness(saved = new Map()) {
-  let failWrite = false;
-  const database = {transaction(_name, mode) {
-    const tx = {}, changes = [];
-    tx.objectStore = () => ({get: key => ({result: structuredClone(saved.get(key))}), put(value,key) { changes.push([key,structuredClone(value)]); return {}; }});
-    setImmediate(() => {
-      if (mode === 'readwrite' && failWrite) { failWrite = false; tx.error = new Error('Quota exceeded'); tx.onabort?.(); }
-      else { for (const [key,value] of changes) saved.set(key,value); tx.oncomplete?.(); }
-    });
-    return tx;
-  }};
-  const context = vm.createContext({console, crypto:webcrypto, performance, TextEncoder, TextDecoder, WebAssembly, Uint8Array, Blob, Date, setTimeout, clearTimeout, setInterval:()=>0, btoa, atob,
-    indexedDB:{open(){const request={result:database}; setImmediate(()=>request.onsuccess());return request;}},
-    fetch:async path=>new Response(readFileSync(new URL(path,folder))),
-  });
-  context.self = context;
-  context.importScripts = path => vm.runInContext(readFileSync(new URL(path,folder),'utf8'),context);
-  vm.runInContext(readFileSync(new URL('browser-worker.js',folder),'utf8'),context);
-  let sequence = 0;
-  function port() {
-    const pending = new Map();
-    const p = {start(){},postMessage(result){pending.get(result.id)?.(result);pending.delete(result.id);}};
-    context.onconnect({ports:[p]});
-    return {raw:p, request(path, body, session, method=body===undefined?'GET':'POST') {
-      return new Promise(resolve=>{
-        const id = ++sequence;
-        pending.set(id,resolve);
-        p.onmessage({data:{id,path,method,body:body===undefined?undefined:JSON.stringify(body),headers:session?{authorization:`Bearer ${session.token}`,'x-csrf-token':session.csrf}:{}}});
-      });
-    }};
-  }
-  return {port, saved, failNextWrite(){failWrite=true;}};
-}
+import {harness} from './testing/worker-harness.mjs';
+
 test('browser worker: admission, privacy, authoritative commands, durability and recovery',async()=>{
   const h = await harness(), instructor = h.port(), student = h.port(), intruder = h.port();
   const opened = await instructor.request('session',{role:'instructor'});
@@ -55,6 +22,9 @@ test('browser worker: admission, privacy, authoritative commands, durability and
   await student.request('room',{action:'ready'},s);
   const sv = (await student.request('state',undefined,s)).body;
   assert.equal(sv.aircraft,undefined); assert.equal(sv.events,undefined); assert.equal(sv.alerts,undefined);
+  assert.equal((await student.request('cloud-view',undefined,s)).status,403);
+  assert.equal((await instructor.request('cloud-view',undefined,i)).body.aircraft,undefined);
+  assert.equal((await instructor.request('cloud-command',cmd('clearance',{action:'right'}),i)).status,400,'cloud commands always run with student authority');
   assert.equal((await student.request('command',cmd('clock',{action:'resume'}),s)).status,400);
   const step = cmd('clock',{action:'step',seconds:60});
   assert.equal((await instructor.request('command',step,i)).status,200);
@@ -84,4 +54,65 @@ test('browser worker: admission, privacy, authoritative commands, durability and
   const failure = await fresh.request('command',cmd('clock',{action:'step',seconds:60}),ri);
   assert.equal(failure.status,507,'failed persistence cannot return accepted');
   assert.equal(reopened.saved.get('checkpoint').state.elapsed,restored.elapsed,'durable state unchanged after failed write');
+});
+
+test('concurrent instructor rooms keep traffic, PINs, commands and storage separate', async () => {
+  const saved = new Map(), directory = new IDBFactory();
+  const rooms = await Promise.all(Array.from({length: 6}, async (_, index) => {
+    const roomId = webcrypto.randomUUID(), h = await harness(saved, {roomId, directory}), instructor = h.port();
+    const session = (await instructor.request('session', {role: 'instructor'})).body;
+    let state = (await instructor.request('state', undefined, session)).body;
+    const command = async (type, payload, aircraftId) => {
+      const result = await instructor.request('command', {id: webcrypto.randomUUID(), exerciseId: state.exerciseId, type, payload, aircraftId}, session);
+      assert.equal(result.status, 200, JSON.stringify(result.body));
+      state = (await instructor.request('state', undefined, session)).body;
+      return state;
+    };
+    await command('scenario-setup', {title: `Room ${index}`, mode: 'area', aircraft: Array.from({length: 24}, (_, i) => ({id: `ac${i + 1}`, callsign: String(1000 + index * 100 + i), qteDeg: i * 15, rangeNm: 25 + i, headingDeg: 180, speedKt: 240, altitudeFt: 10000 + i * 500}))});
+    const room = (await instructor.request('room', undefined, session)).body;
+    return {h, instructor, session, roomId, room, command, state};
+  }));
+  assert.equal(new Set(rooms.map(r => r.room.pin)).size, 6, 'unique simultaneous PINs');
+  assert.equal(new Set(rooms.map(r => r.state.exerciseId)).size, 6, 'unique exercise generations');
+  await Promise.all(rooms.map((r, i) => r.command('clock', {action: 'step', seconds: (i + 1) * 60})));
+  for (let i = 0; i < rooms.length; i++) {
+    const r = rooms[i], state = (await r.instructor.request('state', undefined, r.session)).body;
+    assert.equal(state.elapsed, (i + 1) * 60);
+    assert.equal(state.aircraft.length, 24); assert.equal(state.title, `Room ${i}`);
+    assert.equal(saved.get(`room:${r.roomId}:checkpoint`).state.exerciseId, state.exerciseId);
+    const stranger = r.h.port();
+    assert.equal((await stranger.request('state', undefined, rooms[(i + 1) % 6].session)).status, 401);
+    assert.equal((await stranger.request('session', {role:'student',name:'Wrong room',pin:rooms[(i + 1) % 6].room.pin})).status,403);
+  }
+  const a = rooms[0], b = rooms[1], learner = a.h.port();
+  const student = (await learner.request('session', {role:'student',name:'Controller A',pin:a.room.pin})).body;
+  const waiting = (await a.instructor.request('room',undefined,a.session)).body.students[0];
+  await a.instructor.request('room',{action:'admit',studentId:waiting.id},a.session);
+  await learner.request('room',{action:'ready'},student);
+  await a.command('scope-display',{routesHidden:true});
+  const studentView = (await learner.request('state',undefined,student)).body;
+  assert.equal(studentView.aircraft,undefined); assert.equal(studentView.scopeDisplay.routesHidden,true);
+  assert.notEqual((await b.instructor.request('state',undefined,b.session)).body.scopeDisplay.routesHidden,true);
+});
+
+test('quick continuous turns use existing clearances and cannot be flown by a student', async () => {
+  const h=await harness(), instructor=h.port(), learner=h.port();
+  const session=(await instructor.request('session',{role:'instructor'})).body;
+  const room=(await instructor.request('room',undefined,session)).body;
+  const student=(await learner.request('session',{role:'student',name:'Controller',pin:room.pin})).body;
+  const waiting=(await instructor.request('room',undefined,session)).body.students[0];
+  await instructor.request('room',{action:'admit',studentId:waiting.id},session);
+  let state=(await instructor.request('state',undefined,session)).body;
+  const id=state.aircraft[0].id, start=state.aircraft[0].headingDeg;
+  const cmd=(action)=>({id:webcrypto.randomUUID(),exerciseId:state.exerciseId,type:'clearance',aircraftId:id,payload:{action}});
+  assert.equal((await learner.request('command',cmd('right'),student)).status,400);
+  assert.equal((await instructor.request('command',cmd('right'),session)).status,200);
+  await instructor.request('command',{id:webcrypto.randomUUID(),exerciseId:state.exerciseId,type:'clock',payload:{action:'step',seconds:5}},session);
+  state=(await instructor.request('state',undefined,session)).body;
+  assert.notEqual(state.aircraft[0].headingDeg,start);
+  assert.equal((await instructor.request('command',cmd('stop-turn'),session)).status,200);
+  state=(await instructor.request('state',undefined,session)).body;
+  const stopped=state.aircraft[0].headingDeg;
+  await instructor.request('command',{id:webcrypto.randomUUID(),exerciseId:state.exerciseId,type:'clock',payload:{action:'step',seconds:5}},session);
+  assert.equal((await instructor.request('state',undefined,session)).body.aircraft[0].headingDeg,stopped);
 });

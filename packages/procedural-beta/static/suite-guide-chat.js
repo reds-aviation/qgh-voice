@@ -1,11 +1,12 @@
 (function () {
   'use strict';
+  const knowledge = typeof module === 'object' && module.exports ? require('./guide-knowledge.js') : globalThis.ATCGuideKnowledge;
   const scriptURL = typeof document === 'object' ? document.currentScript?.src : null;
 
   // Curated from procedural-guide.html, instructor-led/training-guide.html and
   // the published QGH Training Centre. No questions leave this page.
   const destinations = {
-    individual: { label: 'Open individual QGH', href: '../index.html' },
+    individual: { label: 'Open individual QGH', href: '../qgh.html' },
     instructor: { label: 'Open instructor-led QGH', href: '../instructor-led/instructor.html#qgh' },
     sra: { label: 'Open SRA instructor beta', href: '../instructor-led/instructor.html#sra' },
     par: { label: 'Open PAR instructor beta', href: '../instructor-led/instructor.html#par' },
@@ -22,12 +23,14 @@
 
   function normalize(input) {
     return String(input || '').slice(0, 1000).normalize('NFKC').toLowerCase()
+      .replace(/\b(?:trun|tuen)\b/g, 'turn').replace(/\b(?:rigth|rihgt)\b/g, 'right').replace(/\bsimulater\b/g, 'simulator')
       .replace(/d\s*\/\s*f/g, 'df').replace(/u\s*\/\s*s/g, 'unserviceable')
       .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
   }
 
-  function matchGuideQuestion(input, context = 'suite') {
-    const q = normalize(input);
+  function matchGuideQuestion(input, context = 'suite', previousIntent = '') {
+    let q = normalize(input);
+    if (/turn/.test(previousIntent) && /^(?:and |what about )?(?:left|right)$/.test(q)) q = 'how to turn ' + q;
     let topic = topics.includes(context) ? context : 'suite';
     const has = pattern => pattern.test(q);
     const procedural = has(/\bprocedural\b/);
@@ -47,12 +50,19 @@
     const reply = (text, links, answerTopic = topic) => ({ matched: true, topic: answerTopic, text, links });
     const fallback = () => ({
       matched: false, topic: topics.includes(context) ? context : 'suite',
-      text: 'I could not match that question to a guide answer. Start with the guide for your simulator:',
+      text: (knowledge?.learning || 'I am also learning. If I’m unable to answer, please refer to the training guides.') + '\n\nI don’t have a reliable simulator answer for that yet. Open the relevant guide below:',
       links: allGuides,
       escalation: 'Contact the creator for further clarification.',
       creator: 'Flt Lt Balaram Reddy · Service No. 38703',
     });
     if (!q) return fallback();
+    if (/^(?:hi|hello|hey|namaste|help|help me|can you help me|who are you|what can you do)(?: gyani)?$/.test(q))
+      return reply('I’m Gyani, your simulator guide. I can help you start or join an exercise, turn aircraft, use bearings, set levels, or declutter the scope. What would you like to do?', topic === 'procedural' ? [guides.procedural] : allGuides);
+    if (/^(?:thanks|thank you|thankyou|ok|okay|got it)(?: gyani)?$/.test(q)) return reply('You’re welcome. Ask me whenever you need help with the simulator.', []);
+    if (/^(?:more|explain|explain more|tell me more|more detail|more details)$/.test(q) && previousIntent) {
+      const entry = knowledge?.entries.find(item => item.id === previousIntent);
+      if (entry) return { ...reply(entry.text + '\n\nThe linked guide has the full procedure and related controls.', [sections(topic === 'procedural' ? guides.procedural : topic === 'qgh-individual' || topic === 'qgh' ? guides.individual : guides.instructor, entry.anchor)]), intent: entry.id };
+    }
 
     const guideQuestion = has(/^(?:please )?(?:show |open |find |read )?(?:me )?(?:the |all )?(?:training )?(?:guide|guides|manual|documentation)$/)
       || has(/\bwhere (?:is|are|can i find|do i find) (?:the |my )?(?:training )?(?:guide|guides|manual)\b/)
@@ -92,11 +102,14 @@
     }
 
     if (topic === 'procedural') {
+      const directIds = ['stop-turn', 'sweep', 'roster-mobile', 'session-isolation'];
+      const direct = knowledge?.entries.find(entry => directIds.includes(entry.id) && new RegExp(entry.match, 'i').test(q));
+      if (direct) return { ...reply(direct.text, [sections(guides.procedural, direct.anchor)]), intent: direct.id };
       if (approachReference) return reply('Open 3° approach for the 10–0 NM table. Approach view frames the final; Show approach marks adds local cues. Distances start at the synthetic runway threshold, not the VOR. Altitude MSL = aerodrome elevation + threshold crossing height + distance NM × 6076.12 × tan(3°), rounded to 10 ft. The instructor sets these references in Edit airspace → Aerodrome & environment. This geometric guide does not command descent or assess obstacle clearance.', [sections(guides.procedural, 'approach-reference')]);
       if (pressure) return reply('The instructor sets QNH, transition altitude (TA), transition level (TL), elevation and threshold crossing height in Edit airspace → Aerodrome & environment. Both desks show QNH/TA/TL; zero TA/TL means unset. These settings are shared; a student’s local scope controls do not change them. Procedural altitude clearances retain the documented QNH/Standard training conversion.', [sections(guides.procedural, 'approach-reference'), sections(guides.procedural, 'pilot')]);
       if (routeOverview) return reply('The selected base loads published route sections crossing a 250 NM region, retaining full source endpoints outside that region. Route overview fits the visible loaded network; Local view returns to the aerodrome. These are local view controls, available on both desks. Chart briefing links official AAI ENR 6 charts with their edition dates, ENR 3 references and published leg limits. This regional selection is not the complete national network or live NOTAM status.', [sections(guides.procedural, 'airspace')]);
       if (pictureControls) return reply('Both procedural desks can drag or scroll to pan, use Ctrl + scroll or +/− to zoom, and use Centre station/Home or Pan arrows. Declutter → Scope detail & tools controls local rings, labels and approach marks. Enable Bearing / range ruler there, then click two map points for true bearing and NM. The instructor’s route and boundary selection is shared; pan, zoom and the ruler affect only your desk. The student still receives no continuous aircraft targets or hidden truth.', [sections(guides.procedural, 'scope'), sections(guides.procedural, 'student')]);
-      if (join) return reply('In Procedural Studio, the instructor opens Session and shares the six-digit PIN. The student opens the student tab, enters their name and PIN, and requests to join. The instructor selects Admit; the student presses Ready. The instructor can then select Run. Use two tabs or windows on this computer.', [sections(guides.procedural, 'start')]);
+      if (join) return reply('In Procedural Studio, the instructor opens Session and shares the six-digit PIN. The student opens the student tab, enters their name and PIN, and requests to join. The instructor selects Admit; the student presses Ready. The instructor can then select Run. Choose This device for two tabs on one computer. When Online room is enabled, select it on both devices and open this same site on the controller device. Keep the instructor tab open.', [sections(guides.procedural, 'start')]);
       if (start || navigation) return reply('Open instructor setup, edit the 1–24 aircraft roster and set the title, runway heading and QNH. Configure airspace if needed, then Create session. The exercise opens paused. Open Session to share the PIN and admit a controller, then select Run when they are Ready.', [destinations.procedural, sections(guides.procedural, 'start')]);
       if (has(/\breopen (?:an? |the |my )?(?:ended )?(?:exercise|session)|\b(?:end|ended|pause|resume) (?:the |my )?exercise|\bexercise (?:ended|paused)|\b(?:nothing moves|traffic (?:stopped|not moving))\b|\brun (?:and |or )?pause buttons?\b|\b(?:run|pause) button\b/)
         || has(/^(?:how (?:do|can) i )?(?:pause|resume|run|end|reopen)(?: (?:the |my )?(?:exercise|session))?$/)) return reply('Pause is an ordinary break. End exercise stops traffic and clears radio for review. Reopen exercise keeps the same aircraft, elapsed time, strips, reports and event history, paused; select Run to continue. If Run is waiting for a controller, they must press Ready or the instructor can remove them in Session.', [sections(guides.procedural, 'review')]);
@@ -133,11 +146,21 @@
       if (audio) return reply('Individual QGH has its own voice controls and preflight audio guidance. The Training Centre explains PTT, Continuous Listening and pilot replies. Manual controls remain available. Follow its headphone check before enabling audible replies.', [sections(guides.individual, 'voice'), sections(guides.individual, 'setup')]);
       if (start || navigation) return reply('Open Single QGH. Choose Normal QGH or U/S Compass, then set tracks, aircraft performance and initial distance. Check the level and airfield settings before starting. The individual Training Centre explains the console and accepted radio calls.', [destinations.individual, sections(guides.individual, 'quick-start')]);
     }
+    const candidates = (knowledge?.entries || []).filter(entry => entry.topics.includes(topic) && new RegExp(entry.match, 'i').test(q));
+    const entry = candidates.find(item => item.id === 'stop-turn') || candidates[0];
+    if (entry) return { ...reply(entry.text, [sections(topic === 'procedural' ? guides.procedural : topic === 'qgh-individual' || topic === 'qgh' ? guides.individual : guides.instructor, entry.anchor)]), intent: entry.id };
+    if (topic === 'suite' && /\b(?:turn|left|right|controls)\b/.test(q)) return reply('For Procedural, select the aircraft and use the left/right arrow buttons. On a mouse, double left-click turns left and double right-click turns right; Stop turn levels the wings. In QGH the controls depend on Normal or U/S Compass. Which simulator are you using?', [destinations.procedural, destinations.individual, destinations.instructor]);
     return fallback();
   }
 
+  function topicForPage(path, hash = '') {
+    if (/\/procedural-beta(?:\/|$)|\/procedural(?:-guide)?\.html$/.test(path)) return 'procedural';
+    if (path.includes('/instructor-led/')) return hash === '#sra' ? 'sra' : hash === '#par' ? 'par' : 'qgh-instructor';
+    if (/\/(?:qgh|qgh-individual|single|tactical|training-centre|user-guide)\.html$/.test(path)) return 'qgh-individual';
+    return 'suite';
+  }
   if (typeof module === 'object' && module.exports) {
-    module.exports = { matchGuideQuestion };
+    module.exports = { matchGuideQuestion, topicForPage };
     return;
   }
   if (typeof document === 'undefined') return;
@@ -150,21 +173,25 @@
       if (text !== undefined) element.textContent = text;
       return element;
     };
-    let topic = /\/qgh-individual\.html$/.test(location.pathname) ? 'qgh-individual' : /\/procedural(?:-guide)?\.html$/.test(location.pathname) ? 'procedural' : location.pathname.includes('/instructor-led/') ? (location.hash === '#sra' ? 'sra' : location.hash === '#par' ? 'par' : 'qgh-instructor') : 'suite';
+    let topic = topicForPage(location.pathname, location.hash);
+    let previousIntent = '';
     let returnFocus = null;
     const root = make('div', 'suite-guide-chat'); root.id = 'suite-guide-chat';
-    const launcher = make('button', 'suite-guide-chat__launcher', 'Training help');
+    const launcher = make('button', 'suite-guide-chat__launcher');
+    const fox = make('img', 'suite-guide-chat__fox'); fox.src = new URL('gyani-fox.png', scriptURL || location.href).href; fox.alt = ''; fox.width = 48; fox.height = 48; fox.decoding = 'async';
+    const invitation = make('span', 'suite-guide-chat__invitation', 'Gyani · Ask me if you need help');
+    launcher.append(fox, invitation); launcher.setAttribute('aria-label', 'Ask Gyani for simulator help');
     launcher.type = 'button'; launcher.setAttribute('aria-haspopup', 'dialog');
     launcher.setAttribute('aria-controls', 'suite-guide-chat-panel'); launcher.setAttribute('aria-expanded', 'false');
     const panel = make('section', 'suite-guide-chat__panel'); panel.id = 'suite-guide-chat-panel'; panel.hidden = true;
     panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-modal', 'false'); panel.setAttribute('aria-labelledby', 'suite-guide-chat-title');
     const header = make('header', 'suite-guide-chat__header');
     const heading = make('div');
-    const title = make('h2', '', 'Training help'); title.id = 'suite-guide-chat-title';
-    heading.append(title, make('p', '', 'Guided answers from the training guides'));
-    const close = make('button', 'suite-guide-chat__close', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Close training help');
-    header.append(heading, close);
-    const history = make('div', 'suite-guide-chat__history'); history.setAttribute('role', 'log'); history.setAttribute('aria-live', 'polite'); history.setAttribute('aria-relevant', 'additions'); history.setAttribute('aria-label', 'Training help conversation');
+    const title = make('h2', '', 'Gyani'); title.id = 'suite-guide-chat-title';
+    heading.append(title, make('p', '', 'Your simulator guide'));
+    const close = make('button', 'suite-guide-chat__close', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Collapse Gyani');
+    header.append(fox.cloneNode(), heading, close);
+    const history = make('div', 'suite-guide-chat__history'); history.setAttribute('role', 'log'); history.setAttribute('aria-live', 'polite'); history.setAttribute('aria-relevant', 'additions'); history.setAttribute('aria-label', 'Conversation with Gyani');
     const suggestions = make('div', 'suite-guide-chat__suggestions'); suggestions.setAttribute('aria-label', 'Suggested questions');
     const quickLinks = make('nav', 'suite-guide-chat__guides'); quickLinks.setAttribute('aria-label', 'All training guides');
     const form = make('form', 'suite-guide-chat__composer');
@@ -183,7 +210,7 @@
     for (const link of allGuides) quickLinks.append(linkNode(link));
     function addMessage(kind, text, answer) {
       const item = make('article', 'suite-guide-chat__message suite-guide-chat__message--' + kind);
-      item.append(make('span', 'suite-guide-chat__speaker', kind === 'user' ? 'You' : 'Training help'), make('p', '', text));
+      item.append(make('span', 'suite-guide-chat__speaker', kind === 'user' ? 'You' : 'Gyani'), make('p', '', text));
       if (answer?.links?.length) {
         const links = make('div', 'suite-guide-chat__answer-links');
         for (const link of answer.links) links.append(linkNode(link));
@@ -196,7 +223,7 @@
     }
     function setSuggestions() {
       suggestions.replaceChildren();
-      const questions = topic === 'procedural' ? ['How do I join?', 'How do I reopen an ended exercise?', 'How long does the D/F bearing hold?'] : topic === 'suite' || topic === 'qgh' ? ['Which simulator should I choose?', 'How do I start individual QGH?', 'How do I start SRA?'] : ['What next?', 'How do I join?', 'Where is the guide?'];
+      const questions = topic === 'procedural' ? ['How to turn right?', 'How do I join?', 'How do I set radar RPM?'] : topic === 'suite' || topic === 'qgh' ? ['Which simulator should I choose?', 'How do I start individual QGH?', 'How do I start SRA?'] : ['What next?', 'How do I join?', 'Where is the guide?'];
       for (const question of questions) {
         const button = make('button', '', question); button.type = 'button';
         button.addEventListener('click', () => { input.value = question; sendQuestion(); }); suggestions.append(button);
@@ -214,7 +241,7 @@
       if (activeExercise()) { closePanel(false); return; }
       const question = input.value.trim().slice(0, 1000); if (!question) return;
       addMessage('user', question);
-      const answer = matchGuideQuestion(question, topic); topic = answer.topic;
+      const answer = matchGuideQuestion(question, topic, previousIntent); topic = answer.topic; previousIntent = answer.intent || '';
       addMessage('assistant', answer.text, answer); input.value = ''; send.disabled = true; setSuggestions(); input.focus();
     }
     launcher.addEventListener('click', () => {
@@ -231,12 +258,24 @@
       else if (event.target === input && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); sendQuestion(); }
     });
     function syncAvailability() {
+      const destination = document.body.classList.contains('desk-open')
+        ? document.getElementById('edge-actions')
+        : document.querySelector('.topbar nav, .suite-header-left, .entry-program-tabs, .header-links, .header-nav') || document.body;
+      if (root.parentElement !== destination) destination.append(root);
+      root.classList.toggle('suite-guide-chat--desk', document.body.classList.contains('desk-open'));
       root.hidden = activeExercise();
       if (root.hidden) closePanel(false);
     }
     new MutationObserver(syncAvailability).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     if (exerciseState) new MutationObserver(syncAvailability).observe(exerciseState, { childList: true, characterData: true, subtree: true });
-    addMessage('assistant', 'Ask where to start, how to join, or how a control works. I match questions to the training guides on this page. Choose a simulator to begin.');
+    function fitKeyboard() {
+      const viewport = window.visualViewport;
+      if (viewport) { panel.style.setProperty('--gyani-height', `${Math.max(240, viewport.height - 16)}px`); panel.style.top = `${viewport.offsetTop + 8}px`; }
+    }
+    window.visualViewport?.addEventListener('resize', fitKeyboard);
+    window.visualViewport?.addEventListener('scroll', fitKeyboard);
+    fitKeyboard();
+    addMessage('assistant', 'I’m Gyani, your simulator guide. Ask me how to turn, join, transmit or use the scope.\n\n' + knowledge.learning);
     setSuggestions();
     syncAvailability();
   }

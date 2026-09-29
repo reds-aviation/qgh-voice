@@ -1,3 +1,5 @@
+import { createAircraftGestures, nearestAircraft } from './scope-interaction.js';
+import { createRadarSweep } from './radar-sweep.js';
 import { recordTrail, trailDots } from './scope-history.js';
 import { createTrafficSetup } from './traffic-setup.js';
 import { createChartWorkshop, drawAreas, routeWindowOpen } from './chart-workshop.js';
@@ -9,6 +11,10 @@ const val = (form, name) => field(form, name).value.trim();
 const num = (form, name) => Number(val(form, name));
 const text = (id, value) => { $(id).textContent = String(value ?? ''); };
 const norm = (v) => (v % 360 + 360) % 360;
+const sizeDeskToViewport = () => document.documentElement.style.setProperty('--usable-height', `${window.visualViewport?.height || window.innerHeight || 700}px`);
+window.visualViewport?.addEventListener('resize', sizeDeskToViewport);
+window.addEventListener('resize', sizeDeskToViewport);
+sizeDeskToViewport();
 const pad = (v) => String(Math.round(norm(v)) % 360).padStart(3, '0');
 const clock = (n) => new Date((36000 + n) * 1000).toISOString().slice(11, 19);
 const elapsed = (n) => `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, '0')}`;
@@ -43,7 +49,7 @@ function syncEnvironmentInputs() {
 }
 let lastElapsed = -1, trailHistory = new Map(), drafts = new Map(), stripRevision = 0;
 let pan = { x: 0, y: 0 }, ruler = [], pointer = null;
-const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false };
+const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 12 };
 const hiddenAreas = new Set(), hiddenRoutes = new Set();
 let conditionAircraft = '';
 const conditionDirty = new Set();
@@ -178,13 +184,12 @@ function storeDraftIfDirty() {
 function tab(name, open = true) {
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     document.querySelectorAll('.tab-content').forEach(p => p.hidden = p.id !== `tab-${name}`);
-    text('drawer-title', { strip: 'Flight strips', pilot: 'Aircraft controls', build: 'Airspace workshop', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope', feedback: 'Feedback' }[name] || name);
+    text('drawer-title', { strip: 'Flight strips', pilot: 'Aircraft controls', build: 'Airspace workshop', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope' }[name] || name);
     $('work-panel').hidden = !open;
     document.body.classList.toggle('drawer-open', open);
     if (open) {
         drawerReturn = document.activeElement;
-        if (window.innerWidth < 1050)
-            requestAnimationFrame(() => $('work-panel').scrollIntoView({ block: 'start', behavior: 'smooth' }));
+        $('drawer-close').focus({ preventScroll: true });
     }
 }
 function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open'); drawerReturn?.focus(); }
@@ -250,12 +255,18 @@ function enter(s, startPolling = true) {
     setStage(s.role === 'instructor' ? 'desk' : 'waiting');
     $('signout').hidden = false;
     const instructor = s.role === 'instructor';
+    $('session-mode').value = s.cloud ? 'online' : 'local';
+    $('open-student').href = `procedural.html?position=student${s.cloud ? '&connection=online' : ''}`;
+    $('open-student').rel = 'noopener';
+    $('open-student').previousElementSibling.textContent = s.cloud
+        ? 'On the other device, open Procedural, choose Online room and enter this PIN. Admit the controller here, then ask them to press Ready. Keep this instructor tab open.'
+        : 'Open the controller in a new browser tab. Use an extended display: move the student tab to the second monitor, then select full screen.';
     document.querySelectorAll('[data-tab="layers"]').forEach(el => { el.textContent = instructor ? 'Declutter' : 'Chart layers'; });
     text('layer-heading-title', instructor ? 'Show what you need.' : 'Instructor-set chart layers');
     text('edge-pin', instructor ? '······' : '');
     text('role', instructor ? 'INSTRUCTOR / PSEUDO-PILOT' : 'STUDENT / PROCEDURAL CONTROLLER');
     text('scope-title', instructor ? 'INSTRUCTOR TRUTH · CONTINUOUS TRAFFIC' : 'PROCEDURAL PICTURE · D/F ONLY');
-    text('scope-caption', instructor ? 'Drag or scroll to pan · Ctrl + scroll to zoom · click an aircraft to select' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
+    text('scope-caption', instructor ? 'Drag to pan · Ctrl + scroll to zoom · double left/right mouse click: turn · tap: controls' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
     $('clock-controls').hidden = !instructor;
     $('scope-manual-dock').hidden = !instructor;
     $('scope-flight-controls').hidden = !instructor;
@@ -273,7 +284,7 @@ function enter(s, startPolling = true) {
     if (startPolling)
         void poll(generation);
 }
-async function openSession(role) {
+async function openSession(role, resumeRoom = false) {
     if (role === 'instructor' && session?.role === role) {
         await showTrafficSetup();
         return;
@@ -286,14 +297,15 @@ async function openSession(role) {
     pendingClock = '';
     document.querySelectorAll('#entry button').forEach(b => b.disabled = true);
     try {
-        const payload = role === 'instructor' ? { role } : { role, pin: $('student-pin').value.trim(), name: $('student-name').value.trim() };
+        const connection = $('session-mode').value;
+        const payload = role === 'instructor' ? { role, resumeRoom, connection } : { role, connection, pin: $('student-pin').value.trim(), name: $('student-name').value.trim() };
         const s = await request('/api/procedural/session', payload);
         if (stamp === generation) {
             enter(s, false);
             const current = generation;
             try {
                 await refresh(current);
-                if (current === generation && role === 'instructor')
+                if (current === generation && role === 'instructor' && !resumeRoom)
                     await showTrafficSetup();
             }
             finally {
@@ -603,6 +615,9 @@ function renderSelection() {
     text('pilot-callsign', row ? `${row.callsign} · pilot` : 'Aircraft controls');
     text('strip-route', row ? `${row.type} · ${view.routes.find(r => r.id === row.routeId)?.name || 'Direct / heading assigned'}` : '');
     const a = view.aircraft?.find(a => a.id === selected);
+    $('aircraft-quick-controls').hidden = session?.role !== 'instructor' || !a || a.status === 'scheduled';
+    text('quick-aircraft-info', a ? `${a.callsign} · ${pad(a.headingDeg)}°T · ${Math.round(a.altitudeFt)} FT · ${Math.round(a.speedKt)} KT` : '');
+    $('aircraft-quick-controls').querySelectorAll('button').forEach(b => b.disabled = !a || !!view.terminated || commandBusy);
     text('scope-selected-truth', a ? `${pad(a.headingDeg)}°T · ${Math.round(a.speedKt)} KT · ${Math.round(a.altitudeFt)} FT MSL${a.compassUnserviceable ? ' · COMPASS U/S' : ''}` : '');
     document.querySelectorAll('#scope-manual-dock button,#scope-flight-controls button,#clearance-form button,#transmit-form button').forEach(b => b.disabled = !a || !!view?.terminated);
     document.querySelectorAll('#scope-heading-form button,#heading-report').forEach(b => b.disabled = !a || !!a.compassUnserviceable || !!view?.terminated);
@@ -854,7 +869,9 @@ async function updateMap(id) {
 }
 const canvas = $('scope'), ctx = canvas.getContext('2d');
 function geometry() { const width = canvas.clientWidth || 600, height = canvas.clientHeight || 500; return { width, height, scale: Math.min(width, height) / (range * 2.3), cx: width / 2 + pan.x, cy: height / 2 + pan.y }; }
+const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 function draw() {
+    sweep.update();
     $('approach-marks').setAttribute('aria-pressed', String(display.approach));
     text('approach-marks', display.approach ? 'Hide approach marks' : 'Show approach marks');
     const g = geometry(), ratio = window.devicePixelRatio || 1;
@@ -1241,6 +1258,15 @@ const fitTraffic = actionButton('Fit all traffic', async () => {
 fitTraffic.dataset.instructorTool = '';
 const rulerButton = actionButton('Bearing / range ruler', async () => { display.ruler = !display.ruler; ruler = []; message(display.ruler ? 'Click two scope points to measure.' : 'Ruler off.'); draw(); });
 toolsBody.append(fitTraffic, rulerButton);
+const sweepRow = make('label', undefined, 'check');
+const sweepToggle = document.createElement('input'); sweepToggle.type = 'checkbox'; sweepToggle.checked = display.sweep;
+sweepToggle.id = 'sweep-enabled'; sweepRow.append(sweepToggle, document.createTextNode('360° radar sweep'));
+const rpmLabel = make('label', 'Sweep speed · RPM');
+const rpmInput = document.createElement('input'); rpmInput.id = 'sweep-rpm'; rpmInput.type = 'number'; rpmInput.min = '1'; rpmInput.max = '60'; rpmInput.step = '1'; rpmInput.value = '12';
+rpmLabel.append(rpmInput);
+sweepToggle.onchange = () => { display.sweep = sweepToggle.checked; sweep.update(); };
+rpmInput.onchange = () => { if (rpmInput.value && rpmInput.reportValidity()) { display.sweepRpm = Number(rpmInput.value); sweep.update(); } };
+toolsBody.append(sweepRow, rpmLabel, make('small', 'One revolution = 60 ÷ RPM seconds. Display sweep only.'));
 toolsPanel.append(toolsBody);
 $('layer-controls').append(toolsPanel);
 for (const group of ['route', 'area']) {
@@ -1260,55 +1286,74 @@ function syncRange() {
     s.value = String(range);
 }
 function position(e) { const b = canvas.getBoundingClientRect(), g = geometry(); return { x: (e.clientX - b.left - g.cx) / g.scale, y: -(e.clientY - b.top - g.cy) / g.scale }; }
+const gestures = createAircraftGestures();
+function hitAircraft(e) {
+    return session?.role === 'instructor' && !display.ruler
+        ? nearestAircraft(view?.aircraft, position(e), geometry().scale, e.pointerType === 'touch' ? 30 : 24) : null;
+}
+function hideAircraftHover() { $('aircraft-hover').hidden = true; }
+async function immediateTurn(action, id = selected) {
+    if (session?.role !== 'instructor' || !id || view?.terminated) return;
+    return command('clearance', { action }, id);
+}
+canvas.addEventListener('contextmenu', e => { if (session?.role === 'instructor') e.preventDefault(); });
 canvas.addEventListener('pointerdown', e => {
-    if (!session || !e.isPrimary || e.button !== 0)
-        return;
-    e.preventDefault();
-    canvas.focus({ preventScroll: true });
-    canvas.setPointerCapture(e.pointerId);
-    pointer = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragging: false };
+    if (!session || !e.isPrimary || ![0, 2].includes(e.button)) return;
+    if (e.button === 2 && session.role !== 'instructor') return;
+    e.preventDefault(); hideAircraftHover();
+    canvas.focus({ preventScroll: true }); canvas.setPointerCapture(e.pointerId);
+    pointer = { id: e.pointerId, button: e.button, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragging: false };
 });
 canvas.addEventListener('pointermove', e => {
-    if (!pointer)
+    if (!pointer) {
+        const a = e.pointerType === 'mouse' ? hitAircraft(e) : null;
+        const tooltip = $('aircraft-hover'); tooltip.hidden = !a;
+        canvas.style.cursor = a ? 'pointer' : 'grab';
+        if (a) {
+            tooltip.textContent = `${a.callsign} · ${a.type}\n${pad(a.headingDeg)}°T · ${Math.round(a.altitudeFt)} FT MSL · ${Math.round(a.speedKt)} KT\n${a.mode} · ${a.status}`;
+            const bounds = canvas.getBoundingClientRect();
+            tooltip.style.left = `${Math.max(4, Math.min(e.clientX - bounds.left + 14, bounds.width - tooltip.offsetWidth - 6))}px`;
+            tooltip.style.top = `${Math.max(4, Math.min(e.clientY - bounds.top + 16, bounds.height - tooltip.offsetHeight - 6))}px`;
+        }
         return;
-    if (Math.hypot(e.clientX - pointer.startX, e.clientY - pointer.startY) > 5)
-        pointer.dragging = true;
-    if (pointer.dragging) {
-        pan = { x: pointer.panX + e.clientX - pointer.startX, y: pointer.panY + e.clientY - pointer.startY };
-        draw();
+    }
+    if (pointer.id !== e.pointerId) return;
+    if (Math.hypot(e.clientX - pointer.startX, e.clientY - pointer.startY) > 5) { pointer.dragging = true; gestures.reset(); }
+    if (pointer.dragging && pointer.button === 0) {
+        pan = { x: pointer.panX + e.clientX - pointer.startX, y: pointer.panY + e.clientY - pointer.startY }; draw();
     }
 });
 canvas.addEventListener('pointerup', e => {
-    if (!pointer || !view)
-        return;
-    const wasDrag = pointer.dragging;
-    pointer = null;
-    if (canvas.hasPointerCapture(e.pointerId))
-        canvas.releasePointerCapture(e.pointerId);
-    if (wasDrag)
-        return;
+    if (!pointer || pointer.id !== e.pointerId || !view) return;
+    const pressed = pointer; pointer = null;
+    if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    if (pressed.dragging) return;
     const p = position(e);
     if (display.ruler) {
-        if (ruler.length === 2)
-            ruler = [];
-        ruler.push(p);
-        draw();
-        return;
+        gestures.reset();
+        if (pressed.button !== 0) return;
+        if (ruler.length === 2) ruler = [];
+        ruler.push(p); draw(); return;
     }
-    if (session?.role !== 'instructor')
-        return;
-    const near = (view.aircraft || []).map(a => ({ a, d: Math.hypot(a.xNm - p.x, a.yNm - p.y) })).sort((a, b) => a.d - b.d)[0];
-    if (near && near.d * geometry().scale < 20) {
-        choose(near.a.id);
-    }
-    else {
-        field('fix-form', 'xNm').value = p.x.toFixed(2);
-        field('fix-form', 'yNm').value = p.y.toFixed(2);
-        message(`Fix position set: ${p.x.toFixed(1)} NM east, ${p.y.toFixed(1)} NM north.`);
+    if (session?.role !== 'instructor') return;
+    const a = hitAircraft(e);
+    if (a) {
+        choose(a.id);
+        const direction = gestures.press({ id: a.id, button: pressed.button, pointerType: e.pointerType, time: e.timeStamp, x: e.clientX, y: e.clientY });
+        if (direction) void safe(() => immediateTurn(direction, a.id))();
+    } else {
+        gestures.reset();
+        if (pressed.button !== 0) return;
+        field('fix-form', 'xNm').value = p.x.toFixed(2); field('fix-form', 'yNm').value = p.y.toFixed(2);
     }
 });
+canvas.addEventListener('pointerleave', hideAircraftHover);
 for (const event of ['pointercancel', 'lostpointercapture'])
-    canvas.addEventListener(event, () => { pointer = null; });
+    canvas.addEventListener(event, () => { if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
+for (const direction of ['left', 'right']) $('quick-' + direction).onclick = safe(() => immediateTurn(direction));
+$('quick-stop').onclick = safe(() => immediateTurn('stop-turn'));
+$('quick-transmit').onclick = safe(() => command('transmit', { mode: 'df', durationSeconds: 8 }, selected));
+$('quick-more').onclick = () => tab('pilot');
 function zoomScope(factor, clientX, clientY) {
     const before = geometry(), bounds = canvas.getBoundingClientRect();
     const x = clientX == null ? before.width / 2 : clientX - bounds.left, y = clientY == null ? before.height / 2 : clientY - bounds.top;
@@ -1353,6 +1398,7 @@ $('bearing-type').onchange = () => draw();
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => tab(b.dataset.tab));
 bindForm('student-join', () => openSession('student'));
 bindForm('instructor-login', () => openSession('instructor'));
+$('resume-local-exercise').onclick = safe(() => openSession('instructor', true));
 $('signout').onclick = leave;
 $('resume').onclick = safe(startExercise);
 $('pause').onclick = safe(() => command('clock', { action: 'pause' }));
@@ -1782,16 +1828,6 @@ $('back-flow').onclick = safe(async () => {
 });
 $('return-desk').onclick = () => { setStage(session?.role === 'student' && room?.status !== 'ready' ? 'waiting' : 'desk'); draw(); };
 $('restart-setup').onclick = safe(showTrafficSetup);
-bindForm('feedback-form', async () => {
-    const report = `ATC SimBox · Procedural Studio — feedback\nFor: Flt Lt Balaram Reddy · Service No. 38703\nDate: ${new Date().toISOString()}\nPosition: ${session?.role || 'entry'}\nExercise: ${view?.title || ''}\n\n${val('feedback-form', 'text')}\n`;
-    const url = URL.createObjectURL(new Blob([report], { type: 'text/plain;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'ATC-SimBox-Feedback.txt';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    message('Feedback note downloaded.');
-});
 $('centre-scope').onclick = () => { const g = geometry(); pan = { x: -(view?.environment.stationXNm || 0) * g.scale, y: (view?.environment.stationYNm || 0) * g.scale }; draw(); };
 function fitScope(points) {
     const fitted = fitNavigation(points, canvas.clientWidth, canvas.clientHeight);

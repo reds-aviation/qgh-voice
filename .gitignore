@@ -72,3 +72,6 @@ docs/qa/v5-media-captures/masters/
 docs/qa/v5-media-captures/work/
 docs/qa/v5-media-captures/fresh/
 docs/qa/v5-ce-work-receipt.json
+
+# Procedural test dependencies (never shipped)
+packages/procedural-beta/node_modules/

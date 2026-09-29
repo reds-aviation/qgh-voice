@@ -65,6 +65,14 @@ export function createTrafficSetup(host) {
     airspaceRow.append(airspaceLabel, airspaceButton);
     const roster = element('div', 'roster-editor');
     roster.append(element('h2', 'roster-editor-head', 'Aircraft roster'));
+    const navigator = element('label', 'roster-navigator', 'Jump to aircraft');
+    const jump = element('select'); jump.setAttribute('aria-label', 'Jump to aircraft in roster'); navigator.append(jump); roster.append(navigator);
+    jump.onchange = () => {
+        const input = rows[Number(jump.value)]?.inputs.callsign;
+        input?.focus({ preventScroll: true }); input?.scrollIntoView({ block: 'center', behavior: 'auto' });
+    };
+    const phone = window.matchMedia('(max-width: 700px)');
+    phone.addEventListener('change', () => syncControls());
     const scroll = element('div', 'roster-scroll');
     const table = element('div', 'roster-table');
     table.setAttribute('role', 'table');
@@ -123,6 +131,7 @@ export function createTrafficSetup(host) {
         };
         const callsign = element('input');
         callsign.type = 'text';
+        callsign.autocomplete = 'off'; callsign.spellcheck = false; callsign.enterKeyHint = 'next';
         const usedCallsigns = new Set(rows.map(existing => existing.inputs.callsign.value.trim()));
         let number = 101;
         while (usedCallsigns.has(String(number)))
@@ -146,7 +155,7 @@ export function createTrafficSetup(host) {
         return { element: row, inputs };
     }
     function syncControls() {
-        roster.classList.toggle('roster-editor--cards', visibleCount <= 2);
+        roster.classList.toggle('roster-editor--cards', visibleCount <= 2 || phone.matches);
         while (rows.length < visibleCount)
             rows.push(addRow(rows.length));
         form.querySelectorAll('input, select, button').forEach(control => {
@@ -157,6 +166,12 @@ export function createTrafficSetup(host) {
             for (const input of Object.values(row.inputs))
                 input.disabled = pending || index >= visibleCount;
         });
+        const chosen = jump.value;
+        jump.replaceChildren(...rows.slice(0, visibleCount).map((row, index) => {
+            const option = element('option', '', `${index + 1} · ${row.inputs.callsign.value || 'Aircraft'}`); option.value = String(index); return option;
+        }));
+        jump.value = chosen && Number(chosen) < visibleCount ? chosen : '0';
+        navigator.hidden = visibleCount < 2;
         create.textContent = pending ? 'Creating session…' : 'Create session';
         form.setAttribute('aria-busy', String(pending));
     }
@@ -256,6 +271,13 @@ export function createTrafficSetup(host) {
     count.addEventListener('change', updateCount);
     runway.addEventListener('input', () => { runwayEdited = true; });
     qnh.addEventListener('input', () => { qnhEdited = true; });
+    form.addEventListener('focusin', event => {
+        if (!phone.matches || !(event.target instanceof HTMLInputElement)) return;
+        const current = event.target;
+        // Give the software keyboard time to resize the visible viewport.
+        setTimeout(() => { if (document.activeElement === current) current.scrollIntoView({ block: 'center', behavior: 'auto' }); }, 300);
+    });
+    form.addEventListener('change', event => { if (event.target.dataset.field === 'callsign') syncControls(); });
     form.addEventListener('input', event => {
         if (event.target instanceof HTMLElement)
             event.target.removeAttribute('aria-invalid');

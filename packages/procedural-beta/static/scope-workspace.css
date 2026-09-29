@@ -33,7 +33,6 @@ body.desk-open {
 body.desk-open.exercise-running { --desk-header-height: 0px; }
 body.desk-open.exercise-running .topbar,
 body.desk-open.exercise-running .scope-caption,
-body.desk-open.exercise-running [data-tab="feedback"],
 body.desk-open.exercise-running #student-instrument-note { display: none; }
 body.desk-open .topbar,
 body.setup-open .topbar {
@@ -693,3 +692,97 @@ body.desk-open #compact-flight-slot #scope-speed-form label { grid-column: span 
   body.desk-open.compact-controls.instructor-desk .scope-panel.homing-right .instrument-dock { grid-template-columns: minmax(0, 1fr); }
   body.desk-open.compact-controls.instructor-desk .instrument-dock .homing { grid-column: 1; justify-self: center; }
 }
+
+/* A small control shelf stays with the selected aircraft; the chart keeps its
+   own space. All advanced forms remain in the independently scrolling drawer. */
+body.desk-open .scope-wrap { display: flex; flex-direction: column; }
+.scope-plot { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.radar-sweep { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+#aircraft-hover { position: absolute; z-index: 4; pointer-events: none; max-width: min(285px, 90%); padding: 9px 12px; border: 1px solid #71848d; border-radius: 6px; background: #172128f5; color: #edf3f5; font: 12px/1.5 PlexMono, monospace; white-space: pre-line; box-shadow: 0 4px 16px #0008; }
+#aircraft-quick-controls { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; padding: 5px 8px; border-top: 1px solid var(--radar-line); background: #20282e; }
+#quick-aircraft-info { font: 11px/1.4 PlexMono, monospace; color: #ffe19a; }
+#aircraft-quick-controls > div { display: flex; gap: 4px; flex-wrap: wrap; }
+#aircraft-quick-controls button { min-height: 36px; padding: 6px 9px; font-size: 12px; color: #e7ecef; background: #303e47; border-color: #71848d; }
+#aircraft-quick-controls #quick-stop { border-color: #b99c65; color: #ffe3a9; }
+#aircraft-quick-controls button:focus-visible { outline: 3px solid #f4c767; }
+.pilot-detail { margin: 12px 0; border: 1px solid var(--radar-line); border-radius: 6px; padding: 10px; }
+.pilot-detail > summary { cursor: pointer; min-height: 32px; font-size: 13px; }
+#work-panel #truth-readout { font-size: 11px; padding: 8px; line-height: 1.4; }
+#work-panel #pilot-callsign { margin: 6px 0; }
+#compact-manual-slot #scope-manual-dock { padding: 8px !important; }
+#compact-manual-slot #scope-selected-truth { margin: 4px 0 8px; }
+.roster-navigator { display: flex; gap: 12px; align-items: center; margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.roster-navigator select { width: auto; min-width: 135px; margin: 0; font-size: 16px; }
+
+@media (min-width: 701px) and (max-width: 1049px) {
+  body.desk-open.drawer-open { height: 100dvh; overflow: hidden; }
+  body.desk-open.drawer-open #main { height: calc(100dvh - var(--desk-header-height)); }
+  body.desk-open.drawer-open #desk { height: 100%; display: grid; }
+  body.desk-open.drawer-open .workspace { width: calc(100% - 320px); height: 100%; min-height: 0; }
+  body.desk-open #work-panel { position: fixed; top: calc(var(--desk-header-height) + var(--desk-exercise-height)); bottom: 0; right: 0; width: 320px; height: auto; min-height: 0; }
+  body.desk-open.drawer-open .scope-edge-actions { display: none; }
+  body.desk-open.drawer-open .scope-panel { grid-template-columns: 130px minmax(0, 1fr) 0; }
+  body.desk-open.drawer-open .scope-panel.homing-right { grid-template-columns: 0 minmax(0, 1fr) 130px; }
+}
+
+@media (max-width: 700px) {
+  /* One page scroll for the entire roster. No sideways grid or nested trap. */
+  .roster-scroll { max-height: none; overflow: visible; overscroll-behavior: auto; }
+  .roster-editor--cards .roster-body { padding: 8px; gap: 10px; }
+  .roster-editor--cards .roster-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roster-editor--cards .roster-cell { padding: 8px; }
+  .roster-editor--cards .roster-cell input, .setup-field input, .setup-field select { font-size: 16px; min-height: 44px; scroll-margin-block: 70px; }
+  .roster-editor--cards .roster-cell input[type=checkbox] { width: 24px; min-height: 24px; }
+  .setup-actions { position: static; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  body.setup-open .topbar { height: auto; min-height: 38px; flex-wrap: wrap; }
+  body.desk-open, body.desk-open.drawer-open { height: var(--usable-height, 100dvh); min-height: 0; overflow: hidden; }
+  body.desk-open #main, body.desk-open.drawer-open #main { height: calc(var(--usable-height, 100dvh) - var(--desk-header-height)); }
+  body.desk-open #desk, body.desk-open.drawer-open #desk { height: 100%; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  body.desk-open .exercisebar { min-height: 70px; padding: 5px 8px; gap: 5px; }
+  body.desk-open .workspace, body.desk-open.drawer-open .workspace { height: 100%; min-height: 0; width: 100%; }
+  body.desk-open .scope-panel, body.desk-open .scope-panel.homing-right, body.desk-open.controls-collapsed .scope-panel, body.desk-open.controls-collapsed .scope-panel.homing-right {
+    height: 100%; min-height: 0; grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 36px 122px minmax(0, 1fr) 51px 0 24px;
+  }
+  body.desk-open .scope-toolbar { padding: 3px 6px; min-height: 34px; }
+  body.desk-open .scope-toolbar > span { display: none; }
+  body.desk-open .scope-toolbar > div { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  body.desk-open .scope-toolbar button, body.desk-open .scope-toolbar select { flex-shrink: 0; min-height: 32px; }
+  body.desk-open .instrument-dock, body.desk-open .instrument-dock.right,
+  body.desk-open.compact-controls.instructor-desk .instrument-dock,
+  body.desk-open.compact-controls.instructor-desk .scope-panel.homing-right .instrument-dock { grid-template-columns: 108px minmax(0, 1fr); padding: 4px 6px; gap: 7px; overflow: hidden; }
+  body.desk-open .instrument-dock .homing, body.desk-open .instrument-dock .homing.right,
+  body.desk-open.compact-controls.instructor-desk .instrument-dock .homing { grid-column: 1; grid-row: 1; width: 108px; height: 114px; padding: 4px; }
+  body.desk-open .instrument-dock #homing-dial { height: 36px; }
+  body.desk-open .instrument-dock .bearing strong { font-size: 23px; }
+  body.desk-open .homing-head strong { font-size: 8px; }
+  body.desk-open .instrument-dock #df-source, body.desk-open #mag-reference-note { font-size: 8px; line-height: 1.1; margin-top: 2px; padding-top: 2px; }
+  body.desk-open #pilot-readback { grid-column: 2; grid-row: 1; margin: 0; padding: 6px; max-height: 114px; overflow-y: auto; }
+  body.desk-open #pilot-readback #radio-caption { max-height: 64px; font-size: 12px; line-height: 1.4; }
+  body.desk-open #pilot-readback #audio-status { display: none; }
+  body.desk-open #student-instrument-note { display: none; }
+  body.desk-open .scope-wrap { min-height: 0; height: 100%; }
+  #aircraft-quick-controls { padding: 4px; gap: 3px; }
+  #quick-aircraft-info { width: 100%; font-size: 10px; }
+  #aircraft-quick-controls > div { width: 100%; display: grid; grid-template-columns: 1fr 1.2fr 1fr 1fr .85fr; gap: 3px; }
+  #aircraft-quick-controls button { min-width: 0; min-height: 40px; padding: 5px 3px; font-size: 11px; }
+  body.desk-open .scope-caption { display: none; }
+  body.desk-open .scope-airspace-key { min-height: 24px; flex-wrap: nowrap; overflow-x: auto; padding: 3px 6px; font-size: 9px; }
+  body.desk-open .scope-edge-actions { padding: 4px; gap: 4px; }
+  body.desk-open .scope-edge-actions button { max-width: none; min-height: 42px; }
+  body.desk-open.drawer-open .workspace { display: grid; grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+  body.desk-open.drawer-open .scope-panel, body.desk-open.drawer-open .scope-panel.homing-right { grid-template-rows: 0 0 122px minmax(0, 1fr) 0 0 0; }
+  body.desk-open.drawer-open .scope-toolbar, body.desk-open.drawer-open #scope-traffic-bar,
+  body.desk-open.drawer-open #aircraft-quick-controls, body.desk-open.drawer-open .scope-edge-actions,
+  body.desk-open.drawer-open .scope-airspace-key { display: none; }
+  body.desk-open #work-panel { position: relative; inset: auto; width: 100%; height: 100%; min-height: 0; border-radius: 8px 8px 0 0; }
+  #work-panel .drawer-head { min-height: 38px; padding: 4px 10px; }
+  #work-panel .work-tabs button { padding: 7px 10px; min-height: 36px; }
+  #work-panel .tab-content { padding: 10px; }
+  body.desk-open #work-panel input, body.desk-open #work-panel select, body.desk-open #work-panel textarea { font-size: 16px; }
+}
+/* Connection choice belongs to setup, outside the operating scope. */
+.session-connection { grid-column: 1 / -1; padding: 1rem; border: 1px solid var(--line, #45606a); border-radius: 12px; }
+.session-connection label { display: grid; gap: .4rem; }
+.session-connection select { width: 100%; min-height: 44px; font: inherit; }
+.session-connection p { margin: .65rem 0 0; font-size: .9rem; }

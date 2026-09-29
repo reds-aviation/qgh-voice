@@ -50,6 +50,31 @@ body.desk-open.exercise-running .suite-guide-chat { display: none !important; }
   .suite-guide-chat__panel { right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); width: calc(100vw - 16px); height: calc(100dvh - 16px - env(safe-area-inset-bottom)); max-height: calc(100dvh - 16px - env(safe-area-inset-bottom)); border-radius: 13px; }
   .suite-guide-chat__launcher { right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); }
 }
+
+/* Gyani lives in the navigation/tool rail, never on top of flight controls. */
+.suite-guide-chat { flex: 0 0 auto; display: inline-flex; vertical-align: middle; }
+.suite-guide-chat .suite-guide-chat__launcher {
+  position: static; display: inline-flex; align-items: center; gap: 6px; margin: 0;
+  min-width: 44px; min-height: 44px; width: auto; max-width: 245px; padding: 0 7px 0 0;
+  border: 0; border-radius: 8px; box-shadow: none; background: transparent; color: inherit;
+}
+.suite-guide-chat__launcher:hover { background: #6c9e891a !important; }
+.suite-guide-chat__fox { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.suite-guide-chat__invitation { font-size: 11px; line-height: 1.3; text-align: left; white-space: normal; }
+.suite-guide-chat--desk .suite-guide-chat__invitation { display: none; }
+.suite-guide-chat .suite-guide-chat__panel { top: 8px; bottom: auto; height: min(650px, var(--gyani-height, calc(100dvh - 16px))); max-height: var(--gyani-height, calc(100dvh - 16px)); }
+.suite-guide-chat__header { padding: 10px 12px; gap: 7px; }
+.suite-guide-chat__header > div { flex: 1; }
+.suite-guide-chat__header .suite-guide-chat__close { min-width: 44px; min-height: 44px; font-size: 26px; }
+.suite-guide-chat__composer textarea { font-size: 16px; }
+body > .suite-guide-chat { display: flex; justify-content: flex-end; padding: 8px 18px; }
+body.desk-open .scope-edge-actions .suite-guide-chat { justify-content: center; }
+@media (max-width: 700px) {
+  .suite-guide-chat__invitation { display: none; }
+  .suite-guide-chat .suite-guide-chat__launcher { min-width: 42px; min-height: 42px; padding: 0; }
+  .suite-guide-chat__fox { width: 42px; height: 42px; }
+  .suite-guide-chat .suite-guide-chat__panel { width: calc(100vw - 16px); right: 8px; }
+}
 @media (max-height: 650px) {
   .suite-guide-chat__panel { grid-template-rows: auto minmax(65px, 1fr) auto; }
   .suite-guide-chat__suggestions, .suite-guide-chat__guides { display: none; }

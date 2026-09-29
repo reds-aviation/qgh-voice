@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.29.1",
+  "version": "2026.09.29.2",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 36591,
-      "sha256": "cea2583d6b750f257d768fbd96a2c4ad86192efb7c073bc6c5efd13f15186602"
+      "bytes": 37116,
+      "sha256": "f4001a85ff7c4ab8d9d3864b7e2ebff8aa0031fc53be0407ddddc3b592c07b74"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 93345,
-      "sha256": "aa839fd1c61a79d03cc1eeeac2628ff86f006778ed8c6080ef120a13648a2206"
+      "bytes": 97605,
+      "sha256": "12de25c00f670ac4377784963253e80c3bd95ed26c283072554170507be46079"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 42292,
-      "sha256": "b1e1040fe99260f0ab3ab67016e98f0425d0a3c598d065e1cd136d68873be877"
+      "bytes": 50611,
+      "sha256": "211eb6c6c4f9dd0a5c81be7df454ced784bdee46523dda6d28854ca51c1470e7"
     },
     {
       "path": "static/scope-history.js",
@@ -49,8 +49,8 @@
     },
     {
       "path": "static/traffic-setup.js",
-      "bytes": 13337,
-      "sha256": "551ebd550bd327fa459b0589aa7c97fc56c5b5d7e6f0c739f179855b163e6988"
+      "bytes": 14925,
+      "sha256": "45d3b2d3f0eee52078245bd1062342e8848cc6e3d84e95e30ead79d10418e55c"
     },
     {
       "path": "static/india-airspace.json",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 30095,
-      "sha256": "c2d701650c96b27f3d564418517ee372bc143574e6fcdcc0e178adfa24dc4244"
+      "bytes": 31116,
+      "sha256": "322f6befbbc1ab6f801c7339a1c7d20a31dd50903e39d80e3ca061a088f5233f"
     },
     {
       "path": "static/style.css",
@@ -89,13 +89,13 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 29048,
-      "sha256": "9507e94d94d76c8c32febbce0bd0e8bd72e3f250c39a3cf3b07003f74fd10474"
+      "bytes": 33308,
+      "sha256": "2478e11da437edd365e708cdc0c2d53c115a29b8b81de4288812c61a64c14b2e"
     },
     {
       "path": "static/suite-guide-chat.css",
-      "bytes": 6027,
-      "sha256": "913917b9ac8d67f2295469b8cdcce55734a9f63920fea98b20f31e115484d9fa"
+      "bytes": 7803,
+      "sha256": "ca1c9face2df155d055a2af2c43e3a815a8fb1236d15c824b7de32ebb77fc852"
     },
     {
       "path": "static/fonts/ibm-plex-mono-500.ttf",
@@ -119,13 +119,13 @@
     },
     {
       "path": "static/browser-worker.js",
-      "bytes": 10264,
-      "sha256": "91f141932859af23b361c24892da9ff5fc5a5016dad45b0ff63bd8854b5c9d0f"
+      "bytes": 11498,
+      "sha256": "20f56a975f10d6aa680c8fcd361c7ada5c0a6d0bc81d7f708f3ac4182dfd869c"
     },
     {
       "path": "static/browser-client.js",
-      "bytes": 2272,
-      "sha256": "5eb93a70c0af1a232f52ba87d7e3bdb2129955fc5e7f06672ef5a1286b1761f0"
+      "bytes": 9689,
+      "sha256": "624fc6067d54d74116cf136ed34f5b6a40cce3e03f9d0145166821e727d01bf3"
     },
     {
       "path": "static/procedural-engine.wasm",
@@ -201,6 +201,51 @@
       "path": "engine/go.mod",
       "bytes": 43,
       "sha256": "8b781e20599db65ff35de356844949837a3e5a6ff4f6047800c645f64b6c3393"
+    },
+    {
+      "path": "static/browser-room-registry.js",
+      "bytes": 2181,
+      "sha256": "5c59653597221ebb1c040db4ab2099dcf9454b6e90c52140330a7996987433be"
+    },
+    {
+      "path": "static/current-flow-guide.css",
+      "bytes": 250,
+      "sha256": "b182b9705ea6681c2eb1e3bdc5ca160be2f1e5db4e7aeb1f1a0cba13689406d7"
+    },
+    {
+      "path": "static/guide-knowledge.js",
+      "bytes": 7589,
+      "sha256": "3ac374a1335216adbe0476ff8dea35117d12206afd13585a607f20e574f1fb27"
+    },
+    {
+      "path": "static/gyani-fox.png",
+      "bytes": 1003252,
+      "sha256": "85a3de31e4b099923f60611a683c7fd22061cc8dbc61615b57d2d37b9ab94eb5"
+    },
+    {
+      "path": "static/radar-sweep.js",
+      "bytes": 2959,
+      "sha256": "4af472d0efdbb9ea26fd127eb150187c30fc973b464a72abfb62d7ea6224a55b"
+    },
+    {
+      "path": "static/scope-interaction.js",
+      "bytes": 1227,
+      "sha256": "250dccfffc17114a0134c5e462238b8e4a4de680538f596c73ecf0399ac030b2"
+    },
+    {
+      "path": "static/remote-config.js",
+      "bytes": 264,
+      "sha256": "55a53a2bb863f78259aee98821564b155833bbddf3f033e80a933af63a3730f8"
+    },
+    {
+      "path": "static/remote-service.js",
+      "bytes": 2945,
+      "sha256": "a374754c074a0bd9d9675f3d8bc74528d6dcf3c5bb8301519556acf30ac53963"
+    },
+    {
+      "path": "static/remote-room.js",
+      "bytes": 6234,
+      "sha256": "f8229fc8d0d990d373c56880d939bbda51dba61e85510fa1a295a081b5dea697"
     }
   ]
 }

@@ -1,9 +1,19 @@
-/* One authoritative Go engine per browser profile and site. No network API. */
+/* One authoritative Go engine per isolated instructor room. No network API. */
 'use strict';
-importScripts('wasm_exec.js');
+importScripts('wasm_exec.js', 'browser-room-registry.js');
+const roomID = new URL(self.location.href).searchParams.get('room') || 'legacy';
+if (roomID !== 'legacy' && !/^[a-f0-9-]{36}$/.test(roomID)) throw new Error('Invalid room identifier');
+const storageKey = key => roomID === 'legacy' ? key : `room:${roomID}:${key}`;
+let directoryUpdated = 0;
+async function advertise(rotate = false) {
+  const active = !!owner?.port && Date.now() - owner.seen < 6000;
+  const registered = await ProceduralRooms.register(roomID, active, rotate);
+  room.pin = registered.pin; directoryUpdated = Date.now();
+}
 const sessions = new Map();
 let db, checkpoint, owner, fault, queue = Promise.resolve();
 let room = {pin: '', students: []}, attempts = {start: 0, count: 0};
+let cloud = { enabled: false, seen: 0 };
 const uuid = () => crypto.randomUUID();
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), {status}); };
 function engine(op, value = '', role = 'instructor') {
@@ -23,19 +33,15 @@ function transaction(mode, action) {
 async function persist() {
   const next = engine('checkpoint');
   if (checkpoint?.state.revision === next.state.revision) return;
-  try { await transaction('readwrite', store => store.put(next, 'checkpoint')); checkpoint = next; }
+  try { await transaction('readwrite', store => store.put(next, storageKey('checkpoint'))); checkpoint = next; }
   catch (error) {
     engine('init', checkpoint || 'null');
     fault = 'Exercise paused: browser storage failed. Free space, then reopen this page.';
     fail(fault, 507);
   }
 }
-function resetRoom() {
-  const old = room.pin;
-  do {
-    const values = crypto.getRandomValues(new Uint32Array(1));
-    room.pin = String(values[0] % 1000000).padStart(6, '0');
-  } while (room.pin === old);
+async function resetRoom() {
+  await advertise(true);
   room.students = [];
 }
 const started = (async () => {
@@ -46,7 +52,7 @@ const started = (async () => {
     request.onerror = () => reject(new Error('Allow browser storage to open Procedural Beta.'));
     request.onblocked = () => reject(new Error('Close older procedural tabs and try again.'));
   });
-  checkpoint = await transaction('readonly', store => store.get('checkpoint'));
+  checkpoint = await transaction('readonly', store => store.get(storageKey('checkpoint')));
   const go = new Go();
   const response = await fetch('procedural-engine.wasm');
   if (!response.ok) throw new Error('Cannot load the procedural engine. Refresh while online.');
@@ -54,7 +60,7 @@ const started = (async () => {
   go.run(result.instance).catch(error => { fault = `Engine stopped: ${error.message}`; });
   if (!self.proceduralEngine) throw new Error('Procedural engine did not start.');
   engine('init', checkpoint || 'null');
-  resetRoom();
+  await resetRoom();
   await persist();
 })();
 // Attach immediately so startup failures cannot become unhandled rejections.
@@ -64,8 +70,8 @@ function serial(action) {
   queue = next.catch(() => {});
   return next;
 }
-function tick() { engine('tick', !!owner && Date.now() - owner.seen < 6000 ? 'true' : 'false'); }
-setInterval(() => serial(async () => { await started; if (fault) return; tick(); await persist(); }).catch(() => {}), 250);
+function tick() { engine('tick', !!owner && Date.now() - owner.seen < 6000 && (!cloud.enabled || Date.now() - cloud.seen < 6000) ? 'true' : 'false'); }
+setInterval(() => serial(async () => { await started; if (fault) return; tick(); await persist(); if (Date.now() - directoryUpdated > 5000) await advertise(); }).catch(() => {}), 250);
 function roomView(session) {
   return session.role === 'instructor' ? {pin: room.pin, students: room.students.map(({id, name, status}) => ({id, name, status}))}
     : {name: session.name, status: room.students.find(s => s.token === session.token)?.status || 'rejected'};
@@ -94,21 +100,28 @@ async function dispatch(port, request) {
       if (attempts.count >= 12) fail('Too many incorrect PIN attempts. Try again in one minute.', 429);
       if (body.pin !== room.pin || !owner) { attempts.count++; fail('Incorrect or expired session PIN', 403); }
     }
-    const result = {token: uuid(), csrf: uuid(), role: body.role, workspace: 'procedural', name: body.name || ''};
+    const result = {token: uuid(), csrf: uuid(), role: body.role, workspace: 'procedural', roomId: roomID, name: body.name || ''};
     const session = {...result, port, seen: Date.now()};
     sessions.set(result.token, session);
-    if (session.role === 'instructor') { if (owner) sessions.delete(owner.token); owner = session; }
+    if (session.role === 'instructor') { if (owner) sessions.delete(owner.token); owner = session; await advertise(); }
     else room.students.push({id: uuid(), name: session.name, token: session.token, status: 'waiting'});
     return result;
   }
   const session = auth(port, headers, method !== 'GET');
   tick();
+  if (path.startsWith('cloud-')) {
+    if (session.role !== 'instructor') fail('Instructor control required', 403);
+    if (path === 'cloud-view' && method === 'GET') return engine('state', '', 'student');
+    if (path === 'cloud-heartbeat' && method === 'POST') { cloud = { enabled: body.enabled === true, seen: Date.now() }; return {ok: true}; }
+    if (path === 'cloud-command' && method === 'POST') { const result = engine('command', body, 'student'); await persist(); return result; }
+    fail('Unknown cloud request', 400);
+  }
   if (path === 'room') {
     if (method === 'POST') {
       const {action, studentId} = body;
       if (!['ready', 'admit', 'reject', 'reset'].includes(action)) fail('Unknown room action');
       if ((action === 'ready') !== (session.role === 'student')) fail('Instructor control required', 403);
-      if (action === 'reset') resetRoom();
+      if (action === 'reset') await resetRoom();
       else {
         const student = room.students.find(s => action === 'ready' ? s.token === session.token : s.id === studentId);
         if (!student) fail('Student is no longer in this room', 404);
@@ -125,14 +138,14 @@ async function dispatch(port, request) {
     const before = engine('checkpoint').state.exerciseId;
     const result = engine('command', body, session.role);
     await persist(); // Never acknowledge before the command receipt and state are durable.
-    if (before !== checkpoint.state.exerciseId) resetRoom();
+    if (before !== checkpoint.state.exerciseId) await resetRoom();
     return result;
   }
   if (path === 'export' && method === 'GET') {
     if (session.role !== 'instructor') fail('Instructor control required', 403);
     const result = engine('export'), id = result.scenario.environment?.map?.imageId;
     if (id) {
-      const blob = await transaction('readonly', store => store.get(`map:${id}`));
+      const blob = await transaction('readonly', store => store.get(storageKey(`map:${id}`)));
       if (!blob) fail('The scenario map is missing. Upload it again before exporting.', 404);
       const bytes = new Uint8Array(await blob.arrayBuffer());
       let binary = ''; for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
@@ -150,11 +163,11 @@ async function dispatch(port, request) {
     const {width, height} = bitmap; bitmap.close();
     if (width > 4096 || height > 4096 || width * height > 16000000) fail('Map dimensions must be within 4096 pixels and 16 megapixels');
     const imageId = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
-    await transaction('readwrite', store => store.put(blob, `map:${imageId}`));
+    await transaction('readwrite', store => store.put(blob, storageKey(`map:${imageId}`)));
     return {imageId, width, height};
   }
   if (/^map\/[a-f0-9]{64}$/.test(path) && method === 'GET') {
-    const blob = await transaction('readonly', store => store.get(`map:${path.slice(4)}`));
+    const blob = await transaction('readonly', store => store.get(storageKey(`map:${path.slice(4)}`)));
     if (!blob) fail('Map is unavailable', 404);
     return blob;
   }
@@ -167,7 +180,7 @@ self.onconnect = event => {
     serial(async () => {
       if (request?.kind === 'detach') {
         for (const session of sessions.values()) if (session.port === port) { session.port = null; session.seen = 0; }
-        if (self.proceduralEngine) { tick(); await persist(); }
+        if (self.proceduralEngine) { tick(); await persist(); await advertise(); }
         return;
       }
       if (request?.kind === 'heartbeat') {

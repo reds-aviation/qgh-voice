@@ -1,3 +1,4 @@
+import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -74,6 +75,16 @@ export async function buildProceduralBeta(outputRoot) {
       .replace('REDS · PROCEDURAL TRAINING','ATC · PROCEDURAL TRAINING');
     await writeFile(path,html);
   }
+  await buildSuiteGuides(outputRoot, root, manifest.version);
+  // One guide/assistant source serves every GitHub Pages branch.
+  for (const [page, prefix] of [
+    ...['index.html','qgh.html','single.html','tactical.html','training-centre.html','user-guide.html'].map(page => [page, 'procedural-beta/']),
+    ...['index.html','instructor.html','student.html','training-guide.html'].map(page => ['instructor-led/' + page, '../procedural-beta/']),
+  ]) {
+    const path = resolve(outputRoot,page); let html = await readFile(path,'utf8');
+    if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
+    await writeFile(path,html);
+  }
   const manifestPath = resolve(outputRoot,'manifest.webmanifest');
   const qghManifest = JSON.parse(await readFile(manifestPath,'utf8'));
   qghManifest.name = 'ATC Training Suite';
@@ -87,10 +98,31 @@ export async function buildProceduralBeta(outputRoot) {
 
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
-  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, '$1-suite-landing-3$2');
+  sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-suite-${manifest.version}$2`);
   sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.png',\n  './qgh-towers.png',\n  './procedural-airspace.png',\n  './aircraft-icon.png',\n  './instructor-icon.png',");
   sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
   if (!sw.includes("'./qgh.html'") || !sw.includes("'./suite-landing.css'")) throw new Error('QGH offline suite shell was not updated');
+  // The assistant assets are shared, cacheable and never fetch an AI service.
+  sw = sw.replace("  './qgh.html',", "  './qgh.html',\n  './procedural-beta/guide-knowledge.js',\n  './procedural-beta/suite-guide-chat.js',\n  './procedural-beta/suite-guide-chat.css',\n  './procedural-beta/gyani-fox.png',");
+  const proceduralShell = [...manifest.files.filter(file => file.path.startsWith('static/')).map(file => './procedural-beta/' + file.path.slice(7)), './procedural-beta/index.html', './procedural-beta/'];
+  const uncached = proceduralShell.filter(path => !sw.includes(`'${path}'`));
+  sw = sw.replace('const APP_SHELL = [', 'const APP_SHELL = [\n' + uncached.map(path => `  '${path}',`).join('\n'));
+  if (uncached.length && !sw.includes(`'${uncached[0]}'`)) throw new Error('Procedural offline shell was not updated');
+  sw = sw.replace("['./', './index.html', './qgh.html'", "['./procedural-beta/', './procedural-beta/index.html', './procedural-beta/procedural.html', './procedural-beta/procedural-guide.html', './', './index.html', './qgh.html'");
+  sw = sw.replace('  if (requestUrl.search) {', `  const proceduralRoot = new URL('./procedural-beta/', self.registration.scope).pathname;
+  const isRoomWorker = requestUrl.pathname === proceduralRoot + 'browser-worker.js'
+    && [...requestUrl.searchParams.keys()].every(key => key === 'room')
+    && /^[a-f0-9-]{36}$/.test(requestUrl.searchParams.get('room') || '');
+  const isControllerPage = [proceduralRoot, proceduralRoot + 'index.html', proceduralRoot + 'procedural.html'].includes(requestUrl.pathname)
+    && [...requestUrl.searchParams.keys()].every(key => ['position','connection'].includes(key))
+    && requestUrl.searchParams.get('position') === 'student'
+    && ['online','local',null].includes(requestUrl.searchParams.get('connection'));
+  if (requestUrl.search && !isRoomWorker && !isControllerPage) {`);
   await writeFile(swPath,sw);
+  const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
+  let instructorSW = await readFile(instructorSWPath,'utf8');
+  instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
+    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',");
+  await writeFile(instructorSWPath,instructorSW);
   console.log(`Built GitHub-only ATC Training Suite with Procedural Beta ${manifest.version}`);
 }
