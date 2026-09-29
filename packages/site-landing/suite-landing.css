@@ -46,6 +46,7 @@ h1,h2,h3,p{margin-top:0}
 .card-stripe-saffron{background:#ff8d00}.card-stripe-green{background:#008759}
 .simulator-card h3{font:600 clamp(45px,3.5vw,55px)/1 Plex Sans,Arial,sans-serif;letter-spacing:-.035em;margin:18px 0 8px}
 .qgh-divider{height:1px;background:#bacbda;position:relative;margin-bottom:15px}
+.qgh-description{font:400 17px/1.35 Plex Sans,Arial,sans-serif;color:#526f93;margin:0 0 12px}
 .qgh-divider:before{content:"";display:block;width:66px;height:1px;background:#6f91ad}
 .qgh-paths{display:grid;grid-template-columns:1fr 1.08fr;gap:14px}
 .path-card{position:relative;display:grid;grid-template-columns:60px 1fr;grid-template-rows:1fr auto;column-gap:12px;min-height:154px;padding:19px 20px 14px;border:1px solid #cbd9e7;border-radius:10px;background:rgba(255,255,255,.87);text-decoration:none;transition:box-shadow .15s,border-color .15s,transform .15s}

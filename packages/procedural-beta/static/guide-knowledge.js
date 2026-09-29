@@ -4,14 +4,16 @@
   // Add/change control guidance here with its UI change. The build validates
   // the referenced control IDs and refuses missing or undocumented controls.
   const knowledge = {
-    revision: '2026.09.29.5',
+    revision: '2026.09.29.6',
     learning: 'I am also learning. If I’m unable to answer, please refer to the training guides.',
     flow: [
-      { title: 'QGH · Individual practice', href: 'qgh.html', text: 'Suite home → QGH Individual Practice → Single aircraft or Tactical → configure → start → terminate and review.' },
+      { title: 'QGH · Individual practice', href: 'qgh.html', text: 'QGH cloud-breaking procedure: Suite home → QGH Individual Practice → Single aircraft or Tactical → configure → start → terminate and review.' },
       { title: 'QGH · Instructor-led / ATSS', href: 'instructor-led/', text: 'Suite home → QGH Instructor-led → Instructor → choose QGH, SRA or PAR → create session → open student display → PIN → Admit → Ready → Start.' },
       { title: 'Procedural', href: 'procedural-beta/', text: 'Suite home → Procedural → Instructor setup → edit aircraft roster and airspace → Create session → Session → open student tab → PIN → Admit → Ready → Run.' },
+      { title: 'Offline PC setup', href: 'offline-setup.html', text: 'Hardware, screens, chairs, cables, completely disconnected installation, local ports, backups and troubleshooting. Separate offline PCs cannot yet share one exercise.' },
     ],
     entries: [
+      { id: 'offline-pc', title: 'Set up a completely offline training PC', topics: ['qgh','qgh-individual','qgh-instructor','sra','par','procedural'], controls: [], anchor: 'start', match: '\\b(?:offline|internet|hardware|ram|gpu|cpu|chairs?|cables?|ports?|server|standalone)\\b', text: 'Use the Offline PC & classroom setup link in the entry-page footer. The handbook recommends one PC with 16 GB RAM, an SSD, integrated graphics supporting two independent displays and two monitors. Transfer the complete site and required offline installers by USB. Choose This device for instructor/student windows in the same browser profile. Online rooms need internet; a shared exercise across different offline PCs requires a future local backend. One PC shares one mouse pointer and keyboard focus.' },
       { id: 'turn', title: 'Turn left or right', topics: ['procedural'], controls: ['quick-left', 'quick-right', 'quick-stop'], anchor: 'pilot', match: '\\b(?:turn|turning|steer|heading|left|right)\\b', text: 'Select an aircraft on the instructor scope. Double-click the left mouse button on that aircraft to turn left now, or double-click the right mouse button to turn right now. On a phone, tap the aircraft, then use ← Left or Right → below the scope. These are continuous turns: press Stop turn to level the wings. For a specific heading, open More → heading controls and use Turn to. The student sends instructions; the instructor flies the aircraft.' },
       { id: 'stop-turn', title: 'Stop a turn', topics: ['procedural'], controls: [], anchor: 'pilot', match: '\\b(?:stop|end|cancel|level)\\b.*\\b(?:turn|turning|wings|orbit)\\b|\\bwings level\\b', text: 'Select the aircraft, then press Stop turn below the scope. The aircraft levels its wings at its current heading. This also exits an orbit immediately. Leave orbit / hold instead completes the current orbit lap before leaving.' },
       { id: 'orbit', title: 'Orbit and leave an orbit', topics: ['procedural'], controls: [], anchor: 'pilot', match: '\\borbit|circle|circling\\b', text: 'Select the aircraft, open Aircraft controls (or More), then choose Orbit left or Orbit right. Leave orbit / hold requests an exit after the current lap. Stop turn exits immediately. The exercise must be running for movement.' },

@@ -1,4 +1,6 @@
 import {buildSuiteGuides} from './build-suite-guides.mjs';
+import {buildEntryTheme} from './build-entry-theme.mjs';
+import {buildOfflineGuide} from './build-offline-guide.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -88,6 +90,8 @@ export async function buildProceduralBeta(outputRoot) {
     await writeFile(path,html);
   }
   const manifestPath = resolve(outputRoot,'manifest.webmanifest');
+  await buildOfflineGuide(outputRoot, root, manifest.version);
+  await buildEntryTheme(outputRoot, root, manifest.version);
   const qghManifest = JSON.parse(await readFile(manifestPath,'utf8'));
   qghManifest.name = 'ATC Training Suite';
   qghManifest.short_name = 'ATC Suite';
@@ -116,6 +120,7 @@ export async function buildProceduralBeta(outputRoot) {
   const proceduralShell = [...manifest.files.filter(file => file.path.startsWith('static/')).map(file => './procedural-beta/' + file.path.slice(7)), './procedural-beta/index.html', './procedural-beta/'];
   const uncached = proceduralShell.filter(path => !sw.includes(`'${path}'`));
   sw = sw.replace('const APP_SHELL = [', 'const APP_SHELL = [\n' + uncached.map(path => `  '${path}',`).join('\n'));
+  sw = sw.replace('const APP_SHELL = [', "const APP_SHELL = [\n  './flow-theme.css',\n  './qgh-cloudbreak.png',\n  './offline-setup.html',\n  './offline-setup.md',\n  './offline-guide.css',");
   if (uncached.length && !sw.includes(`'${uncached[0]}'`)) throw new Error('Procedural offline shell was not updated');
   sw = sw.replace("['./', './index.html', './qgh.html'", "['./procedural-beta/', './procedural-beta/index.html', './procedural-beta/procedural.html', './procedural-beta/procedural-guide.html', './', './index.html', './qgh.html'");
   sw = sw.replace('  if (requestUrl.search) {', `  const proceduralRoot = new URL('./procedural-beta/', self.registration.scope).pathname;
@@ -126,10 +131,16 @@ export async function buildProceduralBeta(outputRoot) {
     && [...requestUrl.searchParams.keys()].every(key => ['position','connection'].includes(key))
     && requestUrl.searchParams.get('position') === 'student'
     && ['online','local',null].includes(requestUrl.searchParams.get('connection'));
-  if (requestUrl.search && !isRoomWorker && !isControllerPage) {`);
+  const isSuiteAsset = [new URL('./flow-theme.css', self.registration.scope).pathname, new URL('./suite-landing-register.js', self.registration.scope).pathname].includes(requestUrl.pathname)
+    && requestUrl.search === '?release=${manifest.version}';
+  if (requestUrl.search && !isRoomWorker && !isControllerPage && !isSuiteAsset) {`);
   await writeFile(swPath,sw);
   const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
   let instructorSW = await readFile(instructorSWPath,'utf8');
+  instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../qgh-cloudbreak.png',\n  '../qgh-towers.png',\n  '../hero-airspace.png',\n  '../offline-setup.html',\n  '../offline-guide.css',\n  '../offline-setup.md',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
+  instructorSW = instructorSW.replace('  if (requestUrl.search) {', `  const isSuiteAsset = [new URL('../flow-theme.css', self.registration.scope).pathname, new URL('../suite-landing-register.js', self.registration.scope).pathname].includes(requestUrl.pathname)
+    && requestUrl.search === '?release=${manifest.version}';
+  if (requestUrl.search && !isSuiteAsset) {`);
   instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',");

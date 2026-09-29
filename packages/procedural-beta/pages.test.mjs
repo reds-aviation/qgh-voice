@@ -40,6 +40,9 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.ok(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?position=student&connection=online',base))));
   assert.equal(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?untrusted=1',base))),null);
   assert.equal(sw.shellCacheKey(new Request('https://example.supabase.co/rest/v1/rpc/atc_session')),null);
+  const release=JSON.parse(readFileSync(resolve(root,'packages/procedural-beta/manifest.json'),'utf8')).version;
+  assert.equal(sw.shellCacheKey(new Request(new URL('flow-theme.css?release='+release,base))).url,new URL('flow-theme.css',base).href);
+  assert.equal(sw.shellCacheKey(new Request(new URL('flow-theme.css?release=untrusted',base))),null);
   for(const file of ['service-worker.js','instructor-led/service-worker.js']) {
     const handlers=new Map();let requests,installation;
     const workerScope=new URL(file,base).href.replace('service-worker.js','');

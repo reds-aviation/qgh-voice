@@ -1,0 +1,139 @@
+/* Shared with the suite landing: local Plex fonts, warm paper, blue-grey ink.
+   No rule below selects a live or paused exercise, its canvas or controls. */
+@font-face{font-family:Suite Sans;src:url('fonts/ibm-plex-sans-400.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:Suite Sans;src:url('fonts/ibm-plex-sans-600.ttf') format('truetype');font-weight:600;font-display:swap}
+@font-face{font-family:Suite Mono;src:url('fonts/ibm-plex-mono-500.ttf') format('truetype');font-weight:500;font-display:swap}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]),
+body[data-suite-surface="procedural"]:not(.desk-open),
+body[data-suite-surface="single"]:has(#setup.active),
+body[data-suite-surface="tactical"]:has(#tSetup.active),
+body[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])) {
+  --entry-paper:#fafaf8;--entry-card:#fff;--entry-ink:#071d3d;--entry-muted:#526f93;--entry-line:#c9d7e4;--entry-accent:#007c9e;--entry-accent-dark:#006b89;--entry-shadow:none;
+  --bg:#fafaf8;--paper:#fff;--paper-strong:#fff;--ink:#071d3d;--muted:#526f93;--line:#c9d7e4;--line-strong:#a3bbd0;--teal:#007c9e;--teal-dark:#006b89;--teal-soft:#e2f5fa;--accent:#007c9e;--accent-dark:#006b89;--shadow:none;
+  background:#fafaf8;color:#071d3d;font-family:Suite Sans,Arial,sans-serif;color-scheme:light;
+}
+[data-suite-surface="qgh"] .entry-app,[data-suite-surface="instructor"] .shell{width:min(1600px,100%);padding:0 4.1% 24px;margin:auto}
+[data-suite-surface="qgh"] .entry-header,[data-suite-surface="instructor"] .site-header{min-height:88px;align-items:center;padding:17px 0;gap:24px}
+[data-suite-surface="qgh"] .entry-brand{display:flex;align-items:center;flex-wrap:wrap;gap:14px 24px}
+[data-suite-surface="qgh"] .entry-brand h1,[data-suite-surface="instructor"] .wordmark{font:500 clamp(17px,1.55vw,24px)/1.25 Suite Mono,monospace;letter-spacing:.025em}
+[data-suite-surface="qgh"] .entry-guide-link,[data-suite-surface="instructor"] .suite-return-link{font:500 11px/1.4 Suite Mono,monospace;color:#007c9e;letter-spacing:.08em}
+[data-suite-surface="qgh"] .entry-credit small,[data-suite-surface="instructor"] .creator small{font:500 10px/1.4 Suite Mono,monospace;color:#607d9b}
+[data-suite-surface="qgh"] .entry-stage{display:block;min-height:0;padding:0}
+[data-suite-surface="qgh"] .entry-card{width:100%;padding:0;border:0;background:none;border-radius:0;box-shadow:none}
+[data-suite-surface="qgh"] .entry-program-tabs{padding:14px 0;margin:0;border:0;gap:20px;justify-content:flex-start}
+[data-suite-surface="qgh"] .entry-program-tab{background:none;border:0;border-radius:0;padding:6px 0;min-height:32px;color:#007c9e;font:500 11px/1.5 Suite Mono,monospace}
+[data-suite-surface="qgh"] .entry-intro,[data-suite-surface="instructor"] .entry-hero,[data-suite-surface="procedural"] #entry .entry-copy{position:relative;background:#fafaf8 url('qgh-cloudbreak.png') center/cover no-repeat;padding:32px 30px;min-height:286px;margin:0 0 25px;border:0;border-radius:0;isolation:isolate}
+[data-suite-surface="qgh"] .entry-intro>span,[data-suite-surface="instructor"] .entry-hero .eyebrow,[data-suite-surface="procedural"] #entry .entry-copy>.eyebrow{display:block;font:500 11px/1.6 Suite Mono,monospace;letter-spacing:.12em;color:#526f93}
+[data-suite-surface="qgh"] .entry-intro>span:after,[data-suite-surface="instructor"] .entry-hero .eyebrow:after,[data-suite-surface="procedural"] #entry .entry-copy>.eyebrow:after{content:'';display:block;width:85px;height:3px;background:linear-gradient(90deg,#ff8a00 0 47%,transparent 47% 53%,#078655 53%);margin:16px 0 20px}
+[data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font:600 clamp(36px,4.1vw,60px)/1.06 Suite Sans,Arial,sans-serif;letter-spacing:-.05em;color:#071d3d;max-width:760px;margin:0 0 18px}
+[data-suite-surface="qgh"] .entry-intro p,[data-suite-surface="instructor"] .entry-hero p,[data-suite-surface="procedural"] #entry .entry-copy p{font:400 19px/1.5 Suite Sans,Arial,sans-serif;color:#526f93;max-width:520px;margin:0}
+.flow-section-label{display:flex;align-items:center;gap:18px;margin:22px 0 16px;font:500 11px/1.4 Suite Mono,monospace;letter-spacing:.12em;color:#2d7599}
+.flow-section-label>span{flex:1;height:1px;background:#afc2d3}
+[data-suite-surface="qgh"] .entry-intro .flow-subtitle{font:500 19px/1.4 Suite Mono,monospace;margin:-7px 0 16px;color:#007c9e}
+[data-suite-surface="qgh"] .entry-options{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+[data-suite-surface="qgh"] .entry-option{display:grid;grid-template-columns:38px 1fr;gap:12px 14px;min-height:185px;padding:27px;border:1px solid #c9d7e4;border-radius:11px;background:#fff url('qgh-towers.png') right bottom/auto 135px no-repeat;box-shadow:0 10px 28px #0b27420a}
+[data-suite-surface="qgh"] .entry-option-index{color:#007c9e;font:500 14px/1.4 Suite Mono,monospace}
+[data-suite-surface="qgh"] .entry-option-copy strong{font:600 30px/1.2 Suite Sans,Arial,sans-serif;letter-spacing:-.03em}
+[data-suite-surface="qgh"] .entry-option-copy small{font:500 11px/1.7 Suite Mono,monospace;color:#526f93;white-space:normal}
+[data-suite-surface="qgh"] .entry-option-action{grid-column:2;justify-self:start;border:0;border-radius:0;padding:8px 0;background:transparent;color:#007c9e;font:500 15px/1.4 Suite Mono,monospace}
+[data-suite-surface="qgh"] .entry-option-action:after{content:' →';margin-left:32px}
+[data-suite-surface="qgh"] .entry-option:hover{border-color:#007c9e;transform:translateY(-2px)}
+[data-suite-surface="qgh"] .entry-quote{font:500 10px/1.6 Suite Mono,monospace;letter-spacing:.07em;font-style:normal;color:#607d9b;margin:20px 0}
+[data-suite-surface="qgh"] .entry-beta-note{font-size:13px;color:#526f93}
+[data-suite-surface="qgh"] .entry-web-distribution{box-shadow:none;border-color:#c9d7e4;background:#fff}
+[data-suite-surface="qgh"] :is(.entry-web-install,.entry-native-downloads a){background:#fff;color:#006b89;border-color:#a3bbd0}
+[data-suite-surface="instructor"] .entry-hero{display:grid;grid-template-columns:minmax(0,1fr) 235px;gap:24px;margin-top:24px}
+[data-suite-surface="instructor"] .mode-orbit{display:grid;width:auto;aspect-ratio:auto;align-self:center;padding:8px 18px;gap:0;border:1px solid #c9d7e4;border-radius:9px;background:#fffffff0}
+[data-suite-surface="instructor"] .mode-orbit:before,[data-suite-surface="instructor"] .mode-orbit:after{display:none}
+[data-suite-surface="instructor"] .mode-orbit div{min-width:0;border:0;border-bottom:1px solid #dce5ed;border-radius:0;background:none;padding:14px 0;box-shadow:none}
+[data-suite-surface="instructor"] .mode-orbit div:last-child{border:0}
+[data-suite-surface="instructor"] .mode-orbit span{font-size:11px;letter-spacing:.04em}
+[data-suite-surface="instructor"] .role-grid{padding:0;gap:20px}
+[data-suite-surface="instructor"] .section-title{margin:0}
+[data-suite-surface="instructor"] .section-title>span{display:none}
+[data-suite-surface="instructor"] .section-title h2{font:500 12px/1.4 Suite Mono,monospace;text-transform:uppercase;letter-spacing:.1em;color:#2d7599}
+[data-suite-surface="instructor"] .role-card{background:#fff;border:1px solid #c9d7e4;border-radius:11px;padding:25px;grid-template-columns:30px minmax(0,1fr);gap:12px 16px;box-shadow:0 10px 28px #0b27420a}
+[data-suite-surface="instructor"] .role-card h3{font-size:29px;letter-spacing:-.025em}
+[data-suite-surface="instructor"] .role-card p{line-height:1.5;font-size:16px}
+[data-suite-surface="instructor"] .role-card>b{grid-column:2;justify-self:start;background:none;color:#007c9e;padding:9px 0;font:500 14px/1.4 Suite Mono,monospace}
+[data-suite-surface="instructor"] .capability-note{margin-top:22px;border-color:#c9d7e4;padding:20px 0}
+[data-suite-surface="instructor"] .capability-note strong{font-size:10px}
+[data-suite-surface="procedural"]:not(.desk-open) .topbar{min-height:88px;height:auto;max-width:1600px;margin:auto;padding:16px 4.1%;border-color:#dce5ed;flex-wrap:wrap}
+[data-suite-surface="procedural"]:not(.desk-open) .topbar .brand{font:500 clamp(16px,1.55vw,24px)/1.25 Suite Mono,monospace;letter-spacing:.025em;color:#071d3d}
+[data-suite-surface="procedural"]:not(.desk-open) .topbar .brand-mark{display:none}
+[data-suite-surface="procedural"]:not(.desk-open) .topbar small{color:#526f93}
+[data-suite-surface="procedural"]:not(.desk-open) .topbar nav{font:500 11px/1.5 Suite Mono,monospace;gap:18px}
+[data-suite-surface="procedural"]:not(.desk-open) #creator-credit{font-size:12px;color:#526f93}
+[data-suite-surface="procedural"] #entry{display:block;max-width:1600px;margin:auto;padding:24px 4.1% 28px}
+[data-suite-surface="procedural"] #entry .entry-copy{background-image:url('hero-airspace.png');min-height:280px;padding-right:38%;margin:0}
+[data-suite-surface="procedural"] #entry .entry-copy p{font-size:18px}
+[data-suite-surface="procedural"] #entry h1{font-size:clamp(36px,3.9vw,57px)}
+[data-suite-surface="procedural"] #entry .entry-rule{border:0;padding:0;margin:17px 0 0;gap:14px}
+[data-suite-surface="procedural"] #entry .entry-rule b{font:500 27px/1.2 Suite Mono,monospace;color:#007c9e}
+[data-suite-surface="procedural"] #entry .entry-rule span{font-size:12px;color:#526f93}
+[data-suite-surface="procedural"] #entry .entry-copy>a{display:none}
+[data-suite-surface="procedural"] #entry .entry-desks{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+[data-suite-surface="procedural"] #entry .session-connection{grid-column:1/-1;display:grid;grid-template-columns:minmax(250px,340px) 1fr;gap:10px 25px;align-items:end;background:#eef4f7;border:1px solid #c9d7e4;border-radius:8px;padding:13px 20px;margin:0}
+[data-suite-surface="procedural"] #entry .session-connection label{margin:0}
+[data-suite-surface="procedural"] #entry .session-connection p{font-size:13px;line-height:1.5;margin:0 0 8px;color:#526f93}
+[data-suite-surface="procedural"] #entry article{padding:23px 26px;background:#fff;border:1px solid #c9d7e4;border-radius:11px;box-shadow:0 10px 28px #0b27420a}
+[data-suite-surface="procedural"] #entry h2{font:600 28px/1.2 Suite Sans,Arial,sans-serif;letter-spacing:-.025em;margin:12px 0}
+[data-suite-surface="procedural"] #entry .eyebrow{font:500 11px/1.5 Suite Mono,monospace;color:#007c9e}
+[data-suite-surface="procedural"] #entry article p,[data-suite-surface="procedural"] #entry small{font-size:14px;line-height:1.6;color:#526f93}
+[data-suite-surface="procedural"] #entry :is(input,select){min-height:44px;background:#fff;color:#071d3d;border:1px solid #97b1c7;font-size:16px}
+[data-suite-surface="procedural"] #entry label{font-size:13px;color:#526f93;letter-spacing:0}
+[data-suite-surface="procedural"] #entry button{min-height:46px;padding:11px 15px;background:#fff;color:#006b89;border-color:#8eafc4;font-family:Suite Mono,monospace;font-size:13px}
+[data-suite-surface="procedural"] #entry button:hover{background:#eaf5fa;border-color:#007c9e}
+[data-suite-surface="procedural"] #entry #student-join{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin:0}
+[data-suite-surface="procedural"] #entry #student-login{grid-column:1/-1}
+[data-suite-surface="procedural"] #entry #student-pin{font-family:Suite Mono,monospace;letter-spacing:.12em}
+[data-suite-surface="procedural"] #entry #return-desk{margin-bottom:15px}
+.flow-footer{display:flex;gap:18px;justify-content:space-between;flex-wrap:wrap;max-width:1470px;margin:0 auto;padding:20px 4.1%;border-top:1px solid #afc2d3;font:500 10px/1.7 Suite Mono,monospace;letter-spacing:.04em;color:#526f93}
+.flow-footer a{color:#006b89;text-underline-offset:4px}
+[data-suite-surface="procedural"].desk-open>.flow-footer,[data-suite-surface="procedural"].setup-open>.flow-footer{display:none}
+/* Preparation pages share the palette only while their own setup is visible. */
+[data-suite-surface="single"]:has(#setup.active) .app,[data-suite-surface="tactical"]:has(#tSetup.active) .tactical-app{max-width:1600px;margin:auto}
+[data-suite-surface="single"] #setup .setup-card,[data-suite-surface="tactical"] #tSetup .tactical-setup-card{background:#fff;border:1px solid #c9d7e4;border-radius:11px;box-shadow:none}
+[data-suite-surface="single"] #setup .setup-intro,[data-suite-surface="tactical"] #tSetup .tactical-setup-intro{background:url('qgh-cloudbreak.png') right center/cover no-repeat;padding:22px;margin-bottom:24px}
+[data-suite-surface="single"] #setup h2,[data-suite-surface="tactical"] #tSetup h2{font:600 clamp(28px,3vw,40px)/1.15 Suite Sans,Arial,sans-serif;letter-spacing:-.03em;max-width:650px}
+[data-suite-surface="host-setup"] #setupPanel>.section-title{padding:25px;background:url('qgh-cloudbreak.png') center/cover no-repeat}
+[data-suite-surface="host-setup"] #setupPanel{border:1px solid #c9d7e4;box-shadow:none;background:#fff}
+[data-suite-surface="join"] :is(#joinPanel,#waitingPanel,#readyPanel){background:#fafaf8 url('qgh-cloudbreak.png') center/cover no-repeat}
+[data-suite-surface="join"] .join-card{background:#fffffff0;border-color:#c9d7e4;box-shadow:none}
+[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-panel{border-color:#c9d7e4;box-shadow:none}
+[data-suite-surface="procedural"]:not(.desk-open) #setup .section-title{padding:24px;background:url('hero-airspace.png') center/cover no-repeat}
+[data-suite-surface="guide"] :is(.guide-hero,.training-hero){background:#fafaf8 url('hero-airspace.png') right center/cover no-repeat;padding:28px;border-color:#c9d7e4}
+[data-suite-surface="guide"] :is(h1,h2,h3){color:#071d3d;font-family:Suite Sans,Arial,sans-serif}
+[data-suite-surface="guide"] :is(.site-header,.guide-sidebar,.section-nav,.guide-section,.current-flow-guide){border-color:#c9d7e4}
+[data-suite-surface="guide"] a{color:#006b89}
+@media(max-width:900px){
+ [data-suite-surface="qgh"] .entry-credit,[data-suite-surface="instructor"] .creator{display:none}
+ [data-suite-surface="instructor"] .entry-hero{grid-template-columns:1fr}
+ [data-suite-surface="instructor"] .mode-orbit{grid-template-columns:repeat(3,1fr);gap:16px;padding:5px 15px}
+ [data-suite-surface="instructor"] .mode-orbit div{border:0}
+ [data-suite-surface="procedural"] #entry .entry-copy{padding-right:25%}
+ [data-suite-surface="procedural"]:not(.desk-open) #creator-credit{display:none}
+}
+@media(max-width:600px){
+ [data-suite-surface="qgh"] .entry-app,[data-suite-surface="instructor"] .shell{padding:0 5% 20px}
+ [data-suite-surface="qgh"] .entry-header,[data-suite-surface="instructor"] .site-header{min-height:88px;padding:16px 0}
+ [data-suite-surface="instructor"] .header-left{flex-wrap:wrap;gap:12px}
+ [data-suite-surface="qgh"] .entry-intro,[data-suite-surface="instructor"] .entry-hero,[data-suite-surface="procedural"] #entry .entry-copy{padding:24px 18px;background-position:65% center}
+ [data-suite-surface="qgh"] .entry-intro:before,[data-suite-surface="instructor"] .entry-hero:before,[data-suite-surface="procedural"] #entry .entry-copy:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#fafaf8f2,#fafaf8ad);z-index:-1}
+ [data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font-size:clamp(32px,8.5vw,44px)}
+ [data-suite-surface="qgh"] .entry-intro p,[data-suite-surface="instructor"] .entry-hero p,[data-suite-surface="procedural"] #entry .entry-copy p{font-size:17px}
+ [data-suite-surface="qgh"] .entry-options,[data-suite-surface="procedural"] #entry .entry-desks{grid-template-columns:1fr;gap:15px}
+ [data-suite-surface="qgh"] .entry-option{min-height:160px;padding:22px 18px;grid-template-columns:27px 1fr}
+ [data-suite-surface="qgh"] .entry-option-copy strong{font-size:27px}
+ [data-suite-surface="instructor"] .mode-orbit{grid-template-columns:1fr;gap:0}
+ [data-suite-surface="instructor"] .mode-orbit div{padding:9px 0}
+ [data-suite-surface="procedural"]:not(.desk-open) .topbar{padding:16px 5%;gap:10px}
+ [data-suite-surface="procedural"] #entry{padding:18px 5% 24px}
+ [data-suite-surface="procedural"] #entry .session-connection{grid-template-columns:1fr;padding:15px;gap:10px}
+ [data-suite-surface="procedural"] #entry article{padding:21px 18px}
+ [data-suite-surface="procedural"] #entry #student-join{grid-template-columns:1fr}
+ .flow-footer{margin:0 5%;padding:18px 0;gap:10px}
+ .flow-footer>span:last-child{display:none}
+}
+@media(prefers-reduced-motion:reduce){[data-suite-surface="qgh"] .entry-option{transition:none;transform:none}}

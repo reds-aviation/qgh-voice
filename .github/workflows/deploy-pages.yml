@@ -17,6 +17,9 @@ on:
       - scripts/build-suite-web.mjs
       - scripts/build-procedural-beta.mjs
       - scripts/build-suite-guides.mjs
+      - scripts/build-entry-theme.mjs
+      - scripts/build-offline-guide.mjs
+      - docs/offline-setup.md
       - scripts/verify-release-version.mjs
       - .github/workflows/deploy-pages.yml
   workflow_dispatch:

@@ -1,0 +1,38 @@
+ATC TRAINING SUITE - COMPLETELY OFFLINE
+
+1. Extract this complete folder to C:\ATC-Suite-Offline.
+2. Use a pre-provisioned Windows 11 PC with Edge or Chrome and Python 3.12+
+   (64-bit). Python and browser installers are NOT included. Carry full offline
+   installers on the preparation USB if the PC does not already have them.
+3. Double-click Start-ATC.cmd. Leave its server window open.
+4. Open http://127.0.0.1:8765/ in the selected browser. Use this exact URL.
+5. For two screens choose Windows + P > Extend. Open both roles in separate
+   windows of the SAME browser profile, on this one PC.
+6. Procedural: This device > Instructor setup > Create session > open student
+   tab > PIN > Admit > Ready > Run. Hosted Online room is disabled in this kit.
+7. Keep the instructor window open. Pause/export before closing it.
+8. Close browser windows, then Ctrl+C in the server window to stop.
+
+Detailed hardware, cables, chairs, power, ports, installation, speech-pack
+preparation, backup, update and troubleshooting handbook:
+http://127.0.0.1:8765/offline-setup.html
+The written source is site\offline-setup.md. Ctrl+P prints the browser guide.
+
+All simulator assets, fonts, QGH recognition/pilot packs and included media are
+inside site\. They are served locally. Optional external reference links still
+need internet, but the exercises and written local guides do not.
+
+The server verifies site-files.json before starting and accepts local requests
+only. It needs no admin rights, database, router, inbound firewall rule or cloud
+account. If port 8765 is occupied, stop your earlier ATC server. Do not kill an
+unknown application or disable security controls.
+
+This release does NOT connect different offline PCs into one shared exercise.
+Install independent copies for independent stations. One PC/two screens still
+shares one keyboard focus and mouse pointer; use verbal student instructions.
+
+Do a cold-start test with Ethernet unplugged/Wi-Fi off on the actual PC before
+classroom acceptance. Source tests do not certify physical hardware or audio.
+
+Keep scenario exports outside this folder. Back them up on a second USB drive.
+Prepare updates elsewhere and transfer the complete tested release by USB.
