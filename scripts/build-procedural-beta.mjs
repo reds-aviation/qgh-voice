@@ -100,6 +100,13 @@ export async function buildProceduralBeta(outputRoot) {
 
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
+  // A new cache version must revalidate its files instead of copying the
+  // previous deployment out of the browser's HTTP cache.
+  const freshPrecache = source => {
+    if (!source.includes('cache.addAll(APP_SHELL)')) throw new Error('Missing app-shell installation');
+    return source.replace('cache.addAll(APP_SHELL)', "cache.addAll(APP_SHELL.map(asset => new Request(new URL(asset, self.registration.scope), {cache: 'reload'})))");
+  };
+  sw = freshPrecache(sw);
   sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-suite-${manifest.version}$2`);
   sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.png',\n  './qgh-towers.png',\n  './procedural-airspace.png',\n  './aircraft-icon.png',\n  './instructor-icon.png',");
   sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
@@ -123,6 +130,7 @@ export async function buildProceduralBeta(outputRoot) {
   await writeFile(swPath,sw);
   const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
   let instructorSW = await readFile(instructorSWPath,'utf8');
+  instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',");
   await writeFile(instructorSWPath,instructorSW);

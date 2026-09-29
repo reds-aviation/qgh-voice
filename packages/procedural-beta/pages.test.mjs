@@ -8,7 +8,7 @@ import vm from 'node:vm';
 import { parseHTML } from 'linkedom';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
 
-test('Pages package: guide links, assets, unique IDs and safe offline room routes',()=>{
+test('Pages package: guide links, assets, unique IDs and safe offline room routes',async()=>{
   execFileSync(process.execPath,['scripts/build-web.mjs'],{cwd:root,env:{...process.env,QGH_PROCEDURAL_BETA:'1'},stdio:'pipe'});
   const dist=resolve(root,'apps/web/dist');
   const base='https://example.test/qgh-voice/';
@@ -40,4 +40,15 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.ok(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?position=student&connection=online',base))));
   assert.equal(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?untrusted=1',base))),null);
   assert.equal(sw.shellCacheKey(new Request('https://example.supabase.co/rest/v1/rpc/atc_session')),null);
+  for(const file of ['service-worker.js','instructor-led/service-worker.js']) {
+    const handlers=new Map();let requests,installation;
+    const workerScope=new URL(file,base).href.replace('service-worker.js','');
+    const installContext=vm.createContext({URL,Request,Response,console,
+      caches:{open:async()=>({addAll:async values=>{requests=values;}})},
+      self:{registration:{scope:workerScope},location:{origin:'https://example.test'},addEventListener:(name,fn)=>handlers.set(name,fn)}});
+    vm.runInContext(readFileSync(resolve(dist,file),'utf8'),installContext);
+    handlers.get('install')({waitUntil:value=>{installation=value;}});await installation;
+    assert.ok(requests.length>10);
+    assert.ok(requests.every(request=>request.cache==='reload'),`${file} must not precache stale HTTP responses`);
+  }
 });
