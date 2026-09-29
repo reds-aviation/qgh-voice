@@ -1,5 +1,6 @@
 import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {buildEntryTheme} from './build-entry-theme.mjs';
+import {buildInstalledBrand} from './build-installed-brand.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -151,5 +152,6 @@ export async function buildProceduralBeta(outputRoot) {
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
+  await buildInstalledBrand(outputRoot, root);
   console.log(`Built GitHub-only ATC Training Suite with Procedural Beta ${manifest.version}`);
 }
