@@ -1560,3 +1560,10 @@ select:focus-visible {
   .tactical-setup-actions .tactical-pilot-readback-setup,
   .tactical-setup-actions .tactical-start { width: 100%; }
 }
+
+@media (max-width:580px) {
+  .tactical-fleet-builder > header { flex-wrap:wrap; }
+  .tactical-fleet-builder > header > div { max-width:100%; }
+  .tactical-count { flex:0 0 144px; }
+  .tactical-count button { min-height:44px; }
+}
