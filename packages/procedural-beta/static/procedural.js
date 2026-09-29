@@ -201,6 +201,7 @@ function setStage(next) {
     document.body.classList.toggle('exercise-running', next === 'desk' && !!view?.running);
     document.body.classList.toggle('instructor-desk', session?.role === 'instructor');
     document.body.classList.toggle('student-desk', session?.role === 'student');
+    arrangeControls();
     if (next !== 'desk')
         document.body.classList.remove('drawer-open');
     $('back-flow').hidden = !session || next === 'entry';
@@ -1420,6 +1421,7 @@ $('toggle-controls').onclick = () => {
     draw();
 };
 new ResizeObserver(() => draw()).observe($('scope-wrap'));
+new ResizeObserver(() => draw()).observe($('scope-plot'));
 $('range').addEventListener('change', () => { range = Number($('range').value); draw(); });
 $('corner').onclick = () => { $('homing').classList.toggle('right'); $('instrument-dock').classList.toggle('right'); document.querySelector('.scope-panel').classList.toggle('homing-right'); };
 $('map-toggle').onclick = () => { showMap = !showMap; $('map-toggle').setAttribute('aria-pressed', String(showMap)); draw(); };
@@ -1466,6 +1468,8 @@ $('scope-manual-dock').append(quickControls);
 quickControls.append(actionButton('Release transmission', () => command('interrupt')));
 // Keep one set of controls and their bindings, with a scrollable home on smaller displays.
 const compactControls = window.matchMedia('(max-height: 740px), (max-width: 1000px)');
+const instrumentHome = document.createComment('student instrument dock');
+$('instrument-dock').before(instrumentHome);
 const controlHomes = ['manual', 'flight'].map(kind => {
     const control = $(kind === 'manual' ? 'scope-manual-dock' : 'scope-flight-controls');
     const home = document.createComment(`${kind} controls`);
@@ -1473,9 +1477,12 @@ const controlHomes = ['manual', 'flight'].map(kind => {
     return { control, home, slot: $(`compact-${kind}-slot`) };
 });
 function arrangeControls() {
+    const instructor = session?.role === 'instructor';
+    if (instructor) $('instructor-control-shelf').append($('instrument-dock'));
+    else instrumentHome.after($('instrument-dock'));
     document.body.classList.toggle('compact-controls', compactControls.matches);
     for (const { control, home, slot } of controlHomes) {
-        if (compactControls.matches)
+        if (compactControls.matches || (instructor && control.id === 'scope-manual-dock'))
             slot.append(control);
         else
             home.after(control);

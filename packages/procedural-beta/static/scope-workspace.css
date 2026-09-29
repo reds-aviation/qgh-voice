@@ -850,3 +850,92 @@ body.desk-open.controls-collapsed #aircraft-quick-controls { display:none; }
 @media (max-width:700px) {
   body.desk-open .topbar nav a, body.setup-open .topbar nav a { display:inline-flex; align-items:center; min-height:44px; flex-shrink:0; }
 }
+
+/* Instructor instruments share the control shelf, leaving the plot full width.
+   The same live elements return to the student's original dock on role change. */
+#instructor-control-shelf { display:none; }
+body.instructor-desk #desk .scope-panel {
+  grid-template-columns:minmax(0,1fr) var(--scope-tools-width);
+  grid-template-areas:"toolbar toolbar" "traffic traffic" "plot tools" "flight flight" "legend legend";
+}
+body.instructor-desk.controls-collapsed #desk .scope-panel { grid-template-columns:minmax(0,1fr) 0; }
+body.instructor-desk #instructor-control-shelf {
+  flex:0 0 auto; display:grid; grid-template-columns:minmax(260px,1.2fr) minmax(275px,1fr);
+  gap:8px; min-width:0; padding:6px; background:#20282e; border-top:1px solid var(--radar-line);
+}
+body.instructor-desk #aircraft-quick-controls {
+  display:grid; grid-template-columns:minmax(0,1fr); align-content:center; gap:6px;
+  min-width:0; padding:0; border:0;
+}
+body.instructor-desk #aircraft-quick-controls > div { display:flex; flex-wrap:wrap; gap:4px; width:auto; }
+body.instructor-desk #quick-heading-form { display:flex; flex-wrap:wrap; align-items:end; gap:5px; margin:0; width:100%; }
+body.instructor-desk #quick-heading-form label { min-width:0; margin:0; }
+body.instructor-desk #quick-heading-form input { width:110px; margin:2px 0 0; }
+body.instructor-desk #quick-heading {
+  background-color:#111b22; color:#f4f8fa; -webkit-text-fill-color:#f4f8fa;
+  caret-color:#f4c767; color-scheme:dark; font-size:16px; opacity:1;
+  border:1px solid #a7c2cd;
+}
+body.instructor-desk #quick-heading::placeholder { color:#afc3cd; -webkit-text-fill-color:#afc3cd; opacity:1; }
+body.instructor-desk #quick-heading:focus { outline:3px solid #f4c767; outline-offset:1px; }
+body.instructor-desk #quick-heading-form button { width:auto; margin:0; }
+body.instructor-desk #instructor-control-shelf #instrument-dock {
+  grid-area:auto; display:grid; grid-template-columns:120px minmax(0,1fr); grid-template-rows:auto;
+  align-items:stretch; gap:6px; padding:0; border:0; background:transparent; overflow:visible;
+}
+body.instructor-desk #instructor-control-shelf #homing {
+  grid-column:1; grid-row:1; justify-self:stretch; width:100%; height:124px; margin:0; padding:4px;
+}
+body.instructor-desk #instructor-control-shelf #homing-dial { height:34px; }
+body.instructor-desk #instructor-control-shelf #bearing { font-size:26px; }
+body.instructor-desk #instructor-control-shelf #bearing-type { min-height:32px; width:58px; }
+body.instructor-desk #instructor-control-shelf #pilot-readback {
+  grid-column:2; grid-row:1; width:auto; max-height:124px; margin:0; padding:6px; overflow-y:auto;
+}
+body.instructor-desk #instructor-control-shelf #radio-caption { max-height:none; margin:5px 0 0; font-size:12px; }
+body.instructor-desk #instructor-control-shelf #audio-status { display:none; }
+body.instructor-desk #instructor-control-shelf #student-instrument-note { display:none; }
+body.instructor-desk #instructor-control-shelf #df-source,
+body.instructor-desk #instructor-control-shelf #mag-reference-note { font-size:8px; line-height:1.2; margin-top:2px; padding-top:0; }
+body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #homing { grid-column:2; }
+body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #pilot-readback { grid-column:1; }
+body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #instrument-dock { grid-template-columns:minmax(0,1fr) 120px; }
+body.instructor-desk.controls-collapsed #instructor-control-shelf { grid-template-columns:minmax(0,1fr); }
+body.instructor-desk.controls-collapsed #instructor-control-shelf #aircraft-quick-controls { display:none; }
+@media (min-width:701px) and (max-width:1049px) {
+  body.instructor-desk.drawer-open #desk .scope-panel { grid-template-columns:minmax(0,1fr) 0; }
+  body.instructor-desk.drawer-open #instructor-control-shelf { grid-template-columns:minmax(0,1fr); }
+  body.instructor-desk.drawer-open #aircraft-quick-controls { display:none; }
+}
+@media (max-width:700px) {
+  body.instructor-desk #desk .scope-panel {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"toolbar" "traffic" "plot" "tools" "flight" "legend";
+    grid-template-rows:auto 36px minmax(0,1fr) 51px 0 24px;
+  }
+  body.instructor-desk #instructor-control-shelf { grid-template-columns:minmax(0,1fr) minmax(0,1.2fr); gap:5px 8px; padding:5px; }
+  body.instructor-desk #aircraft-quick-controls { display:contents; }
+  body.instructor-desk #quick-aircraft-info { grid-column:1 / -1; grid-row:1; }
+  body.instructor-desk #aircraft-quick-controls > div { grid-column:1 / -1; grid-row:2; display:grid; grid-template-columns:1fr 1.05fr 1fr 1fr 1.3fr; gap:3px; }
+  body.instructor-desk #quick-heading-form { grid-column:1; grid-row:3; display:grid; grid-template-columns:minmax(0,1fr); align-content:center; gap:5px; }
+  body.instructor-desk #quick-heading-form input { width:100%; }
+  body.instructor-desk #quick-heading-form button { width:100%; }
+  body.instructor-desk #instructor-control-shelf #instrument-dock,
+  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #instrument-dock {
+    grid-column:2; grid-row:3; grid-template-columns:minmax(0,1fr); grid-template-rows:108px 68px; gap:5px;
+  }
+  body.instructor-desk #instructor-control-shelf #homing,
+  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #homing { grid-column:1; grid-row:1; height:108px; }
+  body.instructor-desk #instructor-control-shelf #homing-dial { height:20px; }
+  body.instructor-desk #instructor-control-shelf #pilot-readback,
+  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #pilot-readback { grid-column:1; grid-row:2; max-height:68px; padding:4px; }
+  body.instructor-desk #instructor-control-shelf #radio-caption { font-size:11px; line-height:1.25; margin-top:3px; }
+  body.instructor-desk #instructor-control-shelf #pilot-readback > div { gap:2px 4px; }
+  body.instructor-desk #instructor-control-shelf .audio-choice { font-size:9px; }
+  body.instructor-desk.controls-collapsed #instructor-control-shelf #instrument-dock,
+  body.instructor-desk.drawer-open #instructor-control-shelf #instrument-dock { grid-column:1 / -1; grid-row:1; grid-template-columns:108px minmax(0,1fr); grid-template-rows:108px; }
+  body.instructor-desk.controls-collapsed #instructor-control-shelf #pilot-readback,
+  body.instructor-desk.drawer-open #instructor-control-shelf #pilot-readback { grid-column:2; grid-row:1; max-height:108px; }
+  body.instructor-desk.drawer-open #desk .scope-panel { grid-template-rows:0 0 minmax(0,1fr) 0 0 0; }
+  body.instructor-desk.drawer-open #aircraft-quick-controls { display:none; }
+}

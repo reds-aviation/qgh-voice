@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.18",
+  "revision": "2026.09.29.19",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -20,6 +20,28 @@
     }
   ],
   "entries": [
+    {
+  "id": "instructor-instrument-shelf",
+  "title": "Instructor homing and pilot messages below the scope",
+  "topics": [
+    "suite",
+    "procedural"
+  ],
+  "controls": [
+    "quick-heading",
+    "homing",
+    "pilot-readback"
+  ],
+  "anchor": "scope",
+  "priority": true,
+  "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark))\\b",
+  "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and homing plus the scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
+  "questions": [
+    "Where is the homing display?",
+    "Where are pilot messages now?",
+    "The heading is white and not visible"
+  ]
+},
     {
       "id": "local-pin-recovery",
       "title": "Recover a rejected local session PIN",
@@ -458,7 +480,7 @@
       ],
       "selector": "#homing",
       "title": "Homing instrument",
-      "text": "QDM selects magnetic homing; QTE selects true bearing. Read the pilot reply above it. Bearing indications follow the transmitting aircraft."
+      "text": "QDM selects magnetic homing; QTE selects true bearing. On the instructor desk, homing and the red pilot reply share the control shelf below the scope. The student keeps its existing instrument dock. Bearing indications follow the transmitting aircraft."
     },
     {
       "pages": [

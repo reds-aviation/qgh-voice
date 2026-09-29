@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.29.18",
+  "version": "2026.09.29.19",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 38253,
-      "sha256": "3fe3cb21711f8faf0422653b5b7af835ab9ecb7877e51fea418f27b8f454b907"
+      "bytes": 38294,
+      "sha256": "675c3e03c8afe4fbf90707f2d498e91f5b4babfadcd3c42854b8a2433a92f763"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 100341,
-      "sha256": "5af409eae1d705e14b7bad3f92d1cf3020a2ce4d489c3da5b1d0439276ce99ff"
+      "bytes": 100784,
+      "sha256": "f7bb9e2fa6d0b9958eda239477eef71ed479c223d9c672e18ffdeb4cc42ae6b3"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 55601,
-      "sha256": "bcbe06261fe75002c49c34a04b8a3b2321079a162c4d8da9a6a9fdee76cab361"
+      "bytes": 62301,
+      "sha256": "11c28439d923f93a04792717df5ffdf9f6fab5972a8a27a905b1551ed1da1bc1"
     },
     {
       "path": "static/scope-history.js",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 32426,
-      "sha256": "c4899f0a7fd2ed796ad8192261f6c95c142bd9ad3f87898d7c94fea94c198b7b"
+      "bytes": 32798,
+      "sha256": "81b9917fbf81e0a76d0d36559329036a97aba7fc20f863f5d3be31fcf069ac87"
     },
     {
       "path": "static/style.css",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 33251,
-      "sha256": "778096cd3e23d534536f5e9c3782d793a2520adac0fcd3119d696fb2bece5488"
+      "bytes": 34433,
+      "sha256": "534066e9ef5a5b37a052bd008158baea65987171180bb38b8c0142eb923d44e9"
     },
     {
       "path": "static/gyani-fox.png",

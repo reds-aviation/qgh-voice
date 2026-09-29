@@ -147,12 +147,14 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
       session={role}; stage='desk';
       const a={id:'a1',callsign:'101',type:'TRAINER',status:'airborne',mode:'heading',headingDeg:90,speedKt:240,altitudeFt:10000,targetAltitudeFt:10000,xNm:0,yNm:0};
       view={exerciseId:'example',available:true,environment:{rangeNm:60,stationName:'NAV0'},roster:[a],aircraft:[a],routes:[],fixes:[],areas:[],elapsed:0};
-      choose(a.id);
+      choose(a.id); setStage('desk');
     };
     globalThis.setEnded=(ended)=>{view.terminated=ended;renderClockControls();renderSelection();};
     globalThis.setCompass=(unserviceable)=>{view.aircraft[0].compassUnserviceable=unserviceable;renderSelection();};
   `,h.context);
   h.context.prepare('instructor');
+  assert.equal(h.document.getElementById('instrument-dock').parentElement.id,'instructor-control-shelf');
+  assert.equal(h.document.getElementById('scope-manual-dock').parentElement.id,'compact-manual-slot');
   const canvas=h.document.getElementById('scope');
   const emit=(type,button,time,pointerType='mouse')=>{const e=new h.Event(type,{bubbles:true,cancelable:true});Object.assign(e,{isPrimary:true,pointerId:1,pointerType,button,clientX:300,clientY:250,timeStamp:time});canvas.dispatchEvent(e);};
   emit('pointerdown',0,10);emit('pointerup',0,30);emit('pointerdown',0,100);emit('pointerup',0,130);
@@ -173,6 +175,8 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   h.context.setCompass(true);assert.equal(heading.disabled,true);heading.value='180';h.document.getElementById('quick-heading-left').click();assert.equal(h.context.commands.length,8);
   h.context.setCompass(false);h.document.getElementById('quick-more').click();assert.equal(h.document.getElementById('tab-pilot').hidden,false);
   h.context.prepare('student');assert.equal(h.document.getElementById('aircraft-quick-controls').hidden,true);
+  assert.ok(h.document.getElementById('instrument-dock').parentElement.classList.contains('scope-panel'));
+  assert.equal(h.document.querySelectorAll('#homing').length,1,'role changes preserve one live homing instrument');
   emit('pointerdown',2,1800);emit('pointerup',2,1830);assert.equal(h.context.commands.length,8);
   h.context.setEnded(true);const notice=h.document.getElementById('exercise-notice');
   assert.equal(notice.hidden,false);assert.equal(notice.getAttribute('role'),'alert');assert.equal(notice.classList.contains('student-termination'),true);
