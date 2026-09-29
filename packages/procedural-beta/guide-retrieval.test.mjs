@@ -45,3 +45,19 @@ test('retired airspace choices cannot return in preset or regional catalogues',(
   assert.equal(presets.length,7);
   for(const id of ['sirsa','jamnagar']){assert.ok(!presets.some(x=>x.id===id));assert.equal(enroute.aerodromes[id],undefined);}
 });
+
+test('Gyani hides throughout individual exercise and returns for review',async()=>{
+  for(const [path,id] of [['single.html','console'],['tactical.html','tConsole']]) {
+    const h=domHarness(`<html><body><section id="${id}"></section></body></html>`,'/qgh-voice/'+path);
+    vm.runInContext(source('guide-knowledge.js'),h.context);
+    vm.runInContext(source('suite-guide-chat.js'),h.context);
+    const chat=h.document.getElementById('suite-guide-chat');
+    assert.equal(chat.hidden,false);
+    chat.querySelector('button').click();assert.equal(h.document.getElementById('suite-guide-chat-panel').hidden,false);
+    h.document.getElementById(id).classList.add('active');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(chat.hidden,true);assert.equal(h.document.getElementById('suite-guide-chat-panel').hidden,true);
+    h.document.getElementById(id).classList.remove('active');
+    await new Promise(resolve=>setImmediate(resolve));assert.equal(chat.hidden,false);
+  }
+});

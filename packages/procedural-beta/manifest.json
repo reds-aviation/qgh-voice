@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.29.8",
+  "version": "2026.09.29.9",
   "go": "1.25.0",
   "files": [
     {
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 51440,
-      "sha256": "5ca2862bb278459363ead6427195778904a22b8ba3d1d651bc73ad88e5ad6a9f"
+      "bytes": 51710,
+      "sha256": "92d8c26b5a7789bf2218312b29da31a67a4ef6fc049312623fd553f9ed820222"
     },
     {
       "path": "static/scope-history.js",
@@ -89,8 +89,8 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 34352,
-      "sha256": "ce1eccd455548e13ba43641a0d2f0c8cd1a9cd78c833aa40928d1f3f7a40c66a"
+      "bytes": 34549,
+      "sha256": "9711731078020acef0fb5651cd0b981c9986688eef1e87958d859641303601cb"
     },
     {
       "path": "static/suite-guide-chat.css",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 26248,
-      "sha256": "600b85e3e26cfccc186bd5e8a083f37d3006bfa105dfab89ad9e7bc06ff238b0"
+      "bytes": 26355,
+      "sha256": "7cb6ab5ed9e474389bb3cc3ac1f576634f05f30f7a743e319d4b4a79ea370b56"
     },
     {
       "path": "static/gyani-fox.png",

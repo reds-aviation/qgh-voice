@@ -276,6 +276,9 @@
       if (root.hidden) closePanel(false);
     }
     new MutationObserver(syncAvailability).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    for (const console of document.querySelectorAll('#console, #tConsole')) {
+      new MutationObserver(syncAvailability).observe(console, { attributes: true, attributeFilter: ['class'] });
+    }
     if (exerciseState) new MutationObserver(syncAvailability).observe(exerciseState, { childList: true, characterData: true, subtree: true });
     function fitKeyboard() {
       const viewport = window.visualViewport;

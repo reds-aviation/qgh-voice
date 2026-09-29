@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.8",
+  "revision": "2026.09.29.9",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -103,7 +103,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:guided tour|screen tour|walkthrough|walk through|show me around|where are the controls)\\b",
-      "text": "Choose Guided tour in the page navigation or scope tool rail. It highlights the visible controls one at a time with Back and Next. It never flies aircraft or changes settings. Finish or press Escape to close it. Tours are available on setup, paused exercises and review; pause before consulting help during an exercise. QGH also retains its separate radio-practice familiarisation.",
+      "text": "Choose Guided tour in the page navigation or scope tool rail. It highlights the visible controls one at a time with Back and Next. It never flies aircraft or changes settings. Finish or press Escape to close it. Tours are available on setup, paused exercises and review; pause before consulting help during an exercise. Gyani hides during active exercises. For individual QGH, use it in setup or after terminating into review. QGH also retains its separate radio-practice familiarisation.",
       "questions": [
         "Show me around the simulator",
         "Where are all the buttons?",
