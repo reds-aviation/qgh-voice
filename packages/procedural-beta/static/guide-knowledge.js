@@ -1,22 +1,22 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.11",
-  "learning": "I am also learning. If Iâ€™m unable to answer, please refer to the training guides.",
+  "revision": "2026.09.29.12",
+  "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
-      "title": "QGH Â· Individual practice",
+      "title": "QGH · Individual practice",
       "href": "qgh.html",
-      "text": "QGH cloud-breaking procedure: Suite home â†’ QGH Individual Practice â†’ Single aircraft or Tactical â†’ configure â†’ start â†’ terminate and review."
+      "text": "QGH cloud-breaking procedure: Suite home → QGH Individual Practice → Single aircraft or Tactical → configure → start → terminate and review."
     },
     {
-      "title": "QGH Â· Instructor-led / ATSS",
+      "title": "QGH · Instructor-led / ATSS",
       "href": "instructor-led/",
-      "text": "Suite home â†’ QGH Instructor-led â†’ Instructor â†’ QGH, Surveillance/SRE, SRA or PAR â†’ choose This device / Online room â†’ create â†’ matching connection + PIN â†’ Admit â†’ Ready â†’ Start."
+      "text": "Suite home → QGH Instructor-led → Instructor → QGH, Surveillance/SRE, SRA or PAR → choose This device / Online room → create → matching connection + PIN → Admit → Ready → Start."
     },
     {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Suite home â†’ Procedural â†’ Instructor setup â†’ edit aircraft roster and airspace â†’ Create session â†’ Session â†’ open student tab â†’ PIN â†’ Admit â†’ Ready â†’ Run."
+      "text": "Suite home → Procedural → Instructor setup → edit aircraft roster and airspace → Create session → Session → open student tab → PIN → Admit → Ready → Run."
     }
   ],
   "entries": [
@@ -55,7 +55,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:extend|extended|duplicate|second screen|second monitor|two screens|2 screens|two monitors|2 monitors|dual monitor|screen 2|another monitor)\\b",
-      "text": "For the best offline instructor-led exercise, use one PC and two monitors in Extend mode. On Windows press Windows + P â†’ Extend. Open instructor and student in separate windows of the SAME browser profile. Drag the student window to screen 2; Windows + Shift + Left/Right Arrow moves a window between monitors. Do not choose Duplicate: it reveals the instructor picture. One PC still shares one mouse pointer and keyboard focus. The student gives verbal instructions while the instructor operates the aircraft.",
+      "text": "For the best offline instructor-led exercise, use one PC and two monitors in Extend mode. On Windows press Windows + P → Extend. Open instructor and student in separate windows of the SAME browser profile. Drag the student window to screen 2; Windows + Shift + Left/Right Arrow moves a window between monitors. Do not choose Duplicate: it reveals the instructor picture. One PC still shares one mouse pointer and keyboard focus. The student gives verbal instructions while the instructor operates the aircraft.",
       "questions": [
         "How do I put the pupil on another monitor?",
         "Best offline display arrangement",
@@ -79,7 +79,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:online|internet|supabase|different (?:devices|systems|pcs|computers)|same (?:pc|browser)|offline capability|connection mode|another (?:pc|computer|device))\\b",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit â†’ Ready â†’ Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release.",
+      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release.",
       "questions": [
         "Can my instructor use another laptop?",
         "Can we train without WiFi?",
@@ -126,7 +126,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:embeddings?|rag|llm|artificial intelligence|limitations?|learning|trained|smart answers|update (?:the )?guides)\\b",
-      "text": "I am Gyani, a fast local guide. I match simulator questions to versioned guide answers using keywords, spelling tolerance and a small local vector index. I am not an LLM and do not invent operational advice or inspect your live traffic. My answers and the current-flow guide sections are built from the same content. Every feature change still needs its explanation to be maintained and checked before release. I am also learning. If Iâ€™m unable to answer, please refer to the training guides.",
+      "text": "I am Gyani, a fast local guide. I match simulator questions to versioned guide answers using keywords, spelling tolerance and a small local vector index. I am not an LLM and do not invent operational advice or inspect your live traffic. My answers and the current-flow guide sections are built from the same content. Every feature change still needs its explanation to be maintained and checked before release. I am also learning. If I’m unable to answer, please refer to the training guides.",
       "questions": [
         "Are you a real AI?",
         "Can you see my aircraft?",
@@ -151,7 +151,7 @@
       ],
       "anchor": "pilot",
       "match": "\\b(?:turn|turning|steer|heading|left|right)\\b",
-      "text": "Single-click an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second so a double-click can be recognised. Double-click the left mouse button on the same aircraft to turn left now, or double-click the right mouse button to turn right now; these turns do not send an extra D/F request. On a phone, tap to select and transmit, then use Left now / Right now below the scope. Stop turn levels the wings. For a target heading, enter Heading Â°T below the scope and choose Turn left or Turn right. More controls opens Aircraft controls for levels, speed and orbit. The student sends instructions; the instructor flies the aircraft.",
+      "text": "Single-click an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second so a double-click can be recognised. Double-click the left mouse button on the same aircraft to turn left now, or double-click the right mouse button to turn right now; these turns do not send an extra D/F request. On a phone, tap to select and transmit, then use Left now / Right now below the scope. Stop turn levels the wings. For a target heading, enter Heading °T below the scope and choose Turn left or Turn right. More controls opens Aircraft controls for levels, speed and orbit. The student sends instructions; the instructor flies the aircraft.",
       "questions": [
         "How to turn right?",
         "How do mouse clicks work?",
@@ -195,7 +195,7 @@
       ],
       "anchor": "pilot",
       "match": "\\b(?:speed|altitude|climb|descend|descent|flight level|height|level)\\b",
-      "text": "Select the aircraft â†’ More controls / Aircraft controls. Enter speed in knots and press Set speed. For altitude, choose feet QNH or Flight level, enter the target, then use Set level, Climb to or Descend to. Climb/descent follows the configured rate. Configure QNH before assigning levels."
+      "text": "Select the aircraft → More controls / Aircraft controls. Enter speed in knots and press Set speed. For altitude, choose feet QNH or Flight level, enter the target, then use Set level, Climb to or Descend to. Climb/descent follows the configured rate. Configure QNH before assigning levels."
     },
     {
       "id": "transmit",
@@ -209,7 +209,7 @@
       ],
       "anchor": "pilot",
       "match": "\\b(?:transmit|transmission|talk|pilot readback|readbacks?|qdm|qte|homing|bearing|df)\\b",
-      "text": "Single-click or tap an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second to distinguish a double-click turn. You can also press Transmit below the scope, or T with the scope focused. The bearing ray and homing instrument follow the transmitting aircraft. QDM selects magnetic homing; QTE selects true bearing. More controls â†’ Bearing display sets the released hold from 2â€“30 seconds; new exercises use 10 seconds. Pilot replies appear in red."
+      "text": "Single-click or tap an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second to distinguish a double-click turn. You can also press Transmit below the scope, or T with the scope focused. The bearing ray and homing instrument follow the transmitting aircraft. QDM selects magnetic homing; QTE selects true bearing. More controls → Bearing display sets the released hold from 2–30 seconds; new exercises use 10 seconds. Pilot replies appear in red."
     },
     {
       "id": "sweep",
@@ -220,7 +220,7 @@
       "controls": [],
       "anchor": "scope",
       "match": "\\b(?:radar sweep|sweep|scanning|rpm|revolutions?|rotation|scan speed)\\b",
-      "text": "Open Declutter â†’ Scope detail & tools. Enable 360Â° radar sweep and set 1â€“60 RPM. At 12 RPM one revolution takes 5 real seconds. The sweep pauses when the exercise pauses. It is a visual scan; instructor truth and student transmission-only bearings retain their existing behaviour. Reduced-motion devices start with the sweep off."
+      "text": "Open Declutter → Scope detail & tools. Enable 360° radar sweep and set 1–60 RPM. At 12 RPM one revolution takes 5 real seconds. The sweep pauses when the exercise pauses. It is a visual scan; instructor truth and student transmission-only bearings retain their existing behaviour. Reduced-motion devices start with the sweep off."
     },
     {
       "id": "roster-mobile",
@@ -233,7 +233,7 @@
       ],
       "anchor": "traffic",
       "match": "\\b(?:callsigns?|scroll|roster|keyboard|phone|mobile|aircraft count|add aircraft|generate traffic)\\b",
-      "text": "Open Traffic setup and set 1â€“24 aircraft. On phones each aircraft has a card with labelled inputs; scroll the page vertically. Jump to aircraft goes straight to a callsign. Reducing the count keeps hidden row edits. Create session applies the visible roster together and starts paused. Use the selected aircraftâ€™s arrows for quick turns; More controls opens the other controls."
+      "text": "Open Traffic setup and set 1–24 aircraft. On phones each aircraft has a card with labelled inputs; scroll the page vertically. Jump to aircraft goes straight to a callsign. Reducing the count keeps hidden row edits. Create session applies the visible roster together and starts paused. Use the selected aircraft’s arrows for quick turns; More controls opens the other controls."
     },
     {
       "id": "run-pause",
@@ -284,7 +284,7 @@
       "controls": [],
       "anchor": "commands",
       "match": "\\b(?:turn|turning|left|right|heading|steer|stop turn)\\b",
-      "text": "Select the aircraft in the instructor console. Use the heading and turn controls for a normal heading-directed turn. For U/S Compass use Left now / Right now and Stop turn. The controller display does not fly aircraft. Command Bar â†’ HELP lists the exact commands accepted by this beta."
+      "text": "Select the aircraft in the instructor console. Use the heading and turn controls for a normal heading-directed turn. For U/S Compass use Left now / Right now and Stop turn. The controller display does not fly aircraft. Command Bar → HELP lists the exact commands accepted by this beta."
     },
     {
       "id": "terminate-exercise",
@@ -301,7 +301,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
-      "text": "On the instructor scope, press the red â–  Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop.",
+      "text": "On the instructor scope, press the red ■ Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop.",
       "questions": [
         "How do I finish this session?",
         "Where is the red end button?",
@@ -337,7 +337,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
-      "text": "Procedural: the instructorâ€™s red â–  Terminate exercise button is in the EXERCISE controls around the scope; it is also in Review. Close any open side panel to see the scope controls. QGH instructor-led / Surveillance / SRA / PAR: create a session, then find TERMINATE beside Start and Pause; it becomes available once the exercise has started. Individual QGH: TERMINATE EXERCISE is in the controller controls. Student displays cannot end the instructorâ€™s exercise. If an old page lacks the new Procedural button, finish or leave the exercise, return to Suite home, choose Update available Â· reload, then reopen it.",
+      "text": "Procedural: the instructor’s red ■ Terminate exercise button is in the EXERCISE controls around the scope; it is also in Review. Close any open side panel to see the scope controls. QGH instructor-led / Surveillance / SRA / PAR: create a session, then find TERMINATE beside Start and Pause; it becomes available once the exercise has started. Individual QGH: TERMINATE EXERCISE is in the controller controls. Student displays cannot end the instructor’s exercise. If an old page lacks the new Procedural button, finish or leave the exercise, return to Suite home, choose Update available · reload, then reopen it.",
       "questions": [
         "Where is terminate?",
         "I cannot see the terminate button",
@@ -388,7 +388,7 @@
       ],
       "selector": "#session-mode",
       "title": "Choose where you train",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit â†’ Ready â†’ Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
+      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
     },
     {
       "pages": [
@@ -428,7 +428,7 @@
       ],
       "selector": "#aircraft-quick-controls",
       "title": "Quick aircraft control",
-      "text": "Click or tap an aircraft to select and transmit. Left now / Right now start continuous turns; Stop turn levels the wings. Enter Heading Â°T and choose Turn left / Turn right for an assigned heading. More controls opens Aircraft controls."
+      "text": "Click or tap an aircraft to select and transmit. Left now / Right now start continuous turns; Stop turn levels the wings. Enter Heading °T and choose Turn left / Turn right for an assigned heading. More controls opens Aircraft controls."
     },
     {
       "pages": [
@@ -452,7 +452,7 @@
       ],
       "selector": "#terminate-quick",
       "title": "Pause or finish",
-      "text": "On the instructor scope, press the red â–  Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop."
+      "text": "On the instructor scope, press the red ■ Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop."
     },
     {
       "pages": [
@@ -461,7 +461,7 @@
       ],
       "selector": "#exerciseConnection",
       "title": "Offline or online",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit â†’ Ready â†’ Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
+      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
     },
     {
       "pages": [
@@ -477,7 +477,7 @@
       ],
       "selector": "#aircraftRoster",
       "title": "Build your traffic",
-      "text": "Set 1â€“24 aircraft and edit their callsign, position, heading, level and performance. Each callsign tab selects the aircraft you will control."
+      "text": "Set 1–24 aircraft and edit their callsign, position, heading, level and performance. Each callsign tab selects the aircraft you will control."
     },
     {
       "pages": [
@@ -525,7 +525,7 @@
       ],
       "selector": "#joinPin",
       "title": "Request admission",
-      "text": "Enter the instructorâ€™s six-digit PIN in the matching connection mode. Request to join; wait for admission and press Position Ready."
+      "text": "Enter the instructor’s six-digit PIN in the matching connection mode. Request to join; wait for admission and press Position Ready."
     },
     {
       "pages": [
