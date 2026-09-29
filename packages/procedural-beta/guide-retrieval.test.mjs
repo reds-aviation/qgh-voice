@@ -14,6 +14,7 @@ test('Gyani: connection, extended screens, common controls, paraphrases and unsu
     ['How to set up two screens?','extended-screens'],['Both monitors show identical pictures','extended-screens'],
     ['How do I put the pupil on another monitor?','extended-screens'],['Best offline display arrangement','extended-screens'],
     ['Show me around','guided-tour'],['Where are the controls?','guided-tour'],['Are you a real AI?','help-limits'],
+    ['The scope disappeared on my phone','mobile-workspace'],['How do I use landscape?','mobile-workspace'],
   ];
   for(const topic of ['suite','procedural','qgh-individual','qgh-instructor','sra','par'])for(const [q,id] of cases){
     assert.equal(matchGuideQuestion(q,topic).intent,id,`${topic}: ${q}`);
