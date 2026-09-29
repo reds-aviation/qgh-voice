@@ -6,6 +6,6 @@
 - Keep the guide revision equal to the Procedural manifest version. Recompute changed asset hashes and include new static assets. Run the guide/interaction tests and relevant simulator tests before release.
 - Clearly distinguish This device/offline (same PC AND browser profile, separate windows) from Online room (different devices, internet on both). Recommend two extended monitors for offline use; Duplicate exposes instructor truth. A second screen does not provide independent keyboard/mouse control.
 - Sirsa and Jamnagar are excluded from selectable airspace presets. Do not reintroduce them through a catalogue refresh.
-- Publish only with user authorization. GitHub Pages is the requested public destination; use `[skip netlify]` in release commits and do not deploy Netlify or build native apps unless requested.
+- Publish only with user authorization. Keep GitHub Pages and Netlify hosted suite builds aligned when the user requests deployment; build native apps only when requested.
 
 - Keep hardware procurement and the owner’s offline installation handbook private in untracked output. Do not publish its pages, source document, links or Gyani answers about the handbook. Retain brief operational connection and extended-screen guidance.

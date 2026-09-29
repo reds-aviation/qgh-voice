@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  QGH_PROCEDURAL_BETA = "1"
 
 # Preserve the exact .html routes cached by the offline service worker.
 [build.processing.html]

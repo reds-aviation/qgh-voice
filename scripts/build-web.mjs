@@ -286,7 +286,7 @@ async function build() {
 
   await buildInstructorLedSuite();
 
-  // GitHub Pages opts in. The default Netlify/native distribution is unchanged.
+  // Hosted suite builds opt in; Netlify and GitHub Pages now use the same flow.
   if (process.env.QGH_PROCEDURAL_BETA === '1') {
     const { buildProceduralBeta } = await import('./build-procedural-beta.mjs');
     await buildProceduralBeta(outputRoot);

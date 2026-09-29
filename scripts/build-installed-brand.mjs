@@ -1,7 +1,7 @@
 import {readFile, writeFile, copyFile, mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
-// Pages-only installed-app identity. Keep document titles, visible branding,
+// Hosted installed-app identity. Keep document titles, visible branding,
 // manifest IDs, start URLs and scopes unchanged.
 export async function buildInstalledBrand(output, root) {
   const assets = ['ats-simbox-192.png', 'ats-simbox-512.png', 'ats-simbox-apple.png'];

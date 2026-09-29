@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export async function buildProceduralBeta(outputRoot) {
-  if (resolve(outputRoot) !== resolve(root,'apps/web/dist')) throw new Error('Unexpected Pages output');
+  if (resolve(outputRoot) !== resolve(root,'apps/web/dist')) throw new Error('Unexpected suite output');
   const source = resolve(root,'packages/procedural-beta');
   const manifest = JSON.parse(await readFile(resolve(source,'manifest.json'),'utf8'));
   const seen = new Set();
@@ -27,8 +27,8 @@ export async function buildProceduralBeta(outputRoot) {
   const landingAssets = ['suite-landing.css','suite-landing-register.js','hero-airspace.png','qgh-towers.png','procedural-airspace.png','aircraft-icon.png','instructor-icon.png'];
   for (const asset of landingAssets) await copyFile(resolve(landingRoot,asset),resolve(outputRoot,asset));
 
-  // Keep the already-built QGH exercise picker at a stable Pages-only URL.
-  // The shared QGH source, native apps, and default Netlify build are untouched.
+  // Keep the already-built QGH exercise picker at a stable hosted-suite URL.
+  // The shared QGH source and native apps are untouched.
   const homePath = resolve(outputRoot,'index.html');
   let qgh = await readFile(homePath,'utf8');
   const individualTab = '<a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>';
@@ -49,15 +49,15 @@ export async function buildProceduralBeta(outputRoot) {
     const suiteLink = '<a class="mode-home-link" href="./">ATC SUITE</a>';
     if (page === 'single.html') {
       const marker = '<div class="brand"><h1>QGH SIMULATOR</h1>';
-      if (!html.includes(marker)) throw new Error('Missing Single QGH header for Pages suite link');
+      if (!html.includes(marker)) throw new Error('Missing Single QGH header for suite link');
       html = html.replace(marker, marker + suiteLink);
     } else if (page === 'tactical.html') {
       const marker = '<div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1>';
-      if (!html.includes(marker)) throw new Error('Missing Tactical QGH header for Pages suite link');
+      if (!html.includes(marker)) throw new Error('Missing Tactical QGH header for suite link');
       html = html.replace(marker, marker + '<a class="tactical-mode-home" href="./">ATC SUITE</a>');
     } else if (page === 'training-centre.html') {
       const marker = '<div class="header-links">';
-      if (!html.includes(marker)) throw new Error('Missing Training Centre header for Pages suite link');
+      if (!html.includes(marker)) throw new Error('Missing Training Centre header for suite link');
       html = html.replace(marker, marker + '<a class="back-link" href="./">ATC Suite</a>');
     }
     await writeFile(path,html);
@@ -82,7 +82,7 @@ export async function buildProceduralBeta(outputRoot) {
     await writeFile(path,html);
   }
   await buildSuiteGuides(outputRoot, root, manifest.version);
-  // One guide/assistant source serves every GitHub Pages branch.
+  // One guide/assistant source serves every hosted suite branch.
   for (const [page, prefix] of [
     ...['index.html','qgh.html','single.html','tactical.html','training-centre.html','user-guide.html'].map(page => [page, 'procedural-beta/']),
     ...['index.html','instructor.html','student.html','training-guide.html'].map(page => ['instructor-led/' + page, '../procedural-beta/']),
@@ -153,5 +153,5 @@ export async function buildProceduralBeta(outputRoot) {
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
-  console.log(`Built GitHub-only ATC Training Suite with Procedural Beta ${manifest.version}`);
+  console.log(`Built ATC Training Suite with Procedural Beta ${manifest.version}`);
 }
