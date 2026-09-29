@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.29.2",
+  "version": "2026.09.29.3",
   "go": "1.25.0",
   "files": [
     {
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 50611,
-      "sha256": "211eb6c6c4f9dd0a5c81be7df454ced784bdee46523dda6d28854ca51c1470e7"
+      "bytes": 50905,
+      "sha256": "fbb721d7f44e079fad037276001a9f71a1571d9498367bee98e788a7e2d4e706"
     },
     {
       "path": "static/scope-history.js",
@@ -215,7 +215,7 @@
     {
       "path": "static/guide-knowledge.js",
       "bytes": 7589,
-      "sha256": "3ac374a1335216adbe0476ff8dea35117d12206afd13585a607f20e574f1fb27"
+      "sha256": "ed9d79a38a2007f791c36af591b97e9fc03228f6fa289f6f67bf3d964095bb67"
     },
     {
       "path": "static/gyani-fox.png",
