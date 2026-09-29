@@ -24,6 +24,13 @@ test('Gyani: connection, extended screens, common controls, paraphrases and unsu
   }
   assert.match(matchGuideQuestion('how do i join','qgh-instructor').text,/internet on both/);
   assert.match(matchGuideQuestion('and left','procedural','turn').text,/Stop turn/);
+  for(const q of ['How do I type a heading?','Where is More controls?','Does clicking an aircraft transmit?']) {
+    const answer=matchGuideQuestion(q,'procedural'); assert.equal(answer.matched,true,q);
+    assert.match(answer.text,/More controls|single.click|click or tap/i,q);
+  }
+  const ended=matchGuideQuestion('The instructor terminated the exercise. What does the student see?','procedural');
+  assert.equal(ended.intent,'terminate-exercise'); assert.match(ended.text,/student.*red|red.*student/i);
+
   for(const topic of ['suite','qgh','procedural','qgh-individual','qgh-instructor','sra','par']) {
     for(const q of ['Where is terminate?','I cannot see the terminate button','How do I end the exercise?']) {
       const answer=matchGuideQuestion(q,topic);assert.equal(answer.matched,true,`${topic}: ${q}`);assert.match(answer.intent,/^terminate-/);

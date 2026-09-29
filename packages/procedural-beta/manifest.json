@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.29.10",
+  "version": "2026.09.29.11",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 37746,
-      "sha256": "7f0fa2ab8a3e9eaef7dfdfd1c852fccc552fd6dc75dbe4e4ae1ea2f5f2f08a19"
+      "bytes": 38224,
+      "sha256": "06aee2331d404079a0d34a4d90c73d6bc60475f17d46306a3c3fd877fd85de1a"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 98211,
-      "sha256": "0a53bc95bd0028c529ba8b8ec3390c9af7d08caf0c771378c2f250da3dfd9171"
+      "bytes": 100341,
+      "sha256": "5af409eae1d705e14b7bad3f92d1cf3020a2ce4d489c3da5b1d0439276ce99ff"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 51710,
-      "sha256": "92d8c26b5a7789bf2218312b29da31a67a4ef6fc049312623fd553f9ed820222"
+      "bytes": 53520,
+      "sha256": "bd6d33b0cb8f86389cb6d59f85f2cabe5a4fdb1749ffab18d89a42362eb4d6d4"
     },
     {
       "path": "static/scope-history.js",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 31145,
-      "sha256": "36cf54ccbf16838c69b437c6b7d58f6c99f8b88e91efb53e5f12c124db947505"
+      "bytes": 32182,
+      "sha256": "f8f2a79a7e12003faf1f167e0e4bf98a58f87b30c845f87b066cfb9b4d9fd4c3"
     },
     {
       "path": "static/style.css",
@@ -89,8 +89,8 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 34549,
-      "sha256": "9711731078020acef0fb5651cd0b981c9986688eef1e87958d859641303601cb"
+      "bytes": 34685,
+      "sha256": "58d5d25120d2626431f9d3326067248de9dc5e986578bdb93b0839fad614751d"
     },
     {
       "path": "static/suite-guide-chat.css",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 29129,
-      "sha256": "9bec308e209ab68cd9eadba3fb58bf8f5a7ba52fadd328026f3f5f4e6a8076bb"
+      "bytes": 30915,
+      "sha256": "341e06fa24a1e5b5be692d20058e3d3b64bfc958ab4bf501f930ae8b22dc9b6f"
     },
     {
       "path": "static/gyani-fox.png",
@@ -229,8 +229,8 @@
     },
     {
       "path": "static/scope-interaction.js",
-      "bytes": 1227,
-      "sha256": "250dccfffc17114a0134c5e462238b8e4a4de680538f596c73ecf0399ac030b2"
+      "bytes": 1755,
+      "sha256": "07fe5fcc23a12370baaef922f8b9be6a50f6e40b260d51e26137408061066ae5"
     },
     {
       "path": "static/remote-config.js",

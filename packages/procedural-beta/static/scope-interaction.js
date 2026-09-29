@@ -1,15 +1,21 @@
-// A gesture selects a target first; only a deliberate pair of mouse presses
-// on the same target and button can issue a turn. Touch uses explicit buttons.
-export function createAircraftGestures() {
-    let previous = null;
+// Delay a single mouse transmission until the double-click window closes.
+// A double click turns once without sending a separate D/F transmission.
+// Touch taps transmit; touch turns use the explicit controls.
+export function createAircraftGestures({ onTransmit = () => {}, schedule = setTimeout, cancel = clearTimeout } = {}) {
+    let previous = null, singleTimer = null;
+    function reset() { if (singleTimer !== null) cancel(singleTimer); singleTimer = null; previous = null; }
     return {
-        reset() { previous = null; },
+        reset,
         press({ id, button, pointerType, time, x, y }) {
-            if (!id || pointerType !== 'mouse' || ![0, 2].includes(button)) { previous = null; return null; }
+            if (!id || ![0, 2].includes(button)) { reset(); return null; }
+            if (pointerType !== 'mouse') { reset(); if (button === 0) onTransmit(id); return null; }
             const paired = previous && previous.id === id && previous.button === button
                 && time >= previous.time && time - previous.time <= 500
                 && Math.hypot(x - previous.x, y - previous.y) <= 24;
+            if (singleTimer !== null) cancel(singleTimer);
+            singleTimer = null;
             previous = paired ? null : { id, button, time, x, y };
+            if (!paired && button === 0) singleTimer = schedule(() => { singleTimer = null; previous = null; onTransmit(id); }, 500);
             return paired ? (button === 2 ? 'right' : 'left') : null;
         },
     };

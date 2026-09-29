@@ -63,6 +63,7 @@
     const shared = knowledge?.entries.find(entry => entry.priority && entry.topics.includes(topic) && new RegExp(entry.match,'i').test(q));
     const answerEntry = entry => ({...reply(entry.text,[sections(topic === 'procedural' ? guides.procedural : topic === 'qgh-individual' || topic === 'qgh' ? guides.individual : guides.instructor,entry.anchor)]),intent:entry.id});
     if(shared) return answerEntry(shared);
+    if(topic === 'procedural' && /\bmore controls\b/.test(q)) return answerEntry(knowledge.entries.find(entry => entry.id === 'turn'));
     if (/^(?:hi|hello|hey|namaste|help|help me|can you help me|who are you|what can you do)(?: gyani)?$/.test(q))
       return reply('I’m Gyani, your simulator guide. I can help you start or join an exercise, turn aircraft, use bearings, set levels, or declutter the scope. What would you like to do?', topic === 'procedural' ? [guides.procedural] : allGuides);
     if (/^(?:thanks|thank you|thankyou|ok|okay|got it)(?: gyani)?$/.test(q)) return reply('You’re welcome. Ask me whenever you need help with the simulator.', []);

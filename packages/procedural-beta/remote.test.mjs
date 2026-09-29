@@ -106,6 +106,14 @@ test('Supabase SQL: rooms, admission, role boundaries, receipts, expiry and priv
     assert.equal((await controller.dispatch('command',clear)).status,403);
     const stolen = await call(student,'poll',a.id);
     assert.equal(stolen.state,null,'rejected membership cannot see another room');
+    for(const [action,ended] of [['terminate',true],['reopen',false]]) {
+      const change={id:randomUUID(),exerciseId:projected.exerciseId,type:'clock',payload:{action}};
+      assert.equal((await hostDriver.dispatch('command',change)).status,200);
+      await hostDriver.sync(); await controller.sync();
+      const studentState=(await controller.dispatch('state')).body;
+      assert.equal(studentState.terminated,ended,'instructor '+action+' reaches the remote student');
+      assert.equal(studentState.running,false);
+    }
     hostDriver.stop(); controller.stop();
   } finally { await db.close(); }
 });

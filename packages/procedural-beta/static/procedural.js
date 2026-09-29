@@ -57,8 +57,7 @@ const dfSettingsDirty = new Set();
 const signatures = new Map();
 function message(value, error = false) { clearTimeout(messageTimer); text('message', value); $('message').classList.toggle('error', error); messageTimer = window.setTimeout(() => text('message', ''), error ? 12000 : 5000); }
 function clearAudio() {
-    if ('speechSynthesis' in window)
-        window.speechSynthesis.cancel();
+    window.speechSynthesis?.cancel();
     lastAudio = '';
 }
 async function request(path, body, method) {
@@ -176,7 +175,7 @@ function loadStrip() {
         field('strip-form', k).value = s[k] || '';
     text('strip-status', drafts.has(selected) ? 'Unsaved draft' : 'Saved working record');
 }
-function choose(id) { storeDraftIfDirty(); selected = id; loadStrip(); renderSelection(); renderFleet(); draw(); }
+function choose(id) { storeDraftIfDirty(); if (selected !== id) { gestures.reset(); $('quick-heading').value = ''; } selected = id; loadStrip(); renderSelection(); renderFleet(); draw(); }
 function storeDraftIfDirty() {
     if (selected && drafts.has(selected))
         storeDraft();
@@ -208,6 +207,7 @@ function setStage(next) {
     $('return-desk').hidden = !session || next !== 'entry';
 }
 function leave() {
+    gestures.reset();
     ++generation;
     commandBusy = false;
     pendingClock = '';
@@ -266,7 +266,7 @@ function enter(s, startPolling = true) {
     text('edge-pin', instructor ? '······' : '');
     text('role', instructor ? 'INSTRUCTOR / PSEUDO-PILOT' : 'STUDENT / PROCEDURAL CONTROLLER');
     text('scope-title', instructor ? 'INSTRUCTOR TRUTH · CONTINUOUS TRAFFIC' : 'PROCEDURAL PICTURE · D/F ONLY');
-    text('scope-caption', instructor ? 'Drag to pan · Ctrl + scroll to zoom · double left/right mouse click: turn · tap: controls' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
+    text('scope-caption', instructor ? 'Click aircraft: transmit · double left/right click: turn · drag: pan · Ctrl + scroll: zoom' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
     $('clock-controls').hidden = !instructor;
     $('scope-manual-dock').hidden = !instructor;
     $('scope-flight-controls').hidden = !instructor;
@@ -460,7 +460,13 @@ function renderClockControls() {
     $('clock-controls').setAttribute('aria-busy', String(!!pendingClock));
     const blocked = !running && waiting > 0 && instructor;
     $('exercise-notice').hidden = !ended && !blocked;
-    text('exercise-notice-text', ended ? (instructor ? 'Exercise ended. Reopen to continue with the same traffic.' : 'Exercise ended. The instructor can reopen it.') : `${waiting} controller${waiting === 1 ? '' : 's'} must press Ready before Run. Manage the session to remove an absent controller.`);
+    const notice = $('exercise-notice'), studentEnd = ended && !instructor;
+    if (studentEnd && !notice.classList.contains('student-termination')) { closeDrawer(); clearAudio(); }
+    notice.classList.toggle('student-termination', studentEnd);
+    notice.setAttribute('role', studentEnd ? 'alert' : 'status');
+    const noticeText = ended ? (instructor ? 'Exercise terminated. Reopen to continue with the same traffic.' : 'EXERCISE TERMINATED · The instructor has ended this exercise. Await further instructions.') : `${waiting} controller${waiting === 1 ? '' : 's'} must press Ready before Run. Manage the session to remove an absent controller.`;
+    if ($('exercise-notice-text').textContent !== noticeText) text('exercise-notice-text', noticeText);
+    if (ended) gestures.reset();
     $('notice-session').hidden = ended || !blocked;
     $('notice-review').hidden = !ended || !instructor;
     $('resume').title = ended ? 'Reopen the ended exercise first' : waiting ? 'Waiting for admitted controllers to press Ready' : running ? 'Exercise is already running' : 'Start traffic';
@@ -623,6 +629,8 @@ function renderSelection() {
     $('aircraft-quick-controls').hidden = session?.role !== 'instructor' || !a || a.status === 'scheduled';
     text('quick-aircraft-info', a ? `${a.callsign} · ${pad(a.headingDeg)}°T · ${Math.round(a.altitudeFt)} FT · ${Math.round(a.speedKt)} KT` : '');
     $('aircraft-quick-controls').querySelectorAll('button').forEach(b => b.disabled = !a || !!view.terminated || commandBusy);
+    $('quick-heading-form').querySelectorAll('input,button').forEach(el => el.disabled = !a || !!a.compassUnserviceable || !!view.terminated || commandBusy);
+    $('quick-heading').title = a?.compassUnserviceable ? 'Heading assignments unavailable with an unserviceable compass; use Left now / Right now.' : 'Target true heading, 000 to 360 degrees';
     text('scope-selected-truth', a ? `${pad(a.headingDeg)}°T · ${Math.round(a.speedKt)} KT · ${Math.round(a.altitudeFt)} FT MSL${a.compassUnserviceable ? ' · COMPASS U/S' : ''}` : '');
     document.querySelectorAll('#scope-manual-dock button,#scope-flight-controls button,#clearance-form button,#transmit-form button').forEach(b => b.disabled = !a || !!view?.terminated);
     document.querySelectorAll('#scope-heading-form button,#heading-report').forEach(b => b.disabled = !a || !!a.compassUnserviceable || !!view?.terminated);
@@ -1291,7 +1299,7 @@ function syncRange() {
     s.value = String(range);
 }
 function position(e) { const b = canvas.getBoundingClientRect(), g = geometry(); return { x: (e.clientX - b.left - g.cx) / g.scale, y: -(e.clientY - b.top - g.cy) / g.scale }; }
-const gestures = createAircraftGestures();
+const gestures = createAircraftGestures({onTransmit: id => { void safe(() => transmitAircraft(id))(); }});
 function hitAircraft(e) {
     return session?.role === 'instructor' && !display.ruler
         ? nearestAircraft(view?.aircraft, position(e), geometry().scale, e.pointerType === 'touch' ? 30 : 24) : null;
@@ -1299,7 +1307,21 @@ function hitAircraft(e) {
 function hideAircraftHover() { $('aircraft-hover').hidden = true; }
 async function immediateTurn(action, id = selected) {
     if (session?.role !== 'instructor' || !id || view?.terminated) return;
+    gestures.reset();
     return command('clearance', { action }, id);
+}
+async function transmitAircraft(id = selected) {
+    if (session?.role !== 'instructor' || stage !== 'desk' || !id || id !== selected || view?.terminated || !view?.aircraft?.some(a => a.id === id && a.status !== 'scheduled')) return;
+    return command('transmit', { mode: 'df', durationSeconds: 8 }, id);
+}
+async function quickHeadingTurn(direction) {
+    const a = view?.aircraft?.find(a => a.id === selected), input = $('quick-heading');
+    if (session?.role !== 'instructor' || !a || a.compassUnserviceable || view?.terminated) return;
+    if (!input.value.trim() || !Number.isInteger(Number(input.value)) || Number(input.value) < 0 || Number(input.value) > 360) {
+        input.reportValidity(); message('Enter a whole heading from 000 to 360, then choose Turn left or Turn right.', true); return;
+    }
+    gestures.reset();
+    return command('clearance', { action: 'heading', direction, value: norm(Number(input.value)) }, a.id);
 }
 canvas.addEventListener('contextmenu', e => { if (session?.role === 'instructor') e.preventDefault(); });
 canvas.addEventListener('pointerdown', e => {
@@ -1357,8 +1379,10 @@ for (const event of ['pointercancel', 'lostpointercapture'])
     canvas.addEventListener(event, () => { if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
 for (const direction of ['left', 'right']) $('quick-' + direction).onclick = safe(() => immediateTurn(direction));
 $('quick-stop').onclick = safe(() => immediateTurn('stop-turn'));
-$('quick-transmit').onclick = safe(() => command('transmit', { mode: 'df', durationSeconds: 8 }, selected));
+$('quick-transmit').onclick = safe(() => { gestures.reset(); return transmitAircraft(); });
 $('quick-more').onclick = () => tab('pilot');
+for (const direction of ['left', 'right']) $('quick-heading-' + direction).onclick = safe(() => quickHeadingTurn(direction));
+$('quick-heading-form').onsubmit = e => { e.preventDefault(); $('quick-heading-left').focus(); };
 function zoomScope(factor, clientX, clientY) {
     const before = geometry(), bounds = canvas.getBoundingClientRect();
     const x = clientX == null ? before.width / 2 : clientX - bounds.left, y = clientY == null ? before.height / 2 : clientY - bounds.top;

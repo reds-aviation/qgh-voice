@@ -795,3 +795,25 @@ body.desk-open #terminate-quick:hover,body.desk-open #terminate-quick[aria-press
 body.desk-open #terminate-quick.is-terminated,body.desk-open #work-panel #terminate.is-terminated { opacity:1; background:#671f2a; }
 #terminate-confirm { max-width:min(460px,calc(100vw - 32px)); background:#171e25; color:#f7f7f7; border:2px solid #ed8692; border-radius:12px; padding:24px; }
 #terminate-confirm::backdrop { background:#0009; }
+
+/* Distinct neutral/ending actions; keep the student ending message on screen. */
+#terminate-confirm #keep-exercise { background:#14695c; color:#fff; border:2px solid #72d4b8; min-height:44px; padding:10px 16px; font-weight:700; }
+#terminate-confirm #keep-exercise:hover { background:#1c806e; }
+#terminate-confirm button:focus-visible { outline:3px solid #f4c767; outline-offset:3px; }
+#exercise-notice.student-termination { background:#63232e; border:2px solid #ff9aaa; color:#fff; box-shadow:0 0 0 3px #c0485c55; animation:student-end-pulse 1.5s ease-in-out 3; }
+#exercise-notice.student-termination #exercise-notice-text { font-weight:700; font-size:clamp(14px,1.5vw,19px); }
+@keyframes student-end-pulse { 50% { background:#9b3142; box-shadow:0 0 0 5px #ef849666; } }
+@media (prefers-reduced-motion:reduce) { #exercise-notice.student-termination { animation:none; } }
+#quick-heading-form { display:flex; align-items:end; gap:5px; margin:0; max-width:100%; }
+#quick-heading-form label { display:grid; gap:2px; color:#dce9ed; font:11px/1.2 PlexMono,monospace; }
+#quick-heading-form input { width:115px; min-height:36px; padding:5px 8px; color:#fff; background:#111b22; border:1px solid #a7c2cd; border-radius:6px; font:15px PlexMono,monospace; }
+#quick-heading-form input::placeholder { color:#a5b8c1; }
+#quick-heading-form input:focus-visible { outline:3px solid #f4c767; }
+#quick-heading-form button { white-space:nowrap; }
+@media(max-width:700px) {
+  #aircraft-quick-controls > div { grid-template-columns:1fr 1.05fr 1fr 1fr 1.3fr; }
+  #quick-heading-form { width:100%; display:grid; grid-template-columns:1.1fr 1fr 1fr; }
+  #quick-heading-form input { width:100%; box-sizing:border-box; min-height:40px; }
+  #quick-heading-form label { min-width:0; }
+  #quick-heading-form button { min-height:40px; }
+}

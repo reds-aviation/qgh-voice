@@ -40,6 +40,14 @@ test('browser worker: admission, privacy, authoritative commands, durability and
   const exported = (await instructor.request('export',undefined,i)).body;
   assert.equal(exported.version,1); assert.equal(exported.scenario.running,false); assert.equal(exported.scenario.elapsed,stepped.elapsed);
   assert.equal((await student.request('export',undefined,s)).status,403);
+  assert.equal((await instructor.request('command',cmd('clock',{action:'terminate'}),i)).status,200);
+  for(const ended of [(await student.request('state',undefined,s)).body,(await instructor.request('cloud-view',undefined,i)).body]) {
+    assert.equal(ended.terminated,true); assert.equal(ended.running,false);
+  }
+  assert.equal((await student.request('command',cmd('clock',{action:'reopen'}),s)).status,400);
+  assert.equal((await instructor.request('command',cmd('clock',{action:'reopen'}),i)).status,200);
+  assert.equal((await student.request('state',undefined,s)).body.terminated,false);
+
   assert.equal((await instructor.request('command',cmd('clock',{action:'resume'}),i)).status,200);
   assert.equal((await instructor.request('state',undefined,i)).body.running,true);
   instructor.raw.onmessage({data:{kind:'detach'}});

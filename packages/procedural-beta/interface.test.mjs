@@ -53,6 +53,19 @@ test('mouse turns need the same aircraft, same button, two clicks; touch and dra
   assert.equal(nearestAircraft(undefined,{x:0,y:0},10),null);
 });
 
+test('single aircraft click transmits once; double clicks and drag cancellation do not transmit',()=>{
+  const tasks=new Map(),sent=[];let next=0;
+  const g=createAircraftGestures({onTransmit:id=>sent.push(id),schedule:fn=>{tasks.set(++next,fn);return next;},cancel:id=>tasks.delete(id)});
+  const click=(button,time,id='a',pointerType='mouse')=>g.press({id,button,time,pointerType,x:10,y:10});
+  const flush=()=>{const due=[...tasks.values()];tasks.clear();due.forEach(fn=>fn());};
+  click(0,0);assert.equal(sent.length,0);flush();assert.deepEqual(sent,['a']);
+  click(0,1000);assert.equal(click(0,1200),'left');flush();assert.equal(sent.length,1);
+  click(2,2000);assert.equal(click(2,2200),'right');flush();assert.equal(sent.length,1);
+  click(0,3000);g.reset();flush();assert.equal(sent.length,1,'drag/termination cancels pending transmission');
+  click(0,4000);click(0,4200,'b');flush();assert.deepEqual(sent,['a','b'],'switching aircraft cancels the pending old source');
+  click(0,5000,'b','touch');assert.deepEqual(sent,['a','b','b'],'one tap transmits immediately without a turn');
+});
+
 test('sweep turns clockwise in real milliseconds and freezes while paused',()=>{
   assert.equal(advanceSweep(0,1250,12),90);
   assert.equal(advanceSweep(0,5000,12),0);
@@ -123,7 +136,8 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
 
 test('procedural console boots after feedback removal; mouse/touch controls preserve roles',async()=>{
   const h=domHarness(source('procedural.html'));
-  Object.assign(h.context,{createAircraftGestures,nearestAircraft,
+  const timers=new Map();let timerId=0;
+  Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,
     createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],createTrafficSetup:()=>({close(){},open(){}}),
     createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
   });
@@ -132,9 +146,11 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
     globalThis.prepare=(role)=>{
       session={role}; stage='desk';
       const a={id:'a1',callsign:'101',type:'TRAINER',status:'airborne',mode:'heading',headingDeg:90,speedKt:240,altitudeFt:10000,targetAltitudeFt:10000,xNm:0,yNm:0};
-      view={exerciseId:'example',environment:{rangeNm:60,stationName:'NAV0'},roster:[a],aircraft:[a],routes:[],fixes:[],areas:[],elapsed:0};
+      view={exerciseId:'example',available:true,environment:{rangeNm:60,stationName:'NAV0'},roster:[a],aircraft:[a],routes:[],fixes:[],areas:[],elapsed:0};
       choose(a.id);
     };
+    globalThis.setEnded=(ended)=>{view.terminated=ended;renderClockControls();renderSelection();};
+    globalThis.setCompass=(unserviceable)=>{view.aircraft[0].compassUnserviceable=unserviceable;renderSelection();};
   `,h.context);
   h.context.prepare('instructor');
   const canvas=h.document.getElementById('scope');
@@ -144,21 +160,35 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   emit('pointerdown',2,300);emit('pointerup',2,330);emit('pointerdown',2,400);emit('pointerup',2,430);
   assert.equal(h.context.commands.length,2);assert.equal(h.context.commands[1][1].action,'right');
   emit('pointerdown',0,500,'touch');emit('pointerup',0,530,'touch');emit('pointerdown',0,600,'touch');emit('pointerup',0,630,'touch');
-  assert.equal(h.context.commands.length,2,'touch selection never makes an accidental turn');
-  h.document.getElementById('quick-right').click();assert.equal(h.context.commands[2][1].action,'right');
+  assert.equal(h.context.commands.length,4,'touch selection transmits without turning');
+  assert.equal(h.context.commands[2][0],'transmit');assert.equal(h.context.commands[3][0],'transmit');
+  h.document.getElementById('quick-right').click();assert.equal(h.context.commands[4][1].action,'right');
+  emit('pointerdown',0,1000);emit('pointerup',0,1030);for(const fn of timers.values())fn();timers.clear();
+  assert.equal(h.context.commands[5][0],'transmit');assert.equal(h.context.commands[5][2],'a1');
+  const heading=h.document.getElementById('quick-heading');heading.value='270';
+  h.document.getElementById('quick-heading-left').click();assert.equal(h.context.commands[6][1].action,'heading');assert.equal(h.context.commands[6][1].value,270);assert.equal(h.context.commands[6][1].direction,'left');
+  heading.value='360';h.document.getElementById('quick-heading-right').click();assert.equal(h.context.commands[7][1].value,0);assert.equal(h.context.commands[7][1].direction,'right');
+  for(const invalid of ['', '-1','361','12.5']) {heading.value=invalid;h.document.getElementById('quick-heading-left').click();}
+  assert.equal(h.context.commands.length,8,'invalid headings never issue a clearance');
+  h.context.setCompass(true);assert.equal(heading.disabled,true);heading.value='180';h.document.getElementById('quick-heading-left').click();assert.equal(h.context.commands.length,8);
+  h.context.setCompass(false);h.document.getElementById('quick-more').click();assert.equal(h.document.getElementById('tab-pilot').hidden,false);
   h.context.prepare('student');assert.equal(h.document.getElementById('aircraft-quick-controls').hidden,true);
-  emit('pointerdown',2,800);emit('pointerup',2,830);assert.equal(h.context.commands.length,3);
+  emit('pointerdown',2,1800);emit('pointerup',2,1830);assert.equal(h.context.commands.length,8);
+  h.context.setEnded(true);const notice=h.document.getElementById('exercise-notice');
+  assert.equal(notice.hidden,false);assert.equal(notice.getAttribute('role'),'alert');assert.equal(notice.classList.contains('student-termination'),true);
+  assert.match(notice.textContent,/EXERCISE TERMINATED/);assert.equal(h.document.getElementById('work-panel').hidden,true);assert.equal(h.document.getElementById('reopen-exercise').hidden,true);
+  h.context.setEnded(false);assert.equal(notice.hidden,true);assert.equal(notice.classList.contains('student-termination'),false);
   const end=h.document.getElementById('terminate-quick'),dialog=h.document.getElementById('terminate-confirm');
   dialog.showModal=()=>{dialog.open=true;};
   end.click();assert.ok(!dialog.open,'student cannot open termination confirmation');
   h.context.prepare('instructor');end.click();assert.equal(dialog.open,true);
   assert.equal(end.getAttribute('aria-pressed'),'true');
   dialog.open=false;dialog.returnValue='cancel';dialog.dispatchEvent(new h.Event('close'));
-  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,3,'cancel never ends the exercise');
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,8,'cancel never ends the exercise');
   end.click();assert.equal(dialog.returnValue,'','previous confirmation cannot leak into Escape');
   dialog.open=false;dialog.returnValue='terminate';dialog.dispatchEvent(new h.Event('close'));
-  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,4);
-  assert.equal(h.context.commands[3][0],'clock');assert.equal(h.context.commands[3][1].action,'terminate');
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,9);
+  assert.equal(h.context.commands[8][0],'clock');assert.equal(h.context.commands[8][1].action,'terminate');
 });
 
 test('phone roster keeps 24 editable cards and retains callsigns while changing the count',async()=>{
