@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.12",
+  "revision": "2026.09.29.13",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -20,6 +20,17 @@
     }
   ],
   "entries": [
+    {
+      "id": "mobile-workspace",
+      "title": "Use the suite on a small screen",
+      "topics": ["procedural", "qgh-instructor", "sra", "par"],
+      "controls": [],
+      "anchor": "current-flow",
+      "priority": true,
+      "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace)\\b",
+      "text": "On narrow or short screens, scroll the Procedural workspace vertically to reach the scope and controls; the radar keeps a usable height. Swipe the top navigation, scope tools and panel tabs sideways to reach extra actions. Setup navigation wraps onto additional rows. Hide controls also collapses the quick aircraft bar to free more scope space; Show controls restores it. More controls opens a scrollable Aircraft panel; Close returns to the full workspace. QGH instructor clock and speed controls wrap below the title on phones. Gyani can be collapsed with its close button.",
+      "questions": ["The scope disappeared on my phone", "How do I use landscape?", "Buttons are off screen"]
+    },
     {
       "id": "online-recovery",
       "title": "Lost connection or stale picture",

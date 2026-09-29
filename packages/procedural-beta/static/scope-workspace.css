@@ -817,3 +817,32 @@ body.desk-open #terminate-quick.is-terminated,body.desk-open #work-panel #termin
   #quick-heading-form label { min-width:0; }
   #quick-heading-form button { min-height:40px; }
 }
+
+/* Small screens scroll the workspace instead of collapsing the radar plot. */
+@media (max-width:700px) {
+  body.desk-open { --desk-header-height:44px; }
+  body.desk-open.exercise-running { --desk-header-height:0px; }
+  body.desk-open .topbar { gap:6px; padding-inline:6px; }
+  body.desk-open .brand { font-size:13px; min-width:0; }
+  body.desk-open .topbar nav { flex:1 1 0; min-width:0; overflow-x:auto; justify-content:flex-start; gap:6px; scrollbar-width:thin; }
+  body.desk-open .topbar nav > * { flex-shrink:0; }
+  body.desk-open .topbar button { min-height:44px; }
+  body.setup-open .topbar { gap:6px; padding:8px; }
+  body.setup-open .topbar nav { width:100%; min-width:0; flex-wrap:wrap; justify-content:flex-start; gap:6px; }
+  body.setup-open .topbar button { min-height:44px; }
+  body.desk-open, body.desk-open.drawer-open { height:auto; min-height:100dvh; overflow-y:auto; }
+  body.desk-open #main, body.desk-open.drawer-open #main { height:max(780px,calc(var(--usable-height,100dvh) - var(--desk-header-height))); }
+  body.desk-open .scope-toolbar > div { min-width:0; max-width:100%; justify-content:flex-start; scrollbar-width:thin; }
+  body.desk-open .scope-toolbar button, body.desk-open .scope-toolbar select { min-height:44px; }
+  #aircraft-quick-controls button, #quick-heading-form button { min-height:44px; }
+  #quick-heading-form label { margin:0; }
+  #quick-heading-form input { margin:0; min-height:44px; font-size:16px; }
+  #work-panel .drawer-head { min-height:48px; }
+  #work-panel .drawer-head button, #work-panel .work-tabs button { min-height:44px; }
+}
+@media (min-width:701px) and (max-width:1050px) and (max-height:700px) {
+  body.desk-open, body.desk-open.drawer-open { height:auto; min-height:100dvh; overflow-y:auto; }
+  body.desk-open #main, body.desk-open.drawer-open #main { height:660px; }
+}
+
+body.desk-open.controls-collapsed #aircraft-quick-controls { display:none; }

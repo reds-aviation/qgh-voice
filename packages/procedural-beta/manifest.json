@@ -1,11 +1,11 @@
 {
-  "version": "2026.09.29.12",
+  "version": "2026.09.29.13",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 38224,
-      "sha256": "06aee2331d404079a0d34a4d90c73d6bc60475f17d46306a3c3fd877fd85de1a"
+      "bytes": 38253,
+      "sha256": "3fe3cb21711f8faf0422653b5b7af835ab9ecb7877e51fea418f27b8f454b907"
     },
     {
       "path": "static/procedural.js",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 53520,
-      "sha256": "bd6d33b0cb8f86389cb6d59f85f2cabe5a4fdb1749ffab18d89a42362eb4d6d4"
+      "bytes": 55432,
+      "sha256": "106729729df7e6fc30ac8bd814347a275480aae7f2333f1658f8521d803855b7"
     },
     {
       "path": "static/scope-history.js",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 32182,
-      "sha256": "f8f2a79a7e12003faf1f167e0e4bf98a58f87b30c845f87b066cfb9b4d9fd4c3"
+      "bytes": 32426,
+      "sha256": "c4899f0a7fd2ed796ad8192261f6c95c142bd9ad3f87898d7c94fea94c198b7b"
     },
     {
       "path": "static/style.css",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 30666,
-      "sha256": "623bcea77dbddadfe0c5a30133dac187fa445ebf6a28990975d4efb5c144451f"
+      "bytes": 31752,
+      "sha256": "48315cd11ec834e03f9d9ad84579700ef6a2e7ff905f8f5e77a8424a9fc16b1c"
     },
     {
       "path": "static/gyani-fox.png",

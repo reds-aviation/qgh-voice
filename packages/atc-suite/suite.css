@@ -524,3 +524,11 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 }
 
 .connection-help { grid-column: 1 / -1; max-width: 78ch; margin: 0; line-height: 1.6; }
+
+/* Keep the title and clock controls inside narrow instructor/student screens. */
+@media (max-width:680px) {
+  .workspace-head, .student-head { flex-wrap:wrap; }
+  .workspace-head > div:first-child, .student-head > div:first-child { flex:1 1 100%; }
+  .status-stack { min-width:0; max-width:100%; margin-left:auto; }
+  .training-rate-control select { min-height:44px; font-size:16px; width:150px; max-width:100%; }
+}
