@@ -16,6 +16,30 @@ const loadModule=async name=>import('data:text/javascript;base64,'+Buffer.from(s
 const {createAircraftGestures,nearestAircraft}=await loadModule('scope-interaction.js');
 const {advanceSweep}=await loadModule('radar-sweep.js');
 
+test('offline update requires an explicit choice outside the active exercise',async()=>{
+  const h=domHarness('<html><body><header class="topbar"><nav></nav></header></body></html>');
+  const events=new Map(), messages=[];
+  let reloaded=0,registered;
+  h.context.location.protocol='https:'; h.context.location.reload=()=>reloaded++;
+  h.document.currentScript.src='https://example.test/qgh-voice/suite-landing-register.js?release=example';
+  h.window.addEventListener=(name,fn)=>events.set('window:'+name,fn);
+  const registration={waiting:{postMessage:message=>messages.push(message)},addEventListener(){},update:async()=>{}};
+  h.context.navigator={serviceWorker:{controller:{},addEventListener:(name,fn)=>events.set(name,fn),register:async(...args)=>{registered=args;return registration;}}};
+  vm.runInContext(readFileSync(new URL('../site-landing/suite-landing-register.js',import.meta.url),'utf8'),h.context);
+  await events.get('window:load')();
+  assert.equal(registered[0],'https://example.test/qgh-voice/service-worker.js');
+  assert.equal(registered[1].scope,'/qgh-voice/');
+  const button=h.document.querySelector('.suite-update');assert.equal(button.hidden,false);
+  events.get('controllerchange')();assert.equal(reloaded,0,'another tab updating never reloads this desk');
+  h.context.sessionStorage.setItem('qgh-procedural-browser-session-v1','active');
+  h.document.body.classList.add('desk-open');await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(button.hidden,true);button.click();assert.equal(messages.length,0);
+  h.context.sessionStorage.removeItem('qgh-procedural-browser-session-v1');
+  h.document.body.classList.remove('desk-open');await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(button.hidden,false);button.click();assert.equal(messages[0].type,'SKIP_WAITING');
+  events.get('controllerchange')();assert.equal(reloaded,1);
+});
+
 test('mouse turns need the same aircraft, same button, two clicks; touch and drags cannot turn',()=>{
   const g=createAircraftGestures();
   const press=(override={})=>g.press({id:'a',button:0,pointerType:'mouse',time:100,x:10,y:10,...override});

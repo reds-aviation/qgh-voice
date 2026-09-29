@@ -35,7 +35,8 @@ export async function buildProceduralBeta(outputRoot) {
     .replace('INSTALL QGH ON THIS DEVICE','INSTALL ATC SUITE ON THIS DEVICE')
     .replace('Install QGH Simulator','Install ATC Training Suite');
   await writeFile(resolve(outputRoot,'qgh.html'),qgh);
-  await copyFile(resolve(landingRoot,'index.html'),homePath);
+  const landingHTML = await readFile(resolve(landingRoot,'index.html'),'utf8');
+  await writeFile(homePath, landingHTML.replace('src="suite-landing-register.js"',`src="suite-landing-register.js?release=${manifest.version}"`));
 
   for (const page of ['single.html','tactical.html','training-centre.html','user-guide.html']) {
     const path = resolve(outputRoot,page);
@@ -72,7 +73,8 @@ export async function buildProceduralBeta(outputRoot) {
     const path = resolve(outputRoot,'procedural-beta',page);
     let html = await readFile(path,'utf8');
     html = html.replace('<span class="brand-mark">R</span>','<span class="brand-mark">⌖</span>')
-      .replace('REDS · PROCEDURAL TRAINING','ATC · PROCEDURAL TRAINING');
+      .replace('REDS · PROCEDURAL TRAINING','ATC · PROCEDURAL TRAINING')
+      .replace('</head>',`<script defer src="../suite-landing-register.js?release=${manifest.version}"></script></head>`);
     await writeFile(path,html);
   }
   await buildSuiteGuides(outputRoot, root, manifest.version);
