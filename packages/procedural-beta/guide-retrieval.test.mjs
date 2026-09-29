@@ -24,6 +24,11 @@ test('Gyani: connection, extended screens, common controls, paraphrases and unsu
   }
   assert.match(matchGuideQuestion('how do i join','qgh-instructor').text,/internet on both/);
   assert.match(matchGuideQuestion('and left','procedural','turn').text,/Stop turn/);
+  for(const topic of ['suite','qgh','procedural','qgh-individual','qgh-instructor','sra','par']) {
+    for(const q of ['Where is terminate?','I cannot see the terminate button','How do I end the exercise?']) {
+      const answer=matchGuideQuestion(q,topic);assert.equal(answer.matched,true,`${topic}: ${q}`);assert.match(answer.intent,/^terminate-/);
+    }
+  }
 });
 
 test('screen tour navigates without commands, closes for Run and restores a paused screen',async()=>{

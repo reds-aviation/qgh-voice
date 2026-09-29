@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.9",
+  "revision": "2026.09.29.10",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -287,7 +287,7 @@
       ],
       "anchor": "current-flow",
       "priority": true,
-      "match": "\\b(?:terminate|termination|end exercise|finish exercise|stop exercise)\\b",
+      "match": "\\b(?:terminate|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
       "text": "On the instructor scope, press the red ■ Terminate exercise button and confirm. Traffic stops, the button reads Exercise terminated and the review opens. Use Reopen exercise to restore the same traffic and records paused, then Run. Pause is the choice for a temporary stop. Students cannot terminate the instructor exercise.",
       "questions": [
         "How do I finish this session?",
@@ -309,6 +309,60 @@
       "questions": [
         "The replay buttons cover my track",
         "How do I watch my flight again?"
+      ]
+    },
+    {
+      "id": "terminate-location",
+      "title": "Where to find Terminate",
+      "topics": [
+        "suite",
+        "qgh"
+      ],
+      "controls": [],
+      "anchor": "current-flow",
+      "priority": true,
+      "match": "\\b(?:terminate|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
+      "text": "Procedural: the instructor’s red ■ Terminate exercise button is in the EXERCISE controls around the scope; it is also in Review. Close any open side panel to see the scope controls. QGH instructor-led / Surveillance / SRA / PAR: create a session, then find TERMINATE beside Start and Pause; it becomes available once the exercise has started. Individual QGH: TERMINATE EXERCISE is in the controller controls. Student displays cannot end the instructor’s exercise. If an old page lacks the new Procedural button, finish or leave the exercise, return to Suite home, choose Update available · reload, then reopen it.",
+      "questions": [
+        "Where is terminate?",
+        "I cannot see the terminate button",
+        "How do I end the exercise?"
+      ]
+    },
+    {
+      "id": "terminate-instructor",
+      "title": "Where to find Terminate",
+      "topics": [
+        "qgh-instructor",
+        "sra",
+        "par"
+      ],
+      "controls": [],
+      "anchor": "current-flow",
+      "priority": true,
+      "match": "\\b(?:terminate|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
+      "text": "After creating an instructor-led session, TERMINATE is beside Start and Pause. It becomes available once the exercise has started and remains available when paused. Terminate ends the shared exercise and opens the instructor review; the student sees Exercise complete. Student displays cannot terminate it. Use Pause for a temporary stop.",
+      "questions": [
+        "Where is terminate?",
+        "I cannot see the terminate button",
+        "How do I end the exercise?"
+      ]
+    },
+    {
+      "id": "terminate-individual",
+      "title": "Where to find Terminate",
+      "topics": [
+        "qgh-individual"
+      ],
+      "controls": [],
+      "anchor": "current-flow",
+      "priority": true,
+      "match": "\\b(?:terminate|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
+      "text": "TERMINATE EXERCISE is in the controller controls after starting Single or Tactical QGH. Press it and confirm to open the recorded flight-path review. Keep exercise cancels the confirmation without ending the flight. Replay and zoom controls sit below the review plot.",
+      "questions": [
+        "Where is terminate?",
+        "I cannot see the terminate button",
+        "How do I end the exercise?"
       ]
     }
   ],
