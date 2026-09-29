@@ -445,8 +445,8 @@ body.narrow-radar .orientation-gate { display: grid !important; }
   .roster-editor-head { align-items: flex-start; flex-direction: column; }
   .roster-editor-head small { text-align: left; }
   .roster-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
-  .console-toolbar { grid-template-columns: 1fr; gap: 7px; padding: 9px; }
-  .console-toolbar-label { display: flex; justify-content: space-between; align-items: baseline; }
+  .console-toolbar { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 9px; }
+  .console-toolbar-label { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: space-between; align-items: baseline; white-space: normal; min-width: 0; }
   .console-toolbar .lifecycle-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .aircraft-tabs { gap: 5px; }
   .aircraft-tabs button { min-width: 76px; min-height: 44px; }
