@@ -1,3 +1,5 @@
+import { createMapWorkshop } from './map-workshop.js';
+import { alignmentBriefing } from './chart-calibration.js';
 import { createAircraftGestures, nearestAircraft } from './scope-interaction.js';
 import { createRadarSweep } from './radar-sweep.js';
 import { recordTrail, trailDots } from './scope-history.js';
@@ -788,6 +790,7 @@ function render() {
     text('reference-note', `True north map · MSL altitude · ${v.environment.magneticVariationKnown === false ? 'magnetic reference not set' : `training variation ${v.environment.magneticVariationDeg}°E`}`);
     void updateMap(v.environment.map?.imageId || '');
     chartWorkshop.render();
+    mapWorkshop.render();
     renderLayerLists();
     renderRadio();
     draw();
@@ -1482,7 +1485,7 @@ function arrangeControls() {
     else instrumentHome.after($('instrument-dock'));
     document.body.classList.toggle('compact-controls', compactControls.matches);
     for (const { control, home, slot } of controlHomes) {
-        if (compactControls.matches || (instructor && control.id === 'scope-manual-dock'))
+        if (compactControls.matches || instructor)
             slot.append(control);
         else
             home.after(control);
@@ -1673,25 +1676,13 @@ for (const form of ['environment-form', 'threshold-form']) {
         message(confirmed ? 'Exercise settings saved.' : 'Settings accepted. Waiting for the refreshed exercise; your entries are kept.');
     });
 }
-$('map-file').addEventListener('change', () => void safe(async () => {
-    const file = $('map-file').files?.[0];
-    if (!file || !view || !session)
-        return;
-    const stamp = generation, auth = session, exerciseId = view.exerciseId, map = { ...view.environment.map };
-    for (const k of ['widthNm', 'originXPct', 'originYPct', 'rotationDeg', 'opacity'])
-        map[k] = num('map-form', k);
-    const uploaded = await request('/api/procedural/map', file);
-    if (stamp !== generation || auth !== session)
-        throw new Error('Desk changed during upload. Choose the image again.');
-    await command('environment', { map: { ...map, imageId: uploaded.imageId } }, undefined, exerciseId);
-    message('Local map added. Adjust scale and chart origin to align it.');
-})());
 bindForm('map-form', async () => {
-    const map = { imageId: view?.environment.map.imageId || '' };
+    if (!view?.environment.map.imageId) throw new Error('Choose an image and complete guided alignment first.');
+    const map = { imageId: view.environment.map.imageId };
     for (const k of ['widthNm', 'originXPct', 'originYPct', 'rotationDeg', 'opacity'])
         map[k] = num('map-form', k);
-    await command('environment', { map });
-    message('Map calibration saved.');
+    await command('environment', { map, briefing: alignmentBriefing(view.environment.briefing, 'Overlay manually adjusted. Recheck alignment against known chart points.') });
+    message('Manual map calibration saved. Verify known points again.');
 });
 $('remove-map').onclick = safe(() => command('environment', { map: { ...view?.environment.map, imageId: '' } }));
 bindForm('criterion-form', async () => {
@@ -1911,6 +1902,7 @@ $('declutter').onclick = () => {
     renderLayerLists();
     draw();
 };
+const mapWorkshop = createMapWorkshop({ view: () => view, generation: () => generation, command, request, message, showMap: () => { showMap = true; $('map-toggle').setAttribute('aria-pressed', 'true'); draw(); } });
 const chartWorkshop = createChartWorkshop({ view: () => view, generation: () => generation, command, request, message, changed: () => { settingsLoaded = false; signatures.clear(); trailHistory.clear(); render(); } });
 function clearanceFields() {
     const action = val('clearance-form', 'action');

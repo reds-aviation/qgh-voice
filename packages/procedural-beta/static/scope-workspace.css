@@ -880,7 +880,7 @@ body.instructor-desk #quick-heading::placeholder { color:#afc3cd; -webkit-text-f
 body.instructor-desk #quick-heading:focus { outline:3px solid #f4c767; outline-offset:1px; }
 body.instructor-desk #quick-heading-form button { width:auto; margin:0; }
 body.instructor-desk #instructor-control-shelf #instrument-dock {
-  grid-area:auto; display:grid; grid-template-columns:120px minmax(0,1fr); grid-template-rows:auto;
+  grid-area:auto; display:grid; grid-template-columns:144px minmax(0,1fr); grid-template-rows:auto;
   align-items:stretch; gap:6px; padding:0; border:0; background:transparent; overflow:visible;
 }
 body.instructor-desk #instructor-control-shelf #homing {
@@ -899,7 +899,7 @@ body.instructor-desk #instructor-control-shelf #df-source,
 body.instructor-desk #instructor-control-shelf #mag-reference-note { font-size:8px; line-height:1.2; margin-top:2px; padding-top:0; }
 body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #homing { grid-column:2; }
 body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #pilot-readback { grid-column:1; }
-body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #instrument-dock { grid-template-columns:minmax(0,1fr) 120px; }
+body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #instrument-dock { grid-template-columns:minmax(0,1fr) 144px; }
 body.instructor-desk.controls-collapsed #instructor-control-shelf { grid-template-columns:minmax(0,1fr); }
 body.instructor-desk.controls-collapsed #instructor-control-shelf #aircraft-quick-controls { display:none; }
 @media (min-width:701px) and (max-width:1049px) {
@@ -922,20 +922,41 @@ body.instructor-desk.controls-collapsed #instructor-control-shelf #aircraft-quic
   body.instructor-desk #quick-heading-form button { width:100%; }
   body.instructor-desk #instructor-control-shelf #instrument-dock,
   body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #instrument-dock {
-    grid-column:2; grid-row:3; grid-template-columns:minmax(0,1fr); grid-template-rows:108px 68px; gap:5px;
+    grid-column:2; grid-row:3; grid-template-columns:minmax(0,1fr); grid-template-rows:124px 52px; gap:5px;
   }
   body.instructor-desk #instructor-control-shelf #homing,
-  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #homing { grid-column:1; grid-row:1; height:108px; }
-  body.instructor-desk #instructor-control-shelf #homing-dial { height:20px; }
+  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #homing { grid-column:1; grid-row:1; height:124px; }
+  body.instructor-desk #instructor-control-shelf #homing-dial { height:36px; }
   body.instructor-desk #instructor-control-shelf #pilot-readback,
-  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #pilot-readback { grid-column:1; grid-row:2; max-height:68px; padding:4px; }
+  body.instructor-desk .scope-panel.homing-right #instructor-control-shelf #pilot-readback { grid-column:1; grid-row:2; max-height:52px; padding:4px; }
   body.instructor-desk #instructor-control-shelf #radio-caption { font-size:11px; line-height:1.25; margin-top:3px; }
   body.instructor-desk #instructor-control-shelf #pilot-readback > div { gap:2px 4px; }
   body.instructor-desk #instructor-control-shelf .audio-choice { font-size:9px; }
   body.instructor-desk.controls-collapsed #instructor-control-shelf #instrument-dock,
-  body.instructor-desk.drawer-open #instructor-control-shelf #instrument-dock { grid-column:1 / -1; grid-row:1; grid-template-columns:108px minmax(0,1fr); grid-template-rows:108px; }
+  body.instructor-desk.drawer-open #instructor-control-shelf #instrument-dock { grid-column:1 / -1; grid-row:1; grid-template-columns:132px minmax(0,1fr); grid-template-rows:124px; }
   body.instructor-desk.controls-collapsed #instructor-control-shelf #pilot-readback,
   body.instructor-desk.drawer-open #instructor-control-shelf #pilot-readback { grid-column:2; grid-row:1; max-height:108px; }
   body.instructor-desk.drawer-open #desk .scope-panel { grid-template-rows:0 0 minmax(0,1fr) 0 0 0; }
   body.instructor-desk.drawer-open #aircraft-quick-controls { display:none; }
+}
+
+/* Chart setup stays readable and scrollable within the existing work drawer. */
+#aerodrome-layout { margin:12px 0; }
+#aerodrome-layout-svg { display:block; width:100%; max-height:330px; border:1px solid #536875; border-radius:8px; overflow:hidden; }
+#aerodrome-layout figcaption { font-size:12px; line-height:1.45; margin-top:6px; }
+#map-image-preview { position:relative; width:100%; cursor:crosshair; margin:12px 0; overflow:hidden; }
+#map-align-image { width:100%; height:auto; display:block; }
+.map-point { position:absolute; transform:translate(-50%,-50%); pointer-events:none; background:#e7be45; color:#09141b; border:2px solid #fff; border-radius:50%; width:24px; height:24px; display:grid; place-items:center; font:bold 14px sans-serif; }
+.map-point[hidden], #map-image-preview[hidden], #aerodrome-layout[hidden] { display:none; }
+#map-align-form fieldset { min-width:0; margin:12px 0; padding:10px; border:1px solid #637680; }
+#map-align-form legend { font-size:13px; }
+#map-align-form input, #map-align-form textarea, #map-align-form select, #chart-form input { min-width:0; width:100%; font-size:16px; }
+#map-align-status, #arp-import-status, #map-arp-summary { overflow-wrap:anywhere; }
+
+/* Reserve the radar first; advanced flight fields live in More controls. */
+@media (min-width:701px) {
+  body.instructor-desk #desk .scope-panel { grid-template-rows:30px 34px minmax(0,1fr) 0 18px; }
+}
+@media (max-width:700px) {
+  body.instructor-desk #main, body.instructor-desk.drawer-open #main { height:max(920px,calc(var(--usable-height,100dvh) - var(--desk-header-height))); }
 }

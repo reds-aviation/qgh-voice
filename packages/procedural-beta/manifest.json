@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.29.19",
+  "version": "2026.09.29.20",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 38294,
-      "sha256": "675c3e03c8afe4fbf90707f2d498e91f5b4babfadcd3c42854b8a2433a92f763"
+      "bytes": 42153,
+      "sha256": "15292825958f4267b4565abdc75439c8da6c7e46f8dea62c2f161a71b9324427"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 100784,
-      "sha256": "f7bb9e2fa6d0b9958eda239477eef71ed479c223d9c672e18ffdeb4cc42ae6b3"
+      "bytes": 100589,
+      "sha256": "5086b1c4255fe3e4995c193cf5d192e7592d399d4d912abba83d892ee9f3ba1a"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 62301,
-      "sha256": "11c28439d923f93a04792717df5ffdf9f6fab5972a8a27a905b1551ed1da1bc1"
+      "bytes": 63890,
+      "sha256": "6f98f8844f8ee408139ebbf6b88ec08f1b6dafc647a8157688801656839a43df"
     },
     {
       "path": "static/scope-history.js",
@@ -34,8 +34,8 @@
     },
     {
       "path": "static/chart-workshop.js",
-      "bytes": 23823,
-      "sha256": "29c44e2481fbef8459e9955a09b033cdcb262118742f050e4f4e390632ba19df"
+      "bytes": 28352,
+      "sha256": "355208f57ea68411c084f797e196b4c8f8a81400579af695d409e40d859a9981"
     },
     {
       "path": "static/chart-geometry.js",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 32798,
-      "sha256": "81b9917fbf81e0a76d0d36559329036a97aba7fc20f863f5d3be31fcf069ac87"
+      "bytes": 34310,
+      "sha256": "a64bf509db7eee0acdc06b6fc62bb10b4769b989040ec4c4f57d6883c4908f60"
     },
     {
       "path": "static/style.css",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 34433,
-      "sha256": "534066e9ef5a5b37a052bd008158baea65987171180bb38b8c0142eb923d44e9"
+      "bytes": 39706,
+      "sha256": "86d4d49da729f719cc598a625d7bb8cb42d742146e1be2fc924c8effe9fdd0dc"
     },
     {
       "path": "static/gyani-fox.png",
@@ -261,6 +261,21 @@
       "path": "static/suite-tour.css",
       "bytes": 1233,
       "sha256": "97f48045fc6800dea1b867f35cce03ff8e3921909423fc9662c56966f2444320"
+    },
+    {
+      "path": "static/chart-calibration.js",
+      "bytes": 4646,
+      "sha256": "e90b47fe9e8b806ebec84a4fea3c6d56a3dffad59f5723f01921e5d1f9e33183"
+    },
+    {
+      "path": "static/map-workshop.js",
+      "bytes": 8208,
+      "sha256": "8f232b3018ce2609607666f6f5e53b830c95a62fde20b48ba09f87e9e35355eb"
+    },
+    {
+      "path": "static/airspace-preview.js",
+      "bytes": 2778,
+      "sha256": "7c9de026ff404a2ef40b5da0640104b5ce1f84994f487d47eceb6c6916284f9b"
     }
   ]
 }

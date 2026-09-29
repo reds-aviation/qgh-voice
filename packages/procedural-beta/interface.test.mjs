@@ -139,7 +139,7 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   const timers=new Map();let timerId=0;
   Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,
     createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],createTrafficSetup:()=>({close(){},open(){}}),
-    createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
+    createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
   });
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm,'')+`
     globalThis.commands=[]; command=async (...args)=>commands.push(args);

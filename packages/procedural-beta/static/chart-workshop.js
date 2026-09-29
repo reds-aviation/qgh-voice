@@ -1,5 +1,7 @@
 import { circle, coordinate, destination, project, readPoint } from './chart-geometry.js';
 import { mergePublishedNavigation } from './aip-navigation.js';
+import { parseARP, alignmentBriefing } from './chart-calibration.js';
+import { drawAirspacePreview } from './airspace-preview.js';
 const $ = (id) => document.getElementById(id);
 const form = (id) => $(id);
 const field = (id, name) => form(id).elements.namedItem(name);
@@ -74,6 +76,26 @@ export function createChartWorkshop(context) {
     let catalogue = [], signature = '', formExercise = '';
     let enroute;
     const dirtyFields = new Set();
+    $('arp-file').addEventListener('change', async () => {
+        const file = $('arp-file').files?.[0], exercise = context.view()?.exerciseId, generation = context.generation();
+        if (!file) return;
+        try {
+            if (file.size > 65536) throw new Error('ARP records must be smaller than 64 KB.');
+            const record = parseARP(await file.text());
+            if (exercise !== context.view()?.exerciseId || generation !== context.generation()) throw new Error('The exercise changed. Choose the ARP file again.');
+            for (const [name, data] of Object.entries(record)) { field('chart-form', name).value = String(data); dirtyFields.add(name); }
+            $('arp-import-status').textContent = `Review ARP ${record.latitude.toFixed(6)}, ${record.longitude.toFixed(6)} and its source below, then Save shared chart settings. Nothing applied yet.`;
+        } catch (e) { $('arp-import-status').textContent = e.message; context.message(e.message, true); }
+        finally { $('arp-file').value = ''; }
+    });
+    $('arp-template').onclick = () => {
+        const base = catalogue.find(a => a.id === value('aerodrome-form', 'aerodrome'));
+        const record = base ? { aerodromeName: base.name + (base.icao ? ` (${base.icao})` : ''), ...base.origin, chartReference: base.source, effectiveInfo: base.effectiveInfo } : { aerodromeName: 'REPLACE with aerodrome name', latitude: 'REPLACE with latitude', longitude: 'REPLACE with longitude', chartReference: 'REPLACE with public chart / AIP reference', effectiveInfo: 'REPLACE with edition and effective date' };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' }));
+        const a = element('a', 'ARP record'); a.href = url; a.download = base ? `${base.id}-arp.json` : 'arp-template.json'; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        $('arp-import-status').textContent = base ? `Downloaded ${base.name} ARP with AIP source. CSV may use the same five field names as its header.` : 'Replace all template values with your ARP and source. CSV may use the same five field names as its header.';
+    };
     form('chart-form').addEventListener('input', e => {
         const input = e.target;
         if (input.name)
@@ -164,6 +186,14 @@ export function createChartWorkshop(context) {
             context.message('No chart changes to save.');
             return;
         }
+        const oldOrigin = context.view()?.environment.chartOrigin;
+        if (payload.chartOrigin !== undefined && JSON.stringify(payload.chartOrigin) !== JSON.stringify(oldOrigin || null)) {
+            if (context.view()?.running) throw new Error('Pause before changing the ARP.');
+            if (!value('chart-form', 'chartReference') || !value('chart-form', 'effectiveInfo')) throw new Error('Enter the ARP source reference and edition / effective date.');
+            if (oldOrigin && !confirm('Change the ARP? Existing traffic, routes, boundaries and station offsets keep their local positions; they are NOT reprojected. The current image will be removed. Reload the published aerodrome to restore its sourced geography, or enter your custom coordinates after this change.')) return;
+            payload.map = { ...context.view().environment.map, imageId: '' };
+            payload.briefing = alignmentBriefing(payload.briefing ?? context.view().environment.briefing, 'ARP changed; any previous image alignment is invalid. Calibrate a new image for this origin.');
+        }
         await context.command('environment', payload);
         for (const name of names) {
             const input = field('chart-form', name), current = input.type === 'checkbox' ? String(input.checked) : value('chart-form', name);
@@ -171,6 +201,7 @@ export function createChartWorkshop(context) {
                 dirtyFields.delete(name);
         }
         context.message('Chart reference and briefing shared with both desks.');
+        $('arp-import-status').textContent = 'ARP and chart settings saved and shared with both desks.';
     });
     bind('chart-fixes-form', async () => {
         const state = context.view();
@@ -219,6 +250,16 @@ export function createChartWorkshop(context) {
     const preview = () => {
         const item = catalogue.find(a => a.id === value('aerodrome-form', 'aerodrome')), extra = item && enroute?.aerodromes[item.id];
         $('aerodrome-preview').textContent = item && extra ? `${item.areas.length + extra.areas.length} boundaries · ${extra.routes.length} route sections · ${extra.fixes.length} fixes\nPublished routes crossing the 250 NM region; full source endpoints retained.\n${enroute.effectiveInfo}\n${item.station?.name || 'Chart reference point'}\nRoute overview fits the wider network; Local view returns to the aerodrome.\nCapacity: 100 routes / 200 fixes including retained exercise navigation.\n${extra.omissions.join('\n')}` : '';
+        $('aerodrome-layout').hidden = !item;
+        drawAirspacePreview($('aerodrome-layout-svg'), item, extra);
+        const list = $('aerodrome-source-list'); list.replaceChildren();
+        if (!item || !extra) return;
+        list.append(record(`${item.name} · ARP`, `${item.origin.latitude.toFixed(6)}, ${item.origin.longitude.toFixed(6)} · WGS-84\nDated public AIP sample.`, item.source));
+        item.areas.forEach((area, i) => list.append(record(`${i + 1}. ${area.name}`, `${area.floorLabel} / ${area.ceilingLabel}\n${area.notes || ''}`, area.reference || item.source)));
+        const routes = element('details', ''); routes.append(element('summary', `${extra.routes.length} real published ATS route sections`));
+        for (const route of extra.routes) routes.append(record(route.name, route.fixNames.join(' → '), route.reference));
+        list.append(routes);
+        for (const chart of extra.charts || []) list.append(record(chart.title, `Official chart · edition effective ${chart.editionEffectiveDate}`, chart.url));
     };
     field('aerodrome-form', 'aerodrome').addEventListener('change', preview);
     bind('aerodrome-form', async () => {

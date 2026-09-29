@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.19",
+  "revision": "2026.09.29.20",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -21,48 +21,129 @@
   ],
   "entries": [
     {
-  "id": "instructor-instrument-shelf",
-  "title": "Instructor homing and pilot messages below the scope",
-  "topics": [
-    "suite",
-    "procedural"
-  ],
-  "controls": [
-    "quick-heading",
-    "homing",
-    "pilot-readback"
-  ],
-  "anchor": "scope",
-  "priority": true,
-  "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark))\\b",
-  "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and homing plus the scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
-  "questions": [
-    "Where is the homing display?",
-    "Where are pilot messages now?",
-    "The heading is white and not visible"
-  ]
-},
+      "id": "lfa-image-alignment",
+      "title": "Align an uploaded LFA layout",
+      "topics": [
+        "procedural"
+      ],
+      "controls": [
+        "map-file",
+        "map-align-form",
+        "map-align-apply"
+      ],
+      "anchor": "airspace",
+      "priority": true,
+      "match": "\\b(?:align|calibrat|embed|upload.*(?:image|map|layout)|reference point|point c)\\w*\\b",
+      "text": "Pause and save the correct ARP first. In Edit airspace → LFA image · guided alignment, choose a flat PNG/JPEG (up to 5 MB, 4096 pixels per side, 16 megapixels). Enter source, edition/date, LFA limits and layout notes. Select A and tap the ARP in the image; mark B and C at known points and enter their coordinates. Spread the points across the chart, with C away from line A–B. Percentages can be entered instead of tapping. Check alignment calculates width and true-north rotation and checks C independently. Apply and share stores the calibrated image and notes for both desks; students enable Map to display it. A distorted photo or unscaled sketch may fail the check; use a flat chart with known points. The image does not automatically create editable boundaries; enter those in the boundary editor. Fine-tune changes require another check against known points.",
+      "questions": [
+        "How do I align my LFA image?",
+        "Why does point C fail?",
+        "Can I upload a simple layout image?"
+      ]
+    },
+    {
+      "id": "arp-upload",
+      "title": "Enter or upload ARP coordinates",
+      "topics": [
+        "procedural"
+      ],
+      "controls": [
+        "arp-file",
+        "arp-template",
+        "chart-form"
+      ],
+      "anchor": "airspace",
+      "priority": true,
+      "match": "\\b(?:arp|aerodrome reference point|upload coordinates|origin coordinates)\\b",
+      "text": "Open Edit airspace → Chart origin & shared briefing. ARP means Aerodrome Reference Point; it anchors geographic entries. Enter WGS-84 latitude/longitude in decimal degrees or DMS, or upload one JSON/CSV record with aerodromeName, latitude, longitude, chartReference and effectiveInfo. Download ARP template uses the selected published base, or supplies an editable blank template. Review, then Save shared chart settings. The VOR has separate offsets. Changing the ARP removes the old image and keeps existing local traffic/routes/areas at their local positions; it does not reproject them. Reload a published base to restore its sourced geometry, or enter custom coordinates after setting your origin.",
+      "questions": [
+        "How do I upload ARP coordinates?",
+        "Can I type latitude and longitude?",
+        "Where is the ARP template?"
+      ]
+    },
+    {
+      "id": "public-lfa-samples",
+      "title": "Public LFA samples and real ATS routes",
+      "topics": [
+        "suite",
+        "procedural"
+      ],
+      "controls": [
+        "aerodrome-select",
+        "aerodrome-layout-svg"
+      ],
+      "anchor": "airspace",
+      "priority": true,
+      "match": "\\b(?:lfa|ats route|airspace|aerodrome|public chart|real route|sample map)\\b",
+      "text": "In Procedural, open Configure airspace during setup or Edit airspace on the instructor desk. Select Hindan, Pune, Jodhpur, Chandigarh, Gwalior, Agra or Bareilly to preview numbered LFA/CTR outlines, real published ATS route sections and source links. Load aerodrome airspace applies the dated AIP sample to both desks and pauses the exercise. The snapshot is effective 3 September 2026, with disclosed omissions; it is not live NOTAM data or the complete network. Route overview fits the network; Local view returns to the base. Declutter selects which routes and boundaries both desks see. A public AIP source is not a licence to redistribute chart images.",
+      "questions": [
+        "Where are the sample LFAs?",
+        "Are these real ATS routes?",
+        "Show public airspace charts"
+      ]
+    },
+    {
+      "id": "instructor-instrument-shelf",
+      "title": "Instructor homing and pilot messages below the scope",
+      "topics": [
+        "suite",
+        "procedural"
+      ],
+      "controls": [
+        "quick-heading",
+        "homing",
+        "pilot-readback"
+      ],
+      "anchor": "scope",
+      "priority": true,
+      "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark))\\b",
+      "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and a larger homing display plus a compact, scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel, including speed and altitude controls. The phone radar has a larger reserved area; scroll to reach the lower controls. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
+      "questions": [
+        "Where is the homing display?",
+        "Where are pilot messages now?",
+        "The heading is white and not visible"
+      ]
+    },
     {
       "id": "local-pin-recovery",
       "title": "Recover a rejected local session PIN",
-      "topics": ["procedural"],
+      "topics": [
+        "procedural"
+      ],
       "controls": [],
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:wrong|incorrect|expired|rejected|invalid)\\b.*\\bpin\\b|\\bpin\\b.*\\b(?:wrong|incorrect|expired|rejected|invalid|not working)\\b",
       "text": "Check that both positions use the same Exercise connection. This device needs the same PC, browser profile and site address; other devices need Online room with internet on both. Copy the PIN currently shown in the instructor Session panel. If an older cached release rejects that local PIN, finish the exercise, return to Suite home, choose Update available · reload, then create a new session and share its new PIN. An old PIN does not join a newly created session.",
-      "questions": ["Why is my PIN rejected?", "Incorrect session PIN", "The local PIN is not working"]
+      "questions": [
+        "Why is my PIN rejected?",
+        "Incorrect session PIN",
+        "The local PIN is not working"
+      ]
     },
     {
       "id": "mobile-workspace",
       "title": "Use the suite on a small screen",
-      "topics": ["suite", "qgh", "procedural", "qgh-individual", "qgh-instructor", "sra", "par"],
+      "topics": [
+        "suite",
+        "qgh",
+        "procedural",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "par"
+      ],
       "controls": [],
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace)\\b",
       "text": "On narrow or short screens, scroll the Procedural workspace vertically to reach the scope and controls; the radar keeps a usable height. Swipe the top navigation, scope tools and panel tabs sideways to reach extra actions. Setup navigation wraps onto additional rows. Hide controls also collapses the quick aircraft bar to free more scope space; Show controls restores it. More controls opens a scrollable Aircraft panel; Close returns to the full workspace. QGH instructor clock and speed controls wrap below the title on phones and narrow browser windows, including windows with visible scrollbars. The aircraft toolbar label also wraps so Start, Pause and Terminate remain within the screen. Tactical QGH aircraft-count buttons wrap below the aircraft heading when space is tight. Surveillance, SRA and PAR student displays require landscape on phones; portrait shows rotation guidance. Gyani can be collapsed with its close button. If an older cached version rejects a current local PIN, finish the exercise, update from Suite home, then create a new session and share its new PIN.",
-      "questions": ["The scope disappeared on my phone", "How do I use landscape?", "Buttons are off screen"]
+      "questions": [
+        "The scope disappeared on my phone",
+        "How do I use landscape?",
+        "Buttons are off screen"
+      ]
     },
     {
       "id": "online-recovery",
@@ -481,6 +562,30 @@
       "selector": "#homing",
       "title": "Homing instrument",
       "text": "QDM selects magnetic homing; QTE selects true bearing. On the instructor desk, homing and the red pilot reply share the control shelf below the scope. The student keeps its existing instrument dock. Bearing indications follow the transmitting aircraft."
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#aerodrome-form",
+      "title": "Preview public base airspace",
+      "text": "Select a base to see its sample LFA/CTR layout, real ATS route sections and AIP sources. Load applies the shared sample while paused; Declutter selects the displayed routes."
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#chart-form",
+      "title": "Set the ARP",
+      "text": "Type WGS-84 coordinates or upload the ARP CSV/JSON template. Review the source and date, then save before adding custom geographic points or aligning an image."
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#map-align-form",
+      "title": "Align your local layout",
+      "text": "Choose a flat image. Mark A at the ARP and B/C at known coordinates. Supply source, date and LFA limits. Check alignment, then Apply and share. C independently checks the scale and orientation."
     },
     {
       "pages": [
