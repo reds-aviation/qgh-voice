@@ -1,6 +1,6 @@
 // Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.14",
+  "revision": "2026.09.29.15",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
   "flow": [
     {
@@ -21,6 +21,17 @@
   ],
   "entries": [
     {
+      "id": "local-pin-recovery",
+      "title": "Recover a rejected local session PIN",
+      "topics": ["procedural"],
+      "controls": [],
+      "anchor": "current-flow",
+      "priority": true,
+      "match": "\\b(?:wrong|incorrect|expired|rejected|invalid)\\b.*\\bpin\\b|\\bpin\\b.*\\b(?:wrong|incorrect|expired|rejected|invalid|not working)\\b",
+      "text": "Check that both positions use the same Exercise connection. This device needs the same PC, browser profile and site address; other devices need Online room with internet on both. Copy the PIN currently shown in the instructor Session panel. If an older cached release rejects that local PIN, finish the exercise, return to Suite home, choose Update available · reload, then create a new session and share its new PIN. An old PIN does not join a newly created session.",
+      "questions": ["Why is my PIN rejected?", "Incorrect session PIN", "The local PIN is not working"]
+    },
+    {
       "id": "mobile-workspace",
       "title": "Use the suite on a small screen",
       "topics": ["procedural", "qgh-individual", "qgh-instructor", "sra", "par"],
@@ -28,7 +39,7 @@
       "anchor": "current-flow",
       "priority": true,
       "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace)\\b",
-      "text": "On narrow or short screens, scroll the Procedural workspace vertically to reach the scope and controls; the radar keeps a usable height. Swipe the top navigation, scope tools and panel tabs sideways to reach extra actions. Setup navigation wraps onto additional rows. Hide controls also collapses the quick aircraft bar to free more scope space; Show controls restores it. More controls opens a scrollable Aircraft panel; Close returns to the full workspace. QGH instructor clock and speed controls wrap below the title on phones. Tactical QGH aircraft-count buttons wrap below the aircraft heading when space is tight. Gyani can be collapsed with its close button.",
+      "text": "On narrow or short screens, scroll the Procedural workspace vertically to reach the scope and controls; the radar keeps a usable height. Swipe the top navigation, scope tools and panel tabs sideways to reach extra actions. Setup navigation wraps onto additional rows. Hide controls also collapses the quick aircraft bar to free more scope space; Show controls restores it. More controls opens a scrollable Aircraft panel; Close returns to the full workspace. QGH instructor clock and speed controls wrap below the title on phones. Tactical QGH aircraft-count buttons wrap below the aircraft heading when space is tight. Gyani can be collapsed with its close button. If an older cached version rejects a current local PIN, finish the exercise, update from Suite home, then create a new session and share its new PIN.",
       "questions": ["The scope disappeared on my phone", "How do I use landscape?", "Buttons are off screen"]
     },
     {

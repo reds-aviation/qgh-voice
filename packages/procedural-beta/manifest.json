@@ -1,5 +1,5 @@
 {
-  "version": "2026.09.29.14",
+  "version": "2026.09.29.15",
   "go": "1.25.0",
   "files": [
     {
@@ -119,8 +119,8 @@
     },
     {
       "path": "static/browser-worker.js",
-      "bytes": 11498,
-      "sha256": "20f56a975f10d6aa680c8fcd361c7ada5c0a6d0bc81d7f708f3ac4182dfd869c"
+      "bytes": 11859,
+      "sha256": "a51934eaefee97a970ab9c19a024db96b57ae8641e2e2fc5de3b034d14a56cdc"
     },
     {
       "path": "static/browser-client.js",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 31859,
-      "sha256": "b164cb5cb6b8960507d5f5f950149d8bd95e93a91a2baf2d35c0769545a6a6ef"
+      "bytes": 32965,
+      "sha256": "5c9742b4f0f566d37e7377f76066e9005dffc11e802eff84e902ac155c31a6ee"
     },
     {
       "path": "static/gyani-fox.png",

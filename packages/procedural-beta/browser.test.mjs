@@ -124,3 +124,25 @@ test('quick continuous turns use existing clearances and cannot be flown by a st
   await instructor.request('command',{id:webcrypto.randomUUID(),exerciseId:state.exerciseId,type:'clock',payload:{action:'step',seconds:5}},session);
   assert.equal((await instructor.request('state',undefined,session)).body.aircraft[0].headingDeg,stopped);
 });
+
+
+test('cached query-free worker scripts retain named room identity and student admission',async()=>{
+  const saved=new Map(),directory=new IDBFactory();
+  const roomId=webcrypto.randomUUID(),otherId=webcrypto.randomUUID();
+  const host=await harness(saved,{roomId,directory,omitRoomQuery:true});
+  const other=await harness(saved,{roomId:otherId,directory,omitRoomQuery:true});
+  const instructor=host.port(),student=host.port(),stranger=other.port();
+  const auth=(await instructor.request('session',{role:'instructor'})).body;
+  const otherAuth=(await stranger.request('session',{role:'instructor'})).body;
+  assert.equal(auth.roomId,roomId); assert.equal(otherAuth.roomId,otherId);
+  const room=(await instructor.request('room',undefined,auth)).body;
+  const learner=(await student.request('session',{role:'student',name:'Cached client',pin:room.pin})).body;
+  assert.equal(learner.roomId,roomId);
+  const waiting=(await instructor.request('room',undefined,auth)).body.students[0];
+  await instructor.request('room',{action:'admit',studentId:waiting.id},auth);
+  await student.request('room',{action:'ready'},learner);
+  assert.equal((await student.request('state',undefined,learner)).status,200);
+  assert.ok(saved.has(`room:${roomId}:checkpoint`)); assert.ok(saved.has(`room:${otherId}:checkpoint`));
+  assert.equal(saved.has('checkpoint'),false,'named rooms never overwrite legacy saved traffic');
+  await assert.rejects(harness(new Map(),{roomId,workerName:`qgh-procedural-${otherId}`}),/Conflicting room identifier/);
+});

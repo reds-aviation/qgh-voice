@@ -3,7 +3,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
 const folder = new URL('../static/',import.meta.url);
-export async function harness(saved = new Map(), {roomId = 'legacy', directory = new IDBFactory()} = {}) {
+export async function harness(saved = new Map(), {roomId = 'legacy', directory = new IDBFactory(), omitRoomQuery = false, workerName = roomId === 'legacy' ? 'qgh-procedural-v1' : `qgh-procedural-${roomId}`} = {}) {
   let failWrite = false;
   const database = {transaction(_name, mode) {
     const tx = {}, changes = [];
@@ -14,7 +14,7 @@ export async function harness(saved = new Map(), {roomId = 'legacy', directory =
     });
     return tx;
   }};
-  const context = vm.createContext({console, URL, location: {href: `https://example.test/procedural-beta/browser-worker.js?room=${roomId}`}, crypto:webcrypto, performance, TextEncoder, TextDecoder, WebAssembly, Uint8Array, Blob, Date, setTimeout, clearTimeout, setInterval:()=>0, btoa, atob,
+  const context = vm.createContext({console, URL, name: workerName, location: {href: `https://example.test/procedural-beta/browser-worker.js${omitRoomQuery ? '' : '?room='+roomId}`}, crypto:webcrypto, performance, TextEncoder, TextDecoder, WebAssembly, Uint8Array, Blob, Date, setTimeout, clearTimeout, setInterval:()=>0, btoa, atob,
     indexedDB:{open(name){if (name.includes('directory')) return directory.open(name, 1); const request={result:database}; setImmediate(()=>request.onsuccess());return request;}},
     fetch:async path=>new Response(readFileSync(new URL(path,folder))),
   });

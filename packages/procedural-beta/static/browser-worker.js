@@ -1,7 +1,12 @@
 /* One authoritative Go engine per isolated instructor room. No network API. */
 'use strict';
 importScripts('wasm_exec.js', 'browser-room-registry.js');
-const roomID = new URL(self.location.href).searchParams.get('room') || 'legacy';
+// A cached script response may resolve to its query-free cache URL. The explicit
+// SharedWorker name retains the room identity in that case.
+const urlRoom = new URL(self.location.href).searchParams.get('room');
+const namedRoom = /^qgh-procedural-([a-f0-9-]{36})$/.exec(self.name || '')?.[1];
+if (urlRoom && namedRoom && urlRoom !== namedRoom) throw new Error('Conflicting room identifier');
+const roomID = namedRoom || urlRoom || 'legacy';
 if (roomID !== 'legacy' && !/^[a-f0-9-]{36}$/.test(roomID)) throw new Error('Invalid room identifier');
 const storageKey = key => roomID === 'legacy' ? key : `room:${roomID}:${key}`;
 let directoryUpdated = 0;
