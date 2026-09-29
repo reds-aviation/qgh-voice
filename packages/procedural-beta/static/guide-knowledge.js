@@ -4,7 +4,7 @@
   // Add/change control guidance here with its UI change. The build validates
   // the referenced control IDs and refuses missing or undocumented controls.
   const knowledge = {
-    revision: '2026.09.29.6',
+    revision: '2026.09.29.7',
     learning: 'I am also learning. If I’m unable to answer, please refer to the training guides.',
     flow: [
       { title: 'QGH · Individual practice', href: 'qgh.html', text: 'QGH cloud-breaking procedure: Suite home → QGH Individual Practice → Single aircraft or Tactical → configure → start → terminate and review.' },
