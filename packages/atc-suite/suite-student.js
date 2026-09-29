@@ -3,7 +3,7 @@
   const Session = globalThis.ATCSuiteSession;
   if (!Session) return;
   const byId = id => document.getElementById(id);
-  const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null,
+  const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null, cloudTransport: null, joining: false,
     radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false };
   const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.floor(Math.max(0, seconds)) % 60).padStart(2, '0')}`;
   const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0');
@@ -60,17 +60,29 @@
     renderFreshness(snapshot);
   }
 
-  function requestJoin() {
+  async function requestJoin() {
+    if (state.joining) return;
     const pin = byId('joinPin').value.replace(/\D/g, '');
     if (!/^\d{6}$/.test(pin)) { byId('joinStatus').textContent = 'Enter all six digits.'; return; }
+    state.joining = true; byId('joinSession').disabled = true;
+    try {
     state.session?.close();
-    state.session = Session.createStudentSession({ pin, storage: localStorage,
+    const online = byId('exerciseConnection')?.value === 'online';
+    try { sessionStorage.setItem('atc-suite-connection', online ? 'online' : 'local'); } catch (_) {}
+    const cloud = online ? await globalThis.ATCSuiteCloud.prepareStudent(pin, Session, status => {
+      if (!status.connected) { byId('connectionState').textContent = 'ONLINE LINK LOST'; byId('waitingMessage').textContent = status.error; }
+    }) : null;
+    state.cloudTransport = cloud?.transport || null;
+    state.session = Session.createStudentSession({ pin, storage: online ? undefined : localStorage, ...(cloud || {}),
       recoveryStorage: typeof sessionStorage === 'undefined' ? undefined : sessionStorage,
       transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
     try { sessionStorage.setItem('reds.atc-suite.last-pin', pin); } catch (_) {}
     show('waitingPanel'); byId('waitingMessage').textContent = `Session ${pin.slice(0, 3)} ${pin.slice(3)} · waiting for admission.`;
     if (state.session.requestJoin()) { /* Admission events determine the next panel. */ }
-    else { show('joinPanel'); byId('joinStatus').textContent = 'No active local session matches that PIN.'; }
+    else { show('joinPanel'); byId('joinStatus').textContent = 'No active session matches that PIN. Check the selected connection mode.'; }
+    state.cloudTransport?.start();
+    } catch (error) { state.cloudTransport?.close(); state.cloudTransport = null; show('joinPanel'); byId('joinStatus').textContent = error.message; }
+    finally { state.joining = false; byId('joinSession').disabled = false; }
   }
 
   function ready() {
@@ -173,6 +185,11 @@
 
   function renderFreshness(snapshot = state.session?.snapshot()) {
     if (!snapshot) return;
+    if (state.cloudTransport && !state.cloudTransport.connected) {
+      if (state.observation) { state.observation = null; cancelPilotAudio(); if (state.metadata?.mode === 'qgh') renderDf(); else if (state.metadata?.mode === 'par') renderPar(); else renderRadar(); }
+      byId('pictureFreshness').textContent = 'ONLINE LINK LOST · WAIT FOR RECONNECT';
+      byId('connectionState').textContent = 'DISCONNECTED'; return;
+    }
     const now = Date.now(), running = snapshot.state === 'running';
     const stale = value => value != null && now - value > 6500;
     let label = 'AWAITING PICTURE';
@@ -704,6 +721,7 @@
   state.heartbeat = setInterval(() => { state.session?.heartbeat(); state.session?.tick(); }, 4000);
   setInterval(renderFreshness, 1000);
   try {
+    if (new URLSearchParams(location.search).get('connection') === 'online' || sessionStorage.getItem('atc-suite-connection') === 'online') byId('exerciseConnection').value = 'online';
     const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');
     if (/^\d{6}$/.test(savedPin || '') && sessionStorage.getItem(`reds.atc-suite.seat.${savedPin}`)) {
       byId('joinPin').value = savedPin; requestJoin();

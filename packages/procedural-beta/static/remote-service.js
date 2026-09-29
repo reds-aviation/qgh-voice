@@ -2,8 +2,9 @@
 export function validRemoteConfig(config) {
   return /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(config?.url || '') && /^sb_publishable_[A-Za-z0-9_-]+$/.test(config?.publishableKey || '');
 }
-export function createRemoteService(config, clientId, { fetcher = fetch, storage = sessionStorage, now = Date.now } = {}) {
+export function createRemoteService(config, clientId, { fetcher = fetch, storage = sessionStorage, now = Date.now, rpc = 'atc_session' } = {}) {
   if (!validRemoteConfig(config)) throw new Error('Online sessions are not configured yet. Use this-device mode.');
+  if (!['atc_session', 'atc_suite_session'].includes(rpc)) throw new Error('Unsupported session service.');
   const key = `atc-cloud-auth:${clientId}`;
   let auth, authenticating;
   try { auth = JSON.parse(storage.getItem(key) || 'null'); } catch { /* Recover corrupt local auth without leaking it. */ }
@@ -32,7 +33,7 @@ export function createRemoteService(config, clientId, { fetcher = fetch, storage
   async function call(action, roomId = null, payload = {}) {
     for (let attempt = 0; attempt < 2; attempt++) {
       const identity = await authenticate(attempt === 1);
-      const response = await fetcher(`${config.url}/rest/v1/rpc/atc_session`, {
+      const response = await fetcher(`${config.url}/rest/v1/rpc/${rpc}`, {
         method: 'POST', headers: { apikey: config.publishableKey, Authorization: `Bearer ${identity.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ p_action: action, p_room: roomId, p_payload: payload }), signal: AbortSignal.timeout(15000),
       });

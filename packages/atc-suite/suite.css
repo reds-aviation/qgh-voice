@@ -522,3 +522,5 @@ body.narrow-radar .orientation-gate { display: grid !important; }
   .beta-guide > nav a { flex: 1 1 auto; justify-content: center; }
   .beta-guide section { scroll-margin-top: 1rem; }
 }
+
+.connection-help { grid-column: 1 / -1; max-width: 78ch; margin: 0; line-height: 1.6; }

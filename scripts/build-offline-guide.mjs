@@ -6,7 +6,7 @@ function inline(text) {
     .replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g,'<a href="$2">$1</a>');
 }
 export async function buildOfflineGuide(output, root, version) {
-  const source = (await readFile(resolve(root,'docs/offline-setup.md'),'utf8')).replaceAll('__SUITE_RELEASE__', version);
+  const source = (await readFile(resolve(root,'output/private-reference/offline-setup.md'),'utf8')).replaceAll('__SUITE_RELEASE__', version);
   const lines = source.split(/\r?\n/), sections = [];
   let html='',list='',table=false,code=false;
   const closeList=()=>{if(list){html+=`</${list}>`;list='';}};
@@ -25,5 +25,5 @@ export async function buildOfflineGuide(output, root, version) {
   closeList();closeTable();
   await writeFile(resolve(output,'offline-setup.md'),source);
   await copyFile(resolve(root,'packages/site-landing/offline-guide.css'),resolve(output,'offline-guide.css'));
-  await writeFile(resolve(output,'offline-setup.html'),`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fafaf8"><title>Offline PC setup · ATC Training Suite</title><link rel="stylesheet" href="offline-guide.css"><script defer src="suite-landing-register.js?release=${version}"></script></head><body><header><a href="./">ATC TRAINING SUITE</a><nav><a href="training-centre.html">Training centre</a><a href="offline-setup.md" download>Download written guide</a></nav></header><div class="guide-layout"><aside><p>ZERO INTERNET · SETUP HANDBOOK</p><nav>${sections.map(([id,title])=>`<a href="#${id}">${esc(title)}</a>`).join('')}</nav><small>Use Ctrl+P to print or save a PDF. This guide is included in the offline folder.</small></aside><main>${html}</main></div><footer>ATC TRAINING SUITE · Release ${version} · Independent training simulator</footer></body></html>`);
+  await writeFile(resolve(output,'offline-setup.html'),`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fafaf8"><title>Offline PC setup · ATC Training Suite</title><link rel="stylesheet" href="offline-guide.css"></head><body><header><strong>ATC TRAINING SUITE · PRIVATE REFERENCE</strong><nav><a href="offline-setup.md" download>Download written guide</a></nav></header><div class="guide-layout"><aside><p>ZERO INTERNET · SETUP HANDBOOK</p><nav>${sections.map(([id,title])=>`<a href="#${id}">${esc(title)}</a>`).join('')}</nav><small>Use Ctrl+P to print or save a PDF. Private reference copy; not part of the public website.</small></aside><main>${html}</main></div><footer>ATC TRAINING SUITE · Release ${version} · Independent training simulator</footer></body></html>`);
 }

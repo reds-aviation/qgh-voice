@@ -1,16 +1,16 @@
 {
-  "version": "2026.09.29.7",
+  "version": "2026.09.29.8",
   "go": "1.25.0",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 37116,
-      "sha256": "f4001a85ff7c4ab8d9d3864b7e2ebff8aa0031fc53be0407ddddc3b592c07b74"
+      "bytes": 37746,
+      "sha256": "7f0fa2ab8a3e9eaef7dfdfd1c852fccc552fd6dc75dbe4e4ae1ea2f5f2f08a19"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 97605,
-      "sha256": "12de25c00f670ac4377784963253e80c3bd95ed26c283072554170507be46079"
+      "bytes": 98211,
+      "sha256": "0a53bc95bd0028c529ba8b8ec3390c9af7d08caf0c771378c2f250da3dfd9171"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 50905,
-      "sha256": "fbb721d7f44e079fad037276001a9f71a1571d9498367bee98e788a7e2d4e706"
+      "bytes": 51440,
+      "sha256": "5ca2862bb278459363ead6427195778904a22b8ba3d1d651bc73ad88e5ad6a9f"
     },
     {
       "path": "static/scope-history.js",
@@ -54,13 +54,13 @@
     },
     {
       "path": "static/india-airspace.json",
-      "bytes": 87793,
-      "sha256": "ffb347601f259385c2e8deafec1fa81fba1a808a53241ce2fc2bc4fc35934cf8"
+      "bytes": 64566,
+      "sha256": "a2e35b11d3728e39d683bd21467120567bf47edd0d0ae518c74e18ff3fae4fd9"
     },
     {
       "path": "static/india-aip-enroute.json",
-      "bytes": 4083532,
-      "sha256": "d9fe33acd07e6f7e0e31430157727191090c24354b9b94e429ab1ae7fdb7dc0a"
+      "bytes": 3294341,
+      "sha256": "18886cb1909cdf81e00b48bf1a9022351b5384e58b03d8b8a5af3beacc85fa69"
     },
     {
       "path": "static/favicon.svg",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 31116,
-      "sha256": "322f6befbbc1ab6f801c7339a1c7d20a31dd50903e39d80e3ca061a088f5233f"
+      "bytes": 31145,
+      "sha256": "36cf54ccbf16838c69b437c6b7d58f6c99f8b88e91efb53e5f12c124db947505"
     },
     {
       "path": "static/style.css",
@@ -89,8 +89,8 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 33308,
-      "sha256": "2478e11da437edd365e708cdc0c2d53c115a29b8b81de4288812c61a64c14b2e"
+      "bytes": 34352,
+      "sha256": "ce1eccd455548e13ba43641a0d2f0c8cd1a9cd78c833aa40928d1f3f7a40c66a"
     },
     {
       "path": "static/suite-guide-chat.css",
@@ -124,8 +124,8 @@
     },
     {
       "path": "static/browser-client.js",
-      "bytes": 9689,
-      "sha256": "624fc6067d54d74116cf136ed34f5b6a40cce3e03f9d0145166821e727d01bf3"
+      "bytes": 9798,
+      "sha256": "252ee01abd8b0a2e6313f33b269366c92806007ab959510089ab27d8624d6750"
     },
     {
       "path": "static/procedural-engine.wasm",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 8656,
-      "sha256": "699818b008aed2e3675cb365b68d5dc5c5a0b8e2f14d516e7a4155d51fef445b"
+      "bytes": 26248,
+      "sha256": "600b85e3e26cfccc186bd5e8a083f37d3006bfa105dfab89ad9e7bc06ff238b0"
     },
     {
       "path": "static/gyani-fox.png",
@@ -239,13 +239,28 @@
     },
     {
       "path": "static/remote-service.js",
-      "bytes": 2945,
-      "sha256": "a374754c074a0bd9d9675f3d8bc74528d6dcf3c5bb8301519556acf30ac53963"
+      "bytes": 3069,
+      "sha256": "84f7edccdaa63066015dcbac2d2b90df6c19b77da4849913ed390f948426bbfc"
     },
     {
       "path": "static/remote-room.js",
       "bytes": 6234,
       "sha256": "f8229fc8d0d990d373c56880d939bbda51dba61e85510fa1a295a081b5dea697"
+    },
+    {
+      "path": "static/guide-search.js",
+      "bytes": 2526,
+      "sha256": "8479f11c406f9f33a223e3f859ee116bb873e33ada08d47b2540455ccfbdf799"
+    },
+    {
+      "path": "static/suite-tour.js",
+      "bytes": 4022,
+      "sha256": "3364d9dcf0ab6546d580dc8448004807f67da8212964424912575dce72b3b761"
+    },
+    {
+      "path": "static/suite-tour.css",
+      "bytes": 1233,
+      "sha256": "97f48045fc6800dea1b867f35cce03ff8e3921909423fc9662c56966f2444320"
     }
   ]
 }

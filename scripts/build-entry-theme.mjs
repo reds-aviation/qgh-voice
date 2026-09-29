@@ -45,9 +45,9 @@ export async function buildEntryTheme(output, root, version) {
         .replace('Build the exercise.', 'Instructor setup')
         .replace('Join with the session PIN.', 'Controller position');
     }
-    // Preserve the training guide routes and place hardware help outside scopes.
+    // Operational guides stay public; the owner’s hardware handbook is private.
     if (['qgh', 'instructor', 'procedural', 'guide'].includes(surface)) {
-      html = html.replace('</body>', `<footer class="flow-footer"><span>ATC TRAINING SUITE</span><a href="${prefix}offline-setup.html">Offline PC &amp; classroom setup →</a><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
+      html = html.replace('</body>', `<footer class="flow-footer"><span>ATC TRAINING SUITE</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
     }
     await writeFile(path, html);
   }

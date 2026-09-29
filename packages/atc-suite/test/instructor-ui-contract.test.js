@@ -17,7 +17,7 @@ test('instructor setup contains all manual scenario inputs and lifecycle control
 
 test('instructor offers a dedicated same-browser student window and second-display placement', () => {
   const page = html();
-  assert.match(page, /Same browser · dedicated student window/);
+  assert.match(page, /same PC and browser profile/);
   assert.match(page, /OPEN \/ FOCUS/);
   assert.match(page, /MOVE TO SECOND DISPLAY/);
   assert.match(page, /aria-live="polite"/);

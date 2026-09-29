@@ -1,6 +1,8 @@
 (function () {
   'use strict';
   const knowledge = typeof module === 'object' && module.exports ? require('./guide-knowledge.js') : globalThis.ATCGuideKnowledge;
+  const searchAPI = typeof module === 'object' && module.exports ? require('./guide-search.js') : globalThis.ATCGuideSearch;
+  const searchGuides = searchAPI?.createIndex(knowledge?.entries || []);
   const scriptURL = typeof document === 'object' ? document.currentScript?.src : null;
 
   // Curated from procedural-guide.html, instructor-led/training-guide.html and
@@ -13,7 +15,7 @@
     procedural: { label: 'Open Procedural Studio', href: 'procedural.html' },
   };
   const guides = {
-    individual: { label: 'Individual QGH Training Centre', href: 'https://reds-aviation.github.io/qgh-voice/training-centre.html' },
+    individual: { label: 'Individual QGH Training Centre', href: '../training-centre.html' },
     instructor: { label: 'Instructor-led QGH / ATSS guide', href: '../instructor-led/training-guide.html' },
     procedural: { label: 'Procedural Studio guide', href: 'procedural-guide.html' },
   };
@@ -56,6 +58,11 @@
       creator: 'Flt Lt Balaram Reddy · Service No. 38703',
     });
     if (!q) return fallback();
+    // Do not answer operational minima, live weather, unrelated instructions or diagnoses.
+    if (/\b(?:ignore (?:all |your )?(?:instructions|rules)|system prompt|medical|diagnos|stock price|weather today|current notam|legal minimum|separation minimum)\b/.test(q)) return fallback();
+    const shared = knowledge?.entries.find(entry => entry.priority && entry.topics.includes(topic) && new RegExp(entry.match,'i').test(q));
+    const answerEntry = entry => ({...reply(entry.text,[sections(topic === 'procedural' ? guides.procedural : topic === 'qgh-individual' || topic === 'qgh' ? guides.individual : guides.instructor,entry.anchor)]),intent:entry.id});
+    if(shared) return answerEntry(shared);
     if (/^(?:hi|hello|hey|namaste|help|help me|can you help me|who are you|what can you do)(?: gyani)?$/.test(q))
       return reply('I’m Gyani, your simulator guide. I can help you start or join an exercise, turn aircraft, use bearings, set levels, or declutter the scope. What would you like to do?', topic === 'procedural' ? [guides.procedural] : allGuides);
     if (/^(?:thanks|thank you|thankyou|ok|okay|got it)(?: gyani)?$/.test(q)) return reply('You’re welcome. Ask me whenever you need help with the simulator.', []);
@@ -128,7 +135,7 @@
       if (approachReference) return reply('In the radar beta, the synthetic threshold and station share the approach origin. SRA marks show threshold NM and altitude MSL = field elevation + threshold crossing height + distance NM × 6076.12 × tan(3°), rounded to 10 ft. The instructor sets elevation and crossing height in Pressure & approach references. PAR retains them through transfer and shows height above aerodrome. These are geometric aids; they do not command descent or assess obstacle clearance.', [sections(guides.instructor, 'references')]);
       if (pressure) return reply('Set QNH, transition altitude, transition level, field elevation and crossing height in the instructor setup’s Pressure & approach references. Both positions show QNH/TA/TL; zero TA/TL means unset. In this beta, QNH is a shared briefing reference and aircraft levels remain modelled in ft MSL. TA/TL do not trigger automatic pressure changes or calculate local minima.', [sections(guides.instructor, 'references')]);
       if (pictureControls) return reply('On the Surveillance/SRA student scope, drag or scroll to pan; Ctrl + scroll, +/− or Range zoom. Centre station/Home recentres; arrow buttons or keyboard arrows pan while the scope is focused. Scope toggles rings, SSR labels and instructor-provided aids locally. Primary returns remain anonymous. PAR keeps separate range/history controls; QGH has its homing controls. These controls do not change the instructor picture.', [sections(guides.instructor, 'display')]);
-      if (join) return reply('In the instructor-led beta, Create Session opens the Student Display. Enter the generated six-digit PIN there. The instructor selects Admit, the student selects Ready, then the instructor selects Start. Both positions must use the same browser profile and site origin on one computer. Keep the instructor window open; a phone cannot join another device through this local PIN.', [sections(guides.instructor, 'start')]);
+      if (join) return reply('Choose the same Exercise connection on both positions. This device / offline requires one PC and the same browser profile; two extended screens are recommended. Online room connects different PCs/devices with internet on both. Create Session, enter its six-digit PIN on Controller Position, Admit, Ready, then Start. Keep the instructor window open.', [sections(guides.instructor, 'start')]);
       if (bearing && topic === 'qgh-instructor') return reply('Instructor-led QGH uses a default 5× flight clock. D/F appears during the pilot transmission and freezes for two real seconds at release. Selecting another aircraft does not change the transmitting source. QDM is magnetic homing; QTE is true bearing.', [sections(guides.instructor, 'modes'), sections(guides.instructor, 'display')]);
       if (audio) return reply('The instructor-led QGH / ATSS beta uses buttons and keyboard, not voice recognition. Optional pilot audio uses an installed device voice and starts muted. Enable it on the student position; captions and simulated transmissions still work when sound is unavailable.', [sections(guides.instructor, 'start')]);
       if (timing) return reply(topic === 'qgh-instructor' ? 'Instructor-led QGH defaults to a 5× flight clock. Its released D/F indication holds for two real seconds.' : 'SRA and PAR default to real-time 1×. Optional 5× and 10× accelerate flight and the sensor clock together. Advance One Minute advances every aircraft, not only the selected one.', [sections(guides.instructor, 'modes')]);
@@ -149,6 +156,8 @@
     const candidates = (knowledge?.entries || []).filter(entry => entry.topics.includes(topic) && new RegExp(entry.match, 'i').test(q));
     const entry = candidates.find(item => item.id === 'stop-turn') || candidates[0];
     if (entry) return { ...reply(entry.text, [sections(topic === 'procedural' ? guides.procedural : topic === 'qgh-individual' || topic === 'qgh' ? guides.individual : guides.instructor, entry.anchor)]), intent: entry.id };
+    const retrieved = searchGuides?.(q,topic);
+    if(retrieved) return answerEntry(retrieved);
     if (topic === 'suite' && /\b(?:turn|left|right|controls)\b/.test(q)) return reply('For Procedural, select the aircraft and use the left/right arrow buttons. On a mouse, double left-click turns left and double right-click turns right; Stop turn levels the wings. In QGH the controls depend on Normal or U/S Compass. Which simulator are you using?', [destinations.procedural, destinations.individual, destinations.instructor]);
     return fallback();
   }
@@ -229,8 +238,8 @@
         button.addEventListener('click', () => { input.value = question; sendQuestion(); }); suggestions.append(button);
       }
     }
-    const exerciseState = document.getElementById('exerciseState');
-    const activeExercise = () => (document.body.classList.contains('desk-open') && document.body.classList.contains('exercise-running')) || exerciseState?.textContent.trim() === 'RUNNING';
+    const exerciseState = document.getElementById('exerciseState') || document.getElementById('studentExerciseState');
+    const activeExercise = () => (document.body.classList.contains('desk-open') && document.body.classList.contains('exercise-running')) || exerciseState?.textContent.trim() === 'RUNNING' || !!document.querySelector('#console.active, #tConsole.active');
     function closePanel(restoreFocus = true) {
       const heldFocus = panel.contains(document.activeElement);
       panel.hidden = true; launcher.hidden = false; launcher.setAttribute('aria-expanded', 'false');

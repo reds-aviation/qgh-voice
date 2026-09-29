@@ -148,6 +148,17 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   h.document.getElementById('quick-right').click();assert.equal(h.context.commands[2][1].action,'right');
   h.context.prepare('student');assert.equal(h.document.getElementById('aircraft-quick-controls').hidden,true);
   emit('pointerdown',2,800);emit('pointerup',2,830);assert.equal(h.context.commands.length,3);
+  const end=h.document.getElementById('terminate-quick'),dialog=h.document.getElementById('terminate-confirm');
+  dialog.showModal=()=>{dialog.open=true;};
+  end.click();assert.ok(!dialog.open,'student cannot open termination confirmation');
+  h.context.prepare('instructor');end.click();assert.equal(dialog.open,true);
+  assert.equal(end.getAttribute('aria-pressed'),'true');
+  dialog.open=false;dialog.returnValue='cancel';dialog.dispatchEvent(new h.Event('close'));
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,3,'cancel never ends the exercise');
+  end.click();assert.equal(dialog.returnValue,'','previous confirmation cannot leak into Escape');
+  dialog.open=false;dialog.returnValue='terminate';dialog.dispatchEvent(new h.Event('close'));
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(h.context.commands.length,4);
+  assert.equal(h.context.commands[3][0],'clock');assert.equal(h.context.commands[3][1].action,'terminate');
 });
 
 test('phone roster keeps 24 editable cards and retains callsigns while changing the count',async()=>{

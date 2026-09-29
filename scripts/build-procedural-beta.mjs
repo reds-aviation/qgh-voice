@@ -1,6 +1,5 @@
 import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {buildEntryTheme} from './build-entry-theme.mjs';
-import {buildOfflineGuide} from './build-offline-guide.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -23,6 +22,7 @@ export async function buildProceduralBeta(outputRoot) {
   }
   await copyFile(resolve(outputRoot,'procedural-beta/procedural.html'),resolve(outputRoot,'procedural-beta/index.html'));
   const landingRoot = resolve(root,'packages/site-landing');
+  await copyFile(resolve(source,'static/remote-config.js'), resolve(outputRoot,'instructor-led/remote-config.js'));
   const landingAssets = ['suite-landing.css','suite-landing-register.js','hero-airspace.png','qgh-towers.png','procedural-airspace.png','aircraft-icon.png','instructor-icon.png'];
   for (const asset of landingAssets) await copyFile(resolve(landingRoot,asset),resolve(outputRoot,asset));
 
@@ -64,6 +64,7 @@ export async function buildProceduralBeta(outputRoot) {
   for (const page of ['index.html','instructor.html','student.html','training-guide.html']) {
     const path = resolve(outputRoot,'instructor-led',page);
     let html = await readFile(path,'utf8');
+    html = html.replace("connect-src 'self';", "connect-src 'self' https://yigmtmdrqpufdwvzswjd.supabase.co;");
     html = html.replaceAll('<span>REDS</span> ATC TRAINING SUITE','ATC TRAINING SUITE')
       .replaceAll('REDS ATC TRAINING SUITE','ATC TRAINING SUITE')
       .replaceAll('Reds ATC Training Suite','ATC Training Suite')
@@ -86,11 +87,16 @@ export async function buildProceduralBeta(outputRoot) {
     ...['index.html','instructor.html','student.html','training-guide.html'].map(page => ['instructor-led/' + page, '../procedural-beta/']),
   ]) {
     const path = resolve(outputRoot,page); let html = await readFile(path,'utf8');
-    if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
+    if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}guide-search.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
     await writeFile(path,html);
   }
+  for (const page of ['single.html','tactical.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
+    const prefix = page.startsWith('procedural-beta/') ? '' : page.includes('/') ? '../procedural-beta/' : 'procedural-beta/';
+    const path = resolve(outputRoot,page);
+    const html = await readFile(path,'utf8');
+    await writeFile(path,html.replace('</head>',`<link rel="stylesheet" href="${prefix}suite-tour.css"><script defer src="${prefix}suite-tour.js"></script></head>`));
+  }
   const manifestPath = resolve(outputRoot,'manifest.webmanifest');
-  await buildOfflineGuide(outputRoot, root, manifest.version);
   await buildEntryTheme(outputRoot, root, manifest.version);
   const qghManifest = JSON.parse(await readFile(manifestPath,'utf8'));
   qghManifest.name = 'ATC Training Suite';
@@ -120,7 +126,7 @@ export async function buildProceduralBeta(outputRoot) {
   const proceduralShell = [...manifest.files.filter(file => file.path.startsWith('static/')).map(file => './procedural-beta/' + file.path.slice(7)), './procedural-beta/index.html', './procedural-beta/'];
   const uncached = proceduralShell.filter(path => !sw.includes(`'${path}'`));
   sw = sw.replace('const APP_SHELL = [', 'const APP_SHELL = [\n' + uncached.map(path => `  '${path}',`).join('\n'));
-  sw = sw.replace('const APP_SHELL = [', "const APP_SHELL = [\n  './flow-theme.css',\n  './qgh-cloudbreak.png',\n  './offline-setup.html',\n  './offline-setup.md',\n  './offline-guide.css',");
+  sw = sw.replace('const APP_SHELL = [', "const APP_SHELL = [\n  './flow-theme.css',\n  './qgh-cloudbreak.png',");
   if (uncached.length && !sw.includes(`'${uncached[0]}'`)) throw new Error('Procedural offline shell was not updated');
   sw = sw.replace("['./', './index.html', './qgh.html'", "['./procedural-beta/', './procedural-beta/index.html', './procedural-beta/procedural.html', './procedural-beta/procedural-guide.html', './', './index.html', './qgh.html'");
   sw = sw.replace('  if (requestUrl.search) {', `  const proceduralRoot = new URL('./procedural-beta/', self.registration.scope).pathname;
@@ -137,13 +143,13 @@ export async function buildProceduralBeta(outputRoot) {
   await writeFile(swPath,sw);
   const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
   let instructorSW = await readFile(instructorSWPath,'utf8');
-  instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../qgh-cloudbreak.png',\n  '../qgh-towers.png',\n  '../hero-airspace.png',\n  '../offline-setup.html',\n  '../offline-guide.css',\n  '../offline-setup.md',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
+  instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../qgh-cloudbreak.png',\n  '../qgh-towers.png',\n  '../hero-airspace.png',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
   instructorSW = instructorSW.replace('  if (requestUrl.search) {', `  const isSuiteAsset = [new URL('../flow-theme.css', self.registration.scope).pathname, new URL('../suite-landing-register.js', self.registration.scope).pathname].includes(requestUrl.pathname)
     && requestUrl.search === '?release=${manifest.version}';
   if (requestUrl.search && !isSuiteAsset) {`);
   instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
-    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',");
+    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   console.log(`Built GitHub-only ATC Training Suite with Procedural Beta ${manifest.version}`);
 }

@@ -83,8 +83,8 @@ try {
   mode.value = validRemoteConfig(remoteConfig) && (saved?.cloud || params.get('connection') === 'online') ? 'online' : 'local';
   const updateMode = () => {
     document.getElementById('connection-help').textContent = mode.value === 'online'
-      ? 'Online room: use the same site on each device. Keep the instructor tab open. Uploaded maps are shared with admitted controllers.'
-      : 'This-device room: open both desks in the same browser profile. Use an extended display.';
+      ? 'Online room: different PCs/devices, internet on both. Select Online room on both and use the same PIN. Keep the instructor tab open.'
+      : 'This device / offline: same PC AND same browser profile, separate windows. Best with two monitors: Windows + P → Extend. Keep the student on screen 2; Duplicate shows the instructor picture.';
   };
   mode.onchange = updateMode; updateMode();
   window.fetch = async (input, init = {}) => {

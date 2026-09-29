@@ -917,9 +917,9 @@ select:focus-visible {
 }
 
 .review-toolbar {
-  position: sticky;
-  bottom: max(var(--space-2), env(safe-area-inset-bottom, 0px));
-  z-index: 3;
+  position: relative;
+  bottom: auto;
+  z-index: auto;
   margin-top: var(--space-3);
   border: 1px solid var(--edge);
   border-radius: 11px;

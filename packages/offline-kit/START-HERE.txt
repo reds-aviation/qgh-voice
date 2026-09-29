@@ -13,10 +13,8 @@ ATC TRAINING SUITE - COMPLETELY OFFLINE
 7. Keep the instructor window open. Pause/export before closing it.
 8. Close browser windows, then Ctrl+C in the server window to stop.
 
-Detailed hardware, cables, chairs, power, ports, installation, speech-pack
-preparation, backup, update and troubleshooting handbook:
-http://127.0.0.1:8765/offline-setup.html
-The written source is site\offline-setup.md. Ctrl+P prints the browser guide.
+The separate hardware/setup handbook is an owner reference, not a public
+page or part of the simulator site. Use the local training guides for controls.
 
 All simulator assets, fonts, QGH recognition/pilot packs and included media are
 inside site\. They are served locally. Optional external reference links still

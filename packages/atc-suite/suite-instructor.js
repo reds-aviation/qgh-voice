@@ -12,7 +12,7 @@
   const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
   const DEFAULT_TRAINING_TIME_RATE = 5;
   const state = {
-    simulation: null, session: null, sensor: null, review: null, sra: null,
+    simulation: null, session: null, sensor: null, review: null, sra: null, cloudTransport: null, creating: false,
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
@@ -39,6 +39,7 @@
     const elapsed = state.previousTick == null ? 0 : Math.max(0, (timestamp - state.previousTick) / 1000);
     state.previousTick = timestamp;
     try {
+      if (state.running && state.cloudTransport && !state.cloudTransport.connected) suspendExercise('ONLINE LINK LOST · exercise paused. Reconnect, then select Resume.');
       if (state.running && elapsed > 2) suspendExercise('BROWSER SUSPENDED · exercise paused. Select Resume when ready.');
       else advanceWallElapsed(elapsed);
       if (state.transmission && radioNow() >= state.transmission.expiresAt) finishTransmission();
@@ -66,7 +67,7 @@
       setStudentDisplayStatus('STUDENT DISPLAY OPEN · enter the PIN there, or move it to a second display.');
       return { ok: true, reason: 'focused', window: state.studentWindow };
     }
-    const opened = Display.openStudentWindow({ url: 'student.html' });
+    const opened = Display.openStudentWindow({ url: state.cloudTransport ? 'student.html?connection=online' : 'student.html' });
     if (!opened.ok) {
       setStudentDisplayStatus(opened.reason === 'popup-blocked'
         ? 'POP-UP BLOCKED · allow pop-ups, then select Open / Focus.'
@@ -439,22 +440,35 @@
     if (snapshot) byId('sessionPin').textContent = snapshot.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
   }
 
-  function createSession(event) {
+  async function createSession(event) {
     event.preventDefault();
-    if (!byId('scenarioForm').reportValidity()) return;
+    if (state.creating || !byId('scenarioForm').reportValidity()) return;
+    state.creating = true;
+    const submit = byId('scenarioForm').querySelector('[type="submit"]');
+    if (submit) submit.disabled = true;
     try {
       const input = scenarioInput();
+      const online = byId('exerciseConnection')?.value === 'online';
+      const cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
+        if (!status.connected) {
+          setStudentDisplayStatus('ONLINE LINK · ' + status.error, 'attention');
+          if (state.running) suspendExercise('ONLINE LINK LOST · exercise paused. Select Resume after reconnection.');
+        }
+      }) : null;
+      state.cloudTransport = cloud?.transport || null;
       resetTrainingTimeRate(input.exerciseFamily);
       state.simulation = Core.setLifecycle(Core.createState(input), 'ready');
       state.sensor = createSensor(input);
       state.review = Sensors.createReviewTimeline();
       state.review.recordTruth(truthForReview());
       state.session = Session.createInstructorSession({
-        publicMetadata: publicMetadata(input), storage: localStorage,
+        publicMetadata: publicMetadata(input), storage: online ? undefined : localStorage,
+        ...(cloud || {}),
         transportFactory: channelName => Session.createLocalSessionTransport({ channelName }),
         onEvent: onSessionEvent
       });
       byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
+      byId('sessionConnectionLabel').textContent = online ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
       byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = false;
       byId('modeKicker').textContent = modeLabel(input.exerciseFamily);
       byId('scopeLabel').textContent = input.exerciseFamily === 'qgh' ? 'CONTINUOUS TRUTH · D/F PREVIEW' : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
@@ -463,8 +477,11 @@
       configureActiveControls();
       byId('startExercise').disabled = true;
       updateAll();
-      openStudentDisplay();
-    } catch (error) { byId('setupPreview').textContent = error.message; }
+      state.cloudTransport?.start();
+      if (online) setStudentDisplayStatus('ONLINE ROOM · On the other PC/device open Controller position, select Online room and enter this PIN. Internet is required on both devices.');
+      else openStudentDisplay();
+    } catch (error) { state.cloudTransport?.close(); state.cloudTransport = null; byId('setupPreview').textContent = error.message; }
+    finally { state.creating = false; if (submit) submit.disabled = false; }
   }
 
   function truthForSensor(simulation = state.simulation) {
@@ -652,6 +669,7 @@
   }
 
   function startExercise() {
+    if (state.cloudTransport && !state.cloudTransport.connected) { byId('commandStatus').textContent = 'Wait for the online connection before Start.'; return false; }
     if (!state.session || !state.simulation || ['running', 'paused', 'review'].includes(state.simulation.lifecycle)) return false;
     if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
@@ -661,6 +679,7 @@
   }
 
   function pauseExercise() {
+    if (state.simulation?.lifecycle === 'paused' && state.cloudTransport && !state.cloudTransport.connected) { byId('commandStatus').textContent = 'Wait for the online connection before Resume.'; return false; }
     if (!state.session || !state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return false;
     if (state.running) {
       state.running = false; state.session.pause(state.simulation.simulationSeconds);

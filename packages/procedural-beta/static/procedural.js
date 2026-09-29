@@ -445,7 +445,12 @@ function renderClockControls() {
     $('resume').disabled = unavailable || busy || ended || running || waiting > 0;
     $('pause').disabled = unavailable || busy || ended || !running;
     $('step').disabled = unavailable || busy || ended || running;
-    $('terminate').disabled = unavailable || busy || ended;
+    for (const id of ['terminate', 'terminate-quick']) {
+        $(id).disabled = !instructor || unavailable || busy || ended;
+        $(id).setAttribute('aria-pressed', String(ended || $('terminate-confirm').open));
+        $(id).classList.toggle('is-terminated', ended);
+        $(id).textContent = ended ? '■ Exercise terminated' : '■ Terminate exercise';
+    }
     for (const id of ['reopen-exercise', 'review-reopen']) {
         $(id).hidden = !instructor || !ended;
         $(id).disabled = unavailable || busy;
@@ -1799,13 +1804,16 @@ $('student-ready').onclick = safe(() => roomAction('ready'));
 $('reset-room').onclick = safe(async () => { if (confirm('Create a new PIN and close current student admissions?'))
     await roomAction('reset'); });
 $('copy-pin').onclick = safe(async () => { await navigator.clipboard.writeText(String(room?.pin || '')); message('Session PIN copied.'); });
-$('terminate').onclick = safe(async () => {
-    if (!confirm('End this exercise for review? Traffic will stop. Reopen exercise lets you continue later with the same traffic and records.'))
-        return;
+for (const id of ['terminate', 'terminate-quick']) $(id).onclick = () => {
+    if (session?.role !== 'instructor' || view?.terminated || commandBusy) return;
+    $('terminate-confirm').returnValue = ''; $('terminate-confirm').showModal(); renderClockControls();
+};
+$('terminate-confirm').addEventListener('close', safe(async () => {
+    renderClockControls();
+    if ($('terminate-confirm').returnValue !== 'terminate' || session?.role !== 'instructor' || view?.terminated) return;
     await command('clock', { action: 'terminate' });
-    clearAudio();
-    tab('debrief');
-});
+    clearAudio(); tab('debrief'); renderClockControls();
+}));
 for (const id of ['reopen-exercise', 'review-reopen'])
     $(id).onclick = safe(async () => {
         await command('clock', { action: 'reopen' });

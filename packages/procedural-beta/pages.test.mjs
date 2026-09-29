@@ -12,10 +12,12 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   execFileSync(process.execPath,['scripts/build-web.mjs'],{cwd:root,env:{...process.env,QGH_PROCEDURAL_BETA:'1'},stdio:'pipe'});
   const dist=resolve(root,'apps/web/dist');
   const base='https://example.test/qgh-voice/';
+  for(const file of ['offline-setup.html','offline-setup.md','offline-guide.css']) assert.equal(existsSync(resolve(dist,file)),false,'private handbook must not be published');
   const pages=['index.html','qgh.html','single.html','tactical.html','training-centre.html','user-guide.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','instructor-led/training-guide.html','procedural-beta/index.html','procedural-beta/procedural.html','procedural-beta/procedural-guide.html'];
   for(const page of pages) {
     const html=readFileSync(resolve(dist,page),'utf8'),{document}=parseHTML(html),ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
     assert.equal(new Set(ids).size,ids.length,`duplicate ID in ${page}`);
+    assert.ok(!html.includes('offline-setup'), `private handbook link in ${page}`);
     assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
     assert.ok(!html.includes('entry-theme.css'),`deferred theme included in ${page}`);
     for(const el of document.querySelectorAll('script[src],link[href],img[src],a[href]')) {

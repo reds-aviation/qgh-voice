@@ -24,6 +24,7 @@ const suiteFiles = [
   'suite-review.js',
   'suite-sensors.js',
   'suite-session.js',
+  'suite-cloud.js',
   'suite-student.js',
 ];
 const sharedEngineFiles = [
@@ -106,6 +107,8 @@ async function build() {
     ...sharedIcons.map(file => copyFrom(sharedIconRoot, file, `icons/${file}`)),
   ]);
   await applyBuildVersion(version);
+  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'remote-service.js');
+  await writeFile(resolve(outputRoot,'remote-config.js'), 'export const remoteConfig = Object.freeze({url:"",publishableKey:""});\n');
 
   const expectedOutput = [
     ...suiteFiles,

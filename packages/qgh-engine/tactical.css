@@ -1185,9 +1185,9 @@ select:focus-visible {
 }
 
 .tactical-review-toolbar {
-  position: sticky;
-  bottom: max(var(--t-space-2), env(safe-area-inset-bottom, 0px));
-  z-index: 4;
+  position: relative;
+  bottom: auto;
+  z-index: auto;
   margin-top: var(--t-space-3);
   border: 1px solid var(--t-line);
   border-radius: 10px;

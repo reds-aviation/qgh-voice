@@ -448,7 +448,7 @@ body:has(.voice-dock) { padding-right: 90px; }
     max-width: none;
     scroll-padding-block: 12px;
   }
-  body:has(.voice-dock) :is(.review-toolbar, .tactical-review-toolbar) { bottom: 8px; }
+  body:has(.voice-dock) :is(.review-toolbar, .tactical-review-toolbar) { bottom: auto; }
   body:has(.voice-dock[data-edge='top']) :is(.app, .tactical-app, .entry-app) {
     padding-top: calc(120px + env(safe-area-inset-top, 0px) + 20px);
   }

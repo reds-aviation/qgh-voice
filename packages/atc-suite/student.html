@@ -9,6 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
   <script defer src="suite-session.js"></script>
+  <script defer src="suite-cloud.js"></script>
   <script defer src="suite-student.js"></script>
 </head>
 <body>
@@ -16,7 +17,7 @@
     <header class="site-header"><div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">CONTROLLER POSITION</span><a href="training-guide.html" target="_blank" rel="noopener">BETA GUIDE ↗</a></div><time id="studentClock" class="header-clock">00:00</time></header>
 
     <section class="join-panel" id="joinPanel">
-      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><p>This local candidate connects the Instructor and Student Display windows in the same browser. It does not yet connect separate devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
+      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label><p id="connectionHelp">Use the same connection setting as the instructor. Offline: same PC and browser profile. Online: internet on both devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
     </section>
 
     <section class="waiting-panel" id="waitingPanel" hidden><div class="waiting-pulse" aria-hidden="true"></div><span class="eyebrow">JOIN REQUEST SENT</span><h1>Waiting for instructor</h1><p id="waitingMessage">Your display will open after the instructor admits this position.</p><button id="cancelJoin" type="button">CANCEL</button></section>
