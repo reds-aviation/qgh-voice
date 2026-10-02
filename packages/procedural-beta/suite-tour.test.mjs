@@ -94,3 +94,29 @@ test('instructor and procedural onboarding cannot reappear after their first Run
     await tick();assert.equal(panel.hidden,true,`${page}: late controls after Pause do not start a missed tour`);
   }
 });
+
+test('automatic introduction closes when recovery returns its workspace to entry without changing the clock',async()=>{
+  for(const [page,path,workspace] of [
+    ['procedural','/qgh-voice/procedural-beta/procedural.html','desk'],
+    ['instructor','/qgh-voice/instructor-led/instructor.html','activeWorkspace'],
+    ['student','/qgh-voice/instructor-led/student.html','readyPanel'],
+  ]) {
+    const h=domHarness(`<html><body><header></header><section id="entry" hidden><button id="restore">Resume saved exercise</button></section><section id="${workspace}"><canvas id="introScope"></canvas><time id="clock">10:00:00</time></section></body></html>`,path);
+    h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=800;
+    h.context.ATCGuideKnowledge={revision:'entry-recovery-regression',firstUse:[{pages:[page],selector:'#introScope',title:'First workspace',text:'Essential controls before Run.'}],tours:[{pages:[page],selector:'#introScope',title:'Manual tour',text:'User-requested controls.'}]};
+    vm.runInContext(source,h.context);
+    const panel=h.document.getElementById('suite-tour');
+    assert.equal(panel.hidden,false,`${page}: the ready workspace initially opens its introduction`);
+    assert.equal(h.document.querySelector('.suite-tour-target').id,'introScope');
+    h.document.getElementById(workspace).hidden=true;
+    h.document.getElementById('entry').hidden=false;
+    await tick();
+    assert.equal(panel.hidden,true,`${page}: returning to entry closes automatic help`);
+    assert.equal(h.document.querySelector('.suite-tour-target'),null,`${page}: hidden workspace is no longer highlighted`);
+    assert.equal(h.document.getElementById('clock').textContent,'10:00:00',`${page}: onboarding never mutates simulation time`);
+    h.document.getElementById(workspace).hidden=false;
+    await tick();assert.equal(panel.hidden,true,`${page}: recovery does not reopen the consumed introduction`);
+    h.document.getElementById('suite-tour-open').click();
+    assert.equal(panel.hidden,false,`${page}: an explicit manual tour is still available`);
+  }
+});

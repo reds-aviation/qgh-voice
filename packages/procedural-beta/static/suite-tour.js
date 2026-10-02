@@ -71,7 +71,7 @@
       if(live||alreadyStarted()){exerciseStarted=true;if(!firstUseHandled)rememberFirstUse();}
       if(!live&&!startHint.hidden)dismissHint();
       if(button.hidden!==live)button.hidden=live;button.disabled=live;
-      if(live&&!panel.hidden)finish(false);
+      if(!panel.hidden&&(live||(tourMode==='first'&&!workspaceReady())))finish(false);
       if(!live&&!exerciseStarted&&!firstUseHandled&&workspaceReady()){
         try{firstUseHandled=localStorage.getItem(firstUseKey)==='1';}catch{}
         if(!firstUseHandled)openTour('first');
