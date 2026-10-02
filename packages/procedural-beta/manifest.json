@@ -1,5 +1,5 @@
 {
-  "version": "2026.10.03.5",
+  "version": "2026.10.03.6",
   "go": "1.25.0",
   "files": [
     {
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 54465,
-      "sha256": "fe3e54873228311d97831b2348e0a3b9f98c822a98cc77f0a3173608f6e30731"
+      "bytes": 54687,
+      "sha256": "d26b4e14cee2a7db289f57bf8d3f9fe6316888790d2c918c7aae757458d42787"
     },
     {
       "path": "static/gyani-fox.png",
@@ -254,8 +254,8 @@
     },
     {
       "path": "static/suite-tour.js",
-      "bytes": 6609,
-      "sha256": "64e3d03206754d18e96a60fb5a7dc38084aeeadd1cc8cd2e4a98a8575211922e"
+      "bytes": 7554,
+      "sha256": "5d53b39d21bba3f4d0809e975515cb0a2c61607a7807bbfa141f733af3930b8a"
     },
     {
       "path": "static/suite-tour.css",

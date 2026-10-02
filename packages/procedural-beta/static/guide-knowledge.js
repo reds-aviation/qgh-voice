@@ -1,6 +1,6 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.10.03.5",
+  "revision": "2026.10.03.6",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -212,6 +212,7 @@
       "priority": true,
       "match": "\\b(?:online|internet|supabase|different (?:devices|systems|pcs|computers)|same (?:pc|browser)|offline capability|connection mode|another (?:pc|computer|device))\\b",
       "text": "This device / offline: use the SAME PC, SAME browser profile and exact same site address, with instructor and student in separate windows. Online room: use DIFFERENT PCs/devices, with internet on both. Choose the same connection mode and PIN, then Admit → Ready → Start/Run. QGH instructor-led, SRE/vectoring, SRA and Procedural support both choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release.",
+      "intro": "Use the instructor's connection mode and PIN. This device needs the same PC and browser profile; Online room connects different devices with internet on both. Keep both positions open.",
       "questions": [
         "Can my instructor use another laptop?",
         "Can we train without WiFi?",
@@ -234,7 +235,7 @@
       "anchor": "tour",
       "priority": true,
       "match": "\\b(?:guided tour|screen tour|walkthrough|walk through|show me around|where are the controls)\\b",
-      "text": "A brief, skippable introduction opens on first use when the workspace is ready, before traffic runs; Individual QGH shows it during setup. Next highlights the essential controls; Skip tour or Escape closes it. You can reopen Guided tour before Start, while paused or during review. Run closes all tour overlays without pausing or changing the exercise. The first instructor Start may show a short mouse-control reminder inside the controls shelf. Phone users use the aircraft arrows and Stop turn.",
+      "text": "A brief, skippable introduction opens on first use when the workspace is ready, before the first Run; Individual QGH shows it during setup. It does not open automatically after Pause or during review. Next highlights the essential controls; Skip tour or Escape closes it. You can reopen Guided tour before Start, while paused or during review. Run closes all tour overlays without pausing or changing the exercise. The first instructor Start may show a short mouse-control reminder inside the controls shelf. Phone users use the aircraft arrows and Stop turn.",
       "questions": [
         "Show me around the simulator",
         "Where are all the buttons?",
@@ -589,6 +590,7 @@
       "anchor": "session",
       "match": "\\b(?:join|admit|admission|ready|six digit|6 digit|session pin|share.*pin|find.*pin|where.*pin)\\b",
       "text": "Create the instructor exercise, then open Session. A new room resets admission and display status; share its new six-digit PIN. The controller opens Student position, selects the matching connection mode, enters name and PIN and requests admission. Instructor: Admit. Student: Ready. Instructor: Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Keep both positions open.",
+      "intro": "After the instructor admits you, press Ready. The instructor then starts the exercise. Your student display opens when traffic begins.",
       "questions": [
         "How do I join?",
         "Where is my PIN?",
@@ -1284,25 +1286,17 @@
       "pages": [
         "student"
       ],
-      "selector": "#qghStudentView",
-      "title": "Read the bearing",
-      "entry": "instructor-transmit"
+      "selector": "#readyPanel",
+      "title": "Your exercise connection",
+      "entry": "connections"
     },
     {
       "pages": [
         "student"
       ],
-      "selector": "#radarStudentView",
-      "title": "Your radar observations",
-      "entry": "sweep"
-    },
-    {
-      "pages": [
-        "student"
-      ],
-      "selector": "#student-estimate-panel",
-      "title": "Plot your own estimates",
-      "entry": "student-estimates"
+      "selector": "#studentReady",
+      "title": "Signal Ready",
+      "entry": "session"
     },
     {
       "pages": [
