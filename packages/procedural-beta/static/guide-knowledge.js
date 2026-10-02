@@ -1,6 +1,6 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.10.03.2",
+  "revision": "2026.10.03.3",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -145,7 +145,7 @@
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace)\\b",
-      "text": "Select an aircraft and use the arrows and Stop turn below the scope. More controls opens the full scrollable aircraft panel; Close returns to the scope. Collapse exercise options above the scope to gain space; they minimise when Start/Run begins. Scroll vertically when controls are below the display and swipe long tool rows sideways. Use landscape for SRE/SRA controller displays. Gyani stays tucked away during running traffic.",
+      "text": "Select an aircraft and use the arrows and Stop turn below the scope. On small screens, the heading field has its own full-width row. More controls opens the full scrollable aircraft panel; Close returns to the scope. Collapse exercise options above the scope to gain space; they minimise when Start/Run begins. Scroll vertically when controls are below the display and swipe long tool rows sideways. Use landscape for SRE/SRA controller displays. Gyani stays tucked away during running traffic.",
       "questions": [
         "The scope disappeared on my phone",
         "How do I use landscape?",
@@ -587,7 +587,7 @@
       ],
       "anchor": "session",
       "match": "\\b(?:join|admit|admission|ready|six digit|6 digit|session pin|share.*pin|find.*pin|where.*pin)\\b",
-      "text": "Create the instructor exercise, then open Session. Share its six-digit PIN. The controller opens Student position, selects the matching connection mode, enters name and PIN and requests admission. Instructor: Admit. Student: Ready. Instructor: Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Keep both positions open.",
+      "text": "Create the instructor exercise, then open Session. A new room resets admission and display status; share its new six-digit PIN. The controller opens Student position, selects the matching connection mode, enters name and PIN and requests admission. Instructor: Admit. Student: Ready. Instructor: Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Keep both positions open.",
       "questions": [
         "How do I join?",
         "Where is my PIN?",

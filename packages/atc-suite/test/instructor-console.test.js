@@ -10,7 +10,7 @@ const Session = require('../suite-session.js');
 
 function store() { const values = new Map(); return { getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, String(value)), removeItem: key => values.delete(key) }; }
 
-function harness(mode = 'qgh') {
+function harness(mode = 'qgh', sessionAdapter = Session) {
   let now = 0, nextTimer = 0;
   const nodes = new Map(), timers = new Map(), captions = [];
   const ctx = new Proxy({ strokes: [], stroke() { this.strokes.push(this.strokeStyle); }, measureText: text => ({ width: text.length * 8 }) }, { get: (target, key) => target[key] || (() => {}) });
@@ -27,9 +27,9 @@ function harness(mode = 'qgh') {
   const document = { body: { classList: { add() {}, remove() {} } }, getElementById: node, querySelectorAll: () => [], createElement: () => node(`created-${nodes.size}`) };
   let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, collapseSetupControls, startExercise, enterWorkspace};})();';
+    '\n globalThis.fixture = {state, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
   const context = { document, structuredClone, sessionStorage: store(), localStorage: store(),
-    ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: Session, ATCSuiteCommandReference: require('../suite-command-reference.js'),
+    ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: sessionAdapter, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); }, performance: { now: () => now }, Date, console };
   vm.runInNewContext(code, context);
   const state = context.fixture.state;
@@ -115,6 +115,61 @@ test('Start moves the view from setup into the active scope through the common w
   assert.deepEqual(entered, [{ id: 'activeWorkspace', block: 'start' }]);
   assert.equal(h.node('scopeSettings').open, false);
   assert.equal(h.state.simulation.lifecycle, 'running');
+});
+
+test('a fresh online SRA room after terminated QGH clears prior admission and readiness in both session displays', async () => {
+  const hub = Session.createFakeTransportHub();
+  // The harness runs the page in a separate VM realm. The real session codec
+  // correctly rejects foreign prototypes, so cross that test boundary as JSON.
+  const h = harness('qgh', {...Session, createInstructorSession: options => {
+    const session = Session.createInstructorSession({...options, publicMetadata:JSON.parse(JSON.stringify(options.publicMetadata))});
+    return {...session, publishObservation: (observation, time) => session.publishObservation(JSON.parse(JSON.stringify(observation)), time)};
+  }});
+  h.onSessionEvent({kind:'student-ready', audioMode:'audio'});
+  h.onSessionEvent({kind:'terminated'});
+  h.state.pendingClient = 'previous-student';
+  h.node('pauseExercise').textContent = 'RESUME'; h.state.accumulator = .2;
+  h.node('admitStudent').hidden = false; h.node('rejectStudent').hidden = false;
+  h.retryScenario();
+  const input = {exerciseFamily:'sra', qghProcedure:'normal', callsign:'201', approachAircraft:'AC1',
+    runwayOrientationDeg:150, finalTrackDeg:150, surveillanceProfile:'primary', parRefreshHz:1,
+    aircraft:[{aircraftId:'AC1',callsign:'201',aircraftType:'fighter',initialQteDeg:330,initialRangeNm:20,
+      initialHeadingDeg:150,altitudeFt:10000,speedKt:240,rateDegPerSecond:3,verticalRateFpm:1000}]};
+  h.setScenarioInput(input);
+  h.node('exerciseFamily').value = 'sra'; h.node('exerciseConnection').value = 'online';
+  h.node('scenarioForm').reportValidity = () => true; h.node('scenarioForm').querySelector = () => null;
+  const transport = {...hub.createTransport('new-room'), connected:true, start(){}};
+  h.context.ATCSuiteCloud = {prepareHost:async () => ({pin:'654321',sessionId:'new-sra-room',transport})};
+  await h.createSession({preventDefault(){}});
+  assert.equal(h.state.session?.snapshot().state, 'waiting', h.node('setupPreview').textContent);
+  assert.equal(h.state.session.snapshot().admittedClientId, null);
+  assert.equal(h.state.simulation.scenario.exerciseFamily, 'sra');
+  assert.equal(h.node('studentStatus').textContent, 'WAITING TO JOIN');
+  assert.equal(h.node('compactConnection').textContent, 'WAITING TO JOIN');
+  assert.match(h.node('studentDetail').textContent, /request admission/);
+  assert.doesNotMatch(h.node('studentDetail').textContent, /can now start/);
+  assert.equal(h.node('startExercise').disabled, true);
+  assert.equal(h.node('admitStudent').hidden, true); assert.equal(h.node('rejectStudent').hidden, true);
+  assert.equal(h.state.pendingClient, null); assert.equal(h.state.radioAudio, false);
+  assert.equal(h.node('pauseExercise').textContent, 'PAUSE'); assert.equal(h.state.accumulator, 0);
+  const student = Session.createStudentSession({pin:'654321', clientId:'new-student', transport:hub.createTransport('new-room'),
+    discovery:{pin:'654321',sessionId:'new-sra-room',channelName:'new-room',expiresAt:Date.now()+60000}});
+  student.requestJoin(); assert.equal(h.state.session.admit(student.clientId), true); student.ready();
+  assert.equal(h.startExercise(), true); assert.equal(student.snapshot().state, 'running');
+  assert.equal(h.node('pauseExercise').textContent, 'PAUSE');
+  h.advanceWallElapsed(1); const elapsed = h.state.simulation.simulationSeconds;
+  assert.equal(elapsed, 1);
+  // Lifecycle remains authoritative even if a stale presentation/runtime flag
+  // survives a preceding session; pressing Pause must still stop this attempt.
+  h.state.running = false;
+  assert.equal(h.pauseExercise(), true); assert.equal(h.state.simulation.lifecycle, 'paused');
+  assert.equal(student.snapshot().state, 'paused'); assert.equal(h.node('pauseExercise').textContent, 'RESUME');
+  assert.equal(h.advanceWallElapsed(2), 0); assert.equal(h.state.simulation.simulationSeconds, elapsed);
+  assert.equal(h.pauseExercise(), true); assert.equal(h.state.simulation.lifecycle, 'running');
+  assert.equal(student.snapshot().state, 'running'); assert.equal(h.node('pauseExercise').textContent, 'PAUSE');
+  h.advanceWallElapsed(1); assert.equal(h.state.simulation.simulationSeconds, elapsed+1);
+  h.state.session.close();
+  student.close();
 });
 
 test('host recovery preserves room and authorized seat, restores paused and forbids resume until reconnect', () => {

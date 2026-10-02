@@ -656,7 +656,8 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 @media (max-width:680px) {
   .student-page .student-head .status-stack { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:8px; }
   .student-page #radarScope, .student-page #studentEstimateScope { height:clamp(300px,55dvh,700px); }
-  .student-page .instrument-controls { flex-wrap:wrap; gap:5px; }
+  .student-page .radar-scope > header > .instrument-controls,
+  .student-page .par-student > header > .instrument-controls { flex-wrap:wrap; gap:5px; }
   .student-page .qgh-student { width:100%; }
   .student-page .df-console { display:grid; grid-template-columns:1fr 1fr; }
   .student-page .df-console header { grid-column:1 / -1; }
@@ -681,7 +682,8 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 /* Keep the title and clock controls inside narrow instructor/student screens. */
 @media (max-width:680px) {
   .workspace-head, .student-head { flex-wrap:wrap; }
-  .workspace-head > div:first-child, .student-head > div:first-child { flex:1 1 100%; }
+  .instructor-page .workspace-head > div:first-child,
+  .student-page .student-head > div:first-child { flex:1 1 100%; width:100%; }
   .status-stack { min-width:0; max-width:100%; margin-left:auto; }
   .training-rate-control select { min-height:44px; font-size:16px; width:150px; max-width:100%; }
 }

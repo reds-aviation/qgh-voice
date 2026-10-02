@@ -728,6 +728,12 @@
         transportFactory: channelName => Session.createLocalSessionTransport({ channelName }),
         onEvent: onSessionEvent
       });
+      state.pendingClient = null; state.radioAudio = false;
+      state.running = false; state.accumulator = 0; state.previousFrame = null; state.previousTick = null; state.runtimeError = null;
+      byId('studentStatus').textContent = 'WAITING TO JOIN';
+      byId('studentDetail').textContent = 'Enter this PIN in the Student Display, then request admission.';
+      byId('admitStudent').hidden = true; byId('rejectStudent').hidden = true;
+      byId('pauseExercise').textContent = 'PAUSE';
       byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
       byId('sessionConnectionLabel').textContent = online ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
       byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = false;
@@ -939,6 +945,7 @@
     if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
+    byId('pauseExercise').textContent = 'PAUSE';
     setPhase('running'); updateAll();
     collapseSetupControls(); enterWorkspace(byId('activeWorkspace')); checkpoint();
     return true;
@@ -947,11 +954,11 @@
   function pauseExercise() {
     if (state.simulation?.lifecycle === 'paused' && state.cloudTransport && !state.cloudTransport.connected) { byId('commandStatus').textContent = 'Wait for the online connection before Resume.'; return false; }
     if (!state.session || !state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return false;
-    if (state.running) {
+    if (state.simulation.lifecycle === 'running') {
       state.running = false; state.session.pause(state.simulation.simulationSeconds);
       state.simulation = Core.setLifecycle(state.simulation, 'paused'); byId('pauseExercise').textContent = 'RESUME';
     } else {
-      if (!state.session.resume(state.simulation.simulationSeconds)) return false;
+      if (!state.session.resume(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be Ready and connected before Resume.'; return false; }
       state.simulation = Core.setLifecycle(state.simulation, 'running'); state.previousTick = performance.now(); state.runtimeError = null;
       state.running = true; state.previousFrame = null; byId('pauseExercise').textContent = 'PAUSE';
     }
@@ -1011,6 +1018,7 @@
     const controllable = ['running', 'paused'].includes(snapshot.lifecycle);
     document.querySelectorAll('.command-grid button, .command-grid input, .command-grid select').forEach(control => { control.disabled = !controllable; });
     byId('pauseExercise').disabled = !controllable; byId('terminateExercise').disabled = !controllable;
+    byId('pauseExercise').textContent = snapshot.lifecycle === 'paused' ? 'RESUME' : 'PAUSE';
     const transfer = snapshot.scenario.exerciseFamily === 'surveillance'
       ? Core.parTransferStatus(state.simulation) : null;
     byId('parTransferActions').hidden = true;
