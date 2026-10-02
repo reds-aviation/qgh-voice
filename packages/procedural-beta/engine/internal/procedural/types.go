@@ -85,17 +85,21 @@ type Point struct {
 // Chart labels retain their published vertical and effective-date references;
 // their presence does not authorize a route or imply automatic airspace checking.
 type AirspaceArea struct {
-	ID            string  `json:"id"`
-	Name          string  `json:"name"`
-	Kind          string  `json:"kind"`
-	Points        []Point `json:"points"`
-	FloorLabel    string  `json:"floorLabel"`
-	CeilingLabel  string  `json:"ceilingLabel"`
-	Source        string  `json:"source"`
-	Reference     string  `json:"reference"`
-	EffectiveInfo string  `json:"effectiveInfo"`
-	Notes         string  `json:"notes,omitempty"`
-	Active        bool    `json:"active"`
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Kind   string  `json:"kind"`
+	Points []Point `json:"points"`
+	// Optional sourced WGS-84 coordinates preserve the author's original ring.
+	// Points remain the geometry used for drawing and simulation.
+	CoordinateOrigin *ChartOrigin  `json:"coordinateOrigin,omitempty"`
+	GeoPoints        []ChartOrigin `json:"geoPoints,omitempty"`
+	FloorLabel       string        `json:"floorLabel"`
+	CeilingLabel     string        `json:"ceilingLabel"`
+	Source           string        `json:"source"`
+	Reference        string        `json:"reference"`
+	EffectiveInfo    string        `json:"effectiveInfo"`
+	Notes            string        `json:"notes,omitempty"`
+	Active           bool          `json:"active"`
 }
 type Condition struct {
 	Kind  string  `json:"kind"`

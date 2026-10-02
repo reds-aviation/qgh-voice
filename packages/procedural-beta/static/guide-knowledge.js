@@ -1,22 +1,22 @@
-// Shared release knowledge: guides, Gyani and screen tours. Maintain with every UI change.
+// Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.09.29.22",
-  "learning": "I am also learning. If I’m unable to answer, please refer to the training guides.",
+  "revision": "2026.10.03.1",
+  "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
-    {
-      "title": "QGH · Individual practice",
-      "href": "qgh.html",
-      "text": "QGH cloud-breaking procedure: Suite home → QGH Individual Practice → Single aircraft or Tactical → configure → start → terminate and review."
-    },
-    {
-      "title": "QGH · Instructor-led / ATSS",
-      "href": "instructor-led/",
-      "text": "Suite home → QGH Instructor-led → Instructor → QGH, Surveillance/SRE, SRA or PAR → choose This device / Online room → create → matching connection + PIN → Admit → Ready → Start."
-    },
     {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Suite home → Procedural → Instructor setup → edit aircraft roster and airspace → Create session → Session → open student tab → PIN → Admit → Ready → Run."
+      "text": "Instructor setup → prepare airspace → create → Traffic setup → Session → Admit → Ready → Run → Terminate → Review."
+    },
+    {
+      "title": "QGH & SRA · Single QGH",
+      "href": "qgh.html",
+      "text": "Single aircraft or Tactical → configure QGH cloud-breaking → Start → control and transmit → Terminate → Review."
+    },
+    {
+      "title": "QGH & SRA · Instructor QGH + SRA",
+      "href": "instructor-led/",
+      "text": "Choose QGH, SRE/vectoring or SRA → create → Session → Admit → Ready → Start → Terminate → Review."
     }
   ],
   "entries": [
@@ -34,7 +34,7 @@
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:align|calibrat|embed|upload.*(?:image|map|layout)|reference point|point c)\\w*\\b",
-      "text": "Pause and save the correct ARP first. In Edit airspace → LFA image · guided alignment, choose a flat PNG/JPEG (up to 5 MB, 4096 pixels per side, 16 megapixels). Enter source, edition/date, LFA limits and layout notes. Select A and tap the ARP in the image; mark B and C at known points and enter their coordinates. Spread the points across the chart, with C away from line A–B. Percentages can be entered instead of tapping. Check alignment calculates width and true-north rotation and checks C independently. Apply and share stores the calibrated image and notes for both desks; students enable Map to display it. A distorted photo or unscaled sketch may fail the check; use a flat chart with known points. The image does not automatically create editable boundaries; enter those in the boundary editor. Fine-tune changes require another check against known points.",
+      "text": "After saving ARP, choose a flat PNG/JPEG up to 5 MB, 4096 pixels per side and 16 megapixels. Enter source, edition and layout notes. Mark A at ARP and B/C at known points, enter coordinates and spread them across the chart. Check alignment → Apply and share. C checks scale and orientation. Aligning an image does not create editable polygons; enter or draw boundaries separately.",
       "questions": [
         "How do I align my LFA image?",
         "Why does point C fail?",
@@ -55,7 +55,7 @@
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:arp|aerodrome reference point|upload coordinates|origin coordinates)\\b",
-      "text": "Open Edit airspace → Chart origin & shared briefing. ARP means Aerodrome Reference Point; it anchors geographic entries. Enter WGS-84 latitude/longitude in decimal degrees or DMS, or upload one JSON/CSV record with aerodromeName, latitude, longitude, chartReference and effectiveInfo. Download ARP template uses the selected published base, or supplies an editable blank template. Review, then Save shared chart settings. The VOR has separate offsets. Changing the ARP removes the old image and keeps existing local traffic/routes/areas at their local positions; it does not reproject them. Reload a published base to restore its sourced geometry, or enter custom coordinates after setting your origin.",
+      "text": "Edit airspace → set the Aerodrome Reference Point in WGS-84 latitude/longitude (decimal degrees or DMS), or upload the ARP CSV/JSON template. Save the origin before adding geographic polygons or aligning an image. Changing ARP keeps existing local positions; it does not reproject them. Check and rebuild geometry against the new origin.",
       "questions": [
         "How do I upload ARP coordinates?",
         "Can I type latitude and longitude?",
@@ -76,11 +76,12 @@
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:lfa|ats route|airspace|aerodrome|public chart|real route|sample map)\\b",
-      "text": "In Procedural, open Configure airspace during setup or Edit airspace on the instructor desk. Select Hindan, Pune, Jodhpur, Chandigarh, Gwalior, Agra or Bareilly to preview numbered LFA/CTR outlines, real published ATS route sections and source links. Load aerodrome airspace applies the dated AIP sample to both desks and pauses the exercise. The snapshot is effective 3 September 2026, with disclosed omissions; it is not live NOTAM data or the complete network. Route overview fits the network; Local view returns to the base. Declutter selects which routes and boundaries both desks see. A public AIP source is not a licence to redistribute chart images.",
+      "text": "Edit airspace lets you choose a published base or enter a custom ARP and polygon coordinates. Preview a base, then select only the ATS routes and areas needed for the exercise. The instructor selection is reflected on the student picture. Public AIP samples carry source/edition information and are dated training snapshots, not live NOTAM activation. Multiple LFA, prohibited, restricted and danger polygons can be entered.",
       "questions": [
-        "Where are the sample LFAs?",
+        "Where are sample LFAs?",
         "Are these real ATS routes?",
-        "Show public airspace charts"
+        "How do I draw an LFA polygon?",
+        "Can I select only one ATS route?"
       ]
     },
     {
@@ -88,6 +89,8 @@
       "title": "Instructor homing and pilot messages below the scope",
       "topics": [
         "suite",
+        "qgh-instructor",
+        "sra",
         "procedural"
       ],
       "controls": [
@@ -98,7 +101,7 @@
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark))\\b",
-      "text": "On the Procedural instructor screen, homing and pilot transmissions sit beside the turn and heading controls below the radar, leaving more room for the scope. On phones, the heading controls use the left column and a larger homing display plus a compact, scrollable red pilot message use the right column. The heading field has a dark background, bright digits and a gold focus border. More controls opens the full Aircraft panel, including speed, altitude and Local pilot voice controls. The phone radar has a larger reserved area; scroll to reach the lower controls. Hide controls keeps homing and pilot messages visible. The student instrument layout is unchanged.",
+      "text": "The scope takes the main exercise area. Quick aircraft controls, homing and compact red pilot captions sit below it. More controls opens aircraft actions. Collapse exercise options above the scope when flying; they minimise when Start/Run begins. Declutter selects shared chart items. Pan, range, labels and local picture tools change only your own scope.",
       "questions": [
         "Where is the homing display?",
         "Where are pilot messages now?",
@@ -109,10 +112,15 @@
       "id": "local-pin-recovery",
       "title": "Recover a rejected local session PIN",
       "topics": [
+        "suite",
+        "qgh",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
         "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "session",
       "priority": true,
       "match": "\\b(?:wrong|incorrect|expired|rejected|invalid)\\b.*\\bpin\\b|\\bpin\\b.*\\b(?:wrong|incorrect|expired|rejected|invalid|not working)\\b",
       "text": "Check that both positions use the same Exercise connection. This device needs the same PC, browser profile and site address; other devices need Online room with internet on both. Copy the PIN currently shown in the instructor Session panel. If an older cached release rejects that local PIN, finish the exercise, return to Suite home, choose Update available · reload, then create a new session and share its new PIN. An old PIN does not join a newly created session.",
@@ -131,14 +139,13 @@
         "procedural",
         "qgh-individual",
         "qgh-instructor",
-        "sra",
-        "par"
+        "sra"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "scope",
       "priority": true,
       "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace)\\b",
-      "text": "On narrow or short screens, scroll the Procedural workspace vertically to reach the scope and controls; the radar keeps a usable height. Swipe the top navigation, scope tools and panel tabs sideways to reach extra actions. Setup navigation wraps onto additional rows. Hide controls also collapses the quick aircraft bar to free more scope space; Show controls restores it. More controls opens a scrollable Aircraft panel; Close returns to the full workspace. QGH instructor clock and speed controls wrap below the title on phones and narrow browser windows, including windows with visible scrollbars. The aircraft toolbar label also wraps so Start, Pause and Terminate remain within the screen. Tactical QGH aircraft-count buttons wrap below the aircraft heading when space is tight. Surveillance, SRA and PAR student displays require landscape on phones; portrait shows rotation guidance. Gyani can be collapsed with its close button. If an older cached version rejects a current local PIN, finish the exercise, update from Suite home, then create a new session and share its new PIN.",
+      "text": "Select an aircraft and use the arrows and Stop turn below the scope. More controls opens the full scrollable aircraft panel; Close returns to the scope. Collapse exercise options above the scope to gain space; they minimise when Start/Run begins. Scroll vertically when controls are below the display and swipe long tool rows sideways. Use landscape for SRE/SRA controller displays. Gyani stays tucked away during running traffic.",
       "questions": [
         "The scope disappeared on my phone",
         "How do I use landscape?",
@@ -149,15 +156,16 @@
       "id": "online-recovery",
       "title": "Lost connection or stale picture",
       "topics": [
+        "suite",
         "qgh-instructor",
         "sra",
-        "par"
+        "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "session",
       "priority": true,
       "match": "\\b(?:reconnect|disconnected|lost link|stale|network error|connection lost|internet.*lost)\\b",
-      "text": "Keep the instructor window open. A lost online connection pauses the instructor exercise and invalidates stale student indications. Restore internet, use Reconnect on the student if needed, then let the instructor Resume. Reloading the same student tab can restore its admitted seat; pilot audio starts muted. If necessary, Release Student Seat and admit a replacement. Refreshing or closing the instructor tab ends its live QGH/ATSS exercise.",
+      "text": "Keep the instructor window open. Lost connectivity pauses the exercise; restore internet and reconnect the student before resuming. QGH/SRE/SRA can restore the same instructor tab paused after refresh, retaining its PIN, student seat and review; let the student reconnect before Resume. In Procedural, keep the instructor tab open and use the offered reconnect flow. Save reusable exercise setups before beginning. Reloaded pilot audio starts muted.",
       "questions": [
         "My trainee has a frozen display",
         "The student lost connectivity",
@@ -173,11 +181,10 @@
         "qgh-individual",
         "qgh-instructor",
         "sra",
-        "par",
         "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "connection",
       "priority": true,
       "match": "\\b(?:extend|extended|duplicate|second screen|second monitor|two screens|2 screens|two monitors|2 monitors|dual monitor|screen 2|another monitor)\\b",
       "text": "For the best offline instructor-led exercise, use one PC and two monitors in Extend mode. On Windows press Windows + P → Extend. Open instructor and student in separate windows of the SAME browser profile. Drag the student window to screen 2; Windows + Shift + Left/Right Arrow moves a window between monitors. Do not choose Duplicate: it reveals the instructor picture. One PC still shares one mouse pointer and keyboard focus. The student gives verbal instructions while the instructor operates the aircraft.",
@@ -197,19 +204,18 @@
         "qgh-individual",
         "qgh-instructor",
         "sra",
-        "par",
         "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "connection",
       "priority": true,
       "match": "\\b(?:online|internet|supabase|different (?:devices|systems|pcs|computers)|same (?:pc|browser)|offline capability|connection mode|another (?:pc|computer|device))\\b",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release.",
+      "text": "This device / offline: use the SAME PC, SAME browser profile and exact same site address, with instructor and student in separate windows. Online room: use DIFFERENT PCs/devices, with internet on both. Choose the same connection mode and PIN, then Admit → Ready → Start/Run. QGH instructor-led, SRE/vectoring, SRA and Procedural support both choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release.",
       "questions": [
         "Can my instructor use another laptop?",
         "Can we train without WiFi?",
         "Can two computers connect without internet?",
-        "Is Supabase used for QGH and PAR?"
+        "Is Supabase used for QGH and SRA?"
       ]
     },
     {
@@ -221,14 +227,13 @@
         "qgh-individual",
         "qgh-instructor",
         "sra",
-        "par",
         "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "tour",
       "priority": true,
       "match": "\\b(?:guided tour|screen tour|walkthrough|walk through|show me around|where are the controls)\\b",
-      "text": "Choose Guided tour in the page navigation or scope tool rail. It highlights the visible controls one at a time with Back and Next. It never flies aircraft or changes settings. Finish or press Escape to close it. Tours are available on setup, paused exercises and review; pause before consulting help during an exercise. Gyani hides during active exercises. For individual QGH, use it in setup or after terminating into review. QGH also retains its separate radio-practice familiarisation.",
+      "text": "Choose Guided tour before Start, while paused or during review. Back and Next highlight visible controls; Escape closes the tour without changing the exercise. On the instructor’s first Start a short reminder appears: single click selects/transmits, double-left/right turns, middle-click stops. Dismiss it to clear the scope. Phone users use the aircraft arrows and Stop turn. Help stays tucked away while traffic runs.",
       "questions": [
         "Show me around the simulator",
         "Where are all the buttons?",
@@ -244,14 +249,13 @@
         "qgh-individual",
         "qgh-instructor",
         "sra",
-        "par",
         "procedural"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "help",
       "priority": true,
       "match": "\\b(?:embeddings?|rag|llm|artificial intelligence|limitations?|learning|trained|smart answers|update (?:the )?guides)\\b",
-      "text": "I am Gyani, a fast local guide. I match simulator questions to versioned guide answers using keywords, spelling tolerance and a small local vector index. I am not an LLM and do not invent operational advice or inspect your live traffic. My answers and the current-flow guide sections are built from the same content. Every feature change still needs its explanation to be maintained and checked before release. I am also learning. If I’m unable to answer, please refer to the training guides.",
+      "text": "Gyani searches the same versioned knowledge as the common training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
       "questions": [
         "Are you a real AI?",
         "Can you see my aircraft?",
@@ -274,14 +278,15 @@
         "quick-heading-right",
         "quick-more"
       ],
-      "anchor": "pilot",
+      "anchor": "aircraft",
       "match": "\\b(?:turn|turning|steer|heading|left|right)\\b",
-      "text": "Single-click an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second so a double-click can be recognised. Double-click the left mouse button on the same aircraft to turn left now, or double-click the right mouse button to turn right now; these turns do not send an extra D/F request. On a phone, tap to select and transmit, then use Left now / Right now below the scope. Stop turn levels the wings. For a target heading, enter Heading °T below the scope and choose Turn left or Turn right. More controls opens Aircraft controls for levels, speed and orbit. The student sends instructions; the instructor flies the aircraft.",
+      "text": "Single-click or tap an aircraft to select and transmit for D/F; a mouse click waits briefly to recognise a double-click. Double-left-click turns left now, double-right-click turns right now. Middle mouse click stops the turn. On phones use Left now / Right now / Stop turn below the scope. Enter Heading °T and choose Turn left or Turn right for a target heading. More controls opens speed, level and orbit controls.",
       "questions": [
         "How to turn right?",
         "How do mouse clicks work?",
         "Can I type a target heading?",
-        "Where is More controls?"
+        "Where is More controls?",
+        "How does centre mouse click work?"
       ]
     },
     {
@@ -291,9 +296,10 @@
         "procedural"
       ],
       "controls": [],
-      "anchor": "pilot",
+      "anchor": "aircraft",
       "match": "\\b(?:stop|end|cancel|level)\\b.*\\b(?:turn|turning|wings|orbit)\\b|\\bwings level\\b",
-      "text": "Select the aircraft, then press Stop turn below the scope. The aircraft levels its wings at its current heading. This also exits an orbit immediately. Leave orbit / hold instead completes the current orbit lap before leaving."
+      "text": "Middle-click the aircraft on the instructor scope, or select it and press Stop turn. The aircraft levels its wings at its current heading and exits an orbit immediately. Leave orbit / hold instead requests an exit after the current lap.",
+      "questions": []
     },
     {
       "id": "orbit",
@@ -302,9 +308,10 @@
         "procedural"
       ],
       "controls": [],
-      "anchor": "pilot",
+      "anchor": "aircraft",
       "match": "\\borbit|circle|circling\\b",
-      "text": "Select the aircraft, open Aircraft controls (or More controls), then choose Orbit left or Orbit right. Leave orbit / hold requests an exit after the current lap. Stop turn exits immediately. The exercise must be running for movement."
+      "text": "Select the aircraft, open Aircraft controls (or More controls), then choose Orbit left or Orbit right. Leave orbit / hold requests an exit after the current lap. Stop turn exits immediately. The exercise must be running for movement.",
+      "questions": []
     },
     {
       "id": "speed-level",
@@ -318,9 +325,10 @@
         "climb-to",
         "descend-to"
       ],
-      "anchor": "pilot",
+      "anchor": "aircraft",
       "match": "\\b(?:speed|altitude|climb|descend|descent|flight level|height|level)\\b",
-      "text": "Select the aircraft → More controls / Aircraft controls. Enter speed in knots and press Set speed. For altitude, choose feet QNH or Flight level, enter the target, then use Set level, Climb to or Descend to. Climb/descent follows the configured rate. Configure QNH before assigning levels."
+      "text": "Select the aircraft → More controls / Aircraft controls. Enter speed in knots and press Set speed. For altitude, choose feet QNH or Flight level, enter the target, then use Set level, Climb to or Descend to. Climb/descent follows the configured rate. Configure QNH before assigning levels.",
+      "questions": []
     },
     {
       "id": "transmit",
@@ -330,22 +338,38 @@
       ],
       "controls": [
         "quick-transmit",
-        "bearing-type"
+        "bearing-type",
+        "transmit-form"
       ],
       "anchor": "pilot",
       "match": "\\b(?:transmit|transmission|talk|pilot readback|readbacks?|qdm|qte|homing|bearing|df)\\b",
-      "text": "Single-click or tap an aircraft on the instructor scope to select it and transmit for D/F. A single mouse click waits half a second to distinguish a double-click turn. You can also press Transmit below the scope, or T with the scope focused. The bearing ray and homing instrument follow the transmitting aircraft. QDM selects magnetic homing; QTE selects true bearing. More controls → Bearing display sets the released hold from 2–30 seconds; new exercises use 10 seconds. Pilot replies appear in red."
+      "text": "Click/tap an aircraft or use quick Transmit for D/F. In Pilot transmission, type a message and choose Transmit custom message to send your own pilot caption. The bearing ray and homing display follow the transmitting aircraft. QDM is magnetic homing; QTE is true bearing. More controls → Bearing display sets the released hold from 2–30 seconds; new exercises use 10 seconds. Pilot captions appear in red.",
+      "questions": [
+        "Does clicking an aircraft transmit?",
+        "How do I send a custom message?",
+        "What does QDM mean?"
+      ]
     },
     {
       "id": "sweep",
       "title": "Radar scan and RPM",
       "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
         "procedural"
       ],
-      "controls": [],
+      "controls": [
+        "trail-count"
+      ],
       "anchor": "scope",
       "match": "\\b(?:radar sweep|sweep|scanning|rpm|revolutions?|rotation|scan speed)\\b",
-      "text": "Open Declutter → Scope detail & tools. Enable 360° radar sweep and set 1–60 RPM. At 12 RPM one revolution takes 5 real seconds. The sweep pauses when the exercise pauses. It is a visual scan; instructor truth and student transmission-only bearings retain their existing behaviour. Reduced-motion devices start with the sweep off."
+      "text": "The radar scan is fixed at 15 RPM: one revolution every 4 real seconds. It pauses with the exercise. Choose trail length in scope options; range-aware spacing keeps movement visible. Instructor truth remains continuous; SRE/SRA controller returns update on beam crossing. A visual sweep does not reveal hidden aircraft on the Procedural student screen.",
+      "questions": [
+        "How do I set radar RPM?",
+        "The trail is not visible",
+        "How many history dots?"
+      ]
     },
     {
       "id": "roster-mobile",
@@ -358,7 +382,8 @@
       ],
       "anchor": "traffic",
       "match": "\\b(?:callsigns?|scroll|roster|keyboard|phone|mobile|aircraft count|add aircraft|generate traffic)\\b",
-      "text": "Open Traffic setup and set 1–24 aircraft. On phones each aircraft has a card with labelled inputs; scroll the page vertically. Jump to aircraft goes straight to a callsign. Reducing the count keeps hidden row edits. Create session applies the visible roster together and starts paused. Use the selected aircraft’s arrows for quick turns; More controls opens the other controls."
+      "text": "Initial traffic is optional and collapsed during setup; expand it when you need to prepare an exact starting roster. You can also open Traffic at the desk. Set 1–24 aircraft with independent callsign, position, heading, level, speed and performance. Phone cards scroll vertically; Jump to aircraft selects a callsign. Create session applies the visible roster. Save the prepared setup before Run for a repeatable assessment.",
+      "questions": []
     },
     {
       "id": "run-pause",
@@ -371,20 +396,25 @@
         "pause",
         "step"
       ],
-      "anchor": "review",
+      "anchor": "exercise",
       "match": "\\b(?:run|pause|resume|start|nothing moves|not moving|stopped)\\b",
-      "text": "Run starts the prepared exercise. An admitted controller must press Ready first; manage admission in Session. Pause freezes traffic, the exercise clock and radar sweep. Run continues the same exercise. +1 min advances the scenario by one minute. The red Terminate exercise button is for review; Reopen exercise restores the same exercise paused."
+      "text": "Run starts or resumes the same exercise after any admitted controller is Ready. Pause freezes traffic, clock and radar sweep. +1 min advances one minute. Exercise options minimise when Run starts; reopen the options dropdown when needed. Terminate finishes the exercise for review; Reopen restores it paused.",
+      "questions": []
     },
     {
       "id": "session-isolation",
       "title": "Separate exercises and student PINs",
       "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
         "procedural"
       ],
       "controls": [],
-      "anchor": "start",
+      "anchor": "session",
       "match": "\\b(?:multiple|many users|same time|different users|separate|another device|another phone|remote|load balanc|independent)\\b",
-      "text": "Each instructor room has its own exercise, PIN, aircraft and clock. A student joins only that room and must be admitted. This device / offline is limited to one PC and the same browser profile; two extended screens are recommended. Online room connects different devices with internet on both. The instructor tab must stay open; lost connectivity pauses traffic. Only the student projection is shared."
+      "text": "Each instructor room has its own exercise, PIN, aircraft and clock. A student joins only that room and must be admitted. This device / offline is limited to one PC and the same browser profile; two extended screens are recommended. Online room connects different devices with internet on both. The instructor tab must stay open; lost connectivity pauses traffic. Only the student projection is shared.",
+      "questions": []
     },
     {
       "id": "qgh-turn",
@@ -394,22 +424,28 @@
         "qgh-individual"
       ],
       "controls": [],
-      "anchor": "controls",
+      "anchor": "individual",
       "match": "\\b(?:turn|turning|left|right|heading|steer|stop turn)\\b",
-      "text": "In Normal QGH, enter the target heading and use Turn left or Turn right. In U/S Compass, use Turn left now / Turn right now, then Stop turn now after the required timed turn. In Tactical practice select the intended aircraft first. Mouse double-click turning is a Procedural feature; individual QGH retains its own manual controls."
+      "text": "Normal QGH: enter the target heading and choose Turn left or Turn right. U/S Compass: use Turn left now / Turn right now and Stop turn now for a timed turn. In Tactical select the intended aircraft first. Individual practice uses its manual controller controls.",
+      "questions": []
     },
     {
       "id": "instructor-turn",
       "title": "Instructor-led turn controls",
       "topics": [
         "qgh-instructor",
-        "sra",
-        "par"
+        "sra"
       ],
       "controls": [],
-      "anchor": "commands",
+      "anchor": "aircraft",
       "match": "\\b(?:turn|turning|left|right|heading|steer|stop turn)\\b",
-      "text": "Select the aircraft in the instructor console. Use the heading and turn controls for a normal heading-directed turn. For U/S Compass use Left now / Right now and Stop turn. The controller display does not fly aircraft. Command Bar → HELP lists the exact commands accepted by this beta."
+      "text": "Single-click an aircraft to select it and transmit: QGH gives D/F; SRE/SRA gives a pilot position report. Double-left/right mouse clicks turn left/right now; middle-click stops. On phones use the arrows and Stop turn. Type a magnetic target in Heading °M for a directed turn; U/S Compass uses timed Left now / Right now and Stop. More controls opens the other aircraft actions. The student gives instructions; the instructor flies.",
+      "questions": [
+        "How to turn right?",
+        "Can I type a heading?",
+        "Does clicking transmit?",
+        "Centre mouse click stops turn?"
+      ]
     },
     {
       "id": "terminate-exercise",
@@ -423,7 +459,7 @@
         "keep-exercise",
         "exercise-notice"
       ],
-      "anchor": "current-flow",
+      "anchor": "review",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
       "text": "On the instructor scope, press the red ■ Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop.",
@@ -438,14 +474,20 @@
       "id": "review-controls",
       "title": "Review and replay without covering the plot",
       "topics": [
+        "suite",
         "qgh",
-        "qgh-individual"
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "procedural"
       ],
-      "controls": [],
-      "anchor": "current-flow",
+      "controls": [
+        "traffic-review"
+      ],
+      "anchor": "review",
       "priority": true,
       "match": "\\b(?:replay|review|debrief|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot))\\b",
-      "text": "After termination, scroll to the review plot. Replay, replay speed, Zoom and Fit controls sit below the plot instead of floating over it. Return Console goes back to the console; New Exercise prepares another exercise. Replay does not change the completed flight.",
+      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side and 3D schematic traffic views. Compare aircraft position, level and time; configured separation alerts are training aids, not a complete Doc 4444 compliance decision. The instructor checks minima and prerequisites against the authorised reference. Replay does not alter the completed exercise.",
       "questions": [
         "The replay buttons cover my track",
         "How do I watch my flight again?"
@@ -459,10 +501,10 @@
         "qgh"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "review",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
-      "text": "Procedural: the instructor’s red ■ Terminate exercise button is in the EXERCISE controls around the scope; it is also in Review. Close any open side panel to see the scope controls. QGH instructor-led / Surveillance / SRA / PAR: create a session, then find TERMINATE beside Start and Pause; it becomes available once the exercise has started. Individual QGH: TERMINATE EXERCISE is in the controller controls. Student displays cannot end the instructor’s exercise. If an old page lacks the new Procedural button, finish or leave the exercise, return to Suite home, choose Update available · reload, then reopen it.",
+      "text": "Procedural and Instructor QGH + SRA have a red Terminate exercise control at the instructor workspace. Individual QGH has TERMINATE EXERCISE in controller controls. Confirming ends traffic and opens review. The student cannot terminate an instructor exercise.",
       "questions": [
         "Where is terminate?",
         "I cannot see the terminate button",
@@ -474,11 +516,10 @@
       "title": "Where to find Terminate",
       "topics": [
         "qgh-instructor",
-        "sra",
-        "par"
+        "sra"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "review",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
       "text": "After creating an instructor-led session, TERMINATE is beside Start and Pause. It becomes available once the exercise has started and remains available when paused. Terminate ends the shared exercise and opens the instructor review; the student sees Exercise complete. Student displays cannot terminate it. Use Pause for a temporary stop.",
@@ -495,7 +536,7 @@
         "qgh-individual"
       ],
       "controls": [],
-      "anchor": "current-flow",
+      "anchor": "review",
       "priority": true,
       "match": "\\b(?:terminate|terminated|termination)\\b|\\b(?:end|finish|stop) (?:the |this |my )?(?:exercise|session)\\b",
       "text": "TERMINATE EXERCISE is in the controller controls after starting Single or Tactical QGH. Press it and confirm to open the recorded flight-path review. Keep exercise cancels the confirmation without ending the flight. Replay and zoom controls sit below the review plot.",
@@ -504,6 +545,318 @@
         "I cannot see the terminate button",
         "How do I end the exercise?"
       ]
+    },
+    {
+      "id": "suite-choice",
+      "title": "Choose an exercise",
+      "topics": [
+        "suite",
+        "qgh",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "start",
+      "match": "\\b(?:which (?:simulator|exercise|mode)|choose (?:a |the )?simulator|what is (?:qgh|sra|sre|procedural)|atss)\\b",
+      "text": "Procedural trains Aerodrome, Approach and Area control in one exercise. QGH & SRA has Single QGH (single-aircraft or Tactical individual practice) and Instructor QGH + SRA (QGH cloud-breaking, SRE/vectoring and Surveillance Radar Approach).",
+      "questions": [
+        "Which simulator should I choose?",
+        "What is QGH?",
+        "Where is vectoring?"
+      ],
+      "priority": true,
+      "controls": []
+    },
+    {
+      "id": "session",
+      "title": "Create, admit and start",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "session",
+      "match": "\\b(?:join|admit|admission|ready|six digit|6 digit|session pin|share.*pin|find.*pin|where.*pin)\\b",
+      "text": "Create the instructor exercise, then open Session. Share its six-digit PIN. The controller opens Student position, selects the matching connection mode, enters name and PIN and requests admission. Instructor: Admit. Student: Ready. Instructor: Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Keep both positions open.",
+      "questions": [
+        "How do I join?",
+        "Where is my PIN?",
+        "What does Ready do?"
+      ],
+      "priority": true,
+      "controls": []
+    },
+    {
+      "id": "procedural-start",
+      "title": "Start Procedural",
+      "topics": [
+        "procedural"
+      ],
+      "anchor": "procedural",
+      "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next)\\b",
+      "text": "Open Instructor setup. Choose connection, title and airspace. Initial traffic is optional and collapsed; expand it for exact starting aircraft, or edit Traffic later at the desk. Create session opens the scope paused. Session admits the controller, then Run after Ready. Save the starting setup before Run to reuse it later.",
+      "questions": [
+        "How do I start?",
+        "Where is the aircraft roster?",
+        "How do I set up Procedural?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "instructor-start",
+      "title": "Start Instructor QGH + SRA",
+      "topics": [
+        "qgh-instructor",
+        "sra"
+      ],
+      "anchor": "instructor",
+      "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sre|vectoring)\\b",
+      "text": "Choose QGH, SRE/vectoring or SRA. QGH is the cloud-breaking procedure with Normal or U/S Compass. Prepare traffic and pressure/approach references, create the session, admit the controller and start after Ready. The scope, compact aircraft controls and collapsible exercise options follow the Procedural workspace.",
+      "questions": [
+        "How do I start SRA?",
+        "How do I start instructor QGH?",
+        "How do I practise vectoring?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "individual-start",
+      "title": "Start Single or Tactical QGH",
+      "topics": [
+        "qgh",
+        "qgh-individual"
+      ],
+      "anchor": "individual",
+      "match": "\\b(?:start|begin|set up|setup|configure|first exercise|what next)\\b",
+      "text": "Open Single QGH, then choose Single aircraft or Tactical. Check runway, inbound/outbound tracks, Normal or U/S Compass, initial range, performance and level settings. Start opens the controller console. In Tactical select the intended aircraft before commanding it. The Training Centre holds the accepted radio-call catalogue.",
+      "questions": [
+        "How do I start individual QGH?",
+        "How do I start Tactical?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "approach-reference",
+      "title": "SRA distance and 3° reference",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "approach",
+      "match": "\\b(?:3 degree|three degree|glide|threshold|sra distances|half mile|0 5 nm|descent (?:guide|altitudes?|profile))\\b",
+      "text": "SRA final marks include 0.5 NM spacing within the last 5 NM. The 3° reference is altitude MSL = field elevation + threshold crossing height + distance NM × 6076.12 × tan(3°), rounded to 10 ft. Set elevation and crossing height before the exercise. Distance is from the runway threshold in the documented approach geometry. The instructor must command descent and assess the procedure.",
+      "questions": [
+        "Where are half-mile marks?",
+        "What is the 3 degree descent altitude?",
+        "Does the aircraft follow the glidepath?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "pressure",
+      "title": "QNH, transition altitude and level",
+      "topics": [
+        "suite",
+        "qgh",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "approach",
+      "match": "\\b(?:qnh|transition altitude|transition level|ta|tl)\\b",
+      "text": "Set QNH, transition altitude (TA), transition level (TL), field elevation and threshold crossing height before starting. Both desks receive the briefing references; zero TA/TL means unset. Procedural retains its documented QNH/Standard training conversion. Instructor QGH/SRE/SRA levels are modelled in ft MSL; pressure references do not calculate local minima or trigger automatic pressure changes.",
+      "questions": [
+        "How do I set QNH?",
+        "What are TA and TL?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "individual-voice",
+      "title": "Individual radio practice",
+      "topics": [
+        "qgh",
+        "qgh-individual"
+      ],
+      "anchor": "individual",
+      "match": "\\b(?:voice|audio|microphone|ptt|radio|accepted call|command)\\b",
+      "text": "Individual QGH provides manual controls and its own voice setup. Check installed pilot voice and microphone before enabling audible replies. The Training Centre contains the searchable accepted-call catalogue, prerequisites and simulator effects. Pilot captions remain the readable record. Instructor-led and Procedural use instructor-operated controls rather than microphone recognition.",
+      "questions": [
+        "Which radio calls work?",
+        "How do I enable voice?",
+        "What is PTT?"
+      ],
+      "priority": false,
+      "controls": []
+    },
+    {
+      "id": "instructor-transmit",
+      "title": "Instructor pilot transmission and D/F",
+      "topics": [
+        "qgh-instructor",
+        "sra"
+      ],
+      "anchor": "pilot",
+      "match": "\\b(?:transmit|transmission|talk|pilot readback|readback|bearing|homing|qdm|qte|df)\\b",
+      "text": "Click the aircraft or choose Transmit. QGH gives a pilot transmission with D/F; SRE/SRA sends the pilot position report. Homing and red pilot captions sit below the scope. QDM is magnetic homing and QTE is true bearing; QGH retains the last indication briefly after release. The controller’s SRE/SRA plots remain sensor observations.",
+      "questions": [
+        "Does clicking an aircraft transmit?",
+        "What does QDM mean?",
+        "Where are pilot messages?"
+      ],
+      "controls": [],
+      "priority": false
+    },
+    {
+      "id": "instructor-speed-level",
+      "title": "Instructor speed and level",
+      "topics": [
+        "qgh-instructor",
+        "sra"
+      ],
+      "anchor": "aircraft",
+      "match": "\\b(?:speed|altitude|climb|descend|descent|flight level|height|level)\\b",
+      "text": "Select the aircraft → More controls. Set speed or target level and command climb/descent. This instructor beta models levels in feet MSL; QNH, TA and TL are shared briefing references. The SRA 3° profile is a guide; the instructor commands descent.",
+      "questions": [
+        "How do I change altitude?",
+        "How do I set speed?"
+      ],
+      "controls": [],
+      "priority": false
+    },
+    {
+      "id": "scope-tools",
+      "title": "Pan, range and collapsed options",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "scope",
+      "match": "\\b(?:pan|zoom|range rings|scope controls|scope layers|local picture|bearing range ruler|ruler|options dropdown|top controls)\\b",
+      "text": "Drag the scope background to pan. Use range controls or Ctrl + scroll to zoom and Centre/Home to return to the origin. Procedural Options hides navigation, range tools and aircraft tabs; Start/Run closes them automatically. The instructor QGH/SRE/SRA navigation, Session, Clock, aircraft drawer and event history also close at Start. Open only the controls needed. Range and pan are local view changes.",
+      "questions": [
+        "How do I pan the scope?",
+        "How do I minimise the top controls?"
+      ],
+      "controls": [
+        "workspace-options-toggle"
+      ],
+      "priority": false
+    },
+    {
+      "id": "custom-polygons",
+      "title": "Custom ARP and point-by-point boundaries",
+      "topics": [
+        "suite",
+        "procedural"
+      ],
+      "anchor": "airspace",
+      "match": "\\b(?:polygon|draw|drawing|boundary|boundaries|point to point|custom airspace|custom lfa|coordinates)\\b",
+      "text": "Pause → Edit airspace → Custom airspace. Enter ARP latitude/longitude and Save ARP. Add a boundary name, type (LFA/P/R/D/CTR), vertical limits and coordinate points. Or click/tap points on the drawing canvas and drag vertices, then Close boundary; Undo point corrects the last point. Draw on radar scope lets you place vertices directly (Enter closes, Escape ends drawing). Save boundary shares it to the student. Edit/Remove manages multiple polygons. Select only needed published routes and areas before loading a base.",
+      "questions": [
+        "How do I draw an LFA polygon?",
+        "Can I drag boundary points?",
+        "Where do I enter prohibited area coordinates?"
+      ],
+      "controls": [
+        "airspace-preparation",
+        "custom-arp-form",
+        "custom-boundary-form",
+        "boundary-sketch",
+        "boundary-sketch-canvas",
+        "custom-boundary-list",
+        "aerodrome-selection"
+      ],
+      "priority": true
+    },
+    {
+      "id": "saved-exercises",
+      "title": "Save and reuse the same starting exercise",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "traffic",
+      "match": "\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library)\\b",
+      "text": "Prepare the starting setup before Run. Procedural: Saved exercises → name → Save starting setup; choose a saved exercise → Use selected exercise to restore its original traffic paused at 00:00. Download selected saves a JSON backup; Import exercise file adds a transferred setup. Instructor QGH/SRE/SRA uses Save, Load, Export and Import in setup; Restart after review retries the identical starting roster. Libraries belong to this browser/device. New live sessions have independent PINs/admissions; saved setups contain no room tokens.",
+      "questions": [
+        "How do I reuse an exercise?",
+        "Can I test two students on the same setup?",
+        "How do I export a saved exercise?"
+      ],
+      "controls": [
+        "scenario-library",
+        "template-name",
+        "template-select",
+        "template-save",
+        "template-load",
+        "template-download",
+        "template-import"
+      ],
+      "priority": true
+    },
+    {
+      "id": "student-estimates",
+      "title": "Student estimate dots",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "anchor": "scope",
+      "match": "\\b(?:estimate|estimated|plotting|manual plot|add (?:a |an )?(?:dot|blip|point)|drag (?:a |the )?dot|dot label|place by coordinates|dot without dragging)\\b",
+      "text": "Student position → Your estimate dots. Type a callsign, choose + Add estimate and click/tap the scope to place it. Drag the dot with mouse or touch to update your estimate. For keyboard entry, open Place by coordinates, enter East/west and North/south NM from the scope origin (negative = west/south), then press Enter or Place estimate / Move selected. Choose a dot in the selector to Rename or Delete it; Clear dots removes all after confirmation. Violet dashed dots labelled EST are your own position estimates, not aircraft truth or radar returns. Up to 24 dots stay local to this exercise, student and browser/device; other users and the instructor do not receive them. Shared airspace changes still appear on your scope.",
+      "questions": [
+        "How do I add a student estimate dot?",
+        "Can I drag and rename a dot?",
+        "Are estimate dots real aircraft positions?",
+        "Can I move a dot without dragging?"
+      ],
+      "controls": [
+        "student-plotting",
+        "estimate-callsign",
+        "estimate-add",
+        "estimate-select",
+        "estimate-rename",
+        "estimate-delete",
+        "estimate-clear",
+        "estimate-coordinate-entry",
+        "estimate-east",
+        "estimate-north",
+        "estimate-coordinate-move"
+      ],
+      "priority": true
+    },
+    {
+      "id": "suite-turn",
+      "title": "Instructor mouse turns and heading references",
+      "topics": [
+        "suite"
+      ],
+      "anchor": "aircraft",
+      "match": "\\b(?:turn|turning|heading|left|right|mouse click|middle click|centre click)\\b",
+      "text": "Instructor scopes: single-click selects the aircraft and transmits, double-left/right starts the corresponding turn, middle-click stops it. On phones select the aircraft and use the turn arrows and Stop turn. Procedural target headings use °T; Instructor QGH/SRE/SRA target headings use °M. Individual QGH uses its manual Normal/U/S Compass controls. More controls opens the other aircraft actions.",
+      "questions": [
+        "How to turn right?",
+        "How do I stop a turn with the mouse?"
+      ],
+      "controls": [],
+      "priority": false
     }
   ],
   "tours": [
@@ -513,15 +866,15 @@
       ],
       "selector": "#session-mode",
       "title": "Choose where you train",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
+      "entry": "connections"
     },
     {
       "pages": [
         "procedural"
       ],
       "selector": "#instructor-login",
-      "title": "Prepare traffic",
-      "text": "Open instructor setup, enter the aircraft roster and prepare your airspace. Create the session to reach the scope paused."
+      "title": "Prepare exercise",
+      "entry": "procedural-start"
     },
     {
       "pages": [
@@ -529,7 +882,7 @@
       ],
       "selector": "#student-join",
       "title": "Controller admission",
-      "text": "Choose the same connection as the instructor. Enter your name and PIN, request admission, then press Ready when admitted."
+      "entry": "session"
     },
     {
       "pages": [
@@ -537,7 +890,7 @@
       ],
       "selector": "#traffic-setup",
       "title": "Traffic and session",
-      "text": "Traffic setup edits aircraft. Session shows the PIN and student admission. Use the same browser profile on one offline PC, or Online room on both internet-connected devices."
+      "entry": "roster-mobile"
     },
     {
       "pages": [
@@ -545,7 +898,7 @@
       ],
       "selector": "#scope",
       "title": "Scope picture",
-      "text": "Drag to pan; Ctrl + scroll zooms. Instructor: single-click or tap an aircraft to select and transmit. Double left/right mouse click turns it left/right now. Student: use transmitted bearings and strips; the full instructor truth is withheld."
+      "entry": "turn"
     },
     {
       "pages": [
@@ -553,7 +906,7 @@
       ],
       "selector": "#aircraft-quick-controls",
       "title": "Quick aircraft control",
-      "text": "Click or tap an aircraft to select and transmit. Left now / Right now start continuous turns; Stop turn levels the wings. Enter Heading °T and choose Turn left / Turn right for an assigned heading. More controls opens Aircraft controls."
+      "entry": "turn"
     },
     {
       "pages": [
@@ -561,7 +914,7 @@
       ],
       "selector": "#homing",
       "title": "Homing instrument",
-      "text": "QDM selects magnetic homing; QTE selects true bearing. On the instructor desk, homing and the red pilot reply share the control shelf below the scope. The student keeps its existing instrument dock. Bearing indications follow the transmitting aircraft."
+      "entry": "transmit"
     },
     {
       "pages": [
@@ -569,7 +922,7 @@
       ],
       "selector": "#aerodrome-form",
       "title": "Preview public base airspace",
-      "text": "Select a base to see its sample LFA/CTR layout, real ATS route sections and AIP sources. Load applies the shared sample while paused; Declutter selects the displayed routes."
+      "entry": "public-lfa-samples"
     },
     {
       "pages": [
@@ -577,7 +930,7 @@
       ],
       "selector": "#chart-form",
       "title": "Set the ARP",
-      "text": "Type WGS-84 coordinates or upload the ARP CSV/JSON template. Review the source and date, then save before adding custom geographic points or aligning an image."
+      "entry": "arp-upload"
     },
     {
       "pages": [
@@ -585,7 +938,7 @@
       ],
       "selector": "#map-align-form",
       "title": "Align your local layout",
-      "text": "Choose a flat image. Mark A at the ARP and B/C at known coordinates. Supply source, date and LFA limits. Check alignment, then Apply and share. C independently checks the scale and orientation."
+      "entry": "lfa-image-alignment"
     },
     {
       "pages": [
@@ -593,7 +946,7 @@
       ],
       "selector": "#edge-actions",
       "title": "Choose your tools",
-      "text": "Declutter selects routes and boundaries for both desks. Flight strips, chart briefing, separation and approach aids are available around the scope."
+      "entry": "instructor-instrument-shelf"
     },
     {
       "pages": [
@@ -601,7 +954,7 @@
       ],
       "selector": "#terminate-quick",
       "title": "Pause or finish",
-      "text": "On the instructor scope, press the red ■ Terminate exercise button and confirm. The green Keep exercise button cancels. Traffic stops and the instructor review opens. The student console shows EXERCISE TERMINATED in a red banner that briefly pulses, then remains visible; an open student drawer closes to reveal it. Reduced-motion settings disable the pulse. Students cannot terminate or reopen the instructor exercise. Reopen exercise restores the same traffic and records paused, and clears the student ending message; Run continues. Use Pause for a temporary stop."
+      "entry": "terminate-exercise"
     },
     {
       "pages": [
@@ -610,15 +963,15 @@
       ],
       "selector": "#exerciseConnection",
       "title": "Offline or online",
-      "text": "This device / offline: instructor and student must use the SAME PC, SAME browser profile and exact same site address, in separate windows. Two monitors in Extend mode are recommended. Online room: instructor and student can use DIFFERENT PCs/devices, with internet on both. Choose Online room on both, use the same PIN, then Admit → Ready → Start/Run. QGH instructor-led, Surveillance/SRE, SRA, PAR and Procedural support these choices. Keep the instructor window open. Separate PCs without internet cannot share a live exercise in this release."
+      "entry": "connections"
     },
     {
       "pages": [
         "instructor"
       ],
       "selector": "#exerciseFamily",
-      "title": "Select the exercise",
-      "text": "QGH is the cloud-breaking procedure. Choose Normal or U/S Compass. Surveillance/SRE, SRA and PAR use their own sensor displays in the same instructor flow."
+      "title": "QGH, SRE/vectoring or SRA",
+      "entry": "instructor-start"
     },
     {
       "pages": [
@@ -626,7 +979,7 @@
       ],
       "selector": "#aircraftRoster",
       "title": "Build your traffic",
-      "text": "Set 1–24 aircraft and edit their callsign, position, heading, level and performance. Each callsign tab selects the aircraft you will control."
+      "entry": "instructor-start"
     },
     {
       "pages": [
@@ -634,7 +987,7 @@
       ],
       "selector": "#createSession",
       "title": "Create the room",
-      "text": "Create the session. Offline opens a student window on the same PC. Online students open Controller Position on their device. Share the six-digit PIN, Admit, wait for Ready, then Start."
+      "entry": "session"
     },
     {
       "pages": [
@@ -642,7 +995,7 @@
       ],
       "selector": "#sessionPin",
       "title": "Connect the controller",
-      "text": "Share this PIN only with your controller. Admit the request and wait for Ready. For offline training use two extended screens, with a separate student window on screen 2."
+      "entry": "session"
     },
     {
       "pages": [
@@ -650,7 +1003,7 @@
       ],
       "selector": "#aircraftRosterTabs",
       "title": "Select before commanding",
-      "text": "Click the aircraft tab or its scope symbol. Heading, speed, level and report controls apply to the selected aircraft. PAR continues tracking the designated approach aircraft."
+      "entry": "instructor-turn"
     },
     {
       "pages": [
@@ -658,7 +1011,7 @@
       ],
       "selector": "#keyboardCommandInput",
       "title": "Aircraft commands",
-      "text": "Buttons remain available. Command Bar accepts exact aliases such as L 230, SPD 240, ALT 7000 and HELP. QGH D/F appears during pilot transmission. SRA/PAR guide lines do not command descent."
+      "entry": "instructor-turn"
     },
     {
       "pages": [
@@ -666,7 +1019,7 @@
       ],
       "selector": ".lifecycle-actions",
       "title": "Run, pause and finish",
-      "text": "Start after Ready. Pause freezes the exercise; Resume continues it. Terminate ends the exercise and opens the instructor review."
+      "entry": "terminate-instructor"
     },
     {
       "pages": [
@@ -674,7 +1027,7 @@
       ],
       "selector": "#joinPin",
       "title": "Request admission",
-      "text": "Enter the instructor’s six-digit PIN in the matching connection mode. Request to join; wait for admission and press Position Ready."
+      "entry": "session"
     },
     {
       "pages": [
@@ -682,7 +1035,7 @@
       ],
       "selector": "#studentReady",
       "title": "Signal Ready",
-      "text": "Check the exercise mode and optional installed pilot voice. Press Position Ready so the instructor can start."
+      "entry": "session"
     },
     {
       "pages": [
@@ -690,7 +1043,7 @@
       ],
       "selector": "#qghStudentView",
       "title": "QGH bearings",
-      "text": "QDM is magnetic homing; QTE is true bearing. Only the pilot transmission provides D/F. The full instructor traffic picture is not shown."
+      "entry": "transmit"
     },
     {
       "pages": [
@@ -698,15 +1051,7 @@
       ],
       "selector": "#radarStudentView",
       "title": "Surveillance and SRA",
-      "text": "Returns are sampled on radar-beam crossing. Range and history adjust your picture. Scope options hide labels or provided aids locally. Primary plots remain anonymous; SRA descent cues are references."
-    },
-    {
-      "pages": [
-        "student"
-      ],
-      "selector": "#parStudentView",
-      "title": "PAR guidance",
-      "text": "Compare elevation and azimuth for the designated aircraft. Adjust range and history as needed. The displayed glidepath does not fly the aircraft."
+      "entry": "sweep"
     },
     {
       "pages": [
@@ -714,7 +1059,7 @@
       ],
       "selector": "#setup",
       "title": "Set up QGH",
-      "text": "Choose Normal or U/S Compass. Check runway, inbound/outbound tracks, callsign, initial range, speed and turn rate before starting."
+      "entry": "individual-start"
     },
     {
       "pages": [
@@ -722,7 +1067,7 @@
       ],
       "selector": "#tSetup",
       "title": "Set up Tactical QGH",
-      "text": "Choose the procedure, aircraft count and individual performance. Check formation settings before starting."
+      "entry": "individual-start"
     },
     {
       "pages": [
@@ -731,7 +1076,7 @@
       ],
       "selector": ".review-toolbar, .tactical-review-toolbar",
       "title": "Review your exercise",
-      "text": "After termination, scroll to the review plot. Replay, replay speed, Zoom and Fit controls sit below the plot instead of floating over it. Return Console goes back to the console; New Exercise prepares another exercise. Replay does not change the completed flight."
+      "entry": "review-controls"
     },
     {
       "pages": [
@@ -739,7 +1084,7 @@
       ],
       "selector": "#runway",
       "title": "Runway and procedure tracks",
-      "text": "Check runway, inbound and outbound tracks for the exercise. These are training settings; QGH is a cloud-breaking procedure."
+      "entry": "individual-start"
     },
     {
       "pages": [
@@ -747,7 +1092,7 @@
       ],
       "selector": "#normal",
       "title": "Normal or U/S Compass",
-      "text": "Normal uses left/right turns to an assigned heading. U/S Compass uses timed Left now / Right now and Stop turn now. Select the appropriate procedure before starting."
+      "entry": "qgh-turn"
     },
     {
       "pages": [
@@ -755,7 +1100,7 @@
       ],
       "selector": "#startExercise",
       "title": "Run, transmit, then review",
-      "text": "Start after checking the aircraft settings. Select the intended aircraft in Tactical. Use Transmit for D/F, then the manual turn, level and speed controls. Terminate opens the review. The existing radio-practice tour provides guided familiarisation."
+      "entry": "individual-start"
     },
     {
       "pages": [
@@ -763,7 +1108,7 @@
       ],
       "selector": "#tRunway",
       "title": "Runway and procedure tracks",
-      "text": "Check runway, inbound and outbound tracks for the exercise. These are training settings; QGH is a cloud-breaking procedure."
+      "entry": "individual-start"
     },
     {
       "pages": [
@@ -771,7 +1116,7 @@
       ],
       "selector": "#tProcedureNormal",
       "title": "Normal or U/S Compass",
-      "text": "Normal uses left/right turns to an assigned heading. U/S Compass uses timed Left now / Right now and Stop turn now. Select the appropriate procedure before starting."
+      "entry": "qgh-turn"
     },
     {
       "pages": [
@@ -779,9 +1124,71 @@
       ],
       "selector": "#tStart",
       "title": "Run, transmit, then review",
-      "text": "Start after checking the aircraft settings. Select the intended aircraft in Tactical. Use Transmit for D/F, then the manual turn, level and speed controls. Terminate opens the review. The existing radio-practice tour provides guided familiarisation."
+      "entry": "individual-start"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#airspace-preparation",
+      "title": "Custom airspace",
+      "entry": "custom-polygons"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#scenario-library",
+      "title": "Save a reusable exercise",
+      "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#workspace-options-toggle",
+      "title": "Collapse exercise options",
+      "entry": "scope-tools"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#savedExercise",
+      "title": "Reuse a starting exercise",
+      "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#instructorHoming",
+      "title": "Pilot transmission and D/F",
+      "entry": "instructor-transmit"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#truthTrailCount",
+      "title": "Range-aware history trail",
+      "entry": "sweep"
+    },
+    {
+      "pages": [
+        "procedural",
+        "student"
+      ],
+      "selector": "#student-plotting",
+      "title": "Plot your position estimates",
+      "entry": "student-estimates"
     }
-  ]
+  ],
+  "startHint": {
+    "title": "Aircraft mouse controls",
+    "text": "Click: select + D/F · Double-left: turn left · Double-right: turn right · Middle: stop turn. Phone: select, then use the turn arrows and Stop turn."
+  }
 };
-if(typeof module === 'object' && module.exports) module.exports=knowledge; else root.ATCGuideKnowledge=knowledge;
-})(typeof globalThis==='object'?globalThis:this);
+for(const step of knowledge.tours) if(step.entry) step.text=knowledge.entries.find(entry=>entry.id===step.entry)?.text||"";
+if(typeof module === "object" && module.exports) module.exports=knowledge; else root.ATCGuideKnowledge=knowledge;
+})(typeof globalThis==="object"?globalThis:this);

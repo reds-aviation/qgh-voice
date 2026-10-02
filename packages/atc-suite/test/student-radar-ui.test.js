@@ -8,17 +8,17 @@ const source = readFileSync(join(__dirname, '..', 'suite-student.js'), 'utf8');
 const page = readFileSync(join(__dirname, '..', 'student.html'), 'utf8');
 
 function harness(mode = 'surveillance', options = {}) {
-  const { metadata: metadataOverrides = {}, ...speech } = options;
+  const { metadata: metadataOverrides = {}, reducedMotion = false, ...speech } = options;
   const playback = [], snapshotOverrides = {};
   const elements = new Map(), windowEvents = {};
   let onEvent, portrait = false;
-  const context = () => new Proxy({ marks: [], labels: [], textDraws: [], strokes: [], path: [], dash: [], beginPath() { this.path = []; }, moveTo(x, y) { this.path.push({ x, y }); }, lineTo(x, y) { this.path.push({ x, y }); }, setLineDash(dash) { this.dash = [...dash]; }, stroke() { this.strokes.push({ path: [...this.path], dash: [...this.dash] }); }, arc(x, y, r) { this.marks.push({ x, y, r, alpha: this.globalAlpha }); }, fillText(text, x, y) { this.labels.push(text); this.textDraws.push({ text, x, y, width: this.measureText(text).width }); }, clearRect() { this.marks = []; this.labels = []; this.textDraws = []; this.strokes = []; }, measureText(text) { return { width: text.length * 8.4 }; } }, { get: (target, key) => key in target ? target[key] : () => {} });
+  const context = () => new Proxy({ marks: [], labels: [], textDraws: [], strokes: [], path: [], dash: [], beginPath() { this.path = []; }, moveTo(x, y) { this.path.push({ x, y }); }, lineTo(x, y) { this.path.push({ x, y }); }, setLineDash(dash) { this.dash = [...dash]; }, stroke() { this.strokes.push({ path: [...this.path], dash: [...this.dash], colour: this.strokeStyle }); }, arc(x, y, r) { this.marks.push({ x, y, r, alpha: this.globalAlpha }); }, fillText(text, x, y) { this.labels.push(text); this.textDraws.push({ text, x, y, width: this.measureText(text).width }); }, clearRect() { this.marks = []; this.labels = []; this.textDraws = []; this.strokes = []; }, measureText(text) { return { width: text.length * 8.4 }; } }, { get: (target, key) => key in target ? target[key] : () => {} });
   const node = id => {
     if (!elements.has(id)) elements.set(id, { id, value: ({ joinPin: '123456', radarHistory: '3', radarRange: '40', parRangeScale: '10', parHistory: '3' })[id] || '', hidden: id === 'radarInspection', checked: false, width: id === 'radarScope' ? 1000 : 1000, height: id === 'radarScope' ? 800 : 300, offsetWidth: id === 'radarInspection' ? 270 : 1000, offsetHeight: id === 'radarInspection' ? 180 : 300, textContent: '', style: {}, events: {}, attributes: {}, ctx: context(), addEventListener(type, fn) { this.events[type] = fn; }, setAttribute(name, value) { this.attributes[name] = value; }, getContext() { return this.ctx; }, getBoundingClientRect() { return { left: 0, top: 0, width: this.width, height: this.height }; }, querySelector() { return node(`${id}-strong`); } });
     return elements.get(id);
   };
   const metadata = { mode, callsign: '101', approachCallsign: '202', runwayOrientation: 230, finalTrack: 230, glidepathDeg: 3, scanRpm: 12, revisitSeconds: 5, ...metadataOverrides };
-  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: () => ({ matches: portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences() {}, pilotPlayback: (id, phase) => playback.push({id,phase}), snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running', ...snapshotOverrides }) }; } } };
+  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: query => ({ matches: query === '(prefers-reduced-motion: reduce)' ? reducedMotion : portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences() {}, pilotPlayback: (id, phase) => playback.push({id,phase}), snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running', ...snapshotOverrides }) }; } } };
   vm.runInNewContext(source, sandbox);
   node('joinSession').events.click();
   const emit = observation => onEvent({ kind: 'observation', observation });
@@ -30,6 +30,16 @@ const returns = h => h.node('radarScope').ctx.strokes.filter(stroke => (
   stroke.path.length === 5 || (stroke.path.length === 4
     && stroke.path[0].y === stroke.path[1].y && stroke.path[2].x === stroke.path[3].x)
 )).map(stroke => ({ ...stroke, x: (stroke.path[0].x + stroke.path[1].x) / 2, y: (stroke.path[0].y + stroke.path.at(-1).y) / 2 }));
+
+test('student reduced-motion presentation hides only the sweep, keeping transmitted targets unchanged', () => {
+  const normal = harness(), reduced = harness('surveillance', { reducedMotion: true });
+  const observation = { timestamp: 20, scanAngleDeg: 90, plots: [plot('a', 20)], history: [] };
+  normal.emit(observation); reduced.emit(observation);
+  assert.ok(normal.node('radarScope').ctx.strokes.some(stroke => stroke.colour === '#389481'));
+  assert.equal(reduced.node('radarScope').ctx.strokes.some(stroke => stroke.colour === '#389481'), false);
+  assert.deepEqual(returns(reduced), returns(normal));
+  assert.equal(observation.plots[0].rangeNm, 8);
+});
 
 test('radar renders every sampled target and history selection applies per track immediately', () => {
   const h = harness();
@@ -49,9 +59,9 @@ test('range changes rescale observations and suppress returns outside selected r
   assert.match(h.node('lastPlot').textContent, /1.*2/);
 });
 
-test('portrait radar gate clears when landscape restores controls', () => {
+test('portrait SRA and vectoring remain usable with scope and controls', () => {
   const h = harness(); h.start(); h.portrait(true);
-  assert.equal(h.node('orientationGate').hidden, false);
+  assert.equal(h.node('orientationGate').hidden, true);
   h.portrait(false); assert.equal(h.node('orientationGate').hidden, true);
 });
 

@@ -525,6 +525,142 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 
 .connection-help { grid-column: 1 / -1; max-width: 78ch; margin: 0; line-height: 1.6; }
 
+/* All instructor modes share the scope-first procedural desk arrangement. */
+.scenario-library { display:flex; flex-wrap:wrap; align-items:end; gap:8px; padding-block:12px; border-bottom:1px solid var(--line); }
+.scenario-library label { display:grid; gap:5px; flex:1 1 190px; font-size:.8rem; }
+.scenario-library button { padding:8px 14px; }
+.scenario-library output { flex:1 1 100%; font-size:.8rem; }
+.scenario-library .preset-import { flex:0 1 160px; }
+.scenario-library input[type=file] { max-width:100%; padding:7px; min-height:44px; }
+.console-navigation > summary, .session-drawer > summary, .aircraft-control-drawer > summary, .event-drawer > summary, .clock-settings > summary { cursor:pointer; min-height:44px; padding:12px; font-weight:600; }
+.instructor-page .active-workspace { grid-template-columns:minmax(0,1fr); gap:6px; padding:8px 0; }
+.instructor-page .session-drawer { border:1px solid var(--line); border-radius:10px; }
+.instructor-page .session-rail { display:grid; grid-template-columns:1fr 1fr; padding:10px; }
+.instructor-page .phase-list { display:none; }
+.instructor-page .workspace-head { min-height:50px; margin:0 0 6px; align-items:center; }
+.instructor-page .workspace-head h1 { font-size:1rem; margin:0; }
+.instructor-page .workspace-head .status-stack { display:flex; align-items:center; gap:12px; }
+.instructor-page .status-stack time { font-size:1.35rem; }
+.instructor-page .clock-settings { position:relative; }
+.instructor-page .clock-settings[open] .training-rate-control { padding:8px; }
+.instructor-page .instructor-console { display:block; }
+.instructor-page .console-toolbar { position:static; margin:0 0 5px; padding:5px; }
+.instructor-page .console-toolbar-label { display:none; }
+.instructor-page .console-toolbar { grid-template-columns:minmax(0,1fr) auto; }
+.instructor-page .truth-layout { display:block; }
+.instructor-page .scope-card { border-radius:10px; overflow:hidden; }
+.instructor-page .scope-card .card-head { flex-wrap:wrap; gap:6px; padding:5px 9px; min-height:46px; }
+.instructor-page .scope-card .card-head label { display:flex; align-items:center; gap:5px; font-size:.75rem; }
+.instructor-page .scope-card .card-head select { min-height:36px; width:auto; padding:0 6px; }
+.instructor-page .scope-card .card-head button { min-height:36px; padding-inline:8px; }
+.instructor-page #instructorScope { display:block; width:100%; height:clamp(300px,calc(100dvh - 310px),850px); touch-action:none; }
+.instructor-page .scope-inspection { padding:4px 10px; margin:0; min-height:24px; font-size:.7rem; }
+.instructor-page .scope-legend { display:none; }
+.instrument-shelf { display:grid; grid-template-columns:minmax(310px,1.4fr) 160px minmax(180px,1fr); gap:8px; padding:8px 0; }
+.instrument-shelf > * { min-width:0; border:1px solid var(--line-strong); border-radius:10px; padding:8px; }
+.quick-aircraft-controls { display:grid; gap:6px; align-content:start; }
+.quick-aircraft-controls output { font:500 .75rem 'IBM Plex Mono',monospace; color:#f3d985; }
+.quick-turn-row { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; }
+.quick-turn-row button { padding:5px; font-size:.75rem; letter-spacing:0; }
+.quick-heading-row { display:flex; gap:6px; align-items:end; }
+.quick-heading-row label { min-width:80px; flex:1; font-size:.72rem; }
+.quick-heading-row input { display:block; min-height:40px; padding:5px; }
+.quick-heading-row button { flex:1; font-size:.75rem; letter-spacing:0; padding:5px; }
+.instructor-homing { display:grid; gap:3px; text-align:center; background:#101419; }
+.instructor-homing label { display:flex; gap:8px; align-items:center; font-size:.7rem; }
+.instructor-homing select { min-height:36px; width:80px; padding:4px; }
+.instructor-homing strong { font:500 2.5rem 'IBM Plex Mono',monospace; color:#efe8b1; }
+.instructor-homing small { font-size:.65rem; }
+.instructor-pilot-channel { background:#2d1c25; color:#ef9ca4; }
+.instructor-pilot-channel > span { font-size:.65rem; letter-spacing:.08em; }
+.instructor-pilot-channel p { margin:7px 0; min-height:2.6em; font-size:.85rem; line-height:1.35; overflow-wrap:anywhere; }
+.instructor-pilot-channel button { width:100%; min-height:38px; }
+.aircraft-control-drawer { margin:5px 0; border:1px solid var(--line); border-radius:10px; }
+.instructor-page .console-control-rail { display:grid; grid-template-columns:minmax(0,2fr) minmax(220px,1fr); position:static; max-height:45dvh; overflow:auto; gap:8px; padding:8px; }
+.instructor-page .command-deck { padding:10px; }
+.instructor-page .command-deck .deck-head, .instructor-page .keyboard-command-bar p, .instructor-page .approach-actions small { display:none; }
+.instructor-page .equipment-note { margin:0; padding:8px; font-size:.65rem; }
+.instructor-page.exercise-console { --bg:#171b20; --paper:#20282f; --paper-strong:#29343d; --ink:#e5edf0; --muted:#aab8bf; --line:#414b53; --line-strong:#63747c; --teal-dark:#9fdde0; --teal-soft:#293e43; color-scheme:dark; }
+.instructor-page.exercise-console .console-toolbar { background:#20282f; }
+.instructor-page.exercise-console .site-header { min-height:60px; }
+.instructor-page.exercise-console .command-grid input, .instructor-page.exercise-console .quick-heading-row input { background:#10171e; color:#f5f8fa; }
+.instructor-page button, .instructor-page label, .instructor-page summary { overflow-wrap:anywhere; }
+.student-page.exercise-console { --bg:#171b20; --paper:#20282f; --paper-strong:#29343d; --ink:#e5edf0; --muted:#aab8bf; --line:#414b53; --line-strong:#63747c; --teal-dark:#9fdde0; color-scheme:dark; }
+.student-page .shell--student { width:calc(100% - 16px); max-width:1800px; }
+.student-page .student-workspace { padding:5px 0; display:flex; flex-direction:column; gap:6px; }
+.student-page .student-head { flex-wrap:wrap; gap:8px; margin:0; min-height:44px; }
+.student-page .student-head > div:first-child { flex:1; }
+.student-page .student-head h1 { font-size:1rem; margin:0; }
+.student-page .student-head .status-stack { font-size:.65rem; }
+.student-page .student-head button { min-height:36px; font-size:.7rem; padding:5px; letter-spacing:0; }
+.student-page .student-mode, .student-page .student-estimate-scope { order:1; }
+.student-page .student-plot-tools { order:2; }
+.student-page .qgh-student { order:3; align-self:flex-start; width:190px; }
+.student-page .pilot-caption { order:4; background:#2d1c25; color:#ef9ca4; min-height:60px; margin:0; padding:8px; overflow-wrap:anywhere; }
+.student-page .pilot-caption strong { font:500 .85rem 'IBM Plex Sans',Arial,sans-serif; letter-spacing:0; }
+.student-page .df-console { border-radius:10px; margin:0; }
+.student-page .df-console header { min-height:32px; padding:5px; gap:5px; }
+.student-page .df-console header span, .student-page .df-console header b { font-size:.6rem; letter-spacing:0; }
+.student-page .df-readout { min-height:78px; gap:4px; }
+.student-page .df-readout strong { font:500 2.5rem 'IBM Plex Mono',monospace; color:#efe8b1; }
+.student-page .df-readout small, .student-page .df-readout span { font-size:.65rem; letter-spacing:0; }
+.student-page .df-console .segmented button { font-size:.65rem; letter-spacing:0; padding:5px; min-height:34px; }
+.student-page #radarScope, .student-page #studentEstimateScope { display:block; width:100%; height:clamp(300px,calc(100dvh - 250px),850px); touch-action:none; background:#0e1319; }
+.student-page .radar-scope > header { flex-wrap:wrap; min-height:44px; padding:5px 8px; gap:5px; }
+.student-page .radar-scope > header > div:first-child b { display:none; }
+.student-page .instrument-controls select { min-height:38px; padding:4px; }
+.student-page .radar-status { padding:4px; font-size:.65rem; min-height:25px; }
+.student-page .instrument-note { margin:0; padding:5px; font-size:.65rem; }
+.student-plot-tools { display:flex; flex-wrap:wrap; align-items:end; gap:5px; padding:6px; border:1px solid var(--line); border-radius:8px; }
+.student-estimate-panel { order:2; grid-column:1 / -1; border:1px solid var(--line); border-radius:8px; }
+.student-estimate-panel > summary { min-height:40px; cursor:pointer; padding:10px; font-size:.8rem; }
+.instructor-page.exercise-console #quickTurnLeft, .instructor-page.exercise-console #quickTurnRight, .instructor-page.exercise-console #quickStopTurn,
+.instructor-page.exercise-console #quickHeadingLeft, .instructor-page.exercise-console #quickHeadingRight,
+.instructor-page.exercise-console #turnLeftHeading, .instructor-page.exercise-console #turnRightHeading,
+.instructor-page.exercise-console #turnLeftNow, .instructor-page.exercise-console #turnRightNow, .instructor-page.exercise-console #stopTurnNow { border-color:#b99847; background:#4a3c23; color:#ffe1a0; }
+.instructor-page.exercise-console #quickTransmit, .instructor-page.exercise-console #moreAircraftControls { border-color:#589cbb; background:#244555; color:#d8f2ff; }
+.instructor-page.exercise-console #terminateExercise { border-color:#ff9da8; background:#863143; color:#fff2f3; font-weight:700; }
+.instructor-page.exercise-console .aircraft-tabs button.selected { border-color:#f1d882; background:#47646c; color:#fff6cf; box-shadow:inset 0 -3px #f1d882; }
+.instructor-page.exercise-console input:focus, .student-page.exercise-console input:focus { border-color:#f1d882; outline:2px solid #f1d882; }
+.student-plot-tools label { display:grid; gap:4px; font-size:.7rem; flex:1 1 100px; max-width:220px; }
+.student-plot-tools input { min-height:40px; padding:5px; }
+.student-plot-tools button { font-size:.75rem; letter-spacing:0; padding:6px; }
+.student-plot-tools output { flex:1 1 100%; font-size:.7rem; color:var(--muted); }
+.student-plot-tools button[aria-pressed=true] { background:#075c60; color:white; border-color:#77c2ca; }
+.student-page .student-estimate-scope .card-head { min-height:44px; flex-wrap:wrap; gap:8px; padding:5px; }
+.student-page .student-estimate-scope .card-head label { display:flex; gap:5px; align-items:center; }
+.student-page .student-estimate-scope .card-head select { min-height:36px; width:100px; padding:4px; }
+@media (min-width:900px) {
+  .student-page .student-workspace { display:grid; grid-template-columns:200px minmax(0,1fr); }
+  .student-page .student-head, .student-page .student-estimate-scope, .student-page .radar-student, .student-page .student-plot-tools { grid-column:1 / -1; }
+  .student-page .qgh-student { grid-column:1; width:auto; }
+  .student-page .pilot-caption { grid-column:2; align-self:stretch; }
+}
+@media (max-width:680px) {
+  .student-page .student-head .status-stack { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:8px; }
+  .student-page #radarScope, .student-page #studentEstimateScope { height:clamp(300px,55dvh,700px); }
+  .student-page .instrument-controls { flex-wrap:wrap; gap:5px; }
+  .student-page .qgh-student { width:100%; }
+  .student-page .df-console { display:grid; grid-template-columns:1fr 1fr; }
+  .student-page .df-console header { grid-column:1 / -1; }
+  .student-page .df-console .segmented { display:flex; flex-direction:column; }
+  .student-page .df-console .segmented button { min-height:40px; }
+}
+@media (max-width:680px) {
+  .instructor-page .shell--wide { width:calc(100% - 12px); }
+  .instructor-page .session-rail, .instructor-page .console-control-rail { grid-template-columns:minmax(0,1fr); }
+  .instructor-page .console-toolbar { grid-template-columns:minmax(0,1fr); }
+  .instructor-page .console-toolbar .lifecycle-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .instructor-page .workspace-head > div:first-child { flex:1 1 auto; }
+  .instructor-page .scope-card .card-head > div { flex:1 1 100%; }
+  .instructor-page #instructorScope { height:clamp(270px,50dvh,600px); }
+  .instrument-shelf { grid-template-columns:145px minmax(0,1fr); }
+  .quick-aircraft-controls { grid-column:1 / -1; }
+  .quick-turn-row button, .quick-heading-row button { min-height:44px; }
+  .instructor-page .console-control-rail { max-height:55dvh; }
+  .instructor-page .setup-panel { margin:20px auto; padding:15px; }
+}
+
 /* Keep the title and clock controls inside narrow instructor/student screens. */
 @media (max-width:680px) {
   .workspace-head, .student-head { flex-wrap:wrap; }

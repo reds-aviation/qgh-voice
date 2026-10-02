@@ -708,9 +708,25 @@ func apply(s *State, c Command, role string) (effect, error) {
 		if e != nil {
 			return efx, e
 		}
-		var p Clearance
-		if e = decode(c.Payload, &p); e != nil {
+		var linked struct {
+			Clearance
+			CallID string `json:"callId,omitempty"`
+		}
+		if e = decode(c.Payload, &linked); e != nil {
 			return efx, e
+		}
+		p := linked.Clearance
+		callIndex := -1
+		if linked.CallID != "" {
+			for i := range s.Calls {
+				if s.Calls[i].ID == linked.CallID && s.Calls[i].AircraftID == a.ID && s.Calls[i].Status == "pending" {
+					callIndex = i
+					break
+				}
+			}
+			if callIndex < 0 {
+				return efx, errors.New("linked call is no longer pending for this aircraft")
+			}
 		}
 		if p.Action == "hold" {
 			if p.LegSeconds == 0 {
@@ -738,6 +754,10 @@ func apply(s *State, c Command, role string) (effect, error) {
 		}
 		if a.Status != "scheduled" {
 			emitPilot(s, a, text, "readback")
+		}
+		if callIndex >= 0 {
+			s.Calls[callIndex].Status = "handled"
+			record(s, "call-handled", "Controller call acknowledged: "+linked.CallID, a.ID)
 		}
 	case "transmit":
 		a, e := target()

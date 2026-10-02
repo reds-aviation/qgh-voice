@@ -78,6 +78,8 @@ test('install precaches the complete local two-position shell', async () => {
     './remote-service.js',
     './remote-config.js',
     './suite-student.js',
+    './student-plotting.js',
+    './student-plotting.css',
     './simulator-core.js',
     './procedure-core.js',
     './fonts/ibm-plex-mono-500.ttf',

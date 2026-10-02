@@ -25,6 +25,8 @@ const APP_SHELL = [
   './remote-service.js',
   './remote-config.js',
   './suite-student.js',
+  './student-plotting.js',
+  './student-plotting.css',
   './simulator-core.js',
   './procedure-core.js',
   './fonts/ibm-plex-mono-500.ttf',

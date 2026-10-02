@@ -539,14 +539,10 @@
       command.side = state.aircraft.turn.side;
       command.headingDeg = degrees(input.headingDeg, 'Assigned heading');
     } else if (type === 'turn-now') {
-      if (state.scenario.exerciseFamily !== 'qgh' || state.scenario.qghProcedure !== 'us') {
-        throw new Error('Timed turns are available only in U/S Compass QGH.');
-      }
       command.side = validateSide(input.side);
     } else if (type === 'stop-turn') {
-      if (state.scenario.exerciseFamily !== 'qgh' || state.scenario.qghProcedure !== 'us') {
-        throw new Error('Stop turn is available only in U/S Compass QGH.');
-      }
+      // Quick turn buttons and mouse gestures use the same manual flight path
+      // across QGH, SRA and vectoring. A stop always captures current heading.
     } else if (type === 'set-speed') {
       command.speedKt = bounded(input.speedKt, 30, 700, 'Ground speed');
     } else if (type === 'set-altitude') {

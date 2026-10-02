@@ -6,9 +6,9 @@
   'use strict';
   // Relay only already-validated protocol messages. Simulation/sensor truth stays local.
   const replaceable = new Set(['observation', 'host-heartbeat', 'student-heartbeat']);
-  function createTransport({ service, room, host, sessionApi, now = Date.now, onStatus = () => {}, schedule = setTimeout, cancel = clearTimeout }) {
+  function createTransport({ service, room, host, sessionApi, initialCursor = 0, now = Date.now, onStatus = () => {}, schedule = setTimeout, cancel = clearTimeout }) {
     const listeners = new Set(), queue = [];
-    let cursor = 0, stopped = false, closing = false, timer, job, lastSuccess = now(), healthy = true;
+    let cursor = initialCursor, stopped = false, closing = false, timer, job, lastSuccess = now(), healthy = true;
     function post(message) {
       if (stopped || closing) return;
       const validation = (host ? sessionApi.validateInstructorMessage : sessionApi.validateStudentMessage)(message, { sessionId: room.sessionId });
@@ -52,6 +52,8 @@
       sync,
       start() { if (!timer && !stopped) timer = schedule(cycle, 0); },
       get connected() { return !stopped && healthy && now() - lastSuccess < 6000; },
+      recoverySnapshot() { return { room: JSON.parse(JSON.stringify(room)), cursor }; },
+      detach() { stopped = true; cancel(timer); listeners.clear(); },
       close() {
         if (stopped || closing) return;
         closing = true; cancel(timer);
@@ -68,16 +70,18 @@
   async function client(student = false) {
     const [{ createRemoteService }, { remoteConfig }] = await Promise.all([import('./remote-service.js'), import('./remote-config.js')]);
     // A random identity per page avoids sharing instructor Auth with an opened student tab.
-    let clientId = student ? sessionStorage.getItem('atc-suite-student-auth') : null;
-    if (!clientId) { clientId = crypto.randomUUID(); if (student) sessionStorage.setItem('atc-suite-student-auth',clientId); }
+    const identityKey = student ? 'atc-suite-student-auth' : 'atc-suite-host-auth';
+    let clientId = sessionStorage.getItem(identityKey);
+    if (!clientId) { clientId = crypto.randomUUID(); sessionStorage.setItem(identityKey,clientId); }
     const service = createRemoteService(remoteConfig, clientId, { rpc: 'atc_suite_session' });
     const auth = await service.authenticate();
     return { service, senderId: auth.user.id };
   }
-  async function prepareHost(sessionApi, onStatus) {
+  async function prepareHost(sessionApi, onStatus, recovery) {
     const { service, senderId } = await client(), hostKey = crypto.randomUUID();
-    const room = await service.call('create', null, { hostKey }); room.hostKey = hostKey;
-    const transport = createTransport({ service, room, host: true, sessionApi, onStatus });
+    const room = recovery?.room?.hostKey ? recovery.room : await service.call('create', null, { hostKey });
+    if (!room.hostKey) room.hostKey = hostKey;
+    const transport = createTransport({ service, room, host: true, sessionApi, initialCursor: recovery?.cursor || 0, onStatus });
     return { transport, senderId, sessionId: room.sessionId, channelName: room.channelName, pin: room.pin };
   }
   async function prepareStudent(pin, sessionApi, onStatus) {

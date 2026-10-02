@@ -139,3 +139,11 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
  .flow-footer>span:last-child{display:none}
 }
 @media(prefers-reduced-motion:reduce){[data-suite-surface="qgh"] .entry-option{transition:none;transform:none}}
+
+/* Typography is shared across every state; exercise colours remain unchanged. */
+body[data-suite-surface],body[data-suite-surface] :is(button,input,select,textarea,h1,h2,h3,h4,label,summary){font-family:Suite Sans,Arial,sans-serif!important}
+body[data-suite-surface] :is(code,kbd,time,input[type="number"],#clock,#elapsedTime,#sessionPin,#student-pin,#quick-heading,.numeric-data){font-family:Suite Mono,monospace!important;font-variant-numeric:tabular-nums}
+body[data-suite-surface] :is(h1,h2,h3,h4,p,summary,label){overflow-wrap:break-word}
+body[data-suite-surface] :is(.entry-option-copy,.role-card>div,.session-connection,.setup-panel,.section-title,.card-head){min-width:0}
+body[data-suite-surface] :is(.entry-option-copy small,.role-card p,.capability-note,.flow-footer){white-space:normal}
+body[data-suite-surface] button{max-width:100%;white-space:normal}

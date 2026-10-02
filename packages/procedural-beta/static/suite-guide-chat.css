@@ -67,6 +67,8 @@ body.desk-open.exercise-running .suite-guide-chat { display: none !important; }
 .suite-guide-chat__header > div { flex: 1; }
 .suite-guide-chat__header .suite-guide-chat__close { min-width: 44px; min-height: 44px; font-size: 26px; }
 .suite-guide-chat__composer textarea { font-size: 16px; }
+.suite-guide-chat,.suite-guide-chat :is(button,textarea){font-family:"IBM Plex Sans",Suite Sans,Arial,sans-serif}
+.suite-guide-chat__header>div,.suite-guide-chat__message,.suite-guide-chat__answer-links{min-width:0;overflow-wrap:anywhere}
 body > .suite-guide-chat { display: flex; justify-content: flex-end; padding: 8px 18px; }
 body.desk-open .scope-edge-actions .suite-guide-chat { justify-content: center; }
 @media (max-width: 700px) {

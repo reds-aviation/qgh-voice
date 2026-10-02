@@ -27,15 +27,15 @@ export async function buildEntryTheme(output, root, version) {
     if (surface === 'qgh') {
       html = html.replace('<title>QGH Simulator</title>', '<title>QGH · ATC Training Suite</title>')
         .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATC TRAINING SUITE</h1>')
-        .replace('SELECT QGH TYPE', 'INDIVIDUAL PRACTICE')
+        .replace('SELECT QGH TYPE', 'SINGLE QGH · INDIVIDUAL PRACTICE')
         .replace('Choose your exercise</h2>', 'QGH</h2><p class="flow-subtitle">Cloud-breaking procedure</p>')
         .replace('Practise one aircraft, or manage a small tactical flight. Each path opens its own setup before the exercise begins.', 'Practise the QGH cloud-breaking procedure. Choose a single aircraft or tactical flight, then prepare your exercise.')
         .replace('<nav class="entry-options"', '<div class="flow-section-label">CHOOSE YOUR EXERCISE<span></span></div><nav class="entry-options"')
         .replace('“Order in the air begins with clarity on the ground.”', 'QGH · CLOUD-BREAKING PROCEDURE · INDIVIDUAL PRACTICE');
     } else if (surface === 'instructor') {
       html = html.replace('One shared airspace.<br>Three training perspectives.', 'Train together.<br>Build confidence.')
-        .replace('INSTRUCTOR · CONTROLLER TRAINING', 'QGH &amp; ATSS · INSTRUCTOR-LED')
-        .replace('Configure 1–24 aircraft. The instructor controls the exercise; the trainee works from the selected sensor picture.', 'QGH cloud-breaking, SRA and PAR practice. One instructor shapes the traffic; one controller works the procedure.')
+        .replace('INSTRUCTOR · CONTROLLER TRAINING', 'QGH &amp; SRA · INSTRUCTOR-LED')
+        .replace('Configure 1–24 aircraft. The instructor controls the exercise; the trainee works from the selected sensor picture.', 'QGH cloud-breaking, SRE/vectoring and SRA. One instructor shapes the traffic; one controller works the procedure.')
         .replace('<span>QGH / D/F</span>', '<span>QGH · CLOUD BREAKING</span>');
     } else if (surface === 'procedural') {
       html = html.replace('INSTRUCTOR LED · PROCEDURAL CONTROL', 'PROCEDURAL CONTROL · INSTRUCTOR-LED')

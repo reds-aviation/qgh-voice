@@ -14,6 +14,20 @@
     const back=make('button','Back'), next=make('button','Next'), close=make('button','Close tour');
     for(const b of [back,next,close]) b.type='button';
     actions.append(back,next,close); panel.append(progress,title,description,actions); document.body.append(panel);
+    const startHint=make('aside',null,'suite-start-hint');startHint.hidden=true;startHint.setAttribute('role','status');
+    const hintText=make('span'),hintClose=make('button','Got it');hintClose.type='button';hintClose.setAttribute('aria-label','Dismiss aircraft mouse controls');startHint.append(hintText,hintClose);document.body.append(startHint);
+    let hasRun=false,hintTimer=0;
+    const hintKey=`atc-mouse-hint-${page}-${globalThis.ATCGuideKnowledge?.revision}`;
+    const dismissHint=()=>{startHint.hidden=true;clearTimeout(hintTimer);};hintClose.onclick=dismissHint;
+    function showStartHint(){
+      if(!['procedural','instructor'].includes(page)||sessionStorage.getItem(hintKey))return;
+      if(page==='procedural'&&document.getElementById('student-login-state')?.textContent)return;
+      const shelf=document.querySelector('#aircraft-quick-controls, .quick-aircraft-controls');
+      if(!shelf||!visible(shelf))return;
+      sessionStorage.setItem(hintKey,'1');
+      shelf.append(startHint);hintText.textContent=globalThis.ATCGuideKnowledge?.startHint?.text||'';startHint.hidden=false;
+      hintTimer=setTimeout(dismissHint,12000);
+    }
     let steps=[], index=0, target;
     const visible=el=>!!el && el.getClientRects().length>0 && !el.closest('[hidden]');
     const running=()=>document.body.classList.contains('exercise-running') || ['exerciseState','studentExerciseState'].some(id=>document.getElementById(id)?.textContent.trim()==='RUNNING') || visible(document.querySelector('#console.active, #tConsole.active'));
@@ -38,7 +52,9 @@
     next.onclick=()=>{if(index===steps.length-1)finish();else{index++;show();}};
     close.onclick=()=>finish();document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidden){event.preventDefault();finish();}});
     function update(){
-      const live=running();if(button.hidden!==live)button.hidden=live;button.disabled=live;
+      const live=running();if(live&&!hasRun)showStartHint();hasRun=live;
+      if(!live&&!startHint.hidden)dismissHint();
+      if(button.hidden!==live)button.hidden=live;button.disabled=live;
       if(live&&!panel.hidden)finish(false);
       const dock=document.querySelector(document.body.classList.contains('desk-open')?'#edge-actions .edge-group:last-child':'.topbar nav');
       if(page==='procedural'&&dock&&button.parentElement!==dock)dock.append(button);

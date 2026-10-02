@@ -249,7 +249,7 @@ test('runway visual report uses the documented simulator training gate without o
 test('invalid commands return a frozen rejection without mutating the source state', () => {
   const initial = scenario();
   const before = JSON.stringify(initial);
-  const result = Suite.applyCommand(initial, { type: 'turn-now', side: 'right' });
+  const result = Suite.applyCommand(initial, { type: 'turn-now', side: 'invalid' });
   assert.equal(result.outcome.accepted, false);
   assert.equal(result.outcome.executionStatus, 'NOT_APPLIED');
   assert.equal(JSON.stringify(initial), before);

@@ -108,6 +108,8 @@ async function build() {
   ]);
   await applyBuildVersion(version);
   await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'remote-service.js');
+  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'student-plotting.js');
+  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'student-plotting.css');
   await writeFile(resolve(outputRoot,'remote-config.js'), 'export const remoteConfig = Object.freeze({url:"",publishableKey:""});\n');
 
   const expectedOutput = [

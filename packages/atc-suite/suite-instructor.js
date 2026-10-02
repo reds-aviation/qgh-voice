@@ -7,6 +7,7 @@
   if (!Core || !Sensors || !Session) return;
 
   const byId = id => document.getElementById(id);
+  const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const family = byId('exerciseFamily');
   const procedure = byId('procedureType');
   const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
@@ -16,11 +17,167 @@
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
-    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false,
-    studentWindow: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false
+    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false, clickTimer: null,
+    studentWindow: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false,
+    scopePan: { x: 0, y: 0 }, scopeDrag: null, lastRightClick: null, suppressClickUntil: 0,
+    initialScenario: null, restoreMessage: '', lastCheckpoint: 0
   };
 
   const radioNow = () => performance.now() / 1000;
+  const RECOVERY_KEY = 'atc-suite.instructor-attempt.v1';
+  const SETUP_KEY = 'atc-suite.instructor-setup.v1';
+  const PRESETS_KEY = 'atc-suite.saved-exercises.v1';
+
+  function presets() {
+    try { const data = JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]'); return Array.isArray(data) ? data.slice(0, 40) : []; } catch (_) { return []; }
+  }
+
+  function refreshPresets(selected = '') {
+    const options = [new Option('Choose an exercise', '')];
+    for (const item of presets()) if (typeof item.name === 'string') options.push(new Option(item.name, item.id));
+    byId('savedExercise').replaceChildren(...options); byId('savedExercise').value = selected;
+  }
+
+  function savePreset() {
+    try {
+      scenarioInput();
+      const name = byId('savedExerciseName').value.trim().slice(0, 60);
+      if (!name) throw new Error('Name this exercise first.');
+      const entries = presets(), existing = entries.find(item => item.name === name);
+      const item = { id: existing?.id || crypto.randomUUID(), name, version: 1, setup: captureSetup() };
+      const next = entries.filter(entry => entry.id !== item.id).concat(item).slice(-40);
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); refreshPresets(item.id);
+      byId('presetStatus').textContent = 'Saved on this browser. Export to use the same traffic on another PC.';
+    } catch (error) { byId('presetStatus').textContent = error.message; }
+  }
+
+  function loadPreset() {
+    const item = presets().find(entry => entry.id === byId('savedExercise').value);
+    if (!item) { byId('presetStatus').textContent = 'Choose a saved exercise.'; return; }
+    restoreSetup(item.setup); byId('savedExerciseName').value = item.name;
+    byId('presetStatus').textContent = 'Loaded starting traffic. Create a session when ready.';
+  }
+
+  function exportPreset() {
+    try {
+      scenarioInput();
+      const content = JSON.stringify({ format: 'ats-simbox-instructor-exercise', version: 1, name: byId('savedExerciseName').value.trim() || 'Exercise', setup: captureSetup() }, null, 2);
+      const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+      const link = document.createElement('a'); link.href = url; link.download = 'ats-simbox-exercise.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) { byId('presetStatus').textContent = error.message; }
+  }
+
+  async function importPreset(event) {
+    try {
+      const file = event.target.files?.[0]; if (!file) return;
+      if (file.size > 128000) throw new Error('Exercise file is too large.');
+      const data = JSON.parse(await file.text());
+      if (data.format !== 'ats-simbox-instructor-exercise' || data.version !== 1 || !Array.isArray(data.setup)) throw new Error('Use an exported ATS SIMBOX instructor exercise.');
+      const allowed = new Set(captureSetup().map(item => item.id));
+      if (data.setup.some(item => !item || typeof item.id !== 'string' || !(allowed.has(item.id) || /^(callsign|squawk|radarReturn|aircraftType|initialBearing|initialRange|initialHeading|initialAltitude|initialSpeed|turnRate|verticalRate)-\d+$/.test(item.id)))) throw new Error('Exercise contains unsupported fields.');
+      restoreSetup(data.setup); scenarioInput(); byId('savedExerciseName').value = String(data.name || 'Imported exercise').slice(0, 60); savePreset();
+    } catch (error) { byId('presetStatus').textContent = error.message; }
+    finally { event.target.value = ''; }
+  }
+
+  function captureSetup() {
+    return [...document.querySelectorAll('#scenarioForm input, #scenarioForm select')].map(node => ({
+      id: node.id, value: node.value, checked: node.type === 'checkbox' ? node.checked : undefined,
+      ...(node.id === 'radarReturn' || /^radarReturn-\d+$/.test(node.id) ? { radarAuto: node.dataset.radarReturnAuto } : {})
+    })).filter(item => item.id);
+  }
+
+  function restoreSetup(saved) {
+    if (!Array.isArray(saved)) return;
+    const count = saved.find(item => item.id === 'aircraftCount');
+    if (count) byId('aircraftCount').value = String(Math.max(1, Math.min(24, Number(count.value) || 1)));
+    syncRoster();
+    for (const item of saved) {
+      const node = byId(item.id);
+      if (!node || !node.closest?.('#scenarioForm')) continue;
+      if (item.id === 'exerciseFamily' && item.value === 'par') continue;
+      node.value = item.id === 'scanPreset' ? '15' : String(item.value);
+      if (node.type === 'checkbox') node.checked = item.checked === true;
+      if (item.id === 'radarReturn' || /^radarReturn-\d+$/.test(item.id)) node.dataset.radarReturnAuto = item.radarAuto === 'true' ? 'true' : 'false';
+    }
+    configureFields();
+    saveSetup();
+  }
+
+  function saveSetup() {
+    try { sessionStorage.setItem(SETUP_KEY, JSON.stringify(captureSetup())); } catch (_) { /* Setup remains editable if storage is unavailable. */ }
+  }
+
+  function checkpoint() {
+    if (!state.simulation || typeof sessionStorage === 'undefined') return;
+    try {
+      const timeline = state.review?.snapshot();
+      // Keep exact commands and observations; sample recovery truth at one
+      // second to prevent long fleet exercises exhausting browser storage.
+      const review = timeline ? { ...timeline, truth: timeline.truth.filter((item, index, rows) => index === rows.length - 1 || index === 0 || Math.floor(item.timestamp) !== Math.floor(rows[index - 1].timestamp)) } : null;
+      const simulation = structuredClone(state.simulation);
+      for (const id of Object.keys(simulation.truthTrails)) simulation.truthTrails[id] = simulation.truthTrails[id].filter((item, index, rows) => index === rows.length - 1 || index === 0 || Math.floor(item.timestamp) !== Math.floor(rows[index - 1].timestamp));
+      sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), setup: captureSetup(),
+        simulation, initialScenario: state.initialScenario, review,
+        protocol: state.session?.recoverySnapshot?.(), cloud: state.cloudTransport?.recoverySnapshot?.(),
+        trainingTimeRate: state.trainingTimeRate }));
+      state.lastCheckpoint = performance.now();
+    } catch (_) { byId('recoveryStatus').textContent = 'Recovery storage full · save/export the scenario before leaving.'; }
+  }
+
+  async function restoreAttempt() {
+    let saved;
+    try { restoreSetup(JSON.parse(sessionStorage.getItem(SETUP_KEY) || 'null')); saved = JSON.parse(sessionStorage.getItem(RECOVERY_KEY) || 'null'); } catch (_) { return; }
+    if (saved?.version !== 1 || !saved.simulation?.scenario || !Array.isArray(saved.simulation.aircraftList) || !saved.protocol) return;
+    try {
+      restoreSetup(saved.setup);
+      state.initialScenario = saved.initialScenario;
+      const review = saved.simulation.lifecycle === 'review';
+      state.simulation = Core.setLifecycle(saved.simulation, review ? 'review' : saved.protocol.admitted?.ready ? 'paused' : 'ready');
+      state.running = false;
+      state.sensor = createSensor({ ...state.simulation.scenario, startSeconds: state.simulation.simulationSeconds });
+      state.review = Sensors.createReviewTimeline();
+      for (const entry of saved.review?.truth || []) state.review.recordTruth(entry);
+      for (const entry of saved.review?.observations || []) state.review.recordObservation(entry.sensor, entry);
+      for (const entry of saved.review?.events || []) state.review.recordEvent(entry);
+      const cloud = saved.cloud ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
+        if (!status.connected) setStudentDisplayStatus('ONLINE LINK LOST · retry connection, then resume.', 'attention');
+      }, saved.cloud) : null;
+      state.cloudTransport = cloud?.transport || null;
+      state.session = Session.createInstructorSession({ ...saved.protocol, recovery: saved.protocol,
+        publicMetadata: publicMetadataForSimulation(), storage: cloud ? undefined : localStorage, ...(cloud || {}),
+        transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
+      if (review) state.session.terminate('exercise-terminated', state.simulation.simulationSeconds);
+      setTrainingTimeRate(saved.trainingTimeRate);
+      byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = review; byId('reviewScreen').hidden = !review;
+      document.body.classList.add('exercise-console');
+      renderAircraftTabs(); refreshSelectionInputs(); configureActiveControls();
+      byId('pauseExercise').textContent = 'RESUME';
+      byId('commandStatus').textContent = review ? 'Review restored.' : 'ATTEMPT RESTORED · paused. Reconnect student, then Resume.';
+      byId('studentStatus').textContent = 'RECONNECT STUDENT';
+      byId('studentDetail').textContent = 'The same PIN and student seat are retained. Select Reconnect on the student display.';
+      byId('sessionConnectionLabel').textContent = cloud ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
+      collapseSetupControls(); updateAll();
+      if (review) { state.reviewTime = state.simulation.simulationSeconds; byId('reviewScrub').max = String(state.reviewTime); renderReview(); }
+      state.cloudTransport?.start(); state.session.heartbeat(state.simulation.simulationSeconds);
+    } catch (error) { byId('setupPreview').textContent = `Recovery unavailable: ${error.message}. Saved setup is retained.`; }
+  }
+
+  function collapseSetupControls() {
+    for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'aircraftControlDrawer', 'eventDrawer']) byId(id).open = false;
+  }
+
+  function retryScenario() {
+    state.running = false; finishTransmission();
+    state.session?.close(); state.cloudTransport = null; state.session = null;
+    state.simulation = null; state.sensor = null; state.latestObservation = null; state.lastRenderedEvent = 0;
+    state.review = null; state.reviewPlaying = false; state.scopePan = { x: 0, y: 0 };
+    try { sessionStorage.removeItem(RECOVERY_KEY); } catch (_) {}
+    byId('setupPanel').hidden = false; byId('activeWorkspace').hidden = true; byId('reviewScreen').hidden = true;
+    document.body.classList.remove('exercise-console'); byId('consoleNavigation').open = true;
+    byId('setupPreview').textContent = 'Same configured traffic · create a new session to repeat from the start.';
+    byId('setupPanel').scrollIntoView?.({ block: 'start' });
+  }
 
   function suspendExercise(message) {
     state.running = false; state.accumulator = 0;
@@ -44,6 +201,7 @@
       else advanceWallElapsed(elapsed);
       if (state.transmission && radioNow() >= state.transmission.expiresAt) finishTransmission();
       if (state.simulation && state.sensor && ['running', 'paused'].includes(state.simulation.lifecycle)) publishCurrentObservation();
+      if (state.simulation && timestamp - state.lastCheckpoint > 3000) checkpoint();
     } catch (error) {
       suspendExercise(`SENSOR UPDATE FAILED · ${error.message}. Exercise paused.`);
     }
@@ -155,7 +313,7 @@
     byId('radarProfileField').hidden = !radarMode;
     byId('parRefreshField').hidden = mode !== 'par';
     byId('approachAircraftField').hidden = !['sra', 'par'].includes(mode);
-    byId('parTransferGateField').hidden = mode !== 'surveillance';
+    byId('parTransferGateField').hidden = true;
     for (const id of ['extendedCentrelineField', 'extendedCentrelineRangeField', 'centrelineTickField', 'localLfaField', 'localLfaRadiusField']) {
       byId(id).hidden = !radarMode;
     }
@@ -303,14 +461,14 @@
       speedKt: number('initialSpeed'), rateDegPerSecond: number('turnRate'),
       verticalRateFpm: 1000, runwayOrientationDeg: number('runwayOrientation'),
       finalTrackDeg: number('finalTrack'), surveillanceProfile,
-      sensorProfile: mode === 'par' ? `${byId('parRefresh').value}hz` : `${byId('scanPreset').value}rpm`,
+      sensorProfile: mode === 'par' ? `${byId('parRefresh').value}hz` : '15rpm',
       parRefreshHz: Number(byId('parRefresh').value), parTransferGateNm: number('parTransferGate'),
       ...(radarEnvironment ? { radarEnvironment } : {})
     };
   }
 
   function publicMetadata(input) {
-    const rpm = Number(byId('scanPreset').value);
+    const rpm = 15;
     const approachAircraft = input.aircraft.find(aircraft => aircraft.aircraftId === input.approachAircraft);
     return {
       mode: input.exerciseFamily,
@@ -325,7 +483,7 @@
       trainingReference: 'Co-aligned training references; zero magnetic variation',
       runwayOrientation: input.runwayOrientationDeg,
       finalTrack: input.finalTrackDeg,
-      ...(['surveillance', 'sra'].includes(input.exerciseFamily) ? { scanRpm: rpm, revisitSeconds: 60 / rpm, historyCount: 3 } : {}),
+      ...(['surveillance', 'sra'].includes(input.exerciseFamily) ? { scanRpm: rpm, revisitSeconds: 60 / rpm, historyCount: 5 } : {}),
       ...(input.exerciseFamily === 'par' ? { parRefreshHz: Number(byId('parRefresh').value), historyCount: 3 } : {}),
       ...(input.radarEnvironment ? { radarEnvironment: input.radarEnvironment } : {}),
       ...(['sra', 'par'].includes(input.exerciseFamily) && approachAircraft ? {
@@ -353,9 +511,9 @@
       finalTrack: scenario.finalTrackDeg
     };
     if (['surveillance', 'sra'].includes(mode)) {
-      metadata.scanRpm = Number(state.sensor?.rpm || 12);
-      metadata.revisitSeconds = Number(state.sensor?.revisitSeconds || 5);
-      metadata.historyCount = 3;
+      metadata.scanRpm = 15;
+      metadata.revisitSeconds = 4;
+      metadata.historyCount = 5;
       if (scenario.radarEnvironment) metadata.radarEnvironment = scenario.radarEnvironment;
     }
     if (mode === 'par') {
@@ -378,8 +536,8 @@
       glidepathDeg: 3, maxRangeNm: 20, history: 3
     });
     state.sra = input.exerciseFamily === 'sra' ? Sensors.createSraReferences({ runwayHeadingDeg: input.finalTrackDeg, terminationRangeNm: .5 }) : null;
-    return Sensors.createSurveillanceSensor({ rpm: Number(byId('scanPreset').value),
-      profile: input.surveillanceProfile, sra: input.exerciseFamily === 'sra', history: 3, maxRangeNm: 100 });
+    return Sensors.createSurveillanceSensor({ rpm: 15, startSeconds: input.startSeconds || 0,
+      profile: input.surveillanceProfile, sra: input.exerciseFamily === 'sra', history: 5, maxRangeNm: 100 });
   }
 
   function configureActiveControls() {
@@ -396,7 +554,7 @@
     byId('continueApproach').hidden = !approachMode;
     byId('reportRunwayVisual').hidden = !approachMode;
     byId('missedApproach').hidden = !approachMode;
-    byId('parTransferActions').hidden = mode !== 'surveillance';
+    byId('parTransferActions').hidden = true;
     byId('approachControlLabel').textContent = mode === 'par' ? 'PAR APPROACH ACTIONS'
       : mode === 'sra' ? 'SRA APPROACH ACTIONS' : 'SURVEILLANCE ACTIONS';
     byId('approachControlHint').textContent = approachMode
@@ -438,6 +596,7 @@
       byId('studentStatus').textContent = 'SESSION CLOSED';
     }
     if (snapshot) byId('sessionPin').textContent = snapshot.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
+    state.dirty = true;
   }
 
   async function createSession(event) {
@@ -447,7 +606,7 @@
     const submit = byId('scenarioForm').querySelector('[type="submit"]');
     if (submit) submit.disabled = true;
     try {
-      const input = scenarioInput();
+      const input = scenarioInput(); state.initialScenario = structuredClone(input);
       const online = byId('exerciseConnection')?.value === 'online';
       const cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
         if (!status.connected) {
@@ -470,6 +629,7 @@
       byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
       byId('sessionConnectionLabel').textContent = online ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
       byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = false;
+      document.body.classList.add('exercise-console');
       byId('modeKicker').textContent = modeLabel(input.exerciseFamily);
       byId('scopeLabel').textContent = input.exerciseFamily === 'qgh' ? 'CONTINUOUS TRUTH · D/F PREVIEW' : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
       byId('truthCallsign').textContent = input.callsign;
@@ -477,6 +637,7 @@
       configureActiveControls();
       byId('startExercise').disabled = true;
       updateAll();
+      checkpoint();
       state.cloudTransport?.start();
       if (online) setStudentDisplayStatus('ONLINE ROOM · On the other PC/device open Controller position, select Online room and enter this PIN. Internet is required on both devices.');
       else openStudentDisplay();
@@ -562,6 +723,7 @@
     const elapsed = Math.min(1, Math.max(0, (timestamp - state.previousFrame) / 1000));
     state.previousFrame = timestamp;
     if (state.dirty) { state.dirty = false; updateAll(); }
+    else if (!reducedMotion() && state.running && state.simulation?.scenario.exerciseFamily !== 'qgh') drawTruth(byId('instructorScope'), state.simulation, state.latestObservation);
     if (state.reviewPlaying) {
       state.reviewTime = Math.min(state.simulation.simulationSeconds, state.reviewTime + elapsed * number('reviewSpeed'));
       if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewPlaying = false;
@@ -640,7 +802,7 @@
     clearTimeout(state.readbackTimer);
     const captionSeconds = Math.max(3, Math.min(15, result.outcome.readback.text.split(/\s+/).length * 60 / 130 + 1));
     state.transmission = { id: result.outcome.readback.id, aircraftId: result.outcome.readback.aircraftId,
-      expiresAt: radioNow() + (state.radioAudio ? 30 : captionSeconds), captionSeconds, controlId };
+      text: result.outcome.readback.text, expiresAt: radioNow() + (state.radioAudio ? 30 : captionSeconds), captionSeconds, controlId };
     if (state.simulation.scenario.exerciseFamily === 'qgh') beginDfTransmission(result.outcome.readback.id, result.outcome.readback.aircraftId);
     state.session.publishCaption(result.outcome.readback.text, state.simulation.simulationSeconds, state.transmission.id);
     updateAll();
@@ -675,6 +837,7 @@
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
     setPhase('running'); updateAll();
+    collapseSetupControls(); checkpoint();
     return true;
   }
 
@@ -690,6 +853,7 @@
       state.running = true; state.previousFrame = null; byId('pauseExercise').textContent = 'PAUSE';
     }
     updateAll();
+    checkpoint();
     return true;
   }
 
@@ -702,6 +866,7 @@
     state.reviewTime = state.simulation.simulationSeconds; state.reviewPlaying = false;
     byId('reviewScrub').max = String(state.reviewTime);
     byId('activeWorkspace').hidden = true; byId('reviewScreen').hidden = false; setPhase('review'); renderReview();
+    checkpoint();
   }
 
   function setPhase(name) { document.querySelectorAll('[data-phase]').forEach(item => item.classList.toggle('active', item.dataset.phase === name)); }
@@ -711,6 +876,7 @@
     byId('liveSpeed').value = String(Math.round(aircraft.speedKt));
     byId('altitudeInput').value = String(Math.round(aircraft.altitudeFt));
     byId('turnHeadingInput').value = String(Math.round(aircraft.headingDeg) % 360);
+    byId('quickHeading').value = String(Math.round(aircraft.headingDeg) % 360);
   }
 
   function renderAircraftTabs() {
@@ -742,7 +908,7 @@
     byId('pauseExercise').disabled = !controllable; byId('terminateExercise').disabled = !controllable;
     const transfer = snapshot.scenario.exerciseFamily === 'surveillance'
       ? Core.parTransferStatus(state.simulation) : null;
-    byId('parTransferActions').hidden = !transfer;
+    byId('parTransferActions').hidden = true;
     if (transfer) {
       byId('parTransferGateStatus').textContent = transfer.message;
       byId('transferToPar').disabled = !controllable || !transfer.eligible;
@@ -767,6 +933,21 @@
       : snapshot.scenario.exerciseFamily === 'par' ? 'CONTINUOUS TRUTH · PAR PREVIEW'
         : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
     byId('sensorPreview').textContent = sensorStatus();
+    byId('compactPin').textContent = state.session?.pin || '—';
+    byId('sessionPin').textContent = (state.session?.pin || '—').replace(/(\d{3})(\d{3})/, '$1 $2');
+    byId('compactConnection').textContent = byId('studentStatus').textContent || 'Waiting';
+    byId('quickAircraftStatus').textContent = `${a.callsign} · ${pad(a.headingDeg)}°M · ${Math.round(a.altitudeFt)} FT · ${Math.round(a.speedKt)} KT`;
+    byId('instructorHoming').hidden = snapshot.scenario.exerciseFamily !== 'qgh';
+    document.querySelectorAll('.quick-aircraft-controls button, .quick-aircraft-controls input, #quickTransmit').forEach(control => { control.disabled = !controllable; });
+    const us = isUsCompass();
+    byId('quickHeadingLeft').hidden = us; byId('quickHeadingRight').hidden = us; byId('quickHeading').parentElement && (byId('quickHeading').parentElement.hidden = us);
+    byId('instructorPilotCaption').textContent = state.transmission?.text || snapshot.readbacks?.at(-1)?.text || 'Awaiting a transmission.';
+    if (snapshot.scenario.exerciseFamily === 'qgh') {
+      const signal = state.sensor.read(radioNow(), truthForSensor());
+      const bearing = byId('instructorDfReference').value === 'qte' ? signal.qte : signal.qdm;
+      byId('instructorDfBearing').textContent = Number.isFinite(bearing) ? `${pad(bearing)}°` : '—';
+      byId('instructorDfPhase').textContent = signal.phase === 'blank' ? 'No transmission' : String(signal.phase || 'idle').toUpperCase();
+    }
     drawTruth(byId('instructorScope'), state.simulation, state.latestObservation);
     updateInspection();
     renderNewEvents();
@@ -794,8 +975,8 @@
   }
 
   function drawBase(context, canvas, maxRange, runway, finalTrack = runway) {
-    const width = canvas.width, height = canvas.height, cx = width / 2, cy = height / 2;
-    context.clearRect(0, 0, width, height); context.fillStyle = '#071b1d'; context.fillRect(0, 0, width, height);
+    const width = canvas.width, height = canvas.height, cx = width / 2 + (canvas.id === 'instructorScope' ? state.scopePan.x : 0), cy = height / 2 + (canvas.id === 'instructorScope' ? state.scopePan.y : 0);
+    context.clearRect(0, 0, width, height); context.fillStyle = '#0e1319'; context.fillRect(0, 0, width, height);
     context.strokeStyle = '#1d5551'; context.lineWidth = 1; context.fillStyle = '#79aaa4'; context.font = '16px IBM Plex Mono';
     for (let range = 10; range <= maxRange; range += 10) { const radius = range / maxRange * Math.min(width, height) * .44; context.beginPath(); context.arc(cx, cy, radius, 0, Math.PI * 2); context.stroke(); context.fillText(`${range}`, cx + 4, cy - radius + 17); }
     context.beginPath(); context.moveTo(cx, 22); context.lineTo(cx, height - 22); context.moveTo(22, cy); context.lineTo(width - 22, cy); context.stroke();
@@ -814,6 +995,8 @@
 
   function displayRange() {
     const simulation = state.simulation;
+    const selected = Number(byId('scopeRange').value);
+    if (selected >= 10) return selected;
     return Math.max(30, ...simulation.aircraftList.map(a => Math.hypot(a.position.xNm, a.position.yNm) * 1.3),
       ...Object.values(simulation.truthTrails).map(trail => Math.hypot(trail[0].xNm, trail[0].yNm) * 1.3));
   }
@@ -824,7 +1007,11 @@
     context.save(); context.translate(x, y); context.rotate(aircraft.headingDeg * Math.PI / 180);
     context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.beginPath(); context.moveTo(0, -14);
     context.lineTo(9, 10); context.lineTo(0, 6); context.lineTo(-9, 10); context.closePath(); context.fill(); context.restore();
-    context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.font = '16px IBM Plex Mono'; context.fillText(aircraft.callsign, x + 16, y - 12);
+    context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.font = '14px IBM Plex Mono';
+    const lines = [aircraft.callsign, ...(selected ? [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)}°M`] : [])];
+    const width = Math.max(...lines.map(line => context.measureText(line)?.width || line.length * 8));
+    const labelX = Math.max(5, Math.min(x + 16, context.canvas?.width ? context.canvas.width - width - 5 : x + 16));
+    for (let i = 0; i < lines.length; i++) context.fillText(lines[i], labelX, Math.max(16, y - 12) + i * 16);
   }
 
   function drawPlots(context, transform, observation) {
@@ -836,26 +1023,61 @@
   }
 
   function drawTruth(canvas, simulation, observation) {
+    const bounds = canvas.getBoundingClientRect?.();
+    if (bounds?.width > 0 && bounds?.height > 0) { canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height); }
     const context = canvas.getContext('2d');
     const transform = drawBase(context, canvas, displayRange(), simulation.scenario.runwayOrientationDeg, simulation.scenario.finalTrackDeg);
     state.scopeTransform = transform;
     for (const aircraft of simulation.aircraftList) {
       const selected = aircraft.id === simulation.selectedAircraftId, trail = simulation.truthTrails[aircraft.id];
       if (byId('historyDots').checked && trail.length > 1) {
-        context.strokeStyle = selected ? '#2bd1c6' : '#387d77'; context.lineWidth = selected ? 2 : 1; context.beginPath();
-        trail.forEach((point, index) => { const x = transform.cx + point.xNm * transform.scale, y = transform.cy + point.yNm * transform.scale; index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.stroke();
+        context.fillStyle = selected ? '#83c6ca' : '#658d94';
+        const count = Math.min(12, Math.max(5, Number(byId('truthTrailCount').value) || 8));
+        const spacingNm = 8 / transform.scale;
+        let anchor = { xNm: aircraft.position.xNm, yNm: aircraft.position.yNm }, shown = 0;
+        for (let index = trail.length - 1; index >= 0 && shown < count; index--) {
+          const point = trail[index];
+          if (Math.hypot(point.xNm - anchor.xNm, point.yNm - anchor.yNm) < spacingNm) continue;
+          context.beginPath(); context.arc(transform.cx + point.xNm * transform.scale, transform.cy + point.yNm * transform.scale, selected ? 2.8 : 2.2, 0, Math.PI * 2); context.fill();
+          anchor = point; shown++;
+        }
       }
       drawAircraft(context, transform, { ...aircraft, ...aircraft.position }, selected);
     }
     if (simulation.scenario.exerciseFamily === 'qgh') {
       const signal = state.sensor.read(radioNow(), truthForSensor());
       const source = simulation.aircraftList.find(a => a.id === signal.source);
-      if (signal.phase === 'live' && source) {
+      if (['live', 'held'].includes(signal.phase) && source) {
         context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.moveTo(transform.cx, transform.cy);
         context.lineTo(transform.cx + source.position.xNm * transform.scale, transform.cy + source.position.yNm * transform.scale); context.stroke();
       }
     }
     drawPlots(context, transform, observation);
+    if (simulation.scenario.exerciseFamily !== 'qgh') {
+      if (!reducedMotion()) {
+        const scanTime = simulation.simulationSeconds + (state.running ? Math.max(0, (performance.now() - state.previousTick) / 1000) * state.trainingTimeRate : 0);
+        const angle = (scanTime * 90 - 90) * Math.PI / 180;
+        const radius = Math.min(canvas.width, canvas.height) * .44;
+        context.strokeStyle = 'rgba(90,210,164,.5)'; context.lineWidth = 1; context.beginPath(); context.moveTo(transform.cx, transform.cy);
+        context.lineTo(transform.cx + Math.cos(angle) * radius, transform.cy + Math.sin(angle) * radius); context.stroke();
+      }
+      if (simulation.scenario.exerciseFamily === 'sra') drawInstructorSra(context, transform, simulation);
+    }
+  }
+
+  function drawInstructorSra(context, transform, simulation) {
+    const angle = (simulation.scenario.finalTrackDeg + 180) * Math.PI / 180;
+    const feetPerNm = Math.tan(3 * Math.PI / 180) * 6076.12;
+    context.strokeStyle = '#d8c780'; context.fillStyle = '#d8c780'; context.font = '11px IBM Plex Mono';
+    let lastLabel = null;
+    for (let distance = .5; distance <= Math.min(20, displayRange()); distance += distance < 5 ? .5 : 1) {
+      const x = transform.cx + Math.sin(angle) * distance * transform.scale, y = transform.cy - Math.cos(angle) * distance * transform.scale;
+      const dx = Math.cos(angle) * (distance % 1 ? 4 : 7), dy = Math.sin(angle) * (distance % 1 ? 4 : 7);
+      context.beginPath(); context.moveTo(x - dx, y - dy); context.lineTo(x + dx, y + dy); context.stroke();
+      if (!lastLabel || Math.hypot(x - lastLabel.x, y - lastLabel.y) >= 32) {
+        context.fillText(`${distance} NM · ${Math.round(feetPerNm * distance / 10) * 10} FT AAL`, x + 10, y + 4); lastLabel = { x, y };
+      }
+    }
   }
 
   function inspectScope(event, select = false) {
@@ -870,16 +1092,70 @@
     state.inspectedAircraftId = nearest?.distance <= hitRadius ? nearest.a.id : null;
     if (select && state.inspectedAircraftId) selectAircraft(state.inspectedAircraftId);
     updateInspection();
+    return state.inspectedAircraftId;
   }
 
   function updateInspection() {
     const aircraft = state.simulation.aircraftList.find(a => a.id === state.inspectedAircraftId);
-    if (!aircraft) { byId('scopeInspection').textContent = 'Point to an aircraft to inspect; click or tap to select.'; return; }
+    if (!aircraft) { byId('scopeInspection').textContent = 'Drag to pan · click aircraft to transmit · double left/right to turn · middle click to stop.'; return; }
     const bearing = Core.bearingFromPosition(aircraft.position);
     const surveillance = aircraft.surveillance?.secondary === true
       ? ` · SQWK ${aircraft.transponderCode || aircraft.surveillance.squawk || '—'}${aircraft.surveillance.modeS === true ? ' · MODE S' : ''}`
       : ` · SQWK ${aircraft.transponderCode || '—'} · PRIMARY / NONE`;
     byId('scopeInspection').textContent = `${aircraft.callsign} · QDM ${pad(bearing.qdmDeg)}° · QTE ${pad(bearing.qteDeg)}° · HDG ${pad(aircraft.headingDeg)}° · ${bearing.rangeNm.toFixed(1)} NM · ${Math.round(aircraft.altitudeFt).toLocaleString()} FT${surveillance}`;
+  }
+
+  function scopeTransmit() {
+    return command({ type: state.simulation?.scenario.exerciseFamily === 'qgh' ? 'transmit' : 'report-position' }, 'quickTransmit');
+  }
+
+  function quickTurn(side) { return command({ type: 'turn-now', side }, side === 'left' ? 'quickTurnLeft' : 'quickTurnRight'); }
+
+  function scopeClick(event) {
+    if (performance.now() < state.suppressClickUntil || !inspectScope(event, true)) return;
+    clearTimeout(state.clickTimer);
+    state.clickTimer = setTimeout(() => { scopeTransmit(); }, 260);
+  }
+
+  function scopeDoubleClick(event) {
+    event.preventDefault(); clearTimeout(state.clickTimer);
+    if (inspectScope(event, true)) quickTurn('left');
+  }
+
+  function scopeRightClick(event) {
+    event.preventDefault();
+    const id = inspectScope(event, true), now = performance.now();
+    if (!id) return;
+    if (state.lastRightClick?.id === id && now - state.lastRightClick.time <= 450) { quickTurn('right'); state.lastRightClick = null; }
+    else state.lastRightClick = { id, time: now };
+  }
+
+  function scopePointerDown(event) {
+    if (event.button === 1) {
+      event.preventDefault(); clearTimeout(state.clickTimer);
+      if (inspectScope(event, true)) command({ type: 'stop-turn' }, 'quickStopTurn');
+      return;
+    }
+    if (event.button !== 0 || inspectScope(event)) return;
+    state.scopeDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, pan: { ...state.scopePan }, moved: false };
+    byId('instructorScope').setPointerCapture?.(event.pointerId);
+  }
+
+  function scopePointerMove(event) {
+    const drag = state.scopeDrag;
+    if (!drag || drag.pointerId !== event.pointerId) { inspectScope(event); return; }
+    const canvas = byId('instructorScope'), bounds = canvas.getBoundingClientRect();
+    const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+    drag.moved ||= Math.hypot(dx, dy) > 4;
+    if (drag.moved) {
+      state.scopePan = { x: drag.pan.x + dx * canvas.width / bounds.width, y: drag.pan.y + dy * canvas.height / bounds.height };
+      state.suppressClickUntil = performance.now() + 500; updateAll();
+    }
+  }
+
+  function scopePointerEnd(event) {
+    if (state.scopeDrag?.pointerId !== event.pointerId) return;
+    byId('instructorScope').releasePointerCapture?.(event.pointerId); state.scopeDrag = null;
   }
 
   function renderReview() {
@@ -1153,7 +1429,7 @@
 
   function handleShortcut(event) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey
-      || isShortcutInteractionTarget(event.target) || byId('trainingGuide').open || !state.simulation || state.simulation.lifecycle === 'review') return;
+      || isShortcutInteractionTarget(event.target) || byId('trainingGuide')?.open || !state.simulation || state.simulation.lifecycle === 'review') return;
     const plan = shortcutActionForKey(String(event.key || '').toLowerCase());
     if (!plan) return;
     event.preventDefault();
@@ -1162,27 +1438,20 @@
     else commandFeedback(`APPLIED · ${result.message}`, true);
   }
 
-  function showGuideStep(step) {
-    state.guideStep = Math.max(0, Math.min(4, step));
-    document.querySelectorAll('[data-guide-step]').forEach(item => { item.hidden = Number(item.dataset.guideStep) !== state.guideStep; });
-    byId('guideProgress').textContent = `${state.guideStep + 1} / 5`;
-    byId('previousGuideStep').disabled = state.guideStep === 0;
-    byId('nextGuideStep').textContent = state.guideStep === 4 ? 'FINISH' : 'NEXT';
-  }
-
-  function closeGuide() {
-    byId('trainingGuide').close(); byId('openTrainingGuide').focus();
-  }
-
   function handleSetupInput(event) {
     const target = event.target;
     if (typeof target?.id === 'string' && (target.id === 'radarReturn' || /^radarReturn-\d+$/.test(target.id))) {
       target.dataset.radarReturnAuto = 'false';
     }
     configureFields();
+    saveSetup();
   }
 
   family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
+  byId('saveExercisePreset').addEventListener('click', savePreset);
+  byId('loadExercisePreset').addEventListener('click', loadPreset);
+  byId('exportExercisePreset').addEventListener('click', exportPreset);
+  byId('importExercisePreset').addEventListener('change', importPreset);
   byId('copyPin').addEventListener('click', () => navigator.clipboard?.writeText(state.session.pin));
   byId('openStudentDisplay').addEventListener('click', openStudentDisplay);
   byId('moveStudentDisplay').addEventListener('click', () => { void moveStudentDisplay(); });
@@ -1227,24 +1496,40 @@
   byId('advanceMinute').addEventListener('click', () => advanceBy(60));
   byId('liveSpeed').addEventListener('change', () => command({ type: 'set-speed', speedKt: number('liveSpeed') }, 'liveSpeed'));
   byId('historyDots').addEventListener('change', updateAll);
-  byId('instructorScope').addEventListener('pointermove', event => inspectScope(event));
-  byId('instructorScope').addEventListener('click', event => inspectScope(event, true));
+  byId('instructorScope').addEventListener('pointermove', scopePointerMove);
+  byId('instructorScope').addEventListener('pointerdown', scopePointerDown);
+  byId('instructorScope').addEventListener('pointerup', scopePointerEnd);
+  byId('instructorScope').addEventListener('pointercancel', scopePointerEnd);
+  byId('instructorScope').addEventListener('click', scopeClick);
+  byId('instructorScope').addEventListener('dblclick', scopeDoubleClick);
+  byId('instructorScope').addEventListener('contextmenu', scopeRightClick);
+  byId('instructorScope').addEventListener('auxclick', event => { if (event.button === 1) event.preventDefault(); });
+  byId('scopeRange').addEventListener('change', updateAll);
+  byId('truthTrailCount').addEventListener('change', updateAll);
+  byId('instructorDfReference').addEventListener('change', updateAll);
+  byId('resetScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; updateAll(); });
+  byId('quickTurnLeft').addEventListener('click', () => quickTurn('left'));
+  byId('quickTurnRight').addEventListener('click', () => quickTurn('right'));
+  byId('quickStopTurn').addEventListener('click', () => command({ type: 'stop-turn' }, 'quickStopTurn'));
+  byId('quickTransmit').addEventListener('click', scopeTransmit);
+  byId('quickHeadingLeft').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'left', headingDeg: number('quickHeading') }, 'quickHeadingLeft'));
+  byId('quickHeadingRight').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'right', headingDeg: number('quickHeading') }, 'quickHeadingRight'));
+  byId('moreAircraftControls').addEventListener('click', () => {
+    const drawer = byId('aircraftControlDrawer'); drawer.open = !drawer.open;
+    byId('moreAircraftControls').setAttribute('aria-expanded', String(drawer.open));
+    if (drawer.open) drawer.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  });
   byId('instructorScope').addEventListener('pointerleave', () => { state.inspectedAircraftId = null; if (state.simulation) updateInspection(); });
   document.addEventListener('keydown', handleShortcut);
-  byId('openTrainingGuide').addEventListener('click', () => { showGuideStep(0); byId('trainingGuide').showModal(); });
-  byId('closeTrainingGuide').addEventListener('click', closeGuide);
-  byId('skipTrainingGuide').addEventListener('click', closeGuide);
-  byId('previousGuideStep').addEventListener('click', () => showGuideStep(state.guideStep - 1));
-  byId('nextGuideStep').addEventListener('click', () => state.guideStep === 4 ? closeGuide() : showGuideStep(state.guideStep + 1));
   byId('reviewScrub').addEventListener('input', () => { state.reviewPlaying = false; state.reviewTime = number('reviewScrub'); drawReview(state.review.snapshot()); });
   byId('reviewPlay').addEventListener('click', () => {
     if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewTime = 0;
     state.reviewPlaying = !state.reviewPlaying; drawReview(state.review.snapshot());
   });
-  byId('newScenario').addEventListener('click', () => location.reload()); byId('restartExercise').addEventListener('click', () => location.reload());
+  byId('newScenario').addEventListener('click', retryScenario); byId('restartExercise').addEventListener('click', retryScenario);
   document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
-  window.addEventListener('beforeunload', () => state.session?.close());
+  window.addEventListener('pagehide', () => { saveSetup(); checkpoint(); state.session?.detach?.(); });
   setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
   setInterval(runtimeTick, 100);
-  configureFields(); requestAnimationFrame(frame);
+  configureFields(); refreshPresets(); void restoreAttempt(); requestAnimationFrame(frame);
 })();

@@ -19,27 +19,30 @@
   <script defer src="suite-command-reference.js"></script>
   <script defer src="suite-instructor.js"></script>
 </head>
-<body>
+<body class="instructor-page">
   <main class="shell shell--wide">
+    <details class="console-navigation" id="consoleNavigation" open><summary>QGH + SRA &amp; vectoring · Navigation &amp; help</summary>
     <header class="site-header">
-      <div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><button class="guide-open" id="openTrainingGuide" type="button">TRAINING GUIDE</button><a href="training-guide.html" target="_blank" rel="noopener">FULL BETA GUIDE ↗</a></div>
+      <div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><a href="training-guide.html" target="_blank" rel="noopener">FULL BETA GUIDE ↗</a></div>
       <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
     </header>
+    </details>
 
     <section class="setup-panel" id="setupPanel">
-      <div class="section-title"><span>SCENARIO</span><h1>Build the exercise</h1><p>Bearing and heading are independent. Training references use zero magnetic variation.</p></div>
+      <div class="section-title"><span>QGH + SRA &amp; VECTORING</span><h1>Build the exercise</h1><p>Choose a mode, set traffic and create a session.</p></div>
+      <div class="scenario-library"><label>Saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePreset" type="button">Save</button><button id="loadExercisePreset" type="button">Load</button><button id="exportExercisePreset" type="button">Export</button><label class="preset-import">Import<input id="importExercisePreset" type="file" accept="application/json,.json"></label><output id="presetStatus" aria-live="polite"></output><output id="recoveryStatus" aria-live="polite"></output></div>
       <form id="scenarioForm" class="setup-form">
         <label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label>
         <p id="connectionHelp" class="connection-help">Offline: same PC and browser profile. Recommended: two monitors in Extend mode, with a separate student window. Online: different PCs with internet on both.</p>
         <label>EXERCISE FAMILY<select id="exerciseFamily" name="family">
           <option value="qgh">QGH / DIRECTION FINDING</option><option value="surveillance">SURVEILLANCE VECTORING</option>
-          <option value="sra">SURVEILLANCE RADAR APPROACH</option><option value="par">PRECISION APPROACH RADAR</option>
+          <option value="sra">SRA · SURVEILLANCE RADAR APPROACH</option>
         </select></label>
         <label id="procedureField">QGH PROCEDURE<select id="procedureType" name="procedure"><option value="normal">NORMAL QGH</option><option value="us-compass">U/S COMPASS QGH</option></select></label>
         <label>AIRCRAFT COUNT · 1–24<input id="aircraftCount" name="aircraftCount" type="number" min="1" max="24" value="1" inputmode="numeric"></label>
         <label>RUNWAY ORIENTATION · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
         <label>FINAL APPROACH TRACK · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
-        <label id="scanPresetField" hidden>SCAN PRESET<select id="scanPreset"><option value="10">10 RPM · 6 SEC</option><option value="12" selected>12 RPM · 5 SEC</option><option value="15">15 RPM · 4 SEC</option></select></label>
+        <label id="scanPresetField" hidden>RADAR SCAN<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 SEC</option></select></label>
         <label id="radarProfileField" hidden>RADAR ENVIRONMENT<select id="radarProfile"><option value="primary">PRIMARY · + PLOTS</option><option value="correlated">SECONDARY · □ SSR PLOTS</option></select></label>
         <label id="parRefreshField" hidden>PAR TRAINING REFRESH<select id="parRefresh"><option value="1">1 HZ</option><option value="5">5 HZ</option></select></label>
         <label id="approachAircraftField" hidden>DESIGNATED APPROACH AIRCRAFT<select id="approachAircraft"><option value="AC1">101</option></select></label>
@@ -76,15 +79,15 @@
     </section>
 
     <section class="active-workspace" id="activeWorkspace" hidden>
-      <aside class="session-rail" aria-label="Session management">
+      <details class="session-drawer" id="sessionDrawer" open><summary>Session <span id="compactPin">—</span> · <span id="compactConnection">Waiting</span></summary><aside class="session-rail" aria-label="Session management">
         <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">COPY PIN</button><button id="openStudentDisplay" type="button">OPEN / FOCUS</button><button id="moveStudentDisplay" class="primary display-move-action" type="button">MOVE TO SECOND DISPLAY</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">A separate student window will open when the session is created.</output></div>
         <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Enter this PIN in the dedicated Student Display, then request admission.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>REJECT</button><button id="admitStudent" type="button" class="primary" hidden>ADMIT</button></div><button id="releaseStudent" type="button" title="Pause the exercise and release the current student seat for a replacement window">RELEASE STUDENT SEAT</button></div>
         <nav class="phase-list" aria-label="Exercise progress"><b class="active" data-phase="ready">1 · READY</b><b data-phase="running">2 · RUNNING</b><b data-phase="review">3 · REVIEW</b></nav>
         <button id="newScenario" type="button">← NEW SCENARIO</button>
-      </aside>
+      </aside></details>
 
       <section class="instructor-main">
-        <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor truth display</h1></div><div class="status-stack"><b id="exerciseState">READY</b><time id="instructorClock">00:00</time><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Speeds the training clock only; aircraft speed and turn radius remain unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></div></header>
+        <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor</h1></div><div class="status-stack"><b id="exerciseState">READY</b><time id="instructorClock">00:00</time><details class="clock-settings" id="clockSettings"><summary>Clock</summary><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Speeds the training clock only; aircraft speed and turn radius remain unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></details></div></header>
         <div class="instructor-console">
           <div class="console-center">
             <div class="console-toolbar" aria-label="Aircraft selection and exercise controls">
@@ -94,15 +97,20 @@
             </div>
             <div class="truth-layout">
               <div class="scope-card">
-                <div class="card-head"><div><span>AUTHORITATIVE AIRCRAFT PICTURE</span><b id="scopeLabel">CONTINUOUS TRUTH</b></div><label class="switch"><input id="historyDots" type="checkbox" checked><span>TRUTH TRAIL</span></label></div>
+                <div class="card-head"><div><span>INSTRUCTOR TRUTH</span><b id="scopeLabel">CONTINUOUS TRUTH</b></div><label>Range<select id="scopeRange"><option value="auto">Auto</option><option value="10">10 NM</option><option value="20">20 NM</option><option value="40">40 NM</option><option value="60">60 NM</option><option value="100">100 NM</option></select></label><button id="resetScopePan" type="button">Centre</button><label class="switch"><input id="historyDots" type="checkbox" checked><span>Trail</span></label><label>Trail<select id="truthTrailCount"><option value="5">5 dots</option><option value="8" selected>8 dots</option><option value="12">12 dots</option></select></label></div>
                 <canvas id="instructorScope" width="900" height="700" aria-label="Instructor aircraft truth display"></canvas>
-                <p id="scopeInspection" class="scope-inspection" aria-live="polite">Point to an aircraft to inspect; click or tap to select.</p>
+                <p id="scopeInspection" class="scope-inspection" aria-live="polite">Drag to pan · click aircraft to transmit · double left/right click to turn · middle click to stop.</p>
                 <div class="scope-legend"><span><i class="legend-truth"></i>TRUTH</span><span><i class="legend-observed"></i>STUDENT OBSERVATION</span><span><i class="legend-runway"></i>RUNWAY / FINAL</span></div>
               </div>
             </div>
+            <div class="instrument-shelf">
+              <section class="quick-aircraft-controls" aria-label="Selected aircraft quick controls"><output id="quickAircraftStatus">Select aircraft</output><div class="quick-turn-row"><button id="quickTurnLeft" type="button">← Left now</button><button id="quickStopTurn" type="button">Stop turn</button><button id="quickTurnRight" type="button">Right now →</button><button id="moreAircraftControls" type="button" aria-controls="aircraftControlDrawer" aria-expanded="false">More controls</button></div><div class="quick-heading-row"><label>Heading °M<input id="quickHeading" type="number" min="0" max="359" inputmode="numeric" placeholder="000–359"></label><button id="quickHeadingLeft" type="button">↶ Turn left</button><button id="quickHeadingRight" type="button">Turn right ↷</button></div></section>
+              <section class="instructor-homing" id="instructorHoming" aria-label="Homing and direction finding"><label>D/F<select id="instructorDfReference"><option value="qdm">QDM</option><option value="qte">QTE</option></select></label><strong id="instructorDfBearing">—</strong><small id="instructorDfPhase">No transmission</small></section>
+              <section class="instructor-pilot-channel" aria-label="Pilot transmission"><span>PILOT TRANSMISSION</span><p id="instructorPilotCaption" aria-live="polite">Awaiting a transmission.</p><button id="quickTransmit" type="button">Transmit</button></section>
+            </div>
           </div>
 
-          <aside class="console-control-rail" aria-label="Selected aircraft controls">
+          <details id="aircraftControlDrawer" class="aircraft-control-drawer"><summary>Aircraft controls</summary><aside class="console-control-rail" aria-label="Selected aircraft controls">
             <section class="command-deck" aria-label="Instructor aircraft controls">
           <div class="deck-head"><div><span>CONTROL INPUT</span><strong id="commandStatus">Awaiting instructor action</strong></div></div>
           <div class="keyboard-command-bar" aria-label="Deterministic keyboard command entry">
@@ -112,7 +120,7 @@
             <output id="keyboardCommandStatus" aria-live="polite">TYPE HELP FOR THE ACCEPTED COMMANDS</output>
             <details class="keyboard-shortcuts" id="keyboardShortcuts"><summary>KEYBOARD SHORTCUTS &amp; COMMANDS</summary>
               <div class="shortcut-legend"><span><kbd>[</kbd><kbd>]</kbd> Previous / next aircraft</span><span><kbd>Space</kbd> Start · pause · resume</span><span><kbd>A</kbd><kbd>D</kbd> Left / right turn</span><span><kbd>X</kbd> Stop U/S turn</span><span><kbd>T</kbd> D/F transmit</span><span><kbd>H</kbd> Heading report</span><span><kbd>P</kbd> Position report</span><span><kbd>C</kbd> Continue approach</span><span><kbd>V</kbd> Runway visual</span><span><kbd>M</kbd> Missed approach</span><span><kbd>G</kbd> Advance one minute</span></div>
-              <p><b>Command bar:</b> <code>L 230</code> or <code>TURN LEFT HEADING 230</code>, <code>SPD 240</code>, <code>ALT 7000</code>, <code>CLIMB 7000</code>, <code>DESCEND 5000</code>, <code>DF</code>, <code>REPORT</code>, <code>ADVANCE</code>, <code>CONTINUE</code>, <code>VISUAL</code>, <code>MISSED</code>, <code>NEXT</code>, <code>PREV</code>, <code>START</code>, <code>PAUSE</code>, <code>RESUME</code>, and <code>TRANSFER PAR</code>. U/S Compass accepts <code>LEFT NOW</code>, <code>RIGHT NOW</code>, and <code>STOP</code>.</p>
+              <p><b>Command bar:</b> <code>L 230</code> or <code>TURN LEFT HEADING 230</code>, <code>SPD 240</code>, <code>ALT 7000</code>, <code>CLIMB 7000</code>, <code>DESCEND 5000</code>, <code>DF</code>, <code>REPORT</code>, <code>ADVANCE</code>, <code>CONTINUE</code>, <code>VISUAL</code>, <code>MISSED</code>, <code>NEXT</code>, <code>PREV</code>, <code>START</code>, <code>PAUSE</code>, <code>RESUME</code>. U/S Compass accepts <code>LEFT NOW</code>, <code>RIGHT NOW</code>, and <code>STOP</code>.</p>
               <p>Shortcuts never act while a text, number, select, or command-bar field is focused. Termination remains a deliberate button action.</p>
             </details>
           </div>
@@ -137,10 +145,10 @@
           </div>
             </section>
             <div class="telemetry-card"><span>AIRCRAFT</span><strong id="truthCallsign">FALCON 11</strong><dl><div><dt>HEADING</dt><dd id="truthHeading">225°</dd></div><div><dt>QTE</dt><dd id="truthBearing">065°</dd></div><div><dt>RANGE</dt><dd id="truthRange">25.0 NM</dd></div><div><dt>ALTITUDE</dt><dd id="truthAltitude">12,000 FT</dd></div><div><dt>SPEED</dt><dd id="truthSpeed">240 KT</dd></div><div><dt>TURN</dt><dd id="truthTurn">LEVEL</dd></div><div><dt>SQUAWK</dt><dd id="truthSquawk">—</dd></div><div><dt>SSR</dt><dd id="truthSurveillance">—</dd></div></dl><p id="sensorPreview">STUDENT SENSOR READY</p></div>
-          </aside>
+          </aside></details>
         </div>
 
-        <section class="event-card"><div class="card-head"><div><span>EVENT HISTORY</span><b>AUTHORITATIVE TIME</b></div></div><ol id="eventLog"><li><time>00:00</time><span>Scenario configured. Waiting for controller position.</span></li></ol></section>
+        <details class="event-drawer" id="eventDrawer"><summary>Event history</summary><section class="event-card"><ol id="eventLog"><li><time>00:00</time><span>Scenario configured. Waiting for controller position.</span></li></ol></section></details>
       </section>
     </section>
 
@@ -149,17 +157,7 @@
       <div class="review-grid"><div class="scope-card"><canvas id="reviewScope" width="1000" height="720" aria-label="Exercise review"></canvas><div class="review-controls"><label><input type="checkbox" data-review-layer="truth" checked> TRUTH</label><label><input type="checkbox" data-review-layer="observations" checked> STUDENT OBSERVATIONS</label><label><input type="checkbox" data-review-layer="events" checked> COMMANDS</label></div><div class="review-playback"><button id="reviewPlay" type="button">PLAY</button><label>REPLAY SPEED<select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0"><output id="reviewTime">00:00</output></div></div><div class="review-summary"><span>EXERCISE SUMMARY</span><strong id="reviewMode">QGH</strong><dl><div><dt>DURATION</dt><dd id="reviewDuration">00:00</dd></div><div><dt>COMMANDS</dt><dd id="reviewCommandCount">0</dd></div><div><dt>OBSERVATIONS</dt><dd id="reviewObservationCount">0</dd></div><div><dt>TRACK END</dt><dd id="reviewEndState">—</dd></div></dl><ol id="reviewEvents"></ol></div></div>
     </section>
     <p class="equipment-note">Each sensor view is an inspired training representation of publicly described functions, not an operational equipment replica.</p>
-    <dialog class="training-guide" id="trainingGuide" aria-labelledby="guideTitle">
-      <div class="guide-card">
-        <header><div><span>GUIDED FAMILIARISATION</span><b id="guideProgress">1 / 5</b></div><button id="closeTrainingGuide" type="button" aria-label="Close training guide">×</button></header>
-        <div class="guide-step" data-guide-step="0"><small>STEP 01 · ROLES</small><h2 id="guideTitle">Instructor truth. Controller observation.</h2><p>You configure and control every aircraft. The controller position receives only the selected sensor picture—never hidden coordinates, heading, truth trail or instructor controls.</p><div class="guide-visual guide-visual--split"><b>INSTRUCTOR<br><span>CONTINUOUS TRUTH</span></b><i>→</i><b>CONTROLLER<br><span>SENSOR-LIMITED</span></b></div></div>
-        <div class="guide-step" data-guide-step="1" hidden><small>STEP 02 · FLEET</small><h2>Build and select 1–24 aircraft</h2><p>Edit each aircraft’s callsign, type, QTE, range, heading, altitude, speed, turn rate and vertical rate. Select a callsign tab or aircraft symbol before applying a command. PAR keeps tracking the designated approach aircraft when you select another aircraft to control.</p><div class="guide-keys"><kbd>[</kbd><span>Previous aircraft</span><kbd>]</kbd><span>Next aircraft</span></div></div>
-        <div class="guide-step" data-guide-step="2" hidden><small>STEP 03 · COMMANDS</small><h2>Fast keyboard control</h2><p>Shortcuts work only when no text, number, select, or command-bar field is active. They always apply to the selected aircraft. Buttons remain fully usable, and termination remains a deliberate button action.</p><div class="guide-keys"><kbd>[</kbd><span>Previous aircraft</span><kbd>]</kbd><span>Next aircraft</span><kbd>A</kbd><span>Left turn / left now in U/S</span><kbd>D</kbd><span>Right turn / right now in U/S</span><kbd>X</kbd><span>Stop U/S turn</span><kbd>T</kbd><span>Transmit D/F in QGH</span><kbd>H</kbd><span>Report heading</span><kbd>P</kbd><span>Report position</span><kbd>C</kbd><span>Continue approach</span><kbd>V</kbd><span>Report runway visual</span><kbd>M</kbd><span>Missed approach climb</span><kbd>G</kbd><span>Advance one minute</span><kbd>Space</kbd><span>Start / pause / resume</span></div><p>Use the command bar for exact typed aliases: <code>L 230</code> or <code>TURN LEFT HEADING 230</code>, <code>SPD 240</code>, <code>ALT 7000</code>, <code>CLIMB 7000</code>, <code>DESCEND 5000</code>, <code>DF</code>, <code>REPORT</code>, <code>ADVANCE</code>, <code>CONTINUE</code>, <code>VISUAL</code>, <code>MISSED</code>, <code>NEXT</code>, <code>PREV</code>, <code>START</code>, <code>PAUSE</code>, <code>RESUME</code>, or <code>TRANSFER PAR</code>. U/S Compass accepts only <code>LEFT NOW</code>, <code>RIGHT NOW</code>, and <code>STOP</code> for turns.</p></div>
-        <div class="guide-step" data-guide-step="3" hidden><small>STEP 04 · SENSOR FLOW</small><h2>Use the right picture</h2><p>QGH keeps its existing exercise flow and 5× training-clock default. Surveillance, SRA and PAR start at real-time 1×; faster speeds remain optional. D/F stays live for the pilot reply and freezes for two real seconds afterwards, regardless of flight speed. Surveillance and SRA plot on beam crossing. PAR samples its designated aircraft. Set speed and command descent as required; the aircraft does not automatically follow the displayed glidepath.</p><p>If the browser suspends processing for more than two seconds, the exercise pauses instead of skipping flight time. Resume deliberately. Refreshing the same student window restores its seat; audio restarts muted. Use Reconnect for a lost link, or Release Student Seat to admit a replacement window.</p><div class="guide-mode-row"><span>QGH<br><b>QDM / QTE</b></span><span>SRA<br><b>DISCRETE PLOTS</b></span><span>PAR<br><b>AZ / ELEVATION</b></span></div></div>
-        <div class="guide-step" data-guide-step="4" hidden><small>STEP 05 · CONNECTION & SCREENS</small><h2>Open the student display, admit, control, review</h2><p>Choose This device for offline operation on one PC in the same browser profile; choose Online room for different PCs with internet on both. For the best offline setup press Windows + P → Extend, then put the student in a separate window on screen 2. Do not use Duplicate. Creating a This-device session opens the Student Display. When a second monitor is available, select Move to Second Display and allow window placement when asked. If the browser cannot place windows, move it manually. Enter the PIN, admit the student, wait for Ready, then start. Termination freezes the exercise and aligns truth, observations, commands and replies for debrief.</p><div class="guide-visual"><b>OPEN DISPLAY</b><i>→</i><b>PIN</b><i>→</i><b>ADMIT</b><i>→</i><b>READY</b><i>→</i><b>RUN</b><i>→</i><b>REVIEW</b></div></div>
-        <footer><button id="skipTrainingGuide" type="button">SKIP GUIDE</button><div><button id="previousGuideStep" type="button" disabled>BACK</button><button id="nextGuideStep" class="primary" type="button">NEXT</button></div></footer>
-      </div>
-    </dialog>
+
   </main>
   <script defer src="pwa-register.js"></script>
 </body>

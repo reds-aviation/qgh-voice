@@ -521,27 +521,37 @@
 
   function createInstructorSession(options = {}) {
     const now = options.now || Date.now;
-    const createdAt = now();
+    const recovery = options.recovery?.version === 1 ? options.recovery : null;
+    const createdAt = Number.isFinite(recovery?.createdAt) ? recovery.createdAt : now();
     const cryptoSource = secureSource(options.crypto);
     const pin = options.pin || generatePin(cryptoSource);
     if (!/^\d{6}$/.test(pin)) throw new Error('PIN must contain six digits.');
     const sessionId = options.sessionId || generateHex(16, cryptoSource);
     const senderId = options.senderId || `host_${generateHex(8, cryptoSource)}`;
     const channelName = options.channelName || `${CHANNEL_PREFIX}${sessionId}`;
-    let expiresAt = createdAt + PIN_TTL_MS;
+    let expiresAt = recovery?.expiresAt || createdAt + PIN_TTL_MS;
     let publicMetadata = sanitizePublicMetadata(options.publicMetadata || { mode: 'qgh' });
     const transport = options.transport || transportFrom(options.transportFactory, channelName);
     const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
-    let state = 'waiting';
-    let revision = 0;
-    let simulationTime = 0;
-    let admitted = null;
+    let admitted = recovery?.admitted && safeId(recovery.admitted.clientId)
+      && /^[a-f0-9]{32}$/i.test(recovery.admitted.seatToken || '') ? jsonClone(recovery.admitted) : null;
+    if (admitted) { admitted.disconnected = true; admitted.lastSeenAt = now(); admitted.audioMode = 'captions'; }
+    let state = admitted ? admitted.ready ? 'paused' : 'admitted' : 'waiting';
+    let revision = Number.isInteger(recovery?.revision) ? Math.max(0, recovery.revision) : 0;
+    let simulationTime = Number.isFinite(recovery?.simulationTime) ? Math.max(0, recovery.simulationTime) : 0;
     let waiting = new Map();
     let endedReason = null;
     let latestObservation = null;
     let unsubscribe;
     const inboundRevision = new Map();
-    writeDiscovery(options.storage, { pin, sessionId, channelName, createdAt, expiresAt });
+    writeDiscovery(options.storage, { pin, sessionId, channelName, createdAt, expiresAt: admitted ? Number.MAX_SAFE_INTEGER : expiresAt });
+
+    // Private host recovery is stored only in the instructor tab. It is never
+    // placed in discovery, a student payload or an online relay message.
+    function recoverySnapshot() {
+      return deepFreeze({ version: 1, sessionId, pin, channelName, senderId, createdAt, expiresAt,
+        revision, simulationTime, admitted: jsonClone(admitted) });
+    }
 
     function snapshot() {
       return deepFreeze({ sessionId, pin, channelName, createdAt, expiresAt, state, simulationTime,
@@ -664,7 +674,7 @@
 
     function start(time = simulationTime) { return admitted?.ready ? transition('running', ['ready'], time) : false; }
     function pause(time = simulationTime) { return transition('paused', ['running'], time); }
-    function resume(time = simulationTime) { return transition('running', ['paused'], time); }
+    function resume(time = simulationTime) { return admitted?.ready && !admitted.disconnected ? transition('running', ['paused'], time) : false; }
 
     function publishObservation(observation, time = simulationTime) {
       if (!admitted || !['running', 'paused'].includes(state)) return false;
@@ -734,6 +744,12 @@
       return snapshot();
     }
 
+    function detach() {
+      if (unsubscribe) unsubscribe();
+      transport.detach?.();
+      if (!transport.detach) transport.close?.();
+    }
+
     function close() {
       if (!['terminated', 'expired'].includes(state)) end('host-left', 'terminated');
       if (unsubscribe) unsubscribe();
@@ -752,7 +768,7 @@
 
     unsubscribe = transport.subscribe(receive);
     return Object.freeze({ pin, sessionId, channelName, senderId, admit, reject, start, pause, resume,
-      publishObservation, updatePublicMetadata, publishCaption, heartbeat, terminate, expire, tick, receive, close, snapshot, releaseStudent });
+      publishObservation, updatePublicMetadata, publishCaption, heartbeat, terminate, expire, tick, receive, close, detach, snapshot, recoverySnapshot, releaseStudent });
   }
 
   function createStudentSession(options = {}) {

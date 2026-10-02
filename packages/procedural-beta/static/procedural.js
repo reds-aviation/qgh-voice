@@ -2,7 +2,9 @@ import { createMapWorkshop } from './map-workshop.js';
 import { alignmentBriefing } from './chart-calibration.js';
 import { createAircraftGestures, nearestAircraft } from './scope-interaction.js';
 import { createRadarSweep } from './radar-sweep.js';
-import { recordTrail, trailDots } from './scope-history.js';
+import { recordTrail, trailDots, trailSpacing } from './scope-history.js';
+import { createTrafficReview } from './traffic-review.js';
+import { createStudentPlotting } from './student-plotting.js';
 import { createTrafficSetup } from './traffic-setup.js';
 import { createChartWorkshop, drawAreas, routeWindowOpen } from './chart-workshop.js';
 import { visibleSegment, reserveLabel, fitNavigation, approachReference } from './scope-navigation.js';
@@ -51,7 +53,27 @@ function syncEnvironmentInputs() {
 }
 let lastElapsed = -1, trailHistory = new Map(), drafts = new Map(), stripRevision = 0;
 let pan = { x: 0, y: 0 }, ruler = [], pointer = null;
-const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 12 };
+const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, trailCount: 8, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 15 };
+let linkedCallId = '', lastRunning = false;
+const trafficReview = createTrafficReview($('traffic-review'));
+function setWorkspaceOptions(open) {
+    document.body.classList.toggle('options-collapsed', !open);
+    $('workspace-options-toggle').setAttribute('aria-expanded', String(open));
+    text('workspace-options-toggle', open ? 'Options ▴' : 'Options ▾');
+}
+$('workspace-options-toggle').onclick = () => setWorkspaceOptions(document.body.classList.contains('options-collapsed'));
+function renderLinkedCall() {
+    const call = view?.calls?.find(c => c.id === linkedCallId && c.status === 'pending' && c.aircraftId === selected);
+    if (!call) linkedCallId = '';
+    $('linked-call-review').hidden = !call;
+    text('linked-call-caption', call ? `Respond to ${aircraftName(call.aircraftId)}` : '');
+    text('linked-call-text', call?.text || '');
+    text('apply-clearance', call ? 'Apply & acknowledge call' : 'Apply & transmit readback');
+}
+$('unlink-call').onclick = () => { linkedCallId = ''; renderLinkedCall(); };
+// Keep pending calls beside the aircraft instruction form, within immediate reach.
+const callsHeading = $('calls').previousElementSibling;
+$('pilot-callsign').after(callsHeading, $('calls'));
 const hiddenAreas = new Set(), hiddenRoutes = new Set();
 let conditionAircraft = '';
 const conditionDirty = new Set();
@@ -177,24 +199,29 @@ function loadStrip() {
         field('strip-form', k).value = s[k] || '';
     text('strip-status', drafts.has(selected) ? 'Unsaved draft' : 'Saved working record');
 }
-function choose(id) { storeDraftIfDirty(); if (selected !== id) { gestures.reset(); $('quick-heading').value = ''; } selected = id; loadStrip(); renderSelection(); renderFleet(); draw(); }
+function choose(id) { storeDraftIfDirty(); if (selected !== id) { gestures.reset(); $('quick-heading').value = ''; linkedCallId = ''; } selected = id; loadStrip(); renderSelection(); renderFleet(); draw(); }
 function storeDraftIfDirty() {
     if (selected && drafts.has(selected))
         storeDraft();
 }
 function tab(name, open = true) {
+    if (session?.role !== 'instructor' && ['pilot','build','debrief'].includes(name)) return;
     document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     document.querySelectorAll('.tab-content').forEach(p => p.hidden = p.id !== `tab-${name}`);
-    text('drawer-title', { strip: 'Flight strips', pilot: 'Aircraft controls', build: 'Airspace workshop', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope' }[name] || name);
+    text('drawer-title', { strip: 'Controller calls', pilot: 'Aircraft controls', build: 'Prepare airspace', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope' }[name] || name);
     $('work-panel').hidden = !open;
     document.body.classList.toggle('drawer-open', open);
+    document.body.classList.toggle('review-open', open && name === 'debrief');
+    if (open && name === 'debrief') trafficReview.open(view);
+    else trafficReview.close();
     if (open) {
         drawerReturn = document.activeElement;
         $('drawer-close').focus({ preventScroll: true });
     }
 }
-function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open'); drawerReturn?.focus(); }
+function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open', 'review-open'); trafficReview.close(); drawerReturn?.focus(); }
 function setStage(next) {
+    if (next !== 'desk') resetScopePointer();
     stage = next;
     for (const id of ['entry', 'setup', 'waiting', 'desk'])
         $(id).hidden = id !== next;
@@ -203,6 +230,8 @@ function setStage(next) {
     document.body.classList.toggle('exercise-running', next === 'desk' && !!view?.running);
     document.body.classList.toggle('instructor-desk', session?.role === 'instructor');
     document.body.classList.toggle('student-desk', session?.role === 'student');
+    studentPlotting.setEnabled(next === 'desk' && session?.role === 'student');
+    studentPlotPanel.hidden = next !== 'desk' || session?.role !== 'student';
     arrangeControls();
     if (next !== 'desk')
         document.body.classList.remove('drawer-open');
@@ -210,6 +239,7 @@ function setStage(next) {
     $('return-desk').hidden = !session || next !== 'entry';
 }
 function leave() {
+    trafficReview.clear();
     gestures.reset();
     ++generation;
     commandBusy = false;
@@ -222,6 +252,8 @@ function leave() {
     trailHistory.clear();
     drafts.clear();
     lastElapsed = -1;
+    lastRunning = false;
+    linkedCallId = '';
     clearAudio();
     mapGeneration++;
     mapLoading = '';
@@ -242,6 +274,7 @@ function leave() {
     draw();
 }
 function enter(s, startPolling = true) {
+    resetScopePointer();
     session = s;
     generation++;
     layerSaving = false;
@@ -269,7 +302,7 @@ function enter(s, startPolling = true) {
     text('edge-pin', instructor ? '······' : '');
     text('role', instructor ? 'INSTRUCTOR / PSEUDO-PILOT' : 'STUDENT / PROCEDURAL CONTROLLER');
     text('scope-title', instructor ? 'INSTRUCTOR TRUTH · CONTINUOUS TRAFFIC' : 'PROCEDURAL PICTURE · D/F ONLY');
-    text('scope-caption', instructor ? 'Click aircraft: transmit · double left/right click: turn · drag: pan · Ctrl + scroll: zoom' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
+    text('scope-caption', instructor ? 'Click: transmit · double left/right: turn · middle: stop · drag: pan · Ctrl + scroll: zoom' : 'Drag or scroll to pan · Ctrl + scroll to zoom · transmission bearings only');
     $('clock-controls').hidden = !instructor;
     $('scope-manual-dock').hidden = !instructor;
     $('scope-flight-controls').hidden = !instructor;
@@ -278,6 +311,8 @@ function enter(s, startPolling = true) {
         document.querySelectorAll(`[data-tab="${name}"]`).forEach(el => el.hidden = !instructor);
     }
     $('traffic-setup').hidden = !instructor;
+    $('scenario-library-open').hidden = !instructor;
+    $('incoming-calls-open').hidden = !instructor;
     $('instructor-room').hidden = !instructor;
     document.querySelectorAll('[data-instructor-tool]').forEach(el => el.hidden = !instructor);
     $('criterion-form').hidden = !instructor;
@@ -421,6 +456,8 @@ function renderRoom() {
     if (session.role === 'instructor') {
         const students = room.students || [];
         const waiting = students.filter((s) => s.status === 'waiting').length;
+        const ready = students.filter(s => s.status === 'ready').length;
+        text('session-link-status', `${session.cloud ? 'ONLINE · different devices' : 'THIS DEVICE · same browser'} → ${waiting ? `${waiting} waiting for admission` : ready ? `${ready} controller ready` : students.length ? 'Waiting for controller Ready' : 'Share PIN → Admit → Ready → Run'}`);
         text('session-pin', room.pin);
         text('edge-pin', `${room.pin}${waiting ? ` · ${waiting} waiting` : ''}`);
         changeList('room-students', students, () => students.length ? students.map((s) => {
@@ -434,6 +471,7 @@ function renderRoom() {
     }
     else {
         text('join-title', room.status === 'admitted' ? 'You are admitted' : room.status === 'rejected' ? 'This join request has ended' : 'Waiting for the instructor');
+        text('session-link-status', `${session.cloud ? 'Online room' : 'This device'} · ${room.status || 'connecting'}`);
         text('join-status', room.status === 'admitted' ? 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
         $('student-ready').hidden = room.status !== 'admitted';
         text('student-room-status', `${room.name || session.name || 'Controller'} · ${room.status}`);
@@ -657,7 +695,8 @@ function renderSelection() {
     else
         text('truth-readout', '');
     for (const id of ['strip-form', 'call-form', 'clearance-form', 'transmit-form'])
-        $(id).querySelectorAll('button').forEach(b => b.disabled = !row);
+        $(id).querySelectorAll('button').forEach(b => b.disabled = !row || !!view.terminated || commandBusy);
+    clearanceFields();
 }
 function render() {
     if (!view)
@@ -674,6 +713,9 @@ function render() {
             delete f.dataset.exerciseId;
         }
         clearanceFields();
+        updateTransmitForm();
+        commandDrafts.clear();
+        draftCommandKey = 'heading:qnh';
         trailHistory.clear();
         lastElapsed = -1;
         selected = '';
@@ -695,6 +737,9 @@ function render() {
     text('clock-state', v.terminated ? 'ENDED' : v.running ? 'RUNNING' : 'PAUSED');
     $('clock-state').classList.toggle('live', v.running);
     document.body.classList.toggle('exercise-running', v.running);
+    if (v.running && !lastRunning) setWorkspaceOptions(false);
+    lastRunning = v.running;
+    if (session?.role === 'instructor') trafficReview.record(v);
     text('mode-label', 'PROCEDURAL STUDIO');
     renderApproachReference();
     text('fleet-count', `${v.roster.length} / 24`);
@@ -733,9 +778,13 @@ function render() {
     changeList('calls', calls, () => calls.length ? calls.map(c => {
         const e = record(`${aircraftName(c.aircraftId)} · ${c.status}`, c.text, clock(c.elapsed));
         if (c.status === 'pending')
-            e.append(actionButton('Select & handle', async () => { choose(c.aircraftId); tab('pilot'); }), actionButton('Mark handled', () => command('call-handled', { id: c.id })));
+            e.append(actionButton('Prepare instruction', async () => { choose(c.aircraftId); linkedCallId = c.id; tab('pilot'); document.querySelector('.pilot-detail').open = true; renderLinkedCall(); clearanceFields(); }), actionButton('Acknowledge only', () => command('call-handled', { id: c.id })));
         return e;
     }) : [empty('No controller calls awaiting the pilot.')]);
+    const pendingCalls = calls.filter(c => c.status === 'pending');
+    text('incoming-count', pendingCalls.length ? `${pendingCalls.length} incoming` : 'Calls');
+    $('incoming-calls-open').classList.toggle('has-calls', pendingCalls.length > 0);
+    renderLinkedCall();
     changeList('route-list', [v.routes, v.fixes, v.routes.map(r => routeWindowOpen(r, v.elapsed))], () => v.routes.map(r => {
         const e = record(r.name, `${r.kind.toUpperCase()} · ${r.fixIds.map((id) => v.fixes.find(f => f.id === id)?.name || id).join(' → ')}`, `${routeWindowOpen(r, v.elapsed) ? 'WINDOW OPEN' : 'UNAVAILABLE'} · ${r.kind === 'conditional' ? `elapsed ${r.availableFrom}–${r.availableUntil || 'unlimited'} sec · ` : ''}${r.minAltitudeFt}–${r.maxAltitudeFt} ft`);
         e.append(actionButton(r.active ? 'Close' : 'Open', () => command('route-upsert', { ...r, active: !r.active })), actionButton('Edit', async () => {
@@ -886,6 +935,20 @@ async function updateMap(id) {
 }
 const canvas = $('scope'), ctx = canvas.getContext('2d');
 function geometry() { const width = canvas.clientWidth || 600, height = canvas.clientHeight || 500; return { width, height, scale: Math.min(width, height) / (range * 2.3), cx: width / 2 + pan.x, cy: height / 2 + pan.y }; }
+const studentPlotPanel = make('details', undefined, 'student-estimate-panel');
+studentPlotPanel.id = 'student-estimate-panel'; studentPlotPanel.hidden = true;
+studentPlotPanel.append(make('summary', 'Estimate aircraft position · dots & callsigns'));
+const studentPlotting = createStudentPlotting({ canvas, screenToPoint: position,
+    projectPoint: (x,y) => { const g=geometry(); return [g.cx+x*g.scale,g.cy-y*g.scale]; }, requestDraw: draw,
+    sessionKey: () => {
+        if (!view || session?.role !== 'student') return '';
+        let id = sessionStorage.getItem('ats-student-plot-identity');
+        if (!id) { id=crypto.randomUUID(); sessionStorage.setItem('ats-student-plot-identity', id); }
+        return `${view.exerciseId}:${session.cloud?.clientId || id}:${session.name || ''}`;
+    }
+});
+studentPlotting.mount(studentPlotPanel); studentPlotting.setEnabled(false);
+$('scope-wrap').append(studentPlotPanel);
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 function draw() {
     sweep.update();
@@ -1044,13 +1107,13 @@ function draw() {
                 continue;
             const [x, y] = p(a.xNm, a.yNm), active = a.id === selected, color = active ? '#ffd66e' : '#7ee8fa';
             if (display.trails) {
-                const dots = trailDots(trailHistory.get(a.id) || [], { x: a.xNm, y: a.yNm, t: view.elapsed }, Math.max(.2, 7 / g.scale));
+                const dots = trailDots(trailHistory.get(a.id) || [], { x: a.xNm, y: a.yNm, t: view.elapsed }, trailSpacing(g.scale, a.speedKt), display.trailCount);
                 dots.forEach((dot, i) => {
                     const [tx, ty] = p(dot.x, dot.y);
                     ctx.fillStyle = color;
-                    ctx.globalAlpha = .8 - i * .12;
+                    ctx.globalAlpha = Math.max(.25, .9 - i * .045);
                     ctx.beginPath();
-                    ctx.arc(tx, ty, 2, 0, Math.PI * 2);
+                    ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
                     ctx.fill();
                 });
                 ctx.globalAlpha = 1;
@@ -1101,13 +1164,15 @@ function draw() {
     }
     if (!df?.valid)
         text('station-radial', 'No transmission');
+    chartWorkshop.draw?.(ctx, p);
+    if (session?.role === 'student') studentPlotting.draw(ctx);
     drawHoming(df);
 }
 function approachPoints() {
     if (!view)
         return [];
     const heading = view.environment.runwayHeadingDeg * Math.PI / 180, halfRunway = view.environment.runwayLengthNm / 2;
-    return Array.from({ length: 11 }, (_, nm) => ({ nm, xNm: -Math.sin(heading) * (halfRunway + nm), yNm: -Math.cos(heading) * (halfRunway + nm) }));
+    return Array.from({ length: 16 }, (_, i) => i <= 10 ? i / 2 : i - 5).map(nm => ({ nm, xNm: -Math.sin(heading) * (halfRunway + nm), yNm: -Math.cos(heading) * (halfRunway + nm) }));
 }
 function drawApproachReference(p, scale, occupied) {
     if (!view)
@@ -1130,7 +1195,7 @@ function drawApproachReference(p, scale, occupied) {
         ctx.moveTo(x - Math.cos(heading) * 5, y - Math.sin(heading) * 5);
         ctx.lineTo(x + Math.cos(heading) * 5, y + Math.sin(heading) * 5);
         ctx.stroke();
-        if (point.nm && scale < 25 && point.nm % 2)
+        if (point.nm % 1 && scale < 30 || point.nm && scale < 25 && point.nm % 2)
             continue;
         const reference = approachReference(point.nm, env.aerodromeElevationFt, env.thresholdCrossingHeightFt || 0);
         const caption = point.nm ? `${point.nm} NM / ${Math.round(reference.altitudeFt / 10) * 10} FT` : 'THR';
@@ -1154,8 +1219,8 @@ function renderApproachReference() {
         return;
     signatures.set('approach-reference', signature);
     text('approach-reference-settings', `QNH ${env.qnhHpa} hPa · elevation ${env.aerodromeElevationFt} FT · threshold crossing height ${env.thresholdCrossingHeightFt || 0} FT\nTL ${tl} · TA ${ta} · inbound ${pad(env.runwayHeadingDeg)}°T`);
-    $('approach-reference-rows').replaceChildren(...Array.from({ length: 11 }, (_, i) => {
-        const nm = 10 - i, values = approachReference(nm, env.aerodromeElevationFt, env.thresholdCrossingHeightFt || 0), row = document.createElement('tr');
+    $('approach-reference-rows').replaceChildren(...approachPoints().reverse().map(({nm}) => {
+        const values = approachReference(nm, env.aerodromeElevationFt, env.thresholdCrossingHeightFt || 0), row = document.createElement('tr');
         for (const value of [nm === 0 ? 'THR' : `${nm} NM`, `${Math.round(values.altitudeFt / 10) * 10}`, `${Math.round(values.heightFt / 10) * 10}`])
             row.append(make('td', value));
         return row;
@@ -1278,12 +1343,13 @@ toolsBody.append(fitTraffic, rulerButton);
 const sweepRow = make('label', undefined, 'check');
 const sweepToggle = document.createElement('input'); sweepToggle.type = 'checkbox'; sweepToggle.checked = display.sweep;
 sweepToggle.id = 'sweep-enabled'; sweepRow.append(sweepToggle, document.createTextNode('360° radar sweep'));
-const rpmLabel = make('label', 'Sweep speed · RPM');
-const rpmInput = document.createElement('input'); rpmInput.id = 'sweep-rpm'; rpmInput.type = 'number'; rpmInput.min = '1'; rpmInput.max = '60'; rpmInput.step = '1'; rpmInput.value = '12';
-rpmLabel.append(rpmInput);
 sweepToggle.onchange = () => { display.sweep = sweepToggle.checked; sweep.update(); };
-rpmInput.onchange = () => { if (rpmInput.value && rpmInput.reportValidity()) { display.sweepRpm = Number(rpmInput.value); sweep.update(); } };
-toolsBody.append(sweepRow, rpmLabel, make('small', 'One revolution = 60 ÷ RPM seconds. Display sweep only.'));
+const trailLabel = make('label', 'History dots');
+const trailCount = document.createElement('select'); trailCount.id = 'trail-count';
+for (const n of [5,8,12,16]) trailCount.append(new Option(`${n} dots`, String(n)));
+trailCount.value = String(display.trailCount); trailLabel.append(trailCount);
+trailCount.onchange = () => { display.trailCount = Number(trailCount.value); draw(); };
+toolsBody.append(sweepRow, make('small', '15 RPM · one scan every 4 seconds.'), trailLabel);
 toolsPanel.append(toolsBody);
 $('layer-controls').append(toolsPanel);
 for (const group of ['route', 'area']) {
@@ -1304,6 +1370,13 @@ function syncRange() {
 }
 function position(e) { const b = canvas.getBoundingClientRect(), g = geometry(); return { x: (e.clientX - b.left - g.cx) / g.scale, y: -(e.clientY - b.top - g.cy) / g.scale }; }
 const gestures = createAircraftGestures({onTransmit: id => { void safe(() => transmitAircraft(id))(); }});
+function resetScopePointer() {
+    gestures.reset();
+    const capture = pointer?.id;
+    pointer = null;
+    if (capture !== undefined && canvas.hasPointerCapture(capture)) canvas.releasePointerCapture(capture);
+    hideAircraftHover();
+}
 function hitAircraft(e) {
     return session?.role === 'instructor' && !display.ruler
         ? nearestAircraft(view?.aircraft, position(e), geometry().scale, e.pointerType === 'touch' ? 30 : 24) : null;
@@ -1328,14 +1401,18 @@ async function quickHeadingTurn(direction) {
     return command('clearance', { action: 'heading', direction, value: norm(Number(input.value)) }, a.id);
 }
 canvas.addEventListener('contextmenu', e => { if (session?.role === 'instructor') e.preventDefault(); });
+canvas.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 canvas.addEventListener('pointerdown', e => {
-    if (!session || !e.isPrimary || ![0, 2].includes(e.button)) return;
+    if (!session || !e.isPrimary || ![0, 1, 2].includes(e.button)) return;
+    if (session.role === 'student' && studentPlotting.onPointerDown(e)) return;
+    if (session.role === 'instructor' && chartWorkshop.isSketching?.()) { e.preventDefault(); gestures.reset(); chartWorkshop.onPointer(e); draw(); return; }
     if (e.button === 2 && session.role !== 'instructor') return;
     e.preventDefault(); hideAircraftHover();
     canvas.focus({ preventScroll: true }); canvas.setPointerCapture(e.pointerId);
     pointer = { id: e.pointerId, button: e.button, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragging: false };
 });
 canvas.addEventListener('pointermove', e => {
+    if (session?.role === 'student' && studentPlotting.onPointerMove(e)) return;
     if (!pointer) {
         const a = e.pointerType === 'mouse' ? hitAircraft(e) : null;
         const tooltip = $('aircraft-hover'); tooltip.hidden = !a;
@@ -1355,6 +1432,7 @@ canvas.addEventListener('pointermove', e => {
     }
 });
 canvas.addEventListener('pointerup', e => {
+    if (session?.role === 'student' && studentPlotting.onPointerUp(e)) return;
     if (!pointer || pointer.id !== e.pointerId || !view) return;
     const pressed = pointer; pointer = null;
     if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
@@ -1380,7 +1458,7 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointerleave', hideAircraftHover);
 for (const event of ['pointercancel', 'lostpointercapture'])
-    canvas.addEventListener(event, () => { if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
+    canvas.addEventListener(event, e => { studentPlotting.onPointerCancel(e); if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
 for (const direction of ['left', 'right']) $('quick-' + direction).onclick = safe(() => immediateTurn(direction));
 $('quick-stop').onclick = safe(() => immediateTurn('stop-turn'));
 $('quick-transmit').onclick = safe(() => { gestures.reset(); return transmitAircraft(); });
@@ -1560,9 +1638,19 @@ bindForm('clearance-form', async () => {
     const kind = val('clearance-form', 'conditionKind');
     if (kind)
         payload.condition = kind === 'time' ? { kind, at: num('clearance-form', 'conditionAt') } : { kind, fixId: val('clearance-form', 'conditionFixId') };
+    if (linkedCallId) payload.callId = linkedCallId;
     await command('clearance', payload, selected);
+    linkedCallId = ''; renderLinkedCall();
     message(kind ? 'Conditional clearance armed.' : 'Clearance applied; pilot readback transmitting.');
 });
+function updateTransmitForm() {
+    const custom = val('transmit-form','mode') === 'custom';
+    field('transmit-form','text').required = custom;
+    field('transmit-form','text').closest('label').hidden = !custom;
+    text('pilot-transmit-submit', custom ? 'Transmit custom message' : 'Transmit report');
+}
+field('transmit-form','mode').addEventListener('change',updateTransmitForm);
+updateTransmitForm();
 bindForm('transmit-form', () => {
     const mode = val('transmit-form', 'mode');
     return command('transmit', { ...(mode === 'custom' ? { text: val('transmit-form', 'text') } : { mode }), durationSeconds: num('transmit-form', 'durationSeconds') }, selected);
@@ -1908,7 +1996,8 @@ $('declutter').onclick = () => {
     draw();
 };
 const mapWorkshop = createMapWorkshop({ view: () => view, generation: () => generation, command, request, message, showMap: () => { showMap = true; $('map-toggle').setAttribute('aria-pressed', 'true'); draw(); } });
-const chartWorkshop = createChartWorkshop({ view: () => view, generation: () => generation, command, request, message, changed: () => { settingsLoaded = false; signatures.clear(); trailHistory.clear(); render(); } });
+const chartWorkshop = createChartWorkshop({ view: () => view, generation: () => generation, command, request, message, scope: { canvas, screenToPoint: position, drawChanged: draw, openScope: closeDrawer }, changed: () => { settingsLoaded = false; signatures.clear(); trailHistory.clear(); render(); } });
+$('scenario-library-open').onclick = () => { tab('build'); chartWorkshop.openLibrary?.(); };
 function clearanceFields() {
     const action = val('clearance-form', 'action');
     text('clearance-value-name', action === 'heading' ? 'Heading °T' : action === 'speed' ? 'Speed kt' : val('clearance-form', 'reference') === 'standard' ? 'Flight level' : 'Altitude ft QNH');
@@ -1920,9 +2009,24 @@ function clearanceFields() {
     }
     field('clearance-form', 'inboundCourseDeg').closest('details').hidden = action !== 'hold';
     field('clearance-form', 'inboundCourseDeg').closest('details').querySelectorAll('input,select').forEach(input => input.disabled = action !== 'hold');
+    const a = view?.aircraft?.find(a => a.id === selected), proposed = val('clearance-form','value');
+    const current = action === 'heading' ? `${pad(a?.headingDeg ?? 0)}°T` : action === 'speed' ? `${Math.round(a?.speedKt ?? 0)} kt` : `${Math.round(a?.altitudeFt ?? 0)} ft`;
+    text('clearance-preview', ['heading','speed','altitude'].includes(action) ? `${a?.callsign || 'Aircraft'} · current ${current} → ${proposed} ${action === 'heading' ? '°T' : action === 'speed' ? 'kt' : val('clearance-form','reference') === 'standard' ? 'FL' : 'ft QNH'}` : '');
 }
-field('clearance-form', 'action').addEventListener('change', clearanceFields);
-field('clearance-form', 'reference').addEventListener('change', clearanceFields);
+field('clearance-form','value').addEventListener('input',clearanceFields);
+const commandDrafts = new Map();
+let draftCommandKey = 'heading:qnh';
+function switchCommandDraft() {
+    commandDrafts.set(draftCommandKey, field('clearance-form','value').value);
+    const action = val('clearance-form','action'), reference = val('clearance-form','reference');
+    draftCommandKey = `${action}:${reference}`;
+    const a = view?.aircraft?.find(a => a.id === selected);
+    const defaults = action === 'speed' ? a?.speedKt ?? 240 : action === 'altitude' ? (reference === 'standard' ? Math.round((a?.altitudeFt ?? 10000) / 100) : a?.altitudeFt ?? 10000) : Math.round(a?.headingDeg ?? 90);
+    field('clearance-form','value').value = commandDrafts.get(draftCommandKey) ?? String(defaults);
+    clearanceFields();
+}
+field('clearance-form', 'action').addEventListener('change', switchCommandDraft);
+field('clearance-form', 'reference').addEventListener('change', switchCommandDraft);
 clearanceFields();
 window.addEventListener('pageshow', e => {
     if (e.persisted && session) {
@@ -1930,10 +2034,12 @@ window.addEventListener('pageshow', e => {
         void poll(generation);
     }
 });
-window.addEventListener('pagehide', () => { clearTimeout(pollTimer); clearAudio(); });
+window.addEventListener('pagehide', () => { resetScopePointer(); clearTimeout(pollTimer); clearAudio(); });
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden)
+    if (document.hidden) {
+        resetScopePointer();
         clearAudio();
+    }
 });
 setInterval(() => {
     if (session) {

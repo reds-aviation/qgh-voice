@@ -18,7 +18,7 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     const html=readFileSync(resolve(dist,page),'utf8'),{document}=parseHTML(html),ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
     assert.equal(new Set(ids).size,ids.length,`duplicate ID in ${page}`);
     assert.ok(!html.includes('offline-setup'), `private handbook link in ${page}`);
-    assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
+    if(!['instructor-led/training-guide.html','procedural-beta/procedural-guide.html'].includes(page))assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
     assert.ok(!html.includes('entry-theme.css'),`deferred theme included in ${page}`);
     for(const el of document.querySelectorAll('script[src],link[href],img[src],a[href]')) {
       const value=el.getAttribute('src') || el.getAttribute('href');
@@ -29,9 +29,21 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
       assert.ok(existsSync(resolve(dist,path.endsWith('/')?path+'index.html':path)),`${page}: missing ${value}`);
     }
   }
-  for(const page of ['training-centre.html','user-guide.html','instructor-led/training-guide.html','procedural-beta/procedural-guide.html']) {
+  for(const page of ['training-centre.html','user-guide.html']) {
     const html=readFileSync(resolve(dist,page),'utf8');assert.equal((html.match(/id="current-flow"/g)||[]).length,1);
-    assert.ok(html.includes('I am also learning.'));
+    if(page==='user-guide.html')assert.ok(html.includes('I am also learning.'),'common handbook explains Gyani limitations');
+    else assert.ok(parseHTML(html).document.querySelector('a[href="user-guide.html#individual"]'),'radio catalogue points to the common handbook');
+  }
+  for(const [page,anchor] of [['instructor-led/training-guide.html','instructor'],['procedural-beta/procedural-guide.html','procedural']]) {
+    const {document}=parseHTML(readFileSync(resolve(dist,page),'utf8'));
+    const destination=`../user-guide.html#${anchor}`;
+    assert.equal(document.querySelector('meta[http-equiv="refresh"]').getAttribute('content'),`0;url=${destination}`);
+    assert.equal(document.querySelector('link[rel="canonical"]').getAttribute('href'),'../user-guide.html');
+    assert.ok(document.querySelector(`a[href="${destination}"]`),`${page}: usable redirect fallback`);
+    const {document:common}=parseHTML(readFileSync(resolve(dist,'user-guide.html'),'utf8'));
+    assert.ok(common.getElementById(anchor),`${page}: common guide destination exists`);
+    assert.ok(common.querySelector('script[src="procedural-beta/suite-guide-chat.js"]'),`${page}: common guide has Gyani`);
+    assert.equal(document.querySelectorAll('#current-flow').length,0,`${page}: no competing handbook`);
   }
   const context=vm.createContext({URL,Request,Response,console,self:{registration:{scope:base},location:{origin:'https://example.test'},addEventListener(){}}});
   const sw=vm.runInContext(readFileSync(resolve(dist,'service-worker.js'),'utf8')+';({APP_SHELL,shellCacheKey})',context);

@@ -1,12 +1,16 @@
-// Keep five simulated minutes regardless of the browser's polling frequency.
+// Keep ten simulated minutes regardless of the browser's polling frequency.
 export function recordTrail(history, point) {
     const last = history.at(-1);
     if (last && point.t < last.t)
         return [point];
-    const recent = history.filter(p => point.t - p.t < 300);
+    const recent = history.filter(p => point.t - p.t < 600);
     if (!last || point.t - last.t >= 1)
         recent.push(point);
     return recent;
+}
+// Keep dots legible at the selected range, including recently spawned traffic.
+export function trailSpacing(scale, speedKt = 240) {
+    return Math.max(0.02, Math.min(9 / Math.max(scale, 0.001), Math.max(0.02, speedKt / 3600 * 15)));
 }
 // Sample the flown path backwards by distance, not browser polling frequency.
 // Never include the aircraft symbol or invent history before its first sample.

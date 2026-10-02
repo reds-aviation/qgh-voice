@@ -2,6 +2,8 @@ import { circle, coordinate, destination, project, readPoint } from './chart-geo
 import { mergePublishedNavigation } from './aip-navigation.js';
 import { parseARP, alignmentBriefing } from './chart-calibration.js';
 import { drawAirspacePreview } from './airspace-preview.js';
+import { createAirspacePreparation, selectPublishedCatalogue } from './airspace-preparation.js';
+import { createScenarioLibrary } from './scenario-library.js';
 const $ = (id) => document.getElementById(id);
 const form = (id) => $(id);
 const field = (id, name) => form(id).elements.namedItem(name);
@@ -75,6 +77,19 @@ export function drawAreas(ctx, areas, projectPoint, labels = true) {
 export function createChartWorkshop(context) {
     let catalogue = [], signature = '', formExercise = '';
     let enroute;
+    for (const href of ['airspace-preparation.css', 'scenario-library.css']) {
+        if (!document.querySelector(`link[href="${href}"]`)) {
+            const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; document.head.append(link);
+        }
+    }
+    const preparation = createAirspacePreparation(context);
+    const library = createScenarioLibrary(context);
+    const legacyBoundary = $('area-form')?.closest('details');
+    if (legacyBoundary) legacyBoundary.hidden = true;
+    const oldChartDetails = $('chart-form')?.closest('details');
+    if (oldChartDetails) oldChartDetails.querySelector('summary').textContent = 'Advanced station / chart settings';
+    const selection = document.createElement('div'); selection.id = 'aerodrome-selection'; selection.className = 'aerodrome-selection';
+    $('aerodrome-preview').after(selection);
     const dirtyFields = new Set();
     $('arp-file').addEventListener('change', async () => {
         const file = $('arp-file').files?.[0], exercise = context.view()?.exerciseId, generation = context.generation();
@@ -247,11 +262,37 @@ export function createChartWorkshop(context) {
     });
     field('area-form', 'shape').addEventListener('change', () => $('area-radius-label').hidden = value('area-form', 'shape') !== 'circle');
     $('area-new').onclick = () => { form('area-form').reset(); delete form('area-form').dataset.editId; $('area-radius-label').hidden = true; };
+    function chosenPublished(item, extra) {
+        return selectPublishedCatalogue(item, extra,
+            [...selection.querySelectorAll('input[data-route-id]:checked')].map(c => c.dataset.routeId),
+            [...selection.querySelectorAll('input[data-area-id]:checked')].map(c => c.dataset.areaId));
+    }
     const preview = () => {
         const item = catalogue.find(a => a.id === value('aerodrome-form', 'aerodrome')), extra = item && enroute?.aerodromes[item.id];
-        $('aerodrome-preview').textContent = item && extra ? `${item.areas.length + extra.areas.length} boundaries · ${extra.routes.length} route sections · ${extra.fixes.length} fixes\nPublished routes crossing the 250 NM region; full source endpoints retained.\n${enroute.effectiveInfo}\n${item.station?.name || 'Chart reference point'}\nRoute overview fits the wider network; Local view returns to the aerodrome.\nCapacity: 100 routes / 200 fixes including retained exercise navigation.\n${extra.omissions.join('\n')}` : '';
+        $('aerodrome-preview').textContent = item && extra ? 'Choose only the routes and areas needed. Nothing is selected automatically.' : '';
+        selection.replaceChildren();
         $('aerodrome-layout').hidden = !item;
-        drawAirspacePreview($('aerodrome-layout-svg'), item, extra);
+        if (item && extra) {
+            const count = element('p', ''); count.className = 'aerodrome-selection-count'; count.id = 'aerodrome-selection-count';
+            const updatePreview = () => {
+                const chosen = chosenPublished(item, extra);
+                count.textContent = `${chosen.routes.length} routes · ${chosen.areas.length} areas selected`;
+                drawAirspacePreview($('aerodrome-layout-svg'), { ...item, areas: chosen.areas }, { ...chosen, areas: [] });
+            };
+            const allAreas = [...item.areas, ...extra.areas].map((area, i) => ({ ...area, id: area.id || `${item.id.toLowerCase()}-${i + 1}` }));
+            for (const [kind, title, records] of [['route', 'ATS routes', extra.routes], ['area', 'LFA / prohibited / restricted / danger', allAreas]]) {
+                const details = element('details', ''), summary = element('summary', `${title} · ${records.length}`); details.append(summary);
+                const list = element('div', ''); list.className = 'aerodrome-selection-list';
+                for (const record of records) {
+                    const label = element('label', ''), checkbox = element('input', ''); checkbox.type = 'checkbox'; checkbox.dataset[kind === 'route' ? 'routeId' : 'areaId'] = record.id;
+                    const text = element('span', record.name); text.append(element('small', kind === 'route' ? record.fixNames.join(' → ') : `${record.floorLabel} / ${record.ceilingLabel}`));
+                    checkbox.addEventListener('change', updatePreview); label.append(checkbox, text); list.append(label);
+                }
+                details.append(button('Select all', async () => { list.querySelectorAll('input').forEach(c => c.checked = true); updatePreview(); }), button('Clear selection', async () => { list.querySelectorAll('input').forEach(c => c.checked = false); updatePreview(); }), list); selection.append(details);
+            }
+            selection.append(count); updatePreview();
+        }
+        else drawAirspacePreview($('aerodrome-layout-svg'), item, extra);
         const list = $('aerodrome-source-list'); list.replaceChildren();
         if (!item || !extra) return;
         list.append(record(`${item.name} · ARP`, `${item.origin.latitude.toFixed(6)}, ${item.origin.longitude.toFixed(6)} · WGS-84\nDated public AIP sample.`, item.source));
@@ -269,7 +310,8 @@ export function createChartWorkshop(context) {
         const extra = enroute?.aerodromes[item.id];
         if (!extra)
             throw new Error('Published route and airspace catalogue is unavailable.');
-        if (!confirm(`Load ${item.name}? This replaces chart boundaries, unused published routes and the image overlay, and pauses the exercise. Existing traffic, custom routes and assigned navigation keep their local positions.${context.view()?.terminated ? ' This reopens the terminated exercise while paused.' : ''}`))
+        const chosen = chosenPublished(item, extra);
+        if (!confirm(`Load ${item.name} with ${chosen.routes.length} routes and ${chosen.areas.length} areas? Existing custom / assigned navigation and traffic keep their local positions. The image is removed and the exercise pauses.${context.view()?.terminated ? ' This reopens the ended exercise while paused.' : ''}`))
             return;
         const exerciseId = context.view()?.exerciseId, generation = context.generation();
         if (!exerciseId)
@@ -284,12 +326,12 @@ export function createChartWorkshop(context) {
         if (scenario.exerciseId !== exerciseId)
             throw new Error('The exercise changed while preparing the chart. Select it again.');
         const station = item.station, offset = station ? project(station, item.origin) : { xNm: 0, yNm: 0 };
-        const areas = [...item.areas, ...extra.areas].map((area, i) => {
+        const areas = chosen.areas.map((area, i) => {
             const geoPoints = area.circle ? Array.from({ length: 72 }, (_, j) => destination(area.circle, j * 5, area.circle.radiusNm)) : area.points || [];
-            return { id: area.id || `${item.id.toLowerCase()}-${i + 1}`, name: area.name, kind: area.kind, points: geoPoints.map(p => project(p, item.origin)), floorLabel: area.floorLabel, ceilingLabel: area.ceilingLabel, source: area.source || 'India AIP', reference: area.reference || item.source, effectiveInfo: area.effectiveInfo || item.effectiveInfo, notes: [area.notes, area.activation].filter(Boolean).join('\n'), active: true };
+            return { id: area.id, name: area.name, kind: area.kind, points: geoPoints.map(p => project(p, item.origin)), coordinateOrigin: item.origin, geoPoints: geoPoints.map(p => ({ latitude: p.latitude, longitude: p.longitude })), floorLabel: area.floorLabel, ceilingLabel: area.ceilingLabel, source: area.source || 'India AIP', reference: area.reference || item.source, effectiveInfo: area.effectiveInfo || item.effectiveInfo, notes: [area.notes, area.activation].filter(Boolean).join('\n'), active: true };
         });
-        const extent = Math.max(60, ...areas.slice(0, item.areas.length).flatMap(a => a.points.map(p => Math.hypot(p.xNm, p.yNm))));
-        const navigation = mergePublishedNavigation(scenario, extra, item.origin);
+        const extent = Math.max(60, ...areas.flatMap(a => a.points.map(p => Math.hypot(p.xNm, p.yNm))));
+        const navigation = mergePublishedNavigation(scenario, chosen, item.origin);
         scenario.environment = { ...scenario.environment, chartOrigin: item.origin, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: offset.xNm, stationYNm: offset.yNm, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `Approximate published LFA / control-zone and P/R/D outlines; selected nearby ATS segments. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nSet runway, QNH, wind, transition altitude, frequencies and coordination instructions before starting.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: Math.min(2000, Math.ceil(extent / 10) * 10), map: { ...scenario.environment.map, imageId: '' } };
         scenario.areas = areas;
         scenario.fixes = navigation.fixes;
@@ -298,7 +340,7 @@ export function createChartWorkshop(context) {
         scenario.scopeDisplay = { hiddenRouteIds: [], hiddenAreaIds: [], routesHidden: false, areasHidden: false };
         await context.command('import', { scenario, expectedRevision: scenario.revision }, undefined, exerciseId);
         context.changed();
-        context.message(`${item.name}: ${extra.routes.length} published route sections loaded and shared. Use Route overview for the wider network. Exercise paused.`);
+        context.message(`${item.name}: ${chosen.routes.length} selected routes and ${areas.length} areas shared. Exercise paused.`);
     });
     void Promise.all(['india-airspace.json', 'india-aip-enroute.json'].map(async (path) => {
         const r = await fetch(path);
@@ -314,6 +356,10 @@ export function createChartWorkshop(context) {
         preview();
     }).catch(e => $('aerodrome-preview').textContent = e.message);
     return {
+        isSketching: preparation.isSketching,
+        onPointer: preparation.onPointer,
+        draw: preparation.draw,
+        openLibrary: library.open,
         render() {
             const state = context.view();
             if (!state) {
@@ -322,11 +368,12 @@ export function createChartWorkshop(context) {
                 dirtyFields.clear();
                 return;
             }
+            preparation.render(); library.render();
             const env = state.environment, areas = state.areas || [], next = JSON.stringify([env, areas, state.fixes, state.routes, state.routes.map(r => routeWindowOpen(r, state.elapsed)), state.role, state.exerciseId]);
             if (next === signature)
                 return;
             signature = next;
-            $('chart-name').textContent = env.aerodromeName || 'Synthetic airspace';
+            $('chart-name').textContent = env.aerodromeName || 'Custom airspace';
             $('chart-info').replaceChildren(record(`${env.stationName || 'NAV0'} · ${(env.stationType || 'df').toUpperCase()} ${env.stationFrequency || ''}`, `QNH ${env.qnhHpa} hPa · wind ${env.windDirectionDeg}°T / ${env.windSpeedKt} kt\n${env.magneticVariationKnown === false ? `Training magnetic reference ${env.trainingMagneticVariationDeg ?? 0}°E · exercise assumption` : `Configured magnetic reference ${env.magneticVariationDeg}°E`}\n${env.effectiveInfo || 'Instructor-defined exercise'}\n${env.briefing || 'Instructor briefing not yet entered.'}`, env.chartReference));
             const base = catalogue.find(a => env.aerodromeName === a.name + (a.icao ? ` (${a.icao})` : '') && env.chartOrigin && Math.abs(a.origin.latitude - env.chartOrigin.latitude) < 1e-8 && Math.abs(a.origin.longitude - env.chartOrigin.longitude) < 1e-8);
             const published = base && enroute?.aerodromes[base.id];

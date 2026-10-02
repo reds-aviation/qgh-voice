@@ -63,8 +63,8 @@ export function createTrafficSetup(host) {
     const airspaceButton = element('button', 'secondary', 'Configure airspace');
     airspaceButton.type = 'button';
     airspaceRow.append(airspaceLabel, airspaceButton);
-    const roster = element('div', 'roster-editor');
-    roster.append(element('h2', 'roster-editor-head', 'Aircraft roster'));
+    const roster = element('details', 'roster-editor optional-traffic');
+    roster.append(element('summary', 'roster-editor-head', 'Initial traffic · optional'));
     const navigator = element('label', 'roster-navigator', 'Jump to aircraft');
     const jump = element('select'); jump.setAttribute('aria-label', 'Jump to aircraft in roster'); navigator.append(jump); roster.append(navigator);
     jump.onchange = () => {
@@ -183,6 +183,7 @@ export function createTrafficSetup(host) {
         }
     }
     function fail(input, message) {
+        if (roster.contains(input)) roster.open = true;
         input.setAttribute('aria-invalid', 'true');
         input.focus();
         throw new Error(message);
@@ -261,7 +262,7 @@ export function createTrafficSetup(host) {
             runway.value = String(environment.runwayHeadingDeg ?? 90);
         if (!qnhEdited)
             qnh.value = String(environment.qnhHpa ?? 1013);
-        airspaceLabel.textContent = `Current aerodrome: ${environment.aerodromeName || 'Synthetic aerodrome'}`;
+        airspaceLabel.textContent = `Airspace: ${environment.aerodromeName || 'Custom airspace'}`;
         error.textContent = '';
         error.hidden = true;
         host.container.hidden = false;

@@ -83,11 +83,11 @@ test('Gyani recognises all deployed page paths and ordinary control questions',(
   for(const q of ['How to turn right','how do I trun rigth?','left turn please','stop turning','how to orbit','change speed','how do I climb','what is QDM','set radar RPM','how do I scroll callsigns on phone','how do I join','show the guide','hello']) {
     const answer=matchGuideQuestion(q,'procedural'); assert.equal(answer.matched,true,q); assert.ok(answer.text.length>20,q);
   }
-  assert.match(matchGuideQuestion('How to turn right','procedural').text,/double-click the right mouse button/i);
+  assert.match(matchGuideQuestion('How to turn right','procedural').text,/Double-right-click/i);
   assert.match(matchGuideQuestion('and left','procedural','turn').text,/Stop turn/);
   assert.match(matchGuideQuestion('how to turn right','qgh-individual').text,/Normal QGH/);
   const unknown=matchGuideQuestion('What is the weather tomorrow in Delhi?','procedural');
-  assert.equal(unknown.matched,false);assert.ok(unknown.text.includes(knowledge.learning));assert.equal(unknown.links.length,3);
+  assert.equal(unknown.matched,false);assert.ok(unknown.text.includes(knowledge.learning));assert.equal(unknown.links.length,1);assert.match(unknown.links[0].href,/user-guide\.html/);
   assert.match(unknown.escalation,/Contact the creator/);
 });
 
@@ -128,7 +128,7 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
   root.querySelector('.suite-guide-chat__launcher').click();
   const input=root.querySelector('textarea');input.value='How to turn right';
   root.querySelector('form').dispatchEvent(new h.Event('submit',{bubbles:true,cancelable:true}));
-  assert.match(root.querySelector('.suite-guide-chat__history').textContent,/double-click the right mouse button/i);
+  assert.match(root.querySelector('.suite-guide-chat__history').textContent,/Double-right-click/i);
   root.querySelector('.suite-guide-chat__close').click();assert.equal(root.querySelector('[role="dialog"]').hidden,true);
   h.document.body.classList.add('exercise-running');
   await new Promise(resolve=>setImmediate(resolve));assert.equal(root.hidden,true);
@@ -138,7 +138,8 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   const h=domHarness(source('procedural.html'));
   const timers=new Map();let timerId=0;
   Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,
-    createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],createTrafficSetup:()=>({close(){},open(){}}),
+    createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],trailSpacing:()=>1,createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({close(){},open(){}}),
+    createStudentPlotting:()=>({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
     createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
   });
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm,'')+`
@@ -161,6 +162,9 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   assert.equal(h.context.commands.length,1);assert.equal(h.context.commands[0][1].action,'left');
   emit('pointerdown',2,300);emit('pointerup',2,330);emit('pointerdown',2,400);emit('pointerup',2,430);
   assert.equal(h.context.commands.length,2);assert.equal(h.context.commands[1][1].action,'right');
+  emit('pointerdown',1,450);emit('pointerup',1,460);
+  assert.equal(h.context.commands.at(-1)[1].action,'stop-turn');
+  h.context.commands.pop();
   emit('pointerdown',0,500,'touch');emit('pointerup',0,530,'touch');emit('pointerdown',0,600,'touch');emit('pointerup',0,630,'touch');
   assert.equal(h.context.commands.length,4,'touch selection transmits without turning');
   assert.equal(h.context.commands[2][0],'transmit');assert.equal(h.context.commands[3][0],'transmit');

@@ -18,6 +18,20 @@ func validateArea(a AirspaceArea) error {
 	if len(a.Points) < 3 || len(a.Points) > 200 {
 		return errors.New("chart area needs 3–200 polygon vertices")
 	}
+	if a.CoordinateOrigin != nil || len(a.GeoPoints) > 0 {
+		if a.CoordinateOrigin == nil || len(a.GeoPoints) != len(a.Points) || !validGeoPoint(*a.CoordinateOrigin) {
+			return errors.New("geographic boundary needs an ARP and one valid coordinate per vertex")
+		}
+		for i, geo := range a.GeoPoints {
+			if !validGeoPoint(geo) {
+				return errors.New("geographic boundary latitude or longitude is invalid")
+			}
+			p := projectAreaCoordinate(geo, *a.CoordinateOrigin)
+			if math.Hypot(p.XNm-a.Points[i].XNm, p.YNm-a.Points[i].YNm) > .01 {
+				return errors.New("geographic boundary does not match its projected points and ARP")
+			}
+		}
+	}
 	twiceArea := 0.0
 	seen := map[Point]bool{}
 	for i, p := range a.Points {
@@ -47,6 +61,17 @@ func validateArea(a AirspaceArea) error {
 		}
 	}
 	return nil
+}
+func validGeoPoint(p ChartOrigin) bool {
+	return between(p.Latitude, -89.999999, 89.999999) && between(p.Longitude, -180, 180)
+}
+func projectAreaCoordinate(p, origin ChartOrigin) Point {
+	const rad = math.Pi / 180
+	lat, base, dl := p.Latitude*rad, origin.Latitude*rad, (p.Longitude-origin.Longitude)*rad
+	h := math.Pow(math.Sin((lat-base)/2), 2) + math.Cos(base)*math.Cos(lat)*math.Pow(math.Sin(dl/2), 2)
+	distance := 2 * 3440.065 * math.Asin(math.Sqrt(math.Min(1, math.Max(0, h))))
+	bearing := math.Atan2(math.Sin(dl)*math.Cos(lat), math.Cos(base)*math.Sin(lat)-math.Sin(base)*math.Cos(lat)*math.Cos(dl))
+	return Point{XNm: distance * math.Sin(bearing), YNm: distance * math.Cos(bearing)}
 }
 func cross(a, b, c Point) float64 { return (b.XNm-a.XNm)*(c.YNm-a.YNm) - (b.YNm-a.YNm)*(c.XNm-a.XNm) }
 func onSegment(a, b, p Point) bool {

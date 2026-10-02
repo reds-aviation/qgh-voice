@@ -73,7 +73,7 @@ test('instructor page exposes an accessible command bar and its safe shortcut re
   assert.match(page, /id="executeKeyboardCommand"/);
   assert.match(page, /id="keyboardShortcuts"/);
   assert.match(page, /Termination remains a deliberate button action/);
-  assert.match(page, /TRANSFER PAR/);
+  assert.doesNotMatch(page, /<code>TRANSFER PAR<\/code>/);
 });
 
 test('typed commands apply only to the selected aircraft and preserve direct-control physics', () => {

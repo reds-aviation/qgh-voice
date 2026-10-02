@@ -3,8 +3,10 @@
   const Session = globalThis.ATCSuiteSession;
   if (!Session) return;
   const byId = id => document.getElementById(id);
+  const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null, cloudTransport: null, joining: false,
-    radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false };
+    radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false,
+    scopePan: { x: 0, y: 0 }, scopeDrag: null, plotting: null, observationReceivedAt: null };
   const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.floor(Math.max(0, seconds)) % 60).padStart(2, '0')}`;
   const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0');
   const modeLabel = mode => ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || 'CONTROLLER POSITION';
@@ -48,7 +50,7 @@
         renderObservation();
       }
     } else if (event.kind === 'observation') {
-      state.observation = event.observation; renderObservation();
+      state.observation = event.observation; state.observationReceivedAt = Date.now(); renderObservation();
     } else if (event.kind === 'caption') {
       renderCaption(event.caption, event.transmissionId);
     } else if (event.kind === 'observation-rejected') {
@@ -56,7 +58,13 @@
     } else if (event.kind === 'disconnected') {
       setPilotAudio(false);
       byId('connectionState').textContent = 'DISCONNECTED'; byId('studentExerciseState').textContent = 'PICTURE FROZEN';
-    } else if (event.kind === 'terminated') { setPilotAudio(false); show('studentEnded'); }
+    } else if (event.kind === 'terminated') {
+      setPilotAudio(false);
+      // A lost/closed host link is recoverable; it is not a completed attempt.
+      if (['host-left', 'heartbeat-timeout'].includes(event.reason)) {
+        byId('connectionState').textContent = 'DISCONNECTED'; byId('studentExerciseState').textContent = 'PICTURE FROZEN · RECONNECT';
+      } else show('studentEnded');
+    }
     renderFreshness(snapshot);
   }
 
@@ -93,6 +101,8 @@
   function renderLifecycle(lifecycle) {
     if (['ready', 'running', 'paused'].includes(lifecycle)) {
       show('studentWorkspace');
+      document.body.classList.add?.('exercise-console');
+      if (lifecycle === 'running' || lifecycle === 'paused') byId('studentNavigation').open = false;
       byId('studentExerciseState').textContent = lifecycle.toUpperCase(); byId('connectionState').textContent = 'CONNECTED';
       renderWorkspaceMode(); refreshAudioAvailability(); renderObservation();
     } else if (lifecycle === 'terminated' || lifecycle === 'disconnected') {
@@ -109,11 +119,12 @@
 
   function chooseMode(mode) {
     byId('qghStudentView').hidden = mode !== 'qgh';
+    byId('studentEstimateScopePanel').hidden = mode !== 'qgh';
     byId('radarStudentView').hidden = !['surveillance', 'sra'].includes(mode);
     byId('parStudentView').hidden = mode !== 'par';
     if (!['surveillance', 'sra'].includes(mode)) closeRadarInspection();
     byId('radarTitle').textContent = mode === 'sra' ? 'SURVEILLANCE RADAR APPROACH' : 'SURVEILLANCE DISPLAY';
-    const narrow = !byId('studentWorkspace').hidden && mode !== 'qgh' && matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
+    const narrow = !byId('studentWorkspace').hidden && mode === 'par' && matchMedia('(orientation: portrait) and (max-width: 700px)').matches;
     document.body.classList.toggle('narrow-radar', narrow);
     byId('orientationGate').hidden = !narrow || byId('studentWorkspace').hidden;
   }
@@ -209,6 +220,7 @@
   }
 
   function renderDf() {
+    renderEstimateScope();
     const observation = state.observation || {};
     const status = String(observation.status || 'idle').toUpperCase();
     byId('dfSignalState').textContent = status === 'IDLE' ? 'NO SIGNAL' : `SIGNAL ${status}`;
@@ -221,12 +233,13 @@
 
   function radarTransform(canvas, rangeNm, azimuthDeg) {
     const radius = Math.min(canvas.width, canvas.height) * .41 * rangeNm / selectedRadarRange(), radians = azimuthDeg * Math.PI / 180;
-    return { x: canvas.width / 2 + Math.sin(radians) * radius, y: canvas.height / 2 - Math.cos(radians) * radius };
+    return { x: canvas.width / 2 + state.scopePan.x + Math.sin(radians) * radius, y: canvas.height / 2 + state.scopePan.y - Math.cos(radians) * radius };
   }
 
   function renderRadar() {
     const canvas = byId('radarScope'), context = canvas.getContext('2d'), observation = state.observation || {};
-    const width = canvas.width, height = canvas.height, cx = width / 2, cy = height / 2, radius = Math.min(width, height) * .41, range = selectedRadarRange();
+    sizeStudentCanvas(canvas);
+    const width = canvas.width, height = canvas.height, cx = width / 2 + state.scopePan.x, cy = height / 2 + state.scopePan.y, radius = Math.min(width, height) * .41, range = selectedRadarRange();
     context.clearRect(0, 0, width, height); context.fillStyle = '#071b1d'; context.fillRect(0, 0, width, height);
     context.strokeStyle = '#24504d'; context.lineWidth = 1; context.fillStyle = '#92b6ad'; context.font = '14px IBM Plex Mono';
     for (let ring = 1; ring <= 4; ring += 1) { context.beginPath(); context.arc(cx, cy, radius * ring / 4, 0, Math.PI * 2); context.stroke(); context.fillText(`${range * ring / 4} NM`, cx + 9, cy - radius * ring / 4 + 18); }
@@ -248,12 +261,14 @@
     const plots = currentRadarPlots();
     selectedHistory(observation.history || [], Number(byId('radarHistory').value), plots).forEach(plot => drawPlot(context, canvas, plot, .35, false));
     plots.forEach(plot => drawPlot(context, canvas, plot, 1, true));
-    if (Number.isFinite(observation.scanAngleDeg)) {
-      const sweep = observation.scanAngleDeg * Math.PI / 180; context.strokeStyle = '#389481'; context.lineWidth = 1.5; context.beginPath(); context.moveTo(cx, cy); context.lineTo(cx + Math.sin(sweep) * radius, cy - Math.cos(sweep) * radius); context.stroke();
+    if (!reducedMotion() && Number.isFinite(observation.scanAngleDeg)) {
+      const elapsed = state.session?.snapshot().state === 'running' && state.observationReceivedAt != null ? Math.max(0, (Date.now() - state.observationReceivedAt) / 1000) : 0;
+      const sweep = (observation.scanAngleDeg + elapsed * 90) * Math.PI / 180; context.strokeStyle = '#389481'; context.lineWidth = 1.5; context.beginPath(); context.moveTo(cx, cy); context.lineTo(cx + Math.sin(sweep) * radius, cy - Math.cos(sweep) * radius); context.stroke();
     }
     drawRadarLabels(context, canvas, plots);
+    state.plotting?.draw(context);
     updateRadarInspection(plots);
-    byId('scanRate').textContent = `${state.metadata.scanRpm || 12} RPM · ${state.metadata.revisitSeconds || 5} SEC REVISIT`;
+    byId('scanRate').textContent = `${state.metadata.scanRpm || 15} RPM · ${state.metadata.revisitSeconds || 4} SEC REVISIT`;
     const hasSecondary = correlatedRadarProfile() && plots.some(plot => plot.surveillance?.secondary === true);
     byId('radarProfileStatus').textContent = correlatedRadarProfile()
       ? `CORRELATED TRAINING · + PRIMARY · □ SSR${hasSecondary ? '' : ' · NO SSR RETURN'}`
@@ -265,6 +280,66 @@
   }
 
   function selectedRadarRange() { return Number(byId('radarRange').value) || 40; }
+
+  function studentScopeCanvas() { return byId(state.metadata?.mode === 'qgh' ? 'studentEstimateScope' : 'radarScope'); }
+  function studentScopeRange() { return state.metadata?.mode === 'qgh' ? Number(byId('studentScopeRange').value) || 40 : selectedRadarRange(); }
+  function sizeStudentCanvas(canvas) {
+    const bounds = canvas.getBoundingClientRect?.();
+    if (bounds?.width > 0 && bounds?.height > 0) { canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height); }
+  }
+  function projectStudentPoint(xNm, yNm) {
+    const canvas = studentScopeCanvas(), scale = Math.min(canvas.width, canvas.height) * .41 / studentScopeRange();
+    return [canvas.width / 2 + state.scopePan.x + xNm * scale, canvas.height / 2 + state.scopePan.y - yNm * scale];
+  }
+  function inverseStudentPoint(event) {
+    const canvas = studentScopeCanvas(), bounds = canvas.getBoundingClientRect(), scale = Math.min(canvas.width, canvas.height) * .41 / studentScopeRange();
+    return { xNm: ((event.clientX - bounds.left) * canvas.width / bounds.width - canvas.width / 2 - state.scopePan.x) / scale,
+      yNm: -((event.clientY - bounds.top) * canvas.height / bounds.height - canvas.height / 2 - state.scopePan.y) / scale };
+  }
+  function renderEstimateScope() {
+    const canvas = byId('studentEstimateScope'), ctx = canvas.getContext('2d'); sizeStudentCanvas(canvas);
+    const cx = canvas.width / 2 + state.scopePan.x, cy = canvas.height / 2 + state.scopePan.y, radius = Math.min(canvas.width, canvas.height) * .41, range = studentScopeRange();
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#0e1319'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#354954'; ctx.fillStyle = '#8eb0b7'; ctx.font = '12px IBM Plex Mono';
+    for (let ring = 1; ring <= 4; ring++) { ctx.beginPath(); ctx.arc(cx, cy, radius * ring / 4, 0, Math.PI * 2); ctx.stroke(); ctx.fillText(`${range * ring / 4} NM`, cx + 7, cy - radius * ring / 4 + 14); }
+    ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius); ctx.stroke();
+    const observation = state.observation;
+    if (Number.isFinite(observation?.bearingDeg) && ['live', 'held'].includes(observation.status)) {
+      const bearing = observation.bearingType === 'qdm' ? (observation.bearingDeg + 180) % 360 : observation.bearingDeg, angle = bearing * Math.PI / 180;
+      ctx.strokeStyle = '#e2cc7c'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(angle) * radius, cy - Math.cos(angle) * radius); ctx.stroke();
+    }
+    state.plotting?.draw(ctx);
+  }
+  function studentScopePointerDown(event) {
+    if (state.plotting?.onPointerDown(event)) return;
+    if (event.button != null && event.button !== 0 && event.pointerType !== 'touch') return;
+    if (state.metadata?.mode !== 'qgh' && selectRadarPlot(event)) return;
+    const canvas = studentScopeCanvas();
+    state.scopeDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, pan: { ...state.scopePan } }; canvas.setPointerCapture?.(event.pointerId);
+  }
+  function studentScopePointerMove(event) {
+    if (state.plotting?.onPointerMove(event)) return;
+    const drag = state.scopeDrag; if (!drag || drag.id !== event.pointerId) return;
+    const canvas = studentScopeCanvas(), bounds = canvas.getBoundingClientRect();
+    state.scopePan = { x: drag.pan.x + (event.clientX - drag.x) * canvas.width / bounds.width, y: drag.pan.y + (event.clientY - drag.y) * canvas.height / bounds.height };
+    event.preventDefault(); renderObservation();
+  }
+  function studentScopePointerUp(event) {
+    if (state.plotting?.onPointerUp(event)) return;
+    if (state.scopeDrag?.id !== event.pointerId) return;
+    studentScopeCanvas().releasePointerCapture?.(event.pointerId); state.scopeDrag = null;
+  }
+
+  async function initialiseStudentPlotting() {
+    try {
+      const { createStudentPlotting } = await import('./student-plotting.js');
+      state.plotting = createStudentPlotting({ get canvas() { return studentScopeCanvas(); }, screenToPoint: inverseStudentPoint,
+        projectPoint: projectStudentPoint, requestDraw: renderObservation, sessionKey: () => {
+          const snapshot = state.session?.snapshot(); return snapshot?.sessionId && snapshot?.clientId ? `${snapshot.sessionId}:${snapshot.clientId}` : '';
+        } });
+      state.plotting.mount(byId('studentPlotTools')); renderObservation();
+    } catch (_) { byId('studentPlotTools').textContent = 'Estimate plotting unavailable · reload the current release.'; }
+  }
   function validPlot(plot) { return Number.isFinite(plot.rangeNm) && plot.rangeNm >= 0 && Number.isFinite(plot.azimuthDeg); }
   function correlatedRadarProfile() { return state.metadata?.radarProfile === 'correlated-training'; }
   function currentRadarPlots() {
@@ -463,6 +538,7 @@
       callsign: typeof match.plot.callsign === 'string' ? match.plot.callsign : null
     };
     updateRadarInspection(currentRadarPlots());
+    return true;
   }
 
   function beginRadarInspectionDrag(event) {
@@ -574,7 +650,7 @@
 
   function drawSraReferences(context, canvas, overlays, radius, environment, showDescentProfile) {
     const bearing = overlays.centrelineDeg ?? ((Number(overlays.runwayOrientationDeg ?? state.metadata.runwayOrientation) + 180) % 360);
-    const angle = bearing * Math.PI / 180, cx = canvas.width / 2, cy = canvas.height / 2;
+    const angle = bearing * Math.PI / 180, cx = canvas.width / 2 + state.scopePan.x, cy = canvas.height / 2 + state.scopePan.y;
     const totalWidthNm = Number.isFinite(overlays.approachCorridorWidthNm) && overlays.approachCorridorWidthNm >= 0 ? overlays.approachCorridorWidthNm : 2;
     const halfWidthPx = totalWidthNm / 2 / selectedRadarRange() * radius;
     const alongPx = Math.sqrt(Math.max(0, radius * radius - halfWidthPx * halfWidthPx));
@@ -599,7 +675,13 @@
     // range cues remain consistent across the training scope.
     const markStep = Number.isFinite(environment.centrelineTickNm) ? environment.centrelineTickNm : 2;
     const cueLabels = [];
-    for (let distance = markStep; distance < selectedRadarRange(); distance += markStep) {
+    const marks = [];
+    for (let distance = .5; distance <= Math.min(5, selectedRadarRange()); distance += .5) marks.push(distance);
+    for (let distance = markStep; distance < selectedRadarRange(); distance += markStep) if (distance > 5) marks.push(distance);
+    // Draw every tick; prioritise the existing major-distance labels before
+    // filling remaining space with the new half-mile labels.
+    marks.sort((a, b) => Number(a % markStep !== 0) - Number(b % markStep !== 0) || a - b);
+    for (const distance of marks) {
       const point = radarTransform(canvas, distance, bearing), dx = Math.cos(angle) * 6, dy = Math.sin(angle) * 6;
       context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
       const height = Math.round((feetPerNm * distance) / 10) * 10;
@@ -708,7 +790,13 @@
   byId('cancelJoin').addEventListener('click', () => { state.session?.close(); state.session = null; show('joinPanel'); });
   byId('studentReady').addEventListener('click', ready); byId('selectQdm').addEventListener('click', () => changeDf('qdm')); byId('selectQte').addEventListener('click', () => changeDf('qte'));
   for (const control of ['radarHistory', 'radarRange', 'parRangeScale', 'parHistory', ...radarLabelFields.map(([, id]) => id), 'radarOverlayCentreline', 'radarOverlayDescent']) byId(control).addEventListener('change', renderObservation);
-  byId('radarScope').addEventListener('pointerdown', selectRadarPlot);
+  for (const id of ['radarScope', 'studentEstimateScope']) {
+    byId(id).addEventListener('pointerdown', studentScopePointerDown); byId(id).addEventListener('pointermove', studentScopePointerMove);
+    byId(id).addEventListener('pointerup', studentScopePointerUp); byId(id).addEventListener('pointercancel', event => { state.plotting?.onPointerCancel(event); state.scopeDrag = null; });
+  }
+  byId('studentScopeRange').addEventListener('change', renderObservation);
+  byId('resetStudentScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
+  byId('resetRadarScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
   byId('closeRadarInspection').addEventListener('click', closeRadarInspection);
   byId('radarInspectionHandle').addEventListener('pointerdown', beginRadarInspectionDrag);
   byId('studentAudio').addEventListener('change', () => setPilotAudio(byId('studentAudio').checked));
@@ -720,6 +808,17 @@
   addEventListener('beforeunload', () => { cancelPilotAudio(); state.session?.close(); });
   state.heartbeat = setInterval(() => { state.session?.heartbeat(); state.session?.tick(); }, 4000);
   setInterval(renderFreshness, 1000);
+  void initialiseStudentPlotting();
+  if (typeof requestAnimationFrame === 'function') {
+    let priorFrame = 0;
+    const animateScan = timestamp => {
+      requestAnimationFrame(animateScan);
+      if (reducedMotion() || timestamp - priorFrame < 33 || byId('studentWorkspace').hidden || !['sra', 'surveillance'].includes(state.metadata?.mode) || state.session?.snapshot().state !== 'running') return;
+      priorFrame = timestamp;
+      try { renderRadar(); } catch (_) { state.pictureError = true; }
+    };
+    requestAnimationFrame(animateScan);
+  }
   try {
     if (new URLSearchParams(location.search).get('connection') === 'online' || sessionStorage.getItem('atc-suite-connection') === 'online') byId('exerciseConnection').value = 'online';
     const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');

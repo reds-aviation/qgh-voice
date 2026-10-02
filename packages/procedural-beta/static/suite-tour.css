@@ -1,8 +1,11 @@
 #suite-tour[hidden],#suite-tour-open[hidden]{display:none!important}
 #suite-tour-open {font:inherit;min-height:42px;padding:8px 12px;border:1px solid currentColor;border-radius:7px;background:transparent;color:inherit;cursor:pointer}
-#suite-tour {position:fixed;z-index:1200;right:16px;bottom:16px;width:min(370px,calc(100vw - 32px));max-height:44dvh;overflow:auto;box-sizing:border-box;background:#f9faf8;color:#142530;border:2px solid #287f83;border-radius:12px;padding:18px;box-shadow:0 10px 35px #0005;font:15px/1.5 system-ui,sans-serif}
+#suite-tour {position:fixed;z-index:1200;right:16px;bottom:16px;width:min(370px,calc(100vw - 32px));max-height:44dvh;overflow:auto;box-sizing:border-box;background:#f9faf8;color:#142530;border:2px solid #287f83;border-radius:12px;padding:18px;box-shadow:0 10px 35px #0005;font:15px/1.5 "IBM Plex Sans",Suite Sans,Arial,sans-serif}
 #suite-tour.suite-tour-top {top:16px;bottom:auto}
 #suite-tour h2{font-size:21px;margin:8px 0}#suite-tour p{margin:8px 0 16px}#suite-tour>div{display:flex;flex-wrap:wrap;gap:8px}
 #suite-tour button{min-height:42px;border:1px solid #8a9ba6;border-radius:7px;padding:8px 13px;background:#fff;color:#142530;cursor:pointer}#suite-tour button:disabled{opacity:.45}#suite-tour button:focus-visible{outline:3px solid #b16a23;outline-offset:2px}
 .suite-tour-target{outline:3px solid #e2a949!important;outline-offset:4px}
 @media(max-width:650px){#suite-tour{right:8px;bottom:8px;width:calc(100vw - 16px);max-height:38dvh;padding:12px}#suite-tour.suite-tour-top{top:8px}#suite-tour h2{font-size:18px}}
+#suite-start-hint[hidden]{display:none!important}
+#suite-start-hint{grid-column:1/-1;display:flex;align-items:center;gap:10px;max-width:100%;padding:8px 10px;background:#263239;color:#f0d487;border:1px solid #8b8053;border-radius:7px;font:12px/1.45 "IBM Plex Sans",Suite Sans,Arial,sans-serif;overflow-wrap:break-word}
+#suite-start-hint span{min-width:0;flex:1}#suite-start-hint button{flex:0 0 auto;min-height:36px;border:1px solid #a4b5bd;border-radius:5px;padding:5px 10px;background:#3b4d58;color:#fff;cursor:pointer}

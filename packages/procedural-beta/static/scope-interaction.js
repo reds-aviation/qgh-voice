@@ -7,7 +7,8 @@ export function createAircraftGestures({ onTransmit = () => {}, schedule = setTi
     return {
         reset,
         press({ id, button, pointerType, time, x, y }) {
-            if (!id || ![0, 2].includes(button)) { reset(); return null; }
+            if (!id || ![0, 1, 2].includes(button)) { reset(); return null; }
+            if (pointerType === 'mouse' && button === 1) { reset(); return 'stop-turn'; }
             if (pointerType !== 'mouse') { reset(); if (button === 0) onTransmit(id); return null; }
             const paired = previous && previous.id === id && previous.button === button
                 && time >= previous.time && time - previous.time <= 500
