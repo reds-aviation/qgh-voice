@@ -1,5 +1,5 @@
 {
-  "version": "2026.10.03.6",
+  "version": "2026.10.03.7",
   "go": "1.25.0",
   "files": [
     {
@@ -215,7 +215,7 @@
     {
       "path": "static/guide-knowledge.js",
       "bytes": 54687,
-      "sha256": "d26b4e14cee2a7db289f57bf8d3f9fe6316888790d2c918c7aae757458d42787"
+      "sha256": "c0fdfe84f355fbc7d1e215588abc13f2a732fa8a664c53d742ebe415854c0858"
     },
     {
       "path": "static/gyani-fox.png",

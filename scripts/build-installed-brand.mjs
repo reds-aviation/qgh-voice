@@ -12,6 +12,7 @@ export async function buildInstalledBrand(output, root) {
     const path = resolve(output, branch, 'manifest.webmanifest');
     const manifest = JSON.parse(await readFile(path, 'utf8'));
     manifest.name = manifest.short_name = 'ATS SIMBOX';
+    manifest.description = `${branch ? 'QGH, SRA and vectoring instructor' : 'QGH, Procedural, SRA and vectoring'} training. Offline: same PC and browser profile. Online: different devices with internet on both.`;
     manifest.icons = [
       {src: 'icons/ats-simbox-192.png', sizes: '192x192', type: 'image/png', purpose: 'any'},
       {src: 'icons/ats-simbox-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable'},

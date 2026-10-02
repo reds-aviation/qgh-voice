@@ -1,7 +1,7 @@
 {
   "name": "Reds ATC Training Suite",
   "short_name": "Reds ATC",
-  "description": "Offline local instructor and controller training for QGH, surveillance/SRA and PAR.",
+  "description": "QGH, SRA and vectoring instructor training. Offline: same PC and browser profile. Online: different devices with internet on both.",
   "id": "./reds-atc-training-suite",
   "start_url": "./index.html",
   "scope": "./",
