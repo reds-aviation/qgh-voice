@@ -41,6 +41,16 @@ test('student reduced-motion presentation hides only the sweep, keeping transmit
   assert.equal(observation.plots[0].rangeNm, 8);
 });
 
+test('student workspace enters the active scope once after Start and retains scroll position during later lifecycle updates', () => {
+  const entered = [], h = harness('qgh', { ATCSuiteWorkspace: { enter(element, options) { entered.push({ id: element.id, block: options.block }); } } });
+  h.node('studentWorkspace').hidden = true; h.node('studentNavigation').open = true;
+  h.start();
+  assert.deepEqual(entered, [{ id: 'studentWorkspace', block: 'start' }]);
+  assert.equal(h.node('studentNavigation').open, false);
+  h.start(); h.snapshot.state = 'paused'; h.start(); h.snapshot.state = 'running'; h.start();
+  assert.equal(entered.length, 1, 'heartbeats or resume must not pull the student away from controls');
+});
+
 test('radar renders every sampled target and history selection applies per track immediately', () => {
   const h = harness();
   h.emit({ timestamp: 20, plots: [plot('a', 20), plot('b', 20)], history: Array.from({ length: 5 }, (_, i) => [plot('a', i), plot('b', i)]).flat() });

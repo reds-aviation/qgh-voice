@@ -5,7 +5,12 @@ package procedural
 import "encoding/json"
 
 const Version = 1
+
+// MaxAircraft keeps earlier 24-aircraft checkpoints and replays readable.
 const MaxAircraft = 24
+
+// MaxNewAircraft limits newly configured traffic and additions to 20 aircraft.
+const MaxNewAircraft = 20
 
 type Command struct {
 	ID         string          `json:"id"`

@@ -11,7 +11,7 @@ const sections = [
   ['individual','Single and Tactical QGH',['individual-start','qgh-turn','individual-voice']],
   ['instructor','Instructor QGH + SRA',['instructor-start']],
   ['procedural','Procedural control',['procedural-start']],
-  ['traffic','Build and reuse traffic',['roster-mobile','saved-exercises']],
+  ['traffic','Build and reuse traffic',['aircraft-limits','roster-mobile','saved-exercises']],
   ['airspace','Custom LFA, routes and maps',['public-lfa-samples','custom-polygons','arp-upload','lfa-image-alignment']],
   ['scope','Scope and screen space',['instructor-instrument-shelf','scope-tools','sweep','mobile-workspace','student-estimates']],
   ['aircraft','Aircraft controls',['suite-turn','turn','instructor-turn','stop-turn','orbit','speed-level','instructor-speed-level']],
@@ -52,7 +52,7 @@ export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   sources.procedural+=plotting;sources.student+=plotting;
   for(const filename of ['procedural.js','airspace-preparation.js','scenario-library.js','chart-workshop.js'])sources.procedural+=await readFile(resolve(sourceRoot,'packages/procedural-beta/static',filename),'utf8');
   const hasControl=(source,id)=>source?.includes(`id="${id}"`)||new RegExp(`\\.id\\s*=\\s*['"]${id}['"]`).test(source||'')||(/\.id\s*=\s*id\b/.test(source||'')&&new RegExp(`\\[\\s*[a-zA-Z_$][\\w$]*\\s*,\\s*['"]${id}['"]\\s*\\]`).test(source||''));
-  for(const step of knowledge.tours || []) {
+  for(const step of [...(knowledge.tours || []),...(knowledge.firstUse || [])]) {
     if(step.entry && !knowledge.entries.some(e=>e.id===step.entry))throw new Error(`Missing tour answer: ${step.entry}`);
     for(const page of step.pages)if(/^#[a-zA-Z0-9-]+$/.test(step.selector)&&!hasControl(sources[page],step.selector.slice(1)))throw new Error(`Tour references missing ${page} control: ${step.selector}`);
   }

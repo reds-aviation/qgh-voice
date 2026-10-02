@@ -50,9 +50,9 @@ export function createTrafficSetup(host) {
         option.value = value;
         mode.append(option);
     }
-    const count = numberInput('aircraftCount', 1, 24, 1);
+    const count = numberInput('aircraftCount', 1, 20, 1);
     count.step = '1';
-    addSetting('Aircraft count · 1–24', count);
+    addSetting('Aircraft count · 1–20', count);
     const runway = numberInput('runwayHeadingDeg', 0, 360, 90);
     const qnh = numberInput('qnhHpa', 870, 1085, 1013);
     addSetting('Runway heading °T', runway);
@@ -177,7 +177,7 @@ export function createTrafficSetup(host) {
     }
     function updateCount() {
         const value = Number(count.value);
-        if (count.value.trim() && Number.isInteger(value) && value >= 1 && value <= 24) {
+        if (count.value.trim() && Number.isInteger(value) && value >= 1 && value <= 20) {
             visibleCount = value;
             syncControls();
         }
@@ -203,9 +203,9 @@ export function createTrafficSetup(host) {
         return value;
     }
     function payload() {
-        const size = readNumber(count, 'Aircraft count', 1, 24);
+        const size = readNumber(count, 'Aircraft count', 1, 20);
         if (!Number.isInteger(size))
-            fail(count, 'Aircraft count must be a whole number from 1 to 24.');
+            fail(count, 'Aircraft count must be a whole number from 1 to 20.');
         updateCount();
         const sessionTitle = readText(title, 'Session title', 100, true);
         if (!['area', 'approach', 'aerodrome'].includes(mode.value))

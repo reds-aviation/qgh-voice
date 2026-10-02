@@ -8,6 +8,11 @@
 
   const byId = id => document.getElementById(id);
   const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function enterWorkspace(element) {
+    if (!element) return;
+    if (globalThis.ATCSuiteWorkspace?.enter) globalThis.ATCSuiteWorkspace.enter(element, { block: 'start' });
+    else element.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+  }
   const family = byId('exerciseFamily');
   const procedure = byId('procedureType');
   const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
@@ -27,6 +32,10 @@
   const RECOVERY_KEY = 'atc-suite.instructor-attempt.v1';
   const SETUP_KEY = 'atc-suite.instructor-setup.v1';
   const PRESETS_KEY = 'atc-suite.saved-exercises.v1';
+  const focusPanelIds = ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'scopeSettings', 'aircraftControlDrawer', 'eventDrawer'];
+  const focusMode = globalThis.ATCSuiteWorkspace?.createFocusMode?.({ root: byId('activeWorkspace'), panels: focusPanelIds.map(byId) });
+  globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('activeWorkspace'), scope: byId('instructorScope'),
+    shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions') });
 
   function presets() {
     try { const data = JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]'); return Array.isArray(data) ? data.slice(0, 40) : []; } catch (_) { return []; }
@@ -38,36 +47,110 @@
     byId('savedExercise').replaceChildren(...options); byId('savedExercise').value = selected;
   }
 
+  function presetName() {
+    const name = byId('savedExerciseName').value.trim().slice(0, 60);
+    if (!name || name.includes('\0')) throw new Error('Name this exercise using 1–60 characters.');
+    return name;
+  }
+
+  function selectedPreset() {
+    const item = presets().find(entry => entry.id === byId('savedExercise').value);
+    if (!item || !Array.isArray(item.setup)) throw new Error('Choose a saved exercise first.');
+    return item;
+  }
+
+  function uniquePresetName(name, exceptId = '') {
+    if (presets().some(item => item.id !== exceptId && item.name?.toLowerCase() === name.toLowerCase())) throw new Error('That exercise name is already used. Choose a new name or Update selected.');
+  }
+
+  function checkPresetCapacity(setup) {
+    const mode = setup.find(item => item.id === 'exerciseFamily')?.value || 'qgh';
+    const count = Number(setup.find(item => item.id === 'aircraftCount')?.value || 1);
+    const limit = mode === 'qgh' ? Core.MAX_QGH_AIRCRAFT : Core.MAX_AIRCRAFT;
+    if (!Number.isInteger(count) || count < 1 || count > limit) {
+      throw new Error(`Saved ${mode === 'qgh' ? 'QGH' : 'radar'} setup has ${count} aircraft. New ${mode === 'qgh' ? 'QGH' : 'radar'} exercises support 1–${limit}. The stored setup is unchanged; export it to retain the original traffic.`);
+    }
+    if (setup.some(item => Number(item.id.match(/^(?:callsign|squawk|radarReturn|aircraftType|initialBearing|initialRange|initialHeading|initialAltitude|initialSpeed|turnRate|verticalRate)-(\d+)$/)?.[1] || 0) > count)) {
+      throw new Error('Saved aircraft fields exceed the declared aircraft count. The stored setup is unchanged.');
+    }
+  }
+
+  function persistPreset(item, { add = false } = {}) {
+    const entries = presets();
+    if (add && entries.length >= 40) throw new Error('Up to 40 exercises can be saved on this browser. Export an exercise before freeing storage.');
+    const next = add ? [...entries, item] : entries.map(entry => entry.id === item.id ? item : entry);
+    // Storage is the source of truth. A quota failure must not paint a saved
+    // record or overwrite an existing entry only in memory.
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); refreshPresets(item.id);
+  }
+
+  function savePresetAsNew() {
+    try {
+      Core.createState(scenarioInput()); const name = presetName(); uniquePresetName(name);
+      persistPreset({ id: crypto.randomUUID(), name, version: 1, setup: captureSetup() }, { add: true });
+      byId('presetStatus').textContent = 'New starting setup saved on this browser. Export selected to share or back it up.';
+    } catch (error) { byId('presetStatus').textContent = `Not saved: ${error.message}`; }
+  }
+
   function savePreset() {
     try {
-      scenarioInput();
-      const name = byId('savedExerciseName').value.trim().slice(0, 60);
-      if (!name) throw new Error('Name this exercise first.');
-      const entries = presets(), existing = entries.find(item => item.name === name);
-      const item = { id: existing?.id || crypto.randomUUID(), name, version: 1, setup: captureSetup() };
-      const next = entries.filter(entry => entry.id !== item.id).concat(item).slice(-40);
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(next)); refreshPresets(item.id);
-      byId('presetStatus').textContent = 'Saved on this browser. Export to use the same traffic on another PC.';
-    } catch (error) { byId('presetStatus').textContent = error.message; }
+      const item = selectedPreset(); Core.createState(scenarioInput());
+      persistPreset({ ...item, version: 1, setup: captureSetup() });
+      byId('savedExerciseName').value = item.name;
+      byId('presetStatus').textContent = `${item.name} updated with the configured starting traffic.`;
+    } catch (error) { byId('presetStatus').textContent = `Not saved: ${error.message}`; }
+  }
+
+  function duplicatePreset() {
+    try {
+      const source = selectedPreset(); checkPresetCapacity(source.setup);
+      let name = byId('savedExerciseName').value.trim();
+      if (!name || name.toLowerCase() === source.name.toLowerCase()) {
+        const base = source.name.slice(0, 48); name = `${base} copy`; let suffix = 2;
+        while (presets().some(item => item.name?.toLowerCase() === name.toLowerCase())) name = `${base} copy ${suffix++}`;
+      }
+      byId('savedExerciseName').value = name; name = presetName(); uniquePresetName(name);
+      persistPreset({ id: crypto.randomUUID(), name, version: 1, setup: structuredClone(source.setup) }, { add: true });
+      byId('presetStatus').textContent = 'Independent copy saved with exactly the selected exercise’s starting traffic.';
+    } catch (error) { byId('presetStatus').textContent = `Not duplicated: ${error.message}`; }
+  }
+
+  function renamePreset() {
+    try {
+      const source = selectedPreset(), name = presetName(); uniquePresetName(name, source.id);
+      persistPreset({ ...source, name });
+      byId('presetStatus').textContent = 'Exercise renamed. Starting traffic is unchanged.';
+    } catch (error) { byId('presetStatus').textContent = `Not renamed: ${error.message}`; }
+  }
+
+  function removePreset() {
+    try {
+      const item = selectedPreset(); if (!confirm(`Remove ${item.name} from this browser? Exported exercise files are unaffected.`)) return;
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(presets().filter(entry => entry.id !== item.id))); refreshPresets();
+      byId('presetStatus').textContent = 'Stored exercise removed from this browser.';
+    } catch (error) { byId('presetStatus').textContent = `Not removed: ${error.message}`; }
   }
 
   function loadPreset() {
-    const item = presets().find(entry => entry.id === byId('savedExercise').value);
-    if (!item) { byId('presetStatus').textContent = 'Choose a saved exercise.'; return; }
-    restoreSetup(item.setup); byId('savedExerciseName').value = item.name;
-    byId('presetStatus').textContent = 'Loaded starting traffic. Create a session when ready.';
+    try {
+      const item = selectedPreset(); checkPresetCapacity(item.setup);
+      restoreSetup(item.setup); byId('savedExerciseName').value = item.name;
+      byId('presetStatus').textContent = 'Loaded the original starting traffic. Create a session when ready.';
+    } catch (error) { byId('presetStatus').textContent = error.message; }
   }
 
   function exportPreset() {
     try {
-      scenarioInput();
-      const content = JSON.stringify({ format: 'ats-simbox-instructor-exercise', version: 1, name: byId('savedExerciseName').value.trim() || 'Exercise', setup: captureSetup() }, null, 2);
+      const item = selectedPreset();
+      const content = JSON.stringify({ format: 'ats-simbox-instructor-exercise', version: 1, name: item.name, setup: item.setup }, null, 2);
       const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
       const link = document.createElement('a'); link.href = url; link.download = 'ats-simbox-exercise.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) { byId('presetStatus').textContent = error.message; }
   }
 
   async function importPreset(event) {
+    const previous = captureSetup(), previousName = byId('savedExerciseName').value;
+    let changed = false;
     try {
       const file = event.target.files?.[0]; if (!file) return;
       if (file.size > 128000) throw new Error('Exercise file is too large.');
@@ -75,8 +158,18 @@
       if (data.format !== 'ats-simbox-instructor-exercise' || data.version !== 1 || !Array.isArray(data.setup)) throw new Error('Use an exported ATS SIMBOX instructor exercise.');
       const allowed = new Set(captureSetup().map(item => item.id));
       if (data.setup.some(item => !item || typeof item.id !== 'string' || !(allowed.has(item.id) || /^(callsign|squawk|radarReturn|aircraftType|initialBearing|initialRange|initialHeading|initialAltitude|initialSpeed|turnRate|verticalRate)-\d+$/.test(item.id)))) throw new Error('Exercise contains unsupported fields.');
-      restoreSetup(data.setup); scenarioInput(); byId('savedExerciseName').value = String(data.name || 'Imported exercise').slice(0, 60); savePreset();
-    } catch (error) { byId('presetStatus').textContent = error.message; }
+      if (new Set(data.setup.map(item => item.id)).size !== data.setup.length) throw new Error('Exercise contains repeated fields.');
+      checkPresetCapacity(data.setup);
+      let name = String(data.name || 'Imported exercise').trim().slice(0, 48) || 'Imported exercise', suffix = 2;
+      const base = name;
+      while (presets().some(item => item.name?.toLowerCase() === name.toLowerCase())) name = `${base} imported ${suffix++}`;
+      changed = true; restoreSetup(data.setup); Core.createState(scenarioInput()); byId('savedExerciseName').value = name;
+      persistPreset({ id: crypto.randomUUID(), name: presetName(), version: 1, setup: captureSetup() }, { add: true });
+      byId('presetStatus').textContent = 'Imported as an independent saved exercise. Original entries are unchanged.';
+    } catch (error) {
+      if (changed) { restoreSetup(previous); byId('savedExerciseName').value = previousName; }
+      byId('presetStatus').textContent = `Not imported: ${error.message}`;
+    }
     finally { event.target.value = ''; }
   }
 
@@ -89,8 +182,10 @@
 
   function restoreSetup(saved) {
     if (!Array.isArray(saved)) return;
+    const savedFamily = saved.find(item => item.id === 'exerciseFamily');
+    if (savedFamily && ['qgh', 'surveillance', 'sra'].includes(savedFamily.value)) family.value = savedFamily.value;
     const count = saved.find(item => item.id === 'aircraftCount');
-    if (count) byId('aircraftCount').value = String(Math.max(1, Math.min(24, Number(count.value) || 1)));
+    if (count) byId('aircraftCount').value = String(Math.max(1, Math.min(maxNewAircraft(), Number(count.value) || 1)));
     syncRoster();
     for (const item of saved) {
       const node = byId(item.id);
@@ -158,13 +253,15 @@
       byId('studentDetail').textContent = 'The same PIN and student seat are retained. Select Reconnect on the student display.';
       byId('sessionConnectionLabel').textContent = cloud ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
       collapseSetupControls(); updateAll();
+      enterWorkspace(byId(review ? 'reviewScreen' : 'activeWorkspace'));
       if (review) { state.reviewTime = state.simulation.simulationSeconds; byId('reviewScrub').max = String(state.reviewTime); renderReview(); }
       state.cloudTransport?.start(); state.session.heartbeat(state.simulation.simulationSeconds);
     } catch (error) { byId('setupPreview').textContent = `Recovery unavailable: ${error.message}. Saved setup is retained.`; }
   }
 
   function collapseSetupControls() {
-    for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'aircraftControlDrawer', 'eventDrawer']) byId(id).open = false;
+    if (focusMode) focusMode.enterRun();
+    else for (const id of focusPanelIds) byId(id).open = false;
   }
 
   function retryScenario() {
@@ -331,7 +428,10 @@
   function syncRoster() {
     const container = byId('aircraftRoster');
     if (!state.rosterRows.length) state.rosterRows = [...container.children];
-    const count = Math.max(1, Math.min(24, Math.trunc(number('aircraftCount')) || 1));
+    const maximum = maxNewAircraft();
+    const count = Math.max(1, Math.min(maximum, Math.trunc(number('aircraftCount')) || 1));
+    byId('aircraftCount').max = String(maximum); byId('aircraftCount').value = String(count);
+    byId('aircraftCountLabel').textContent = `AIRCRAFT COUNT · 1–${maximum}`;
     const fields = [
       ['callsign', 'callsign', '101'], ['squawk', 'four digit octal squawk', '4300'], ['radarReturn', 'radar return', 'primary'], ['aircraftType', 'type', 'fighter'], ['initialBearing', 'initial QTE', '65'],
       ['initialRange', 'initial range', '25'], ['initialHeading', 'initial heading', '225'],
@@ -362,6 +462,8 @@
     approach.replaceChildren(...options);
     approach.value = options.some(option => option.value === selected) ? selected : 'AC1';
   }
+
+  function maxNewAircraft() { return family.value === 'qgh' ? Core.MAX_QGH_AIRCRAFT : Core.MAX_AIRCRAFT; }
 
   // The global profile selects the automatic roster default. An instructor can
   // deliberately override an individual return to create a mixed primary / SSR
@@ -451,7 +553,7 @@
     const surveillanceProfile = ['surveillance', 'sra'].includes(mode) && aircraft.some(item => item.surveillance?.secondary === true)
       ? 'correlated'
       : 'primary';
-    return {
+    return Core.validateNewExercise({
       aircraft, approachAircraft: byId('approachAircraft').value,
       exerciseFamily: mode,
       qghProcedure: procedure.value === 'us-compass' ? 'us' : 'normal',
@@ -464,7 +566,7 @@
       sensorProfile: mode === 'par' ? `${byId('parRefresh').value}hz` : '15rpm',
       parRefreshHz: Number(byId('parRefresh').value), parTransferGateNm: number('parTransferGate'),
       ...(radarEnvironment ? { radarEnvironment } : {})
-    };
+    });
   }
 
   function publicMetadata(input) {
@@ -637,6 +739,7 @@
       configureActiveControls();
       byId('startExercise').disabled = true;
       updateAll();
+      enterWorkspace(byId('activeWorkspace'));
       checkpoint();
       state.cloudTransport?.start();
       if (online) setStudentDisplayStatus('ONLINE ROOM · On the other PC/device open Controller position, select Online room and enter this PIN. Internet is required on both devices.');
@@ -837,7 +940,7 @@
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
     setPhase('running'); updateAll();
-    collapseSetupControls(); checkpoint();
+    collapseSetupControls(); enterWorkspace(byId('activeWorkspace')); checkpoint();
     return true;
   }
 
@@ -866,6 +969,7 @@
     state.reviewTime = state.simulation.simulationSeconds; state.reviewPlaying = false;
     byId('reviewScrub').max = String(state.reviewTime);
     byId('activeWorkspace').hidden = true; byId('reviewScreen').hidden = false; setPhase('review'); renderReview();
+    enterWorkspace(byId('reviewScreen'));
     checkpoint();
   }
 
@@ -898,6 +1002,7 @@
   function updateAll() {
     if (!state.simulation) return;
     const snapshot = Core.truthSnapshot(state.simulation), a = snapshot.aircraft, b = snapshot.bearing;
+    focusMode?.setPhase(snapshot.lifecycle);
     byId('truthCallsign').textContent = a.callsign;
     for (const button of byId('aircraftRosterTabs').children) {
       const selected = button.dataset.aircraftId === a.id;
@@ -1449,6 +1554,14 @@
 
   family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
   byId('saveExercisePreset').addEventListener('click', savePreset);
+  byId('saveExercisePresetAs').addEventListener('click', savePresetAsNew);
+  byId('duplicateExercisePreset').addEventListener('click', duplicatePreset);
+  byId('renameExercisePreset').addEventListener('click', renamePreset);
+  byId('removeExercisePreset').addEventListener('click', removePreset);
+  byId('savedExercise').addEventListener('change', () => {
+    const item = presets().find(entry => entry.id === byId('savedExercise').value);
+    if (item) byId('savedExerciseName').value = item.name;
+  });
   byId('loadExercisePreset').addEventListener('click', loadPreset);
   byId('exportExercisePreset').addEventListener('click', exportPreset);
   byId('importExercisePreset').addEventListener('change', importPreset);

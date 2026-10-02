@@ -200,22 +200,22 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
   assert.equal(h.context.commands[8][0],'clock');assert.equal(h.context.commands[8][1].action,'terminate');
 });
 
-test('phone roster keeps 24 editable cards and retains callsigns while changing the count',async()=>{
+test('phone roster keeps 20 editable cards and retains callsigns while changing the count',async()=>{
   const h=domHarness('<html><body><section id="setup"></section></body></html>');
   let submitted;
   h.context.rosterHost={container:h.document.getElementById('setup'),view:()=>({title:'Phone exercise',mode:'area',environment:{}}),submit:async value=>{submitted=value;},airspace(){},cancel(){}};
   vm.runInContext(source('traffic-setup.js').replace('export function createTrafficSetup','function createTrafficSetup')+';createTrafficSetup(rosterHost).open();',h.context);
   const count=h.document.querySelector('[name="aircraftCount"]');
   const setCount=n=>{count.value=String(n);count.dispatchEvent(new h.Event('input',{bubbles:true}));};
-  setCount(24);
+  setCount(20);
   assert.ok(h.document.querySelector('.roster-editor--cards'));
   const callsigns=[...h.document.querySelectorAll('[data-field="callsign"]')];
-  assert.equal(callsigns.length,24);
-  callsigns[23].value='224';setCount(2);setCount(24);
-  assert.equal(callsigns[23].value,'224');
-  const jump=h.document.querySelector('.roster-navigator select');jump.value='23';jump.onchange();
-  assert.equal(h.document.activeElement,callsigns[23]);
+  assert.equal(callsigns.length,20);
+  callsigns[19].value='224';setCount(2);setCount(20);
+  assert.equal(callsigns[19].value,'224');
+  const jump=h.document.querySelector('.roster-navigator select');jump.value='19';jump.onchange();
+  assert.equal(h.document.activeElement,callsigns[19]);
   h.document.querySelector('form').dispatchEvent(new h.Event('submit',{bubbles:true,cancelable:true}));
   await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(submitted.aircraft.length,24);assert.equal(submitted.aircraft[23].callsign,'224');
+  assert.equal(submitted.aircraft.length,20);assert.equal(submitted.aircraft[19].callsign,'224');
 });

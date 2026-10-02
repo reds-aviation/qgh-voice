@@ -76,7 +76,7 @@ test('concurrent instructor rooms keep traffic, PINs, commands and storage separ
       state = (await instructor.request('state', undefined, session)).body;
       return state;
     };
-    await command('scenario-setup', {title: `Room ${index}`, mode: 'area', aircraft: Array.from({length: 24}, (_, i) => ({id: `ac${i + 1}`, callsign: String(1000 + index * 100 + i), qteDeg: i * 15, rangeNm: 25 + i, headingDeg: 180, speedKt: 240, altitudeFt: 10000 + i * 500}))});
+    await command('scenario-setup', {title: `Room ${index}`, mode: 'area', aircraft: Array.from({length: 20}, (_, i) => ({id: `ac${i + 1}`, callsign: String(1000 + index * 100 + i), qteDeg: i * 15, rangeNm: 25 + i, headingDeg: 180, speedKt: 240, altitudeFt: 10000 + i * 500}))});
     const room = (await instructor.request('room', undefined, session)).body;
     return {h, instructor, session, roomId, room, command, state};
   }));
@@ -86,7 +86,7 @@ test('concurrent instructor rooms keep traffic, PINs, commands and storage separ
   for (let i = 0; i < rooms.length; i++) {
     const r = rooms[i], state = (await r.instructor.request('state', undefined, r.session)).body;
     assert.equal(state.elapsed, (i + 1) * 60);
-    assert.equal(state.aircraft.length, 24); assert.equal(state.title, `Room ${i}`);
+    assert.equal(state.aircraft.length, 20); assert.equal(state.title, `Room ${i}`);
     assert.equal(saved.get(`room:${r.roomId}:checkpoint`).state.exerciseId, state.exerciseId);
     const stranger = r.h.port();
     assert.equal((await stranger.request('state', undefined, rooms[(i + 1) % 6].session)).status, 401);

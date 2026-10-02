@@ -29,6 +29,18 @@ test('fleet validates bounds, unique IDs and normalized callsigns', () => {
   }
 });
 
+test('new QGH sessions allow two aircraft while radar sessions retain their fleet capacity and old QGH attempts remain readable', () => {
+  const two = { exerciseFamily: 'qgh', aircraft: [aircraft(1), aircraft(2)] };
+  assert.equal(Suite.validateNewExercise(two), two);
+  assert.throws(() => Suite.validateNewExercise({ ...two, aircraft: [aircraft(1), aircraft(2), aircraft(3)] }), /QGH.*1 to 2/);
+  for (const exerciseFamily of ['surveillance', 'sra']) {
+    assert.doesNotThrow(() => Suite.validateNewExercise({ exerciseFamily, aircraft: Array.from({ length: 24 }, (_, i) => aircraft(i + 1)) }));
+  }
+  const historical = fleet({ exerciseFamily: 'qgh', aircraft: Array.from({ length: 24 }, (_, i) => aircraft(i + 1)) });
+  assert.equal(Suite.setLifecycle(historical, 'paused').aircraftList.length, 24);
+  assert.equal(Suite.MAX_QGH_AIRCRAFT, 2);
+});
+
 test('legacy input and selected aliases share canonical frozen aircraft and trail', () => {
   const legacy = Suite.createState({ ...aircraft(1), runwayOrientationDeg: 230, finalTrackDeg: 225 });
   assert.equal(legacy.aircraftList.length, 1);

@@ -20,6 +20,8 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     assert.ok(!html.includes('offline-setup'), `private handbook link in ${page}`);
     if(!['instructor-led/training-guide.html','procedural-beta/procedural-guide.html'].includes(page))assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
     assert.ok(!html.includes('entry-theme.css'),`deferred theme included in ${page}`);
+    if(['qgh.html','single.html','tactical.html'].includes(page))assert.ok(!html.includes('guided-familiarisation.js'),`${page}: legacy tour must not compete with the shared suite tour`);
+    if(['single.html','tactical.html'].includes(page))assert.ok(html.includes('suite-tour.js'),`${page}: shared tour is available`);
     for(const el of document.querySelectorAll('script[src],link[href],img[src],a[href]')) {
       const value=el.getAttribute('src') || el.getAttribute('href');
       if(!value || value.startsWith('#')) continue;

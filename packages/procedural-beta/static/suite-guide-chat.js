@@ -40,7 +40,8 @@
     const candidates=knowledge.entries.filter(e=>e.topics.includes(topic)&&new RegExp(e.match,'i').test(q));
     // Specific intents take precedence over broad words such as "turn" or "start".
     const specific=['stop-turn','extended-screens','guided-tour','mobile-workspace','local-pin-recovery','student-estimates','saved-exercises','custom-polygons','suite-turn','transmit','instructor-transmit','scope-tools','roster-mobile','approach-reference'];
-    const selected=specific.map(id=>candidates.find(e=>e.id===id)).find(Boolean)||candidates.find(e=>e.priority)||candidates[0];
+    const storedSetup=/\b(?:exercise|template|preset|setup)\b/.test(q)&&candidates.find(e=>e.id==='saved-exercises');
+    const selected=storedSetup||specific.map(id=>candidates.find(e=>e.id===id)).find(Boolean)||candidates.find(e=>e.priority)||candidates[0];
     if(selected)return answerEntry(selected);
     const retrieved=searchGuides?.(q,topic);if(retrieved)return answerEntry(retrieved);
     if(topic==='suite'&&/\b(?:start|begin|choose|launch|open|turn|left|right|vectoring|sre)\b/.test(q))return answerEntry(knowledge.entries.find(e=>e.id==='suite-choice'));
@@ -125,7 +126,7 @@
       }
     }
     const exerciseState = document.getElementById('exerciseState') || document.getElementById('studentExerciseState');
-    const activeExercise = () => (document.body.classList.contains('desk-open') && document.body.classList.contains('exercise-running')) || exerciseState?.textContent.trim() === 'RUNNING' || !!document.querySelector('#console.active, #tConsole.active');
+    const activeExercise = () => (document.body.classList.contains('desk-open') && document.body.classList.contains('exercise-running')) || (!exerciseState?.closest('[hidden]') && exerciseState?.textContent.trim() === 'RUNNING') || !!document.querySelector('#console.active, #tConsole.active');
     function closePanel(restoreFocus = true) {
       const heldFocus = panel.contains(document.activeElement);
       panel.hidden = true; launcher.hidden = false; launcher.setAttribute('aria-expanded', 'false');
@@ -165,7 +166,11 @@
     for (const console of document.querySelectorAll('#console, #tConsole')) {
       new MutationObserver(syncAvailability).observe(console, { attributes: true, attributeFilter: ['class'] });
     }
-    if (exerciseState) new MutationObserver(syncAvailability).observe(exerciseState, { childList: true, characterData: true, subtree: true });
+    if (exerciseState) {
+      new MutationObserver(syncAvailability).observe(exerciseState, { childList: true, characterData: true, subtree: true });
+      const workspace=exerciseState.closest('#studentWorkspace,#activeWorkspace');
+      if(workspace)new MutationObserver(syncAvailability).observe(workspace,{attributes:true,attributeFilter:['hidden']});
+    }
     function fitKeyboard() {
       const viewport = window.visualViewport;
       if (viewport) { panel.style.setProperty('--gyani-height', `${Math.max(240, viewport.height - 16)}px`); panel.style.top = `${viewport.offsetTop + 8}px`; }

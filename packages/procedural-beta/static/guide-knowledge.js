@@ -1,6 +1,6 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.10.03.1",
+  "revision": "2026.10.03.2",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -233,7 +233,7 @@
       "anchor": "tour",
       "priority": true,
       "match": "\\b(?:guided tour|screen tour|walkthrough|walk through|show me around|where are the controls)\\b",
-      "text": "Choose Guided tour before Start, while paused or during review. Back and Next highlight visible controls; Escape closes the tour without changing the exercise. On the instructor’s first Start a short reminder appears: single click selects/transmits, double-left/right turns, middle-click stops. Dismiss it to clear the scope. Phone users use the aircraft arrows and Stop turn. Help stays tucked away while traffic runs.",
+      "text": "A brief, skippable introduction opens on first use when the workspace is ready, before traffic runs; Individual QGH shows it during setup. Next highlights the essential controls; Skip tour or Escape closes it. You can reopen Guided tour before Start, while paused or during review. Run closes all tour overlays without pausing or changing the exercise. The first instructor Start may show a short mouse-control reminder inside the controls shelf. Phone users use the aircraft arrows and Stop turn.",
       "questions": [
         "Show me around the simulator",
         "Where are all the buttons?",
@@ -287,7 +287,8 @@
         "Can I type a target heading?",
         "Where is More controls?",
         "How does centre mouse click work?"
-      ]
+      ],
+      "intro": "Click an aircraft to select and transmit. Double-left/right clicks turn; middle-click stops. On a phone, select it and use the arrows and Stop turn. Target headings use °T."
     },
     {
       "id": "stop-turn",
@@ -348,7 +349,8 @@
         "Does clicking an aircraft transmit?",
         "How do I send a custom message?",
         "What does QDM mean?"
-      ]
+      ],
+      "intro": "Pilot captions and homing sit beside the aircraft controls. Click or Transmit obtains D/F; Pilot transmission also accepts your custom message. Student scope receives bearings, not instructor truth."
     },
     {
       "id": "sweep",
@@ -369,7 +371,8 @@
         "How do I set radar RPM?",
         "The trail is not visible",
         "How many history dots?"
-      ]
+      ],
+      "intro": "SRE/SRA returns update on the 15 RPM radar scan. Use your own range and pan controls. The instructor picture and student observations are different views."
     },
     {
       "id": "roster-mobile",
@@ -382,7 +385,7 @@
       ],
       "anchor": "traffic",
       "match": "\\b(?:callsigns?|scroll|roster|keyboard|phone|mobile|aircraft count|add aircraft|generate traffic)\\b",
-      "text": "Initial traffic is optional and collapsed during setup; expand it when you need to prepare an exact starting roster. You can also open Traffic at the desk. Set 1–24 aircraft with independent callsign, position, heading, level, speed and performance. Phone cards scroll vertically; Jump to aircraft selects a callsign. Create session applies the visible roster. Save the prepared setup before Run for a repeatable assessment.",
+      "text": "Initial traffic is optional and collapsed during setup; expand it when you need to prepare an exact starting roster. You can also open Traffic at the desk. Set 1–20 aircraft with independent callsign, position, heading, level, speed and performance. Phone cards scroll vertically; Jump to aircraft selects a callsign. Create session applies the visible roster. Save the prepared setup before Run for a repeatable assessment.",
       "questions": []
     },
     {
@@ -399,7 +402,8 @@
       "anchor": "exercise",
       "match": "\\b(?:run|pause|resume|start|nothing moves|not moving|stopped)\\b",
       "text": "Run starts or resumes the same exercise after any admitted controller is Ready. Pause freezes traffic, clock and radar sweep. +1 min advances one minute. Exercise options minimise when Run starts; reopen the options dropdown when needed. Terminate finishes the exercise for review; Reopen restores it paused.",
-      "questions": []
+      "questions": [],
+      "intro": "Admit the controller and wait for Ready, then Run. Pause freezes the clock and traffic. Exercise options minimise at Run; the red Terminate button finishes the attempt."
     },
     {
       "id": "session-isolation",
@@ -445,7 +449,8 @@
         "Can I type a heading?",
         "Does clicking transmit?",
         "Centre mouse click stops turn?"
-      ]
+      ],
+      "intro": "Click an aircraft to select and transmit. Double-left/right clicks turn; middle-click stops. On a phone, use the arrows and Stop turn. Target headings use °M; More controls opens speed and level."
     },
     {
       "id": "terminate-exercise",
@@ -486,11 +491,13 @@
       ],
       "anchor": "review",
       "priority": true,
-      "match": "\\b(?:replay|review|debrief|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot))\\b",
-      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side and 3D schematic traffic views. Compare aircraft position, level and time; configured separation alerts are training aids, not a complete Doc 4444 compliance decision. The instructor checks minima and prerequisites against the authorised reference. Replay does not alter the completed exercise.",
+      "match": "\\b(?:replay|review|debrief|timeline|separation cue|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot))\\b",
+      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side · altitude and 3D schematic views at the same replay time. Choose Aircraft to highlight one track and filter its events; select a timeline marker or a Commands & events item to seek to that recorded time. Cues show measured spacing against the configured threshold, plus the supplied source, applicability, evidence and instructor assessment. These are configured training cues, not a complete Doc 4444 decision; no cue at a sample does not establish safe separation. The instructor checks authorised minima and prerequisites. The 3D view exaggerates altitude, and replay never alters the completed exercise.",
       "questions": [
         "The replay buttons cover my track",
-        "How do I watch my flight again?"
+        "How do I watch my flight again?",
+        "How do I seek to a command in review?",
+        "What do the separation cues mean?"
       ]
     },
     {
@@ -527,7 +534,8 @@
         "Where is terminate?",
         "I cannot see the terminate button",
         "How do I end the exercise?"
-      ]
+      ],
+      "intro": "Admit the controller and wait for Ready, then Start. Pause freezes traffic. The red Terminate button ends the attempt for both positions and opens review."
     },
     {
       "id": "terminate-individual",
@@ -614,7 +622,7 @@
       ],
       "anchor": "instructor",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sre|vectoring)\\b",
-      "text": "Choose QGH, SRE/vectoring or SRA. QGH is the cloud-breaking procedure with Normal or U/S Compass. Prepare traffic and pressure/approach references, create the session, admit the controller and start after Ready. The scope, compact aircraft controls and collapsible exercise options follow the Procedural workspace.",
+      "text": "Choose QGH, SRE/vectoring or SRA. QGH is the cloud-breaking procedure with Normal or U/S Compass. New QGH sessions allow up to 2 aircraft; SRE/vectoring and SRA allow up to 24. Prepare traffic and pressure/approach references, create the session, admit the controller and start after Ready. The scope, compact aircraft controls and collapsible exercise options follow the Procedural workspace.",
       "questions": [
         "How do I start SRA?",
         "How do I start instructor QGH?",
@@ -638,7 +646,8 @@
         "How do I start Tactical?"
       ],
       "priority": false,
-      "controls": []
+      "controls": [],
+      "intro": "Check runway, procedure tracks, Normal or U/S Compass and aircraft settings. Start begins the clock. Use the controller controls, then Terminate to review your track."
     },
     {
       "id": "approach-reference",
@@ -715,7 +724,8 @@
         "Where are pilot messages?"
       ],
       "controls": [],
-      "priority": false
+      "priority": false,
+      "intro": "Pilot captions and homing sit below the scope. Click or Transmit gives QGH D/F, or a position report in SRE/SRA. The student sees the appropriate bearing or radar observation."
     },
     {
       "id": "instructor-speed-level",
@@ -745,7 +755,7 @@
       ],
       "anchor": "scope",
       "match": "\\b(?:pan|zoom|range rings|scope controls|scope layers|local picture|bearing range ruler|ruler|options dropdown|top controls)\\b",
-      "text": "Drag the scope background to pan. Use range controls or Ctrl + scroll to zoom and Centre/Home to return to the origin. Procedural Options hides navigation, range tools and aircraft tabs; Start/Run closes them automatically. The instructor QGH/SRE/SRA navigation, Session, Clock, aircraft drawer and event history also close at Start. Open only the controls needed. Range and pan are local view changes.",
+      "text": "Drag the scope background to pan. Use range controls or Ctrl + scroll to zoom and Centre/Home to return to the origin. Procedural Options hides navigation, range tools and aircraft tabs; Start/Run closes them automatically. Instructor QGH/SRE/SRA Scope settings groups range, centre and trail controls and closes at Start with navigation, Session, Clock, aircraft and event drawers. Its summary stays accessible. Pause/Resume/Terminate remains visible while the scope scrolls. Range and pan are local view changes.",
       "questions": [
         "How do I pan the scope?",
         "How do I minimise the top controls?"
@@ -764,10 +774,11 @@
       ],
       "anchor": "airspace",
       "match": "\\b(?:polygon|draw|drawing|boundary|boundaries|point to point|custom airspace|custom lfa|coordinates)\\b",
-      "text": "Pause → Edit airspace → Custom airspace. Enter ARP latitude/longitude and Save ARP. Add a boundary name, type (LFA/P/R/D/CTR), vertical limits and coordinate points. Or click/tap points on the drawing canvas and drag vertices, then Close boundary; Undo point corrects the last point. Draw on radar scope lets you place vertices directly (Enter closes, Escape ends drawing). Save boundary shares it to the student. Edit/Remove manages multiple polygons. Select only needed published routes and areas before loading a base.",
+      "text": "Pause → Edit airspace → Custom airspace. Enter ARP latitude/longitude and Save ARP. Add a boundary name, type (LFA/P/R/D/CTR), vertical limits and coordinate points, or click/tap points on the canvas. Edit loads an existing ring; drag a vertex or choose Selected vertex → Delete selected vertex. Draw / edit on radar scope allows the same changes; Enter closes the ring, Delete/Backspace removes the selected vertex and Escape cancels drawing. Only Save boundary shares the edited polygon to the student; a crossed ring is rejected. Remove deletes a whole area. Select only needed published routes and areas before loading a base.",
       "questions": [
         "How do I draw an LFA polygon?",
         "Can I drag boundary points?",
+        "How do I delete a polygon vertex?",
         "Where do I enter prohibited area coordinates?"
       ],
       "controls": [
@@ -777,7 +788,11 @@
         "boundary-sketch",
         "boundary-sketch-canvas",
         "custom-boundary-list",
-        "aerodrome-selection"
+        "aerodrome-selection",
+        "boundary-scope-edit",
+        "boundary-vertex-select",
+        "boundary-vertex-delete",
+        "boundary-scope-delete"
       ],
       "priority": true
     },
@@ -791,12 +806,13 @@
         "procedural"
       ],
       "anchor": "traffic",
-      "match": "\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library)\\b",
-      "text": "Prepare the starting setup before Run. Procedural: Saved exercises → name → Save starting setup; choose a saved exercise → Use selected exercise to restore its original traffic paused at 00:00. Download selected saves a JSON backup; Import exercise file adds a transferred setup. Instructor QGH/SRE/SRA uses Save, Load, Export and Import in setup; Restart after review retries the identical starting roster. Libraries belong to this browser/device. New live sessions have independent PINs/admissions; saved setups contain no room tokens.",
+      "match": "\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library|(?:duplicate|rename) (?:selected|(?:(?:a|the|my) )?(?:exercise|setup|template|preset)))\\b",
+      "text": "Prepare the starting setup before Run. Procedural: Saved exercises → name → Save starting setup; replacing the same name asks for confirmation. Save as new needs a new name. Duplicate selected copies the stored setup; Rename selected keeps its traffic and chart selections. Use selected exercise restores original traffic paused at 00:00. Export selected saves a JSON backup; Import exercise file adds a transferred setup. New Procedural saves/imports allow up to 20 aircraft; older device templates retain their traffic. Instructor QGH/SRE/SRA: Save as new creates a uniquely named setup; Update selected replaces the chosen record from the current form. Duplicate copies the stored original; Rename changes only its name. Load selected restores the stored setup; Export selected exports that original. Import creates an independent entry with a unique name. Remove deletes the local record after confirmation. Legacy QGH setups above 2 aircraft cannot Load/Import; the original remains stored and exportable, with no silent truncation. Restart after review retries the initial roster. Libraries belong to this browser/device; new live sessions have independent PINs/admissions and saved setups contain no room tokens.",
       "questions": [
         "How do I reuse an exercise?",
         "Can I test two students on the same setup?",
-        "How do I export a saved exercise?"
+        "How do I export a saved exercise?",
+        "Can I duplicate or rename a saved exercise?"
       ],
       "controls": [
         "scenario-library",
@@ -805,7 +821,10 @@
         "template-save",
         "template-load",
         "template-download",
-        "template-import"
+        "template-import",
+        "template-save-as",
+        "template-duplicate",
+        "template-rename"
       ],
       "priority": true
     },
@@ -840,7 +859,8 @@
         "estimate-north",
         "estimate-coordinate-move"
       ],
-      "priority": true
+      "priority": true,
+      "intro": "EST dots are your own position estimates. Add a callsign, place a dot and drag it, or use Place by coordinates. These dots stay local and do not move the instructor aircraft."
     },
     {
       "id": "suite-turn",
@@ -857,6 +877,28 @@
       ],
       "controls": [],
       "priority": false
+    },
+    {
+      "id": "aircraft-limits",
+      "title": "Aircraft limits by exercise",
+      "topics": [
+        "suite",
+        "qgh",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "controls": [],
+      "anchor": "traffic",
+      "priority": true,
+      "match": "\\b(?:how many aircraft|maximum aircraft|aircraft limit|traffic limit|max aircraft|20 aircraft|2 aircraft|24 aircraft)\\b",
+      "text": "New Procedural exercises support up to 20 aircraft. New instructor-led QGH sessions allow up to 2 aircraft. SRE/vectoring and SRA retain up to 24 aircraft. Single QGH uses one aircraft; Tactical keeps its existing setup controls. Older stored exercises retain their original traffic for replay and export.",
+      "questions": [
+        "How many aircraft can I create?",
+        "What is the QGH aircraft limit?",
+        "Can Procedural use 20 aircraft?"
+      ]
     }
   ],
   "tours": [
@@ -1187,8 +1229,99 @@
   "startHint": {
     "title": "Aircraft mouse controls",
     "text": "Click: select + D/F · Double-left: turn left · Double-right: turn right · Middle: stop turn. Phone: select, then use the turn arrows and Stop turn."
-  }
+  },
+  "firstUse": [
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#scope",
+      "title": "Select and turn",
+      "entry": "turn"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#homing",
+      "title": "Pilot and homing",
+      "entry": "transmit"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#clock-controls",
+      "title": "Ready, then Run",
+      "entry": "run-pause"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#instructorScope",
+      "title": "Select and turn",
+      "entry": "instructor-turn"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#instructorHoming",
+      "title": "Pilot and homing",
+      "entry": "instructor-transmit"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": ".lifecycle-actions",
+      "title": "Ready, then Start",
+      "entry": "terminate-instructor"
+    },
+    {
+      "pages": [
+        "student"
+      ],
+      "selector": "#qghStudentView",
+      "title": "Read the bearing",
+      "entry": "instructor-transmit"
+    },
+    {
+      "pages": [
+        "student"
+      ],
+      "selector": "#radarStudentView",
+      "title": "Your radar observations",
+      "entry": "sweep"
+    },
+    {
+      "pages": [
+        "student"
+      ],
+      "selector": "#student-estimate-panel",
+      "title": "Plot your own estimates",
+      "entry": "student-estimates"
+    },
+    {
+      "pages": [
+        "single"
+      ],
+      "selector": "#setup",
+      "title": "Prepare Single QGH",
+      "entry": "individual-start"
+    },
+    {
+      "pages": [
+        "tactical"
+      ],
+      "selector": "#tSetup",
+      "title": "Prepare Tactical QGH",
+      "entry": "individual-start"
+    }
+  ]
 };
 for(const step of knowledge.tours) if(step.entry) step.text=knowledge.entries.find(entry=>entry.id===step.entry)?.text||"";
+for(const step of knowledge.firstUse) if(step.entry){const entry=knowledge.entries.find(entry=>entry.id===step.entry);step.text=entry?.intro||entry?.text||"";}
 if(typeof module === "object" && module.exports) module.exports=knowledge; else root.ATCGuideKnowledge=knowledge;
 })(typeof globalThis==="object"?globalThis:this);

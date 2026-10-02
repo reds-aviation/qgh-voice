@@ -5,6 +5,7 @@ import { createRadarSweep } from './radar-sweep.js';
 import { recordTrail, trailDots, trailSpacing } from './scope-history.js';
 import { createTrafficReview } from './traffic-review.js';
 import { createStudentPlotting } from './student-plotting.js';
+import './workspace-shell.js';
 import { createTrafficSetup } from './traffic-setup.js';
 import { createChartWorkshop, drawAreas, routeWindowOpen } from './chart-workshop.js';
 import { visibleSegment, reserveLabel, fitNavigation, approachReference } from './scope-navigation.js';
@@ -54,13 +55,15 @@ function syncEnvironmentInputs() {
 let lastElapsed = -1, trailHistory = new Map(), drafts = new Map(), stripRevision = 0;
 let pan = { x: 0, y: 0 }, ruler = [], pointer = null;
 const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, trailCount: 8, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 15 };
-let linkedCallId = '', lastRunning = false;
+let linkedCallId = '', focusExerciseId = '';
 const trafficReview = createTrafficReview($('traffic-review'));
-function setWorkspaceOptions(open) {
+function applyWorkspaceOptions(open) {
     document.body.classList.toggle('options-collapsed', !open);
     $('workspace-options-toggle').setAttribute('aria-expanded', String(open));
     text('workspace-options-toggle', open ? 'Options ▴' : 'Options ▾');
 }
+const workspaceFocus = globalThis.ATCSuiteWorkspace?.createFocusMode({root:document.body,toggle:$('workspace-options-toggle'),onChange:applyWorkspaceOptions});
+function setWorkspaceOptions(open) { if (workspaceFocus) workspaceFocus.setExpanded(open); else applyWorkspaceOptions(open); }
 $('workspace-options-toggle').onclick = () => setWorkspaceOptions(document.body.classList.contains('options-collapsed'));
 function renderLinkedCall() {
     const call = view?.calls?.find(c => c.id === linkedCallId && c.status === 'pending' && c.aircraftId === selected);
@@ -221,6 +224,7 @@ function tab(name, open = true) {
 }
 function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open', 'review-open'); trafficReview.close(); drawerReturn?.focus(); }
 function setStage(next) {
+    const changed = stage !== next;
     if (next !== 'desk') resetScopePointer();
     stage = next;
     for (const id of ['entry', 'setup', 'waiting', 'desk'])
@@ -237,6 +241,7 @@ function setStage(next) {
         document.body.classList.remove('drawer-open');
     $('back-flow').hidden = !session || next === 'entry';
     $('return-desk').hidden = !session || next !== 'entry';
+    if (changed && next === 'desk') globalThis.ATCSuiteWorkspace?.enter($('desk'));
 }
 function leave() {
     trafficReview.clear();
@@ -252,7 +257,7 @@ function leave() {
     trailHistory.clear();
     drafts.clear();
     lastElapsed = -1;
-    lastRunning = false;
+    focusExerciseId = '';
     linkedCallId = '';
     clearAudio();
     mapGeneration++;
@@ -522,7 +527,8 @@ async function roomAction(action, studentId) {
 async function startExercise() {
     if (room?.students?.some((s) => s.status === 'admitted'))
         throw new Error('Wait for the admitted controller to press Ready.');
-    return command('clock', { action: 'resume' });
+    await command('clock', { action: 'resume' });
+    globalThis.ATCSuiteWorkspace?.enter($('desk'));
 }
 async function showTrafficSetup() {
     if (session?.role !== 'instructor')
@@ -737,12 +743,11 @@ function render() {
     text('clock-state', v.terminated ? 'ENDED' : v.running ? 'RUNNING' : 'PAUSED');
     $('clock-state').classList.toggle('live', v.running);
     document.body.classList.toggle('exercise-running', v.running);
-    if (v.running && !lastRunning) setWorkspaceOptions(false);
-    lastRunning = v.running;
+    if (v.running && focusExerciseId !== v.exerciseId) { setWorkspaceOptions(false); focusExerciseId = v.exerciseId; }
     if (session?.role === 'instructor') trafficReview.record(v);
     text('mode-label', 'PROCEDURAL STUDIO');
     renderApproachReference();
-    text('fleet-count', `${v.roster.length} / 24`);
+    text('fleet-count', `${v.roster.length} / 20`);
     renderClockControls();
     const nextChart = JSON.stringify([v.environment.aerodromeName, v.environment.chartOrigin]);
     if (nextChart !== chartIdentity) {
@@ -949,6 +954,7 @@ const studentPlotting = createStudentPlotting({ canvas, screenToPoint: position,
 });
 studentPlotting.mount(studentPlotPanel); studentPlotting.setEnabled(false);
 $('scope-wrap').append(studentPlotPanel);
+globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls')});
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 function draw() {
     sweep.update();
@@ -1371,6 +1377,7 @@ function syncRange() {
 function position(e) { const b = canvas.getBoundingClientRect(), g = geometry(); return { x: (e.clientX - b.left - g.cx) / g.scale, y: -(e.clientY - b.top - g.cy) / g.scale }; }
 const gestures = createAircraftGestures({onTransmit: id => { void safe(() => transmitAircraft(id))(); }});
 function resetScopePointer() {
+    chartWorkshop.cancelSketch?.();
     gestures.reset();
     const capture = pointer?.id;
     pointer = null;
@@ -1412,6 +1419,7 @@ canvas.addEventListener('pointerdown', e => {
     pointer = { id: e.pointerId, button: e.button, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragging: false };
 });
 canvas.addEventListener('pointermove', e => {
+    if (session?.role === 'instructor' && chartWorkshop.onPointerMove?.(e)) return;
     if (session?.role === 'student' && studentPlotting.onPointerMove(e)) return;
     if (!pointer) {
         const a = e.pointerType === 'mouse' ? hitAircraft(e) : null;
@@ -1432,6 +1440,7 @@ canvas.addEventListener('pointermove', e => {
     }
 });
 canvas.addEventListener('pointerup', e => {
+    if (session?.role === 'instructor' && chartWorkshop.onPointerUp?.(e)) return;
     if (session?.role === 'student' && studentPlotting.onPointerUp(e)) return;
     if (!pointer || pointer.id !== e.pointerId || !view) return;
     const pressed = pointer; pointer = null;
@@ -1458,7 +1467,7 @@ canvas.addEventListener('pointerup', e => {
 });
 canvas.addEventListener('pointerleave', hideAircraftHover);
 for (const event of ['pointercancel', 'lostpointercapture'])
-    canvas.addEventListener(event, e => { studentPlotting.onPointerCancel(e); if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
+    canvas.addEventListener(event, e => { chartWorkshop.onPointerCancel?.(e); studentPlotting.onPointerCancel(e); if (pointer) gestures.reset(); pointer = null; hideAircraftHover(); });
 for (const direction of ['left', 'right']) $('quick-' + direction).onclick = safe(() => immediateTurn(direction));
 $('quick-stop').onclick = safe(() => immediateTurn('stop-turn'));
 $('quick-transmit').onclick = safe(() => { gestures.reset(); return transmitAircraft(); });
@@ -1689,6 +1698,7 @@ bindForm('preset-form', async () => {
     message('Training exercise loaded, paused.');
 });
 bindForm('aircraft-form', async () => {
+    if ((view?.roster.length || 0) >= 20) throw new Error('The exercise already has 20 aircraft. Remove one before adding another.');
     const p = {};
     for (const k of ['callsign', 'type', 'routeId', 'wakeCategory'])
         p[k] = val('aircraft-form', k);
@@ -1702,10 +1712,10 @@ bindForm('generate-form', async () => {
     if (!view)
         return;
     const count = num('generate-form', 'count'), interval = num('generate-form', 'interval');
-    if (count < 1 || count > 24 || !Number.isInteger(count))
-        throw new Error('Choose 1–24 aircraft.');
-    if (view.roster.length + count > 24)
-        throw new Error(`Only ${24 - view.roster.length} aircraft places remain.`);
+    if (count < 1 || count > 20 || !Number.isInteger(count))
+        throw new Error('Choose 1–20 aircraft.');
+    if (view.roster.length + count > 20)
+        throw new Error(`Only ${Math.max(0, 20 - view.roster.length)} aircraft places remain.`);
     const route = view.routes.find(r => r.id === val('generate-form', 'routeId'));
     if (!route)
         throw new Error('Choose a route first.');

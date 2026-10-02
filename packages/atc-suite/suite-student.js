@@ -4,6 +4,11 @@
   if (!Session) return;
   const byId = id => document.getElementById(id);
   const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function enterWorkspace(element) {
+    if (!element) return;
+    if (globalThis.ATCSuiteWorkspace?.enter) globalThis.ATCSuiteWorkspace.enter(element, { block: 'start' });
+    else element.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+  }
   const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null, cloudTransport: null, joining: false,
     radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false,
     scopePan: { x: 0, y: 0 }, scopeDrag: null, plotting: null, observationReceivedAt: null };
@@ -14,10 +19,15 @@
     ['callsign', 'radarLabelCallsign'], ['squawk', 'radarLabelSquawk'], ['modeS', 'radarLabelModeS'], ['level', 'radarLabelLevel'],
     ['groundSpeed', 'radarLabelSpeed'], ['heading', 'radarLabelHeading'], ['bearingRange', 'radarLabelBearingRange']
   ];
+  globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('studentWorkspace'), scope: byId('radarScope'),
+    shelf: byId('student-estimate-panel'), actions: byId('studentWorkspace')?.querySelector?.('.student-head') });
+  byId('studentEstimateScope').classList?.add?.('ats-scope-surface');
 
-  function show(id) {
+  function show(id, { scroll = true } = {}) {
+    const entering = byId(id).hidden;
     for (const name of ['joinPanel', 'waitingPanel', 'readyPanel', 'studentWorkspace', 'studentEnded', 'orientationGate']) byId(name).hidden = name !== id;
     if (id !== 'studentWorkspace') document.body.classList.toggle('narrow-radar', false);
+    if (entering && scroll) enterWorkspace(byId(id));
   }
 
   function onSessionEvent(event) {
@@ -100,11 +110,14 @@
 
   function renderLifecycle(lifecycle) {
     if (['ready', 'running', 'paused'].includes(lifecycle)) {
-      show('studentWorkspace');
+      const alreadyVisible = !byId('studentWorkspace').hidden;
+      const collapseNavigation = ['running', 'paused'].includes(lifecycle) && byId('studentNavigation').open;
+      show('studentWorkspace', { scroll: false });
       document.body.classList.add?.('exercise-console');
       if (lifecycle === 'running' || lifecycle === 'paused') byId('studentNavigation').open = false;
       byId('studentExerciseState').textContent = lifecycle.toUpperCase(); byId('connectionState').textContent = 'CONNECTED';
       renderWorkspaceMode(); refreshAudioAvailability(); renderObservation();
+      if (!alreadyVisible || collapseNavigation) enterWorkspace(byId('studentWorkspace'));
     } else if (lifecycle === 'terminated' || lifecycle === 'disconnected') {
       setPilotAudio(false);
     }

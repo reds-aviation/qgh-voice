@@ -13,6 +13,7 @@
   const SCHEMA_VERSION = 1;
   const STEP_SECONDS = .25;
   const MAX_AIRCRAFT = 24;
+  const MAX_QGH_AIRCRAFT = 2;
   const FAMILIES = new Set(['qgh', 'surveillance', 'sra', 'par']);
   const QGH_PROCEDURES = new Set(['normal', 'us']);
   const TURN_SIDES = new Set(['left', 'right']);
@@ -237,6 +238,18 @@
       headingDeg: aircraft.headingDeg,
       altitudeFt: aircraft.altitudeFt
     };
+  }
+
+  // New session admission has mode-specific traffic limits. The underlying
+  // engine continues to read old attempts and replay their original fleet.
+  function validateNewExercise(input = {}) {
+    const family = String(input.exerciseFamily || 'qgh').toLowerCase();
+    const maximum = family === 'qgh' ? MAX_QGH_AIRCRAFT : MAX_AIRCRAFT;
+    const aircraft = input.aircraft === undefined ? [input] : input.aircraft;
+    if (!Array.isArray(aircraft) || aircraft.length < 1 || aircraft.length > maximum) {
+      throw new Error(`${family === 'qgh' ? 'QGH' : 'A radar'} exercise must contain from 1 to ${maximum} aircraft.`);
+    }
+    return input;
   }
 
   function createState(input = {}) {
@@ -992,6 +1005,8 @@
     SCHEMA_VERSION,
     STEP_SECONDS,
     MAX_AIRCRAFT,
+    MAX_QGH_AIRCRAFT,
+    validateNewExercise,
     createState,
     selectAircraft,
     parTransferStatus,

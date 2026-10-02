@@ -358,6 +358,10 @@ export function createChartWorkshop(context) {
     return {
         isSketching: preparation.isSketching,
         onPointer: preparation.onPointer,
+        onPointerMove: preparation.onPointerMove,
+        onPointerUp: preparation.onPointerUp,
+        onPointerCancel: preparation.onPointerCancel,
+        cancelSketch: preparation.cancelSketch,
         draw: preparation.draw,
         openLibrary: library.open,
         render() {

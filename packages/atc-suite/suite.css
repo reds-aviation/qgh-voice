@@ -545,6 +545,8 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 .instructor-page .clock-settings[open] .training-rate-control { padding:8px; }
 .instructor-page .instructor-console { display:block; }
 .instructor-page .console-toolbar { position:static; margin:0 0 5px; padding:5px; }
+.instructor-page.exercise-console .console-toolbar { position:sticky; top:max(0px,env(safe-area-inset-top)); z-index:8; }
+.instructor-page #activeWorkspace, .student-page #studentWorkspace { scroll-margin-top:0; outline:none; }
 .instructor-page .console-toolbar-label { display:none; }
 .instructor-page .console-toolbar { grid-template-columns:minmax(0,1fr) auto; }
 .instructor-page .truth-layout { display:block; }
@@ -553,7 +555,22 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 .instructor-page .scope-card .card-head label { display:flex; align-items:center; gap:5px; font-size:.75rem; }
 .instructor-page .scope-card .card-head select { min-height:36px; width:auto; padding:0 6px; }
 .instructor-page .scope-card .card-head button { min-height:36px; padding-inline:8px; }
+.instructor-page .scope-settings > summary { min-height:44px; padding:10px; cursor:pointer; font-size:.75rem; }
+.instructor-page .scope-settings > summary b { padding-left:8px; color:var(--muted); font-size:.64rem; font-weight:500; }
 .instructor-page #instructorScope { display:block; width:100%; height:clamp(300px,calc(100dvh - 310px),850px); touch-action:none; }
+@media (min-width:900px) and (max-height:850px) {
+  .instructor-page .workspace-head { min-height:38px; margin-bottom:3px; }
+  .instructor-page .workspace-head h1 { display:none; }
+  .instructor-page .workspace-head .eyebrow { font-size:.7rem; letter-spacing:.03em; }
+  .instructor-page .workspace-head .status-stack { gap:8px; }
+  .instructor-page .status-stack time { font-size:1.15rem; }
+  .instructor-page .console-toolbar .lifecycle-actions button { min-height:44px; }
+  .instructor-page .instrument-shelf { gap:5px; padding:5px 0; }
+  .instructor-page .instrument-shelf > * { padding:5px; }
+  .instructor-page #instructorScope { height:clamp(300px,calc(100dvh - 310px),540px); }
+  .instructor-page .quick-heading-row input, .instructor-page .quick-heading-row button { min-height:38px; }
+  .instructor-page .scope-settings > summary b { float:right; }
+}
 .instructor-page .scope-inspection { padding:4px 10px; margin:0; min-height:24px; font-size:.7rem; }
 .instructor-page .scope-legend { display:none; }
 .instrument-shelf { display:grid; grid-template-columns:minmax(310px,1.4fr) 160px minmax(180px,1fr); gap:8px; padding:8px 0; }

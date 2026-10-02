@@ -8,6 +8,8 @@
   <title>Controller Position · ATC Training Suite</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
+  <link rel="stylesheet" href="workspace-shell.css">
+  <script defer src="workspace-shell.js"></script>
   <link rel="stylesheet" href="student-plotting.css">
   <script defer src="suite-session.js"></script>
   <script defer src="suite-cloud.js"></script>
@@ -25,7 +27,7 @@
 
     <section class="ready-panel" id="readyPanel" hidden><div><span class="eyebrow">POSITION ADMITTED</span><h1 id="readyMode">QGH / DIRECTION FINDING</h1><p>The sensor display will remain blank until the instructor starts the exercise.</p></div><label class="audio-option"><input id="studentAudio" type="checkbox"><span><b>OPTIONAL PILOT AUDIO</b><small id="audioAvailability">Uses an installed device voice. Captions remain authoritative.</small></span></label><button id="studentReady" class="primary-action" type="button">POSITION READY</button></section>
 
-    <section class="student-workspace active-workspace" id="studentWorkspace" hidden>
+    <section class="student-workspace active-workspace" id="studentWorkspace" tabindex="-1" hidden>
       <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><time id="studentClock" class="header-clock">00:00</time><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><button id="reconnectStudent" type="button">RECONNECT</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span><span id="pictureFreshness" role="status">AWAITING PICTURE</span></div></header>
 
       <output id="studentCaption" class="pilot-caption" aria-live="polite"><small>PILOT</small><strong>Awaiting transmission</strong></output>

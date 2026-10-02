@@ -19,6 +19,8 @@ export async function buildEntryTheme(output, root, version) {
     const prefix = page.includes('/') ? '../' : '';
     const path = resolve(output, page);
     let html = await readFile(path, 'utf8');
+    // Published Pages uses the shared tour; keep legacy engine assets for old recordings/builds.
+    if(['qgh','single','tactical'].includes(surface))html=html.replace(/<script[^>]+src="guided-familiarisation\.js[^\"]*"[^>]*><\/script>\s*/g,'').replace(/<link[^>]+href="guided-familiarisation\.css[^\"]*"[^>]*>\s*/g,'');
     html = html.replace('<body', `<body data-suite-surface="${surface}"`)
       .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}"></head>`);
     if (['qgh', 'instructor', 'guide'].includes(surface)) {

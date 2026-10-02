@@ -1000,10 +1000,16 @@ body.desk-open.review-open #work-panel .tab-content { width:min(1200px,100%); ma
 .traffic-review-toolbar label { margin:0; min-width:100px; }
 .traffic-review-toolbar input[type=range] { flex:1 1 240px; width:auto; min-height:44px; }
 .traffic-review-toolbar output { font:14px PlexMono,monospace; align-self:center; }
+.traffic-review-markers { position:relative; height:36px; margin:0 18px 8px; border-bottom:2px solid #607b8a; }
+.traffic-review-markers button { position:absolute; bottom:0; transform:translateX(-50%); padding:0; width:28px; min-height:32px; color:#f2cd72; background:transparent; border:0; font-size:24px; }
+.traffic-review-events { display:grid; gap:6px; max-height:240px; overflow-y:auto; margin:10px 0; }
+.traffic-review-events button { text-align:left; white-space:normal; overflow-wrap:anywhere; min-height:44px; font-size:13px; }
 .traffic-review-canvas { display:block; width:100%; height:clamp(250px,48vh,560px); border:1px solid #536b7b; border-radius:10px; }
 .review-cues { padding:10px 0; font-size:14px; }
 .review-cues p { margin:5px 0; }
-.review-cues.has-cue { color:#ffc2c2; }
+.review-cues .review-cue-warning { color:#ffc2c2; }
+.review-cues .review-cue-assessment { color:#ffdf94; }
+.review-cues .review-cue-measurement { color:#bdd3dc; }
 #calls { max-height:240px; overflow:auto; }
 .student-estimate-panel { flex:0 0 auto; background:#18222d; border-top:1px solid #6d6284; margin:0; }
 .student-estimate-panel > summary { cursor:pointer; color:#e0c4ff; padding:10px 12px; font:600 13px Plex,Arial,sans-serif; min-height:40px; }

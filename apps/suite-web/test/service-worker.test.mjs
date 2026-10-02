@@ -80,6 +80,8 @@ test('install precaches the complete local two-position shell', async () => {
     './suite-student.js',
     './student-plotting.js',
     './student-plotting.css',
+    './workspace-shell.js',
+    './workspace-shell.css',
     './simulator-core.js',
     './procedure-core.js',
     './fonts/ibm-plex-mono-500.ttf',
@@ -158,10 +160,12 @@ test('activation removes only earlier ATC suite generations', async () => {
   assert.deepEqual(harness.calls.deleted, ['reds-atc-suite-atc-suite-v0.0.9']);
 });
 
-test('waiting updates remain paused while a local session is active', async () => {
+test('waiting updates remain invisible across instructor, student, admission and review phases', async () => {
   const serviceWorkerListeners = new Map();
   const windowListeners = new Map();
-  let activeSession = true;
+  let activeSession = '#activeWorkspace';
+  let observeVisibility;
+  let observerOptions;
   let clickUpdate;
   let postCount = 0;
   let reloadCount = 0;
@@ -185,7 +189,7 @@ test('waiting updates remain paused while a local session is active', async () =
     visibilityState: 'visible',
     createElement: () => notice,
     addEventListener: () => {},
-    querySelector: selector => selector.includes('#activeWorkspace') && activeSession ? {} : null,
+    querySelector: selector => activeSession && selector.includes(activeSession) ? {} : null,
   };
   const window = {
     addEventListener: (type, listener) => windowListeners.set(type, listener),
@@ -205,19 +209,39 @@ test('waiting updates remain paused while a local session is active', async () =
     location: { protocol: 'https:' },
     navigator,
     window,
+    MutationObserver: class { constructor(callback) { observeVisibility = callback; } observe(_body, options) { observerOptions = options; } },
   }, { filename: 'pwa-register.js' });
 
   await windowListeners.get('load')();
   assert.equal(typeof clickUpdate, 'function');
+  assert.equal(notice.hidden, true, 'a waiting update must not cover the active mobile console');
+  assert.equal(button.disabled, true);
+  assert.equal(observerOptions.subtree, true);
+  assert.deepEqual([...observerOptions.attributeFilter], ['hidden']);
   clickUpdate();
   assert.equal(postCount, 0, 'active instructor or student sessions are not interrupted');
   assert.match(copy.textContent, /active local session/i);
 
-  activeSession = false;
+  activeSession = false; observeVisibility();
+  assert.equal(notice.hidden, false, 'update remains available on a safe entry page');
+  assert.equal(button.disabled, false);
+  for (const panel of ['#waitingPanel', '#readyPanel', '#studentWorkspace', '#reviewScreen', '#activeWorkspace']) {
+    activeSession = panel; observeVisibility();
+    assert.equal(notice.hidden, true, `${panel} cannot be obstructed by an update offer`);
+    assert.equal(button.disabled, true);
+    assert.equal(postCount, 0);
+    activeSession = false; observeVisibility();
+    assert.equal(notice.hidden, false);
+  }
   clickUpdate();
   assert.equal(postCount, 1);
   serviceWorkerListeners.get('controllerchange')();
   assert.equal(reloadCount, 1, 'reload occurs only after the user accepts a safe update');
+});
+
+test('hidden update notices cannot be resurrected by their fixed-position flex styling', () => {
+  const css = readFileSync(resolve(staticRoot, 'pwa.css'), 'utf8');
+  assert.match(css, /\.pwa-update-notice\[hidden\]\s*\{\s*display:\s*none\s*!important/);
 });
 
 test('skip-waiting messages are accepted only from this suite scope', () => {

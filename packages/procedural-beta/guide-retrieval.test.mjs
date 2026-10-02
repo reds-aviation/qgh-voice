@@ -82,7 +82,10 @@ test('Gyani explains current shared controls, saved setups and retired PAR',()=>
     ['How does centre mouse click stop turning?','procedural','stop-turn',/Middle.click/],
     ['Can I type a target heading?','qgh-instructor','instructor-turn',/Heading °M/],
     ['How do I reuse an exercise?','procedural','saved-exercises',/JSON backup/],
-    ['How do I draw an LFA polygon?','procedural','custom-polygons',/drag vertices/],
+    ['How do I draw an LFA polygon?','procedural','custom-polygons',/drag a vertex/],
+    ['How do I delete a polygon vertex?','procedural','custom-polygons',/Delete selected vertex/],
+    ['Can I duplicate or rename a saved exercise?','procedural','saved-exercises',/Duplicate selected/],
+    ['How do I save a QGH instructor exercise?','qgh-instructor','saved-exercises',/Update selected replaces/],
     ['How do I send a custom message?','procedural','transmit',/Transmit custom message/],
     ['The trail is not visible','sra','sweep',/15 RPM/],
     ['Where are half-mile marks?','sra','approach-reference',/0\.5 NM/],
@@ -90,8 +93,19 @@ test('Gyani explains current shared controls, saved setups and retired PAR',()=>
     ['Can I drag and rename a dot?','sra','student-estimates',/Rename or Delete/],
     ['Can I move a dot without dragging?','procedural','student-estimates',/Place by coordinates/],
     ['Place by coordinates','sra','student-estimates',/negative = west\/south/],
+    ['How many aircraft can I create?','procedural','aircraft-limits',/up to 20 aircraft/],
+    ['What is the QGH aircraft limit?','qgh-instructor','aircraft-limits',/up to 2 aircraft/],
+    ['How do I seek to a command in review?','procedural','review-controls',/Commands & events/],
+    ['What do the separation cues mean?','procedural','review-controls',/no cue at a sample does not establish safe separation/],
   ]){const answer=matchGuideQuestion(question,topic);assert.equal(answer.intent,intent,question);assert.match(answer.text,pattern);assert.match(answer.links[0].href,/user-guide\.html#/);}
   const retired=matchGuideQuestion('How do I start PAR?','suite');assert.match(retired.text,/not available/);assert.ok(!retired.links.some(link=>/#par/.test(link.href)));
+});
+
+test('Gyani remains available at student join despite a hidden initial RUNNING label',async()=>{
+  const h=domHarness('<html><body><header></header><section id="studentWorkspace" hidden><b id="studentExerciseState">RUNNING</b></section></body></html>','/qgh-voice/instructor-led/student.html');
+  vm.runInContext(source('guide-knowledge.js'),h.context);vm.runInContext(source('suite-guide-chat.js'),h.context);
+  const chat=h.document.getElementById('suite-guide-chat');assert.equal(chat.hidden,false);
+  h.document.getElementById('studentWorkspace').hidden=false;await new Promise(resolve=>setImmediate(resolve));assert.equal(chat.hidden,true);
 });
 
 test('first instructor Start shows one dismissible mouse hint without pausing traffic',async()=>{
@@ -106,6 +120,27 @@ test('first instructor Start shows one dismissible mouse hint without pausing tr
   h.document.body.classList.add('exercise-running');await new Promise(resolve=>setImmediate(resolve));assert.equal(hint.hidden,true);
 });
 
+test('first workspace introduction is skippable before Run and never overlays running traffic',async()=>{
+  for(const [page,workspace,scope,pilot,controls,status] of [
+    ['instructor','activeWorkspace','instructorScope','instructorHoming','startExercise','exerciseState'],
+    ['procedural','desk','scope','homing','resume','clock-state'],
+  ]) {
+    const path=page==='instructor'?'/qgh-voice/instructor-led/instructor.html':'/qgh-voice/procedural-beta/procedural.html';
+    const h=domHarness(`<html><body><header><nav></nav></header><section id="${workspace}" hidden><canvas id="${scope}"></canvas><div id="${pilot}"></div><div id="clock-controls" class="lifecycle-actions"><button id="${controls}">Start</button><b id="${status}">READY</b></div><time id="test-clock">00:00</time></section><section hidden><b id="studentExerciseState">RUNNING</b></section></body></html>`,path);
+    h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=800;
+    vm.runInContext(source('guide-knowledge.js'),h.context);vm.runInContext(source('suite-tour.js'),h.context);
+    const panel=h.document.getElementById('suite-tour');assert.equal(panel.hidden,true);
+    h.document.getElementById(workspace).hidden=false;await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(panel.hidden,false);assert.match(panel.textContent,/Quick introduction/);assert.match(panel.textContent,/middle-click|Middle mouse/i);assert.equal(panel.querySelectorAll('button')[2].textContent,'Skip tour');
+    assert.equal(h.document.getElementById('test-clock').textContent,'00:00','introduction never advances the clock');
+    panel.querySelectorAll('button')[2].click();assert.equal(panel.hidden,true);
+    h.document.getElementById(workspace).hidden=true;h.document.getElementById(workspace).hidden=false;await new Promise(resolve=>setImmediate(resolve));assert.equal(panel.hidden,true,'first-use introduction appears only once');
+    h.document.getElementById('suite-tour-open').click();assert.equal(panel.hidden,false);
+    h.document.getElementById(controls).click();assert.equal(panel.hidden,true,'Start immediately dismisses a visible tour');
+    h.document.body.classList.add('exercise-running');await new Promise(resolve=>setImmediate(resolve));assert.equal(panel.hidden,true);assert.equal(h.document.getElementById('suite-tour-open').hidden,true);
+  }
+});
+
 test('one common handbook has every answer anchor, current controls and the live RT catalogue',()=>{
   const knowledge=require('./static/guide-knowledge.js'),{document}=parseHTML(renderCommonGuide());
   assert.equal(document.querySelectorAll('h1').length,1);
@@ -115,4 +150,5 @@ test('one common handbook has every answer anchor, current controls and the live
   assert.ok(!/PAR|Flight strips|1–60 RPM/.test(document.textContent||''));
   assert.equal(document.getElementById('current-flow').getAttribute('data-guide-revision'),knowledge.revision);
   for(const step of knowledge.tours)assert.equal(step.text,knowledge.entries.find(e=>e.id===step.entry).text);
+  for(const step of knowledge.firstUse)assert.equal(step.text,knowledge.entries.find(e=>e.id===step.entry).intro);
 });

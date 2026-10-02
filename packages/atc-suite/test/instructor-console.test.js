@@ -27,7 +27,7 @@ function harness(mode = 'qgh') {
   const document = { body: { classList: { add() {}, remove() {} } }, getElementById: node, querySelectorAll: () => [], createElement: () => node(`created-${nodes.size}`) };
   let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, collapseSetupControls};})();';
+    '\n globalThis.fixture = {state, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, collapseSetupControls, startExercise, enterWorkspace};})();';
   const context = { document, structuredClone, sessionStorage: store(), localStorage: store(),
     ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: Session, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); }, performance: { now: () => now }, Date, console };
@@ -98,13 +98,23 @@ test('dragging background pans the scope and never controls an aircraft', () => 
 
 test('Start declutters every optional instructor panel and retry retains the initial form', () => {
   const h = harness();
-  for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'aircraftControlDrawer', 'eventDrawer']) h.node(id).open = true;
+  for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'scopeSettings', 'aircraftControlDrawer', 'eventDrawer']) h.node(id).open = true;
   h.collapseSetupControls();
-  for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'aircraftControlDrawer', 'eventDrawer']) assert.equal(h.node(id).open, false);
+  for (const id of ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'scopeSettings', 'aircraftControlDrawer', 'eventDrawer']) assert.equal(h.node(id).open, false);
   h.node('callsign').value = '764'; h.node('initialHeading').value = '123';
   h.retryScenario();
   assert.equal(h.node('callsign').value, '764'); assert.equal(h.node('initialHeading').value, '123');
   assert.equal(h.state.simulation, null); assert.equal(h.node('setupPanel').hidden, false);
+});
+
+test('Start moves the view from setup into the active scope through the common workspace adapter', () => {
+  const h = harness(), entered = [];
+  h.state.simulation = Core.setLifecycle(h.state.simulation, 'ready'); h.state.session.start = () => true;
+  h.context.ATCSuiteWorkspace = { enter(element, options) { entered.push({ id: element.id, block: options.block }); } };
+  assert.equal(h.startExercise(), true);
+  assert.deepEqual(entered, [{ id: 'activeWorkspace', block: 'start' }]);
+  assert.equal(h.node('scopeSettings').open, false);
+  assert.equal(h.state.simulation.lifecycle, 'running');
 });
 
 test('host recovery preserves room and authorized seat, restores paused and forbids resume until reconnect', () => {

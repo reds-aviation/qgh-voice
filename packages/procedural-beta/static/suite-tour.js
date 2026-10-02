@@ -28,38 +28,49 @@
       shelf.append(startHint);hintText.textContent=globalThis.ATCGuideKnowledge?.startHint?.text||'';startHint.hidden=false;
       hintTimer=setTimeout(dismissHint,12000);
     }
-    let steps=[], index=0, target;
+    let steps=[], index=0, target, firstUseHandled=false, tourMode='full';
+    const firstUseKey=`atc-first-tour-${page}-${globalThis.ATCGuideKnowledge?.revision}`;
     const visible=el=>!!el && el.getClientRects().length>0 && !el.closest('[hidden]');
-    const running=()=>document.body.classList.contains('exercise-running') || ['exerciseState','studentExerciseState'].some(id=>document.getElementById(id)?.textContent.trim()==='RUNNING') || visible(document.querySelector('#console.active, #tConsole.active'));
+    const running=()=>document.body.classList.contains('exercise-running') || ['exerciseState','studentExerciseState'].some(id=>{const state=document.getElementById(id);return visible(state)&&state.textContent.trim()==='RUNNING';}) || visible(document.querySelector('#console.active, #tConsole.active'));
+    const workspaceReady=()=>page==='procedural'?visible(document.getElementById('desk')):page==='instructor'?visible(document.getElementById('activeWorkspace')):page==='student'?visible(document.getElementById('studentWorkspace')):page==='single'?visible(document.querySelector('#setup.active')):visible(document.querySelector('#tSetup.active'));
+    const rememberFirstUse=()=>{firstUseHandled=true;try{localStorage.setItem(firstUseKey,'1');}catch{}};
     function clearTarget(){target?.classList.remove('suite-tour-target');target=null;}
     function finish(restore=true){panel.hidden=true;clearTarget();if(restore && !running())button.focus();}
     function show(){
       clearTarget(); const step=steps[index]; target=document.querySelector(step.selector);
       target?.classList.add('suite-tour-target'); target?.scrollIntoView({block:'center',behavior:'auto'});
-      title.textContent=step.title;description.textContent=step.text;progress.textContent=`${index+1} / ${steps.length} · ${globalThis.ATCGuideKnowledge.revision}`;
+      title.textContent=step.title;description.textContent=step.text;progress.textContent=`${tourMode==='first'?'Quick introduction · ':''}${index+1} / ${steps.length} · ${globalThis.ATCGuideKnowledge.revision}`;
       back.disabled=index===0;next.textContent=index===steps.length-1?'Finish':'Next';
       // Keep the highlighted control outside the help panel on short screens.
       requestAnimationFrame(()=>{
         panel.classList.toggle('suite-tour-top',!!target && target.getBoundingClientRect().top>innerHeight/2);
       });
     }
-    button.onclick=()=>{
+    function openTour(mode='full'){
       if(running())return;
-      steps=(globalThis.ATCGuideKnowledge?.tours || []).filter(step=>step.pages.includes(page)&&visible(document.querySelector(step.selector)));
-      if(!steps.length)return;index=0;panel.hidden=false;show();next.focus();
-    };
+      const source=mode==='first'?globalThis.ATCGuideKnowledge?.firstUse:globalThis.ATCGuideKnowledge?.tours;
+      steps=(source || []).filter(step=>step.pages.includes(page)&&visible(document.querySelector(step.selector)));
+      if(!steps.length)return;rememberFirstUse();tourMode=mode;index=0;close.textContent=mode==='first'?'Skip tour':'Close tour';panel.hidden=false;show();next.focus();
+    }
+    button.onclick=()=>openTour();
     back.onclick=()=>{index=Math.max(0,index-1);show();};
     next.onclick=()=>{if(index===steps.length-1)finish();else{index++;show();}};
     close.onclick=()=>finish();document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidden){event.preventDefault();finish();}});
+    // Close before the exercise start handler runs. The tour never changes the clock.
+    document.addEventListener('click',event=>{if(event.target.closest?.('#resume,#startExercise,#tStart')&&!panel.hidden)finish(false);},true);
     function update(){
       const live=running();if(live&&!hasRun)showStartHint();hasRun=live;
       if(!live&&!startHint.hidden)dismissHint();
       if(button.hidden!==live)button.hidden=live;button.disabled=live;
       if(live&&!panel.hidden)finish(false);
+      if(!live&&!firstUseHandled&&workspaceReady()){
+        try{firstUseHandled=localStorage.getItem(firstUseKey)==='1';}catch{}
+        if(!firstUseHandled)openTour('first');
+      }
       const dock=document.querySelector(document.body.classList.contains('desk-open')?'#edge-actions .edge-group:last-child':'.topbar nav');
       if(page==='procedural'&&dock&&button.parentElement!==dock)dock.append(button);
     }
-    new MutationObserver(update).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
+    new MutationObserver(update).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','hidden']});
     update();
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();

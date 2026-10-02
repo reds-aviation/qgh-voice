@@ -81,20 +81,24 @@ export function createAirspacePreparation(host) {
     const sketch = element('details', '', 'airspace-sketch'); sketch.id = 'boundary-sketch';
     sketch.append(element('summary', 'Draw boundary with mouse / touch'));
     const tools = element('div', '', 'airspace-preparation-actions');
-    let draft = [], closed = false, active = false, drag = -1, lastExercise = '', dirtyARP = false;
+    let draft = [], closed = false, active = false, drag = -1, selectedVertex = -1, dragPointer = null, dragCanvas = null, previewDragScale = null, scopeTransform = null, lastExercise = '', dirtyARP = false;
     const canvas = element('canvas'); canvas.id = 'boundary-sketch-canvas'; canvas.width = 720; canvas.height = 380; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Boundary editor. Click to add points. Drag a point to move it. Close boundary when complete.');
-    const hint = element('p', 'Click points in order. Drag a point to move it.', 'hint'); const status = element('p', '', 'airspace-preparation-status'); status.id = 'custom-airspace-status'; status.setAttribute('role', 'status');
+    const hint = element('p', 'Click points in order. Select or drag a vertex to edit it. Coordinates stay in NM or latitude / longitude.', 'hint'); const status = element('p', '', 'airspace-preparation-status'); status.id = 'custom-airspace-status'; status.setAttribute('role', 'status');
+    const vertexLabel = element('label', 'Selected vertex'), vertexSelect = element('select'); vertexSelect.id = 'boundary-vertex-select'; vertexLabel.append(vertexSelect);
+    const deleteVertex = button('Delete selected vertex', () => { if (selectedVertex < 0) return; draft.splice(selectedVertex, 1); selectedVertex = Math.min(selectedVertex, draft.length - 1); closed = closed && draft.length >= 3; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); }); deleteVertex.id = 'boundary-vertex-delete';
+    const scopeDeleteVertex = button('Delete vertex', () => deleteVertex.click()); scopeDeleteVertex.id = 'boundary-scope-delete';
+    vertexSelect.addEventListener('change', () => { selectedVertex = Number(vertexSelect.value); refreshVertices(); drawPreview(); host.scope?.drawChanged?.(); });
     const scopeTools = element('div', '', 'boundary-scope-tools'); scopeTools.id = 'boundary-scope-tools'; scopeTools.hidden = true; scopeTools.setAttribute('aria-label', 'Boundary drawing controls');
-    const closeRing = () => { try { const wasActive = active; draft = validateBoundary(draft); closed = true; active = false; scopeTools.hidden = true; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); status.textContent = 'Boundary closed. Save boundary to share it.'; if (wasActive) document.querySelector('[data-tab="build"]')?.click(); } catch (e) { status.textContent = e.message; host.message?.(e.message, true); } };
-    tools.append(button('Undo point', () => { draft.pop(); closed = false; syncPoints(); drawPreview(); }), button('Close boundary', closeRing), button('Clear points', () => { draft = []; closed = false; syncPoints(); drawPreview(); }));
+    const closeRing = () => { try { const wasActive = active; draft = validateBoundary(draft); closed = true; cancelSketch(); syncPoints(); drawPreview(); host.scope?.drawChanged?.(); status.textContent = 'Boundary closed. Save boundary to share it.'; if (wasActive) document.querySelector('[data-tab="build"]')?.click(); } catch (e) { status.textContent = e.message; host.message?.(e.message, true); } };
+    tools.append(button('Undo point', () => { draft.pop(); selectedVertex = Math.min(selectedVertex, draft.length - 1); closed = false; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); }), button('Close boundary', closeRing), button('Clear points', () => { draft = []; selectedVertex = -1; closed = false; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); }), deleteVertex);
     if (host.scope) {
         const finish = button('Close boundary', closeRing); finish.id = 'boundary-scope-close';
-        scopeTools.append(element('strong', 'DRAW BOUNDARY'), button('Undo', () => { draft.pop(); syncPoints(); drawPreview(); host.scope.drawChanged?.(); }), finish, button('Cancel drawing', () => { active = false; scopeTools.hidden = true; host.scope.drawChanged?.(); document.querySelector('[data-tab="build"]')?.click(); }));
+        scopeTools.append(element('strong', 'DRAW / EDIT BOUNDARY'), button('Undo', () => { draft.pop(); selectedVertex = Math.min(selectedVertex, draft.length - 1); closed = false; syncPoints(); drawPreview(); host.scope.drawChanged?.(); }), scopeDeleteVertex, finish, button('Cancel drawing', () => { cancelSketch(); host.scope.drawChanged?.(); document.querySelector('[data-tab="build"]')?.click(); }));
         host.scope.canvas?.parentElement?.append(scopeTools);
-        tools.append(button('Draw on radar scope', () => { try { requireOrigin(); if (host.view()?.running) throw new Error('Pause before drawing airspace.'); active = true; closed = false; scopeTools.hidden = false; host.scope.openScope?.(); host.scope.drawChanged?.(); host.message?.('Click boundary points. Use Close boundary or Enter when done.'); } catch (e) { status.textContent = e.message; } }));
+        const drawScope = button('Draw / edit on radar scope', () => { try { requireOrigin(); if (host.view()?.role !== 'instructor') throw new Error('Instructor controls only.'); if (host.view()?.running) throw new Error('Pause before drawing airspace.'); active = true; scopeTools.hidden = false; host.scope.openScope?.(); host.scope.drawChanged?.(); host.message?.('Click to add points; drag a vertex to edit. Close boundary when done.'); } catch (e) { status.textContent = e.message; } }); drawScope.id = 'boundary-scope-edit'; tools.append(drawScope);
     }
-    sketch.append(hint, canvas, tools);
-    const saveBoundary = element('button', 'Save boundary'); const newBoundary = button('New boundary', () => { boundaryName.value = ''; draft = []; closed = false; delete boundaryForm.dataset.editId; pointsInput.value = ''; drawPreview(); });
+    sketch.append(hint, canvas, vertexLabel, tools);
+    const saveBoundary = element('button', 'Save boundary'); const newBoundary = button('New boundary', () => { cancelSketch(); boundaryName.value = ''; draft = []; selectedVertex = -1; closed = false; delete boundaryForm.dataset.editId; syncPoints(); drawPreview(); });
     const boundaryActions = element('div', '', 'airspace-preparation-actions'); boundaryActions.append(saveBoundary, newBoundary);
     const list = element('div', '', 'airspace-boundary-list'); list.id = 'custom-boundary-list';
     boundaryForm.append(grid, modeWrap, pointsWrap, sketch, boundaryActions); section.append(arpForm, boundaryForm, status, list); container.prepend(section);
@@ -107,14 +111,16 @@ export function createAirspacePreparation(host) {
     function syncPoints() {
         const origin = host.view()?.environment.chartOrigin;
         pointsInput.value = draft.map(p => mode.value === 'geographic' && origin ? localToGeographic(p, origin) : p).map(p => mode.value === 'geographic' && origin ? `${p.latitude.toFixed(7)}, ${p.longitude.toFixed(7)}` : `${p.xNm.toFixed(4)}, ${p.yNm.toFixed(4)}`).join('\n');
+        refreshVertices();
     }
-    const scale = () => Math.max(10, host.view()?.environment.rangeNm || 60, ...draft.map(p => Math.hypot(p.xNm, p.yNm)));
+    function refreshVertices() { vertexSelect.replaceChildren(new Option('Choose vertex…', '-1'), ...draft.map((p, i) => new Option(`${i + 1} · ${p.xNm.toFixed(2)} E / ${p.yNm.toFixed(2)} N NM`, String(i)))); vertexSelect.value = String(selectedVertex); deleteVertex.disabled = selectedVertex < 0 || selectedVertex >= draft.length; scopeDeleteVertex.disabled = deleteVertex.disabled; }
+    const scale = () => previewDragScale ?? Math.max(10, host.view()?.environment.rangeNm || 60, ...draft.map(p => Math.hypot(p.xNm, p.yNm)));
     function drawDraft(ctx, transform) {
         if (!draft.length) return;
         ctx.save(); ctx.strokeStyle = '#ffc86a'; ctx.fillStyle = '#ffc86a'; ctx.lineWidth = 2; ctx.setLineDash([]); ctx.beginPath();
         draft.forEach((p, i) => { const [x, y] = transform(p.xNm, p.yNm); if (i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
         if (closed) ctx.closePath(); ctx.stroke();
-        draft.forEach((p, i) => { const [x, y] = transform(p.xNm, p.yNm); ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.font = '12px sans-serif'; ctx.fillText(String(i + 1), x + 9, y - 7); }); ctx.restore();
+        draft.forEach((p, i) => { const [x, y] = transform(p.xNm, p.yNm); ctx.fillStyle = i === selectedVertex ? '#9bf0e7' : '#ffc86a'; ctx.beginPath(); ctx.arc(x, y, i === selectedVertex ? 8 : 5, 0, Math.PI * 2); ctx.fill(); ctx.font = '12px sans-serif'; ctx.fillText(String(i + 1), x + 9, y - 7); }); ctx.restore();
     }
     function drawPreview() {
         const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -126,13 +132,28 @@ export function createAirspacePreparation(host) {
         ctx.fillStyle = '#83c8d5'; ctx.font = '13px sans-serif'; ctx.fillText('ARP +', width / 2 + 7, height / 2 - 7); ctx.fillText(`${scale().toFixed(0)} NM`, 12, height - 14); ctx.fillText('N ↑', 12, 23); drawDraft(ctx, transform);
     }
     function previewPoint(e) { const r = canvas.getBoundingClientRect(), factor = Math.min(canvas.width, canvas.height) * .44 / scale(); return { xNm: ((e.clientX - r.left) * canvas.width / r.width - canvas.width / 2) / factor, yNm: (canvas.height / 2 - (e.clientY - r.top) * canvas.height / r.height) / factor }; }
-    canvas.addEventListener('pointerdown', e => { if (e.button !== 0 && e.pointerType !== 'touch') return; try { requireOrigin(); e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); const p = previewPoint(e); const threshold = scale() / 22; drag = draft.findIndex(a => Math.hypot(a.xNm - p.xNm, a.yNm - p.yNm) < threshold); if (drag < 0) { if (draft.length >= 200) throw new Error('Maximum 200 points.'); draft.push(p); drag = draft.length - 1; } closed = false; syncPoints(); drawPreview(); } catch (error) { status.textContent = error.message; } });
-    canvas.addEventListener('pointermove', e => { if (drag < 0) return; draft[drag] = previewPoint(e); syncPoints(); drawPreview(); });
-    for (const name of ['pointerup', 'pointercancel']) canvas.addEventListener(name, () => { drag = -1; });
-    document.addEventListener('keydown', e => { if (!active) return; if (e.key === 'Enter') { e.preventDefault(); closeRing(); } else if (e.key === 'Escape') { active = false; scopeTools.hidden = true; host.scope?.drawChanged?.(); } });
+    function releasePointer() { const surface = dragCanvas, id = dragPointer; drag = -1; dragPointer = null; dragCanvas = null; previewDragScale = null; if (surface?.hasPointerCapture?.(id)) surface.releasePointerCapture?.(id); }
+    function cancelSketch() { active = false; scopeTools.hidden = true; releasePointer(); }
+    function screenHit(e, surface, transform) { if (!transform) return -1; const r = surface.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, radius = e.pointerType === 'touch' ? 26 : 15; let nearest = -1, distance = radius; draft.forEach((p, i) => { const [px, py] = transform(p.xNm, p.yNm); const d = Math.hypot(px - x, py - y); if (d < distance) { nearest = i; distance = d; } }); return nearest; }
+    function beginPointer(e, surface, point, transform) {
+        if (e.isPrimary === false || e.button !== 0 && e.pointerType !== 'touch') return false;
+        if (dragPointer !== null) return true;
+        requireOrigin(); if (host.view()?.role !== 'instructor' || host.view()?.running) throw new Error('Pause the instructor exercise before editing airspace.');
+        if (!point || ![point.xNm, point.yNm].every(v => Number.isFinite(v) && Math.abs(v) <= 2000)) throw new Error('Boundary point must be within ±2,000 NM.');
+        e.preventDefault(); drag = screenHit(e, surface, transform);
+        if (drag < 0) { if (draft.length >= 200) throw new Error('Maximum 200 points.'); draft.push(point); drag = draft.length - 1; closed = false; }
+        selectedVertex = drag; dragPointer = e.pointerId; dragCanvas = surface; surface.focus?.({ preventScroll: true }); surface.setPointerCapture?.(e.pointerId); syncPoints(); drawPreview(); host.scope?.drawChanged?.(); return true;
+    }
+    function movePointer(e, surface, point) { if (dragCanvas !== surface || dragPointer !== e.pointerId || drag < 0) return false; e.preventDefault(); if (point && [point.xNm, point.yNm].every(v => Number.isFinite(v) && Math.abs(v) <= 2000)) { draft[drag] = point; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); } return true; }
+    function finishPointer(e) { if (dragPointer !== e.pointerId) return false; releasePointer(); drawPreview(); host.scope?.drawChanged?.(); return true; }
+    const previewTransform = () => { const r = canvas.getBoundingClientRect(), factor = Math.min(canvas.width, canvas.height) * .44 / scale(); return (x, y) => [(canvas.width / 2 + x * factor) * r.width / canvas.width, (canvas.height / 2 - y * factor) * r.height / canvas.height]; };
+    canvas.addEventListener('pointerdown', e => { try { if (dragPointer !== null) return; previewDragScale = scale(); if (!beginPointer(e, canvas, previewPoint(e), previewTransform())) previewDragScale = null; } catch (error) { releasePointer(); status.textContent = error.message; } });
+    canvas.addEventListener('pointermove', e => movePointer(e, canvas, previewPoint(e)));
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(event, finishPointer);
+    document.addEventListener('keydown', e => { if (!active || e.target?.closest?.('input,textarea,select,button')) return; if (e.key === 'Enter') { e.preventDefault(); closeRing(); } else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteVertex.click(); } else if (e.key === 'Escape') { cancelSketch(); host.scope?.drawChanged?.(); } });
     arpForm.addEventListener('input', () => { dirtyARP = true; });
     mode.addEventListener('change', syncPoints);
-    pointsInput.addEventListener('input', () => { try { const parsed = parseBoundary(pointsInput.value, mode.value, host.view()?.environment.chartOrigin); draft = parsed.points; closed = true; drawPreview(); } catch { closed = false; } });
+    pointsInput.addEventListener('input', () => { try { const parsed = parseBoundary(pointsInput.value, mode.value, host.view()?.environment.chartOrigin); draft = parsed.points; selectedVertex = Math.min(selectedVertex, draft.length - 1); closed = true; refreshVertices(); drawPreview(); host.scope?.drawChanged?.(); } catch { closed = false; } });
     async function perform(action, control) { if (control.disabled) return; control.disabled = true; try { await action(); } catch (e) { status.textContent = e.message; host.message?.(e.message, true); } finally { control.disabled = false; } }
     arpForm.addEventListener('submit', e => { e.preventDefault(); void perform(async () => {
         const state = host.view(); if (!state || state.role !== 'instructor') throw new Error('Open the instructor desk first.');
@@ -142,7 +163,7 @@ export function createAirspacePreparation(host) {
         const changed = JSON.stringify(origin) !== JSON.stringify(state.environment.chartOrigin || null);
         if (changed && state.environment.chartOrigin && !confirm('Change the ARP? Existing traffic and chart points keep their local positions. The aligned image is removed.')) return;
         await host.command('environment', { chartOrigin: origin, aerodromeName: arpName.value.trim() || 'Custom airspace', chartReference: reference.value.trim() || 'Instructor-defined custom coordinates', effectiveInfo: date.value.trim() || 'Instructor-defined training geometry', ...(changed ? { map: { ...state.environment.map, imageId: '' } } : {}) }, undefined, state.exerciseId);
-        dirtyARP = false; draft = []; pointsInput.value = ''; closed = false; status.textContent = 'ARP saved. Add one or more boundaries below.'; host.changed?.(); drawPreview();
+        cancelSketch(); dirtyARP = false; draft = []; selectedVertex = -1; syncPoints(); closed = false; status.textContent = 'ARP saved. Add one or more boundaries below.'; host.changed?.(); drawPreview();
     }, saveArp); });
     boundaryForm.addEventListener('submit', e => { e.preventDefault(); void perform(async () => {
         const state = host.view(); if (!state || state.role !== 'instructor') throw new Error('Instructor controls only.');
@@ -150,14 +171,16 @@ export function createAirspacePreparation(host) {
         const origin = requireOrigin(); const geometry = parseBoundary(pointsInput.value, mode.value, origin);
         if (!boundaryName.value.trim()) throw new Error('Name the boundary.');
         await host.command('area-upsert', { ...(boundaryForm.dataset.editId ? { id: boundaryForm.dataset.editId } : {}), name: boundaryName.value.trim(), kind: kind.value, floorLabel: floor.value.trim(), ceilingLabel: ceiling.value.trim(), source: 'Instructor chart', reference: reference.value.trim(), effectiveInfo: date.value.trim(), notes: 'Custom coordinate boundary. Instructor-defined exercise activation.', active: true, ...geometry }, undefined, state.exerciseId);
-        delete boundaryForm.dataset.editId; boundaryName.value = ''; draft = []; pointsInput.value = ''; closed = false; status.textContent = 'Boundary saved on both desks. Add another area or return to the scope.'; host.changed?.(); drawPreview();
+        cancelSketch(); delete boundaryForm.dataset.editId; boundaryName.value = ''; draft = []; selectedVertex = -1; syncPoints(); closed = false; status.textContent = 'Boundary saved on both desks. Add another area or return to the scope.'; host.changed?.(); drawPreview();
     }, saveBoundary); });
     function render() {
         const state = host.view(); if (!state) return;
-        if (lastExercise !== state.exerciseId) { lastExercise = state.exerciseId; dirtyARP = false; draft = []; closed = false; active = false; scopeTools.hidden = true; delete boundaryForm.dataset.editId; pointsInput.value = ''; }
+        if (state.running) cancelSketch();
+        if (lastExercise !== state.exerciseId || state.role !== 'instructor') { lastExercise = state.exerciseId; dirtyARP = false; draft = []; selectedVertex = -1; closed = false; cancelSketch(); delete boundaryForm.dataset.editId; syncPoints(); }
         if (!dirtyARP) { arpFields.latitude.value = String(state.environment.chartOrigin?.latitude ?? ''); arpFields.longitude.value = String(state.environment.chartOrigin?.longitude ?? ''); arpName.value = state.environment.aerodromeName || ''; reference.value = state.environment.chartReference || ''; date.value = state.environment.effectiveInfo || ''; }
-        list.replaceChildren(...(state.areas || []).map(area => { const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${area.name} · ${kinds.find(k => k[0] === area.kind)?.[1] || area.kind}`)); row.append(button('Edit', () => { boundaryForm.dataset.editId = area.id; boundaryName.value = area.name; kind.value = area.kind; floor.value = area.floorLabel; ceiling.value = area.ceilingLabel; draft = area.points.map(p => ({ ...p })); closed = true; mode.value = state.environment.chartOrigin ? 'geographic' : 'local'; syncPoints(); sketch.open = true; drawPreview(); }), button('Remove', () => void perform(async () => { if (confirm(`Remove ${area.name}?`)) { await host.command('area-delete', { id: area.id }, undefined, state.exerciseId); host.changed?.(); } }, row.querySelector('button:last-child')))); return row; }));
+        list.replaceChildren(...(state.areas || []).map(area => { const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${area.name} · ${kinds.find(k => k[0] === area.kind)?.[1] || area.kind}`)); row.append(button('Edit', () => { cancelSketch(); boundaryForm.dataset.editId = area.id; boundaryName.value = area.name; kind.value = area.kind; floor.value = area.floorLabel; ceiling.value = area.ceilingLabel; draft = area.points.map(p => ({ ...p })); selectedVertex = -1; closed = true; mode.value = state.environment.chartOrigin ? 'geographic' : 'local'; syncPoints(); sketch.open = true; drawPreview(); }), button('Remove', () => void perform(async () => { if (confirm(`Remove ${area.name}?`)) { await host.command('area-delete', { id: area.id }, undefined, state.exerciseId); host.changed?.(); } }, row.querySelector('button:last-child')))); return row; }));
         drawPreview();
     }
-    return { render, isSketching: () => active, draw: (ctx, transform) => { if (active) drawDraft(ctx, transform); }, onPointer(e) { if (!active) return false; if (e.button !== 0) return true; const result = host.scope?.screenToPoint?.(e); const p = Array.isArray(result) ? { xNm: result[0], yNm: result[1] } : { xNm: result?.xNm ?? result?.x, yNm: result?.yNm ?? result?.y }; if (p && Number.isFinite(p.xNm) && Number.isFinite(p.yNm) && draft.length < 200) { draft.push({ xNm: p.xNm, yNm: p.yNm }); syncPoints(); drawPreview(); host.scope.drawChanged?.(); } return true; } };
+    function scopePoint(e) { const p = host.scope?.screenToPoint?.(e); return Array.isArray(p) ? { xNm: p[0], yNm: p[1] } : { xNm: p?.xNm ?? p?.x, yNm: p?.yNm ?? p?.y }; }
+    return { render, cancelSketch, isSketching: () => active, draw: (ctx, transform) => { scopeTransform = transform; if (active) drawDraft(ctx, transform); }, onPointer(e) { if (!active) return false; try { beginPointer(e, host.scope.canvas, scopePoint(e), scopeTransform); } catch (error) { releasePointer(); status.textContent = error.message; host.message?.(error.message, true); } return true; }, onPointerMove(e) { return movePointer(e, host.scope?.canvas, scopePoint(e)); }, onPointerUp: finishPointer, onPointerCancel: finishPointer };
 }

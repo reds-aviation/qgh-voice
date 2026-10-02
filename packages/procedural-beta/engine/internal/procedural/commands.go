@@ -633,8 +633,8 @@ func apply(s *State, c Command, role string) (effect, error) {
 		record(s, "route-delete", "Route removed", "")
 		s.ScopeDisplay.HiddenRouteIDs = slices.DeleteFunc(s.ScopeDisplay.HiddenRouteIDs, func(id string) bool { return id == p.ID })
 	case "aircraft-add":
-		if len(s.Aircraft) >= MaxAircraft {
-			return efx, fmt.Errorf("maximum %d aircraft; remove an aircraft before adding another", MaxAircraft)
+		if len(s.Aircraft) >= MaxNewAircraft {
+			return efx, fmt.Errorf("maximum %d aircraft for new traffic; remove aircraft before adding another", MaxNewAircraft)
 		}
 		a, e := aircraftFromPayload(s, c.Payload, "")
 		if e != nil {

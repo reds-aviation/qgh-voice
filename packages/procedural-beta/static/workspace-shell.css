@@ -1,0 +1,9 @@
+.ats-workspace-shell{--ats-action:#195b66;--ats-action-ink:#effcff;--ats-turn:#453c25;--ats-turn-ink:#ffdf94;--ats-danger:#782a39;--ats-danger-ink:#fff3f5;--ats-estimate:#d4b1ff;--ats-scope:#0e1319;font-family:Plex,"IBM Plex Sans",Arial,sans-serif;min-width:0}
+.ats-workspace-shell button,.ats-workspace-shell input,.ats-workspace-shell select,.ats-workspace-shell textarea{font-family:inherit}
+.ats-workspace-shell .ats-scope-surface{display:block;max-width:100%;background:var(--ats-scope);touch-action:none}
+.ats-aircraft-shelf,.ats-workspace-actions{min-width:0}
+.ats-workspace-shell .ats-workspace-actions button{min-height:40px}
+.ats-workspace-shell :focus-visible{outline:3px solid #e6bf69;outline-offset:3px}
+.ats-workspace-shell button:disabled{cursor:default;opacity:.55}
+@media(max-width:700px){.ats-workspace-shell .ats-workspace-actions button{min-height:44px}.ats-aircraft-shelf{max-width:100%}}
+@media(prefers-reduced-motion:reduce){.ats-workspace-shell *{scroll-behavior:auto;animation-duration:.001ms!important;transition-duration:.001ms!important}}

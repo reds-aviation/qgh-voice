@@ -12,12 +12,23 @@
   ].join(', ');
   let reloadApproved = false;
   let updateNotice;
+  let noticeObserver;
 
   const hasActiveLocalSession = () => Boolean(document.querySelector(ACTIVE_SESSION_SELECTOR));
 
   const setNoticeText = text => {
     const copy = updateNotice?.querySelector('[data-update-copy]');
     if (copy) copy.textContent = text;
+  };
+
+  const refreshNoticeVisibility = () => {
+    if (!updateNotice) return;
+    const protectedSession = hasActiveLocalSession();
+    // A disabled UPDATE button is still an obstruction over a mobile scope.
+    // Keep the entire notice out of every admitted/waiting/run/review view.
+    if (updateNotice.hidden !== protectedSession) updateNotice.hidden = protectedSession;
+    const button = updateNotice.querySelector('button');
+    if (button) button.disabled = protectedSession;
   };
 
   const offerUpdate = registration => {
@@ -36,10 +47,15 @@
         }
 
         reloadApproved = true;
-        setNoticeText('Updating Reds ATC Training Suite…');
+        setNoticeText('Updating ATS SIMBOX…');
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       });
       document.body.append(updateNotice);
+    }
+    refreshNoticeVisibility();
+    if (!noticeObserver && typeof MutationObserver === 'function') {
+      noticeObserver = new MutationObserver(refreshNoticeVisibility);
+      noticeObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
     }
   };
 
@@ -73,6 +89,7 @@
 
       window.addEventListener('online', checkForUpdate);
       document.addEventListener('visibilitychange', () => {
+        refreshNoticeVisibility();
         if (document.visibilityState === 'visible') checkForUpdate();
       });
     } catch {

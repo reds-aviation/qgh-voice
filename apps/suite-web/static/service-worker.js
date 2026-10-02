@@ -27,6 +27,8 @@ const APP_SHELL = [
   './suite-student.js',
   './student-plotting.js',
   './student-plotting.css',
+  './workspace-shell.js',
+  './workspace-shell.css',
   './simulator-core.js',
   './procedure-core.js',
   './fonts/ibm-plex-mono-500.ttf',

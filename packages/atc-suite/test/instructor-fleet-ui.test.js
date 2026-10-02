@@ -81,6 +81,17 @@ test('all 24 generated aircraft have distinct bearings, ranges, headings and sep
   assert.equal(new Set(simulation.aircraftList.map(item => `${item.position.xNm}:${item.position.yNm}`)).size, 24);
 });
 
+test('new QGH roster is capped at two without reducing SRA or vectoring traffic', () => {
+  const h = harness(); h.node('exerciseFamily').value = 'qgh'; initialiseRoster(h, 24);
+  assert.equal(h.node('aircraftCount').max, '2'); assert.equal(h.node('aircraftCount').value, '2');
+  assert.equal(h.node('aircraftRoster').children.length, 2);
+  assert.equal(h.node('aircraftCountLabel').textContent, 'AIRCRAFT COUNT · 1–2');
+  for (const mode of ['sra', 'surveillance']) {
+    h.node('exerciseFamily').value = mode; h.node('aircraftCount').value = '24'; h.syncRoster();
+    assert.equal(h.node('aircraftCount').max, '24'); assert.equal(h.node('aircraftRoster').children.length, 24);
+  }
+});
+
 test('changing count restores every edited field without regenerating cached aircraft', () => {
   const h = harness();
   initialiseRoster(h, 24);

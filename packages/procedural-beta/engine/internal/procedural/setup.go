@@ -110,8 +110,8 @@ func setupScenario(current *State, c Command) (State, error) {
 	if p.Mode != "area" && p.Mode != "approach" && p.Mode != "aerodrome" {
 		return State{}, errors.New("mode must be area, approach or aerodrome")
 	}
-	if len(p.Aircraft) < 1 || len(p.Aircraft) > MaxAircraft {
-		return State{}, fmt.Errorf("scenario setup needs 1–%d aircraft", MaxAircraft)
+	if len(p.Aircraft) < 1 || len(p.Aircraft) > MaxNewAircraft {
+		return State{}, fmt.Errorf("scenario setup needs 1–%d aircraft", MaxNewAircraft)
 	}
 	s := clone(*current)
 	s.ExerciseID = commandExerciseID(c.ID)
