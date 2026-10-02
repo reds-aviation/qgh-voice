@@ -24,7 +24,7 @@ New exercises are limited to 20 aircraft for Procedural and 2 for instructor-led
 - Independent implementation reviews identified and resolved replay sampling/seek bounds, transmission form reset, stale gestures and termination-button state issues.
 - GitHub publication of .1 succeeded: commit [99ecd8d](https://github.com/reds-aviation/qgh-voice/commit/99ecd8d), deployment [37066241470](https://github.com/reds-aviation/qgh-voice/actions/runs/37066241470). Key public JavaScript matched the staged release.
 - Public 390 px review confirmed the landing flow and QGH instructor/student admission, Ready and Start; pilot Transmit produced a 032° student homing indication and scope bearing. This was a same-browser paired session, not a test on two separate physical devices.
-- The public review found an update notice overlapping an active exercise. Its suppression is being corrected in .2; verification of the corrected public behavior is still required. Other full journeys have not completed rendered review.
+- The public review found an update notice overlapping an active exercise. Its suppression is corrected in .2; verification of the corrected public behavior is still required. Other full journeys have not completed rendered review.
 - Continuation guide checks: 9 guide/tour tests and 3 guide interface tests passed. Source knowledge audit: 43 answers, 40 manual tour steps, 11 first-use steps; all documented controls and guide anchors resolve. The complete .2 build and regression passed; public review follows deployment.
 - Final .2 Node regression: **757 passed, 0 failed**. Full Go suite passed; WASM rebuilt with new 20-aircraft admission checks. Legacy 24-aircraft checkpoint validation and recovery passed.
 - No mobile visual certification, WCAG conformance claim or real-user performance score is implied by DOM or regression tests.
@@ -75,3 +75,5 @@ Statuses refer to the whole numbered request. Functional test evidence is identi
 5. Run briefly and review: seek a command marker, switch Top/Side/3D, and check the same time remains selected. Open the common guide and ask Gyani about joining, turns, saved exercises and an unsupported question.
 
 Rollback reference before this iteration: `d159af2ab7b3d357b3fdc3c24718fe49ef124562`. Rollback uses a new revert commit, preserving later history. Netlify is excluded with the release commit marker `[skip netlify]`.
+
+The first .2 deployment was correctly stopped by CI: the new instructor preset test used a Procedural DOM test dependency before its install step. The test was relocated into the dependency-backed Procedural test suite; application behaviour is unchanged. A clean repair deployment is required before public .2 verification.

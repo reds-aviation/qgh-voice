@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 53869,
-      "sha256": "9603b36dfed4c3b1cbd315a778e7ea448cfe0275336c91257a332b2e38dcf3e6"
+      "bytes": 54031,
+      "sha256": "86f6d3830b14cc9be2bc29c2b44996e28d8abb7148034d2dd4355892dcde61eb"
     },
     {
       "path": "static/gyani-fox.png",
@@ -309,8 +309,8 @@
     },
     {
       "path": "static/traffic-review.js",
-      "bytes": 12807,
-      "sha256": "f92d97176a0e8f568b2582bc5a000c33d0f988c0fb4632793be8fa7ac2010e98"
+      "bytes": 13660,
+      "sha256": "519990bedea78e01a36e0932001ab13320c33c7859d345a2c7c6e3141aab3f45"
     },
     {
       "path": "static/workspace-shell.js",

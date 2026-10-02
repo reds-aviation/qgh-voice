@@ -11,6 +11,15 @@ export function reviewCueSeverity(cue) {
   return cue.kind==='criterion-measurement'?'measurement':'assessment';
 }
 function cueTransitions(cues) { return JSON.stringify(cues.map(({id,ids,kind,threshold,unit,criterionId,basis})=>({id,ids,kind,threshold,unit,criterionId,basis}))); }
+export function recordedCueDuration(frames,cue,time) {
+  const matches=other=>cueTransitions([other])===cueTransitions([cue]);
+  let index=frames.findLastIndex(f=>f.t<=time);
+  if(index<0 || !frames[index].alerts.some(matches))return null;
+  let first=index;while(first>0 && frames[first-1].alerts.some(matches))first--;
+  let after=index+1;while(after<frames.length && frames[after].alerts.some(matches))after++;
+  const start=frames[first].t,end=after<frames.length?frames[after].t:frames.at(-1).t;
+  return {start,end,duration:Math.max(0,end-start),complete:after<frames.length};
+}
 export function recordedReviewEvents(events, next, start=0) {
   const merged=new Map(events.map(e=>[e.id,e]));
   for(const e of next || []) if(e.id && Number.isFinite(e.elapsed) && e.elapsed>=start) merged.set(e.id,{id:e.id,t:e.elapsed,kind:e.kind,text:e.text,aircraftId:e.aircraftId});
@@ -88,6 +97,8 @@ export function createTrafficReview(container) {
     cues.replaceChildren(...(shownCues.length?shownCues.map(a=>{
       const section=el('section');section.className=`review-cue-${reviewCueSeverity(a)}`;section.append(el('p',a.text));
       if(Number.isFinite(a.measured) && Number.isFinite(a.threshold))section.append(el('p',`Measured ${Number(a.measured.toFixed(2))} ${a.unit || ''} · configured threshold ${a.threshold} ${a.unit || ''}`));
+      const span=recordedCueDuration(frames,a,time);
+      if(span)section.append(el('small',`Recorded cue ${clock(span.start)}–${clock(span.end)} · ${Number(span.duration.toFixed(1))} sec${span.complete?'':' observed so far'}. Timing follows recorded samples.`));
       if(a.basis)section.append(el('small',`Source: ${a.basis.reference || 'Instructor reference not supplied'} · ${a.basis.applicability || 'Check applicability'} · ${a.basis.evidence || 'Supporting evidence not supplied'} · ${a.basis.assessment || 'Instructor assessment required'}`));
       return section;
     }):[el('p','No configured separation cue at this sample.')]));

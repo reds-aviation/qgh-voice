@@ -74,4 +74,7 @@ test('stable measured cues record at scan spacing, while threshold transitions a
   review.open({...view,elapsed:4.5,alerts:[]});
   const scrub=h.document.querySelector('input[type=range]');scrub.value='4';scrub.oninput();
   assert.equal(h.document.querySelector('.review-cues').classList.contains('has-cue'),false,'satisfied measurements are never painted as a warning');
+  const cue={id:'cue',kind:'criterion-below-threshold',ids:['a'],threshold:1000};
+  const interval=module.recordedCueDuration([{t:0,alerts:[]},{t:1,alerts:[cue]},{t:2,alerts:[{...cue,measured:700}]},{t:3,alerts:[]}],cue,2);
+  assert.deepEqual(interval,{start:1,end:3,duration:2,complete:true},'cue interval retains onset and clearance from samples, not changing measurement text');
 });

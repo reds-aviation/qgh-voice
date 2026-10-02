@@ -1,21 +1,23 @@
-'use strict';
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const vm = require('node:vm');
-const {readFileSync} = require('node:fs');
-const {join} = require('node:path');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+import {domHarness} from './testing/dom-harness.mjs';
+
+const require = createRequire(import.meta.url);
+const suiteSource = name => readFileSync(new URL('../atc-suite/' + name, import.meta.url), 'utf8');
 
 const storageKey = 'atc-suite.saved-exercises.v1';
 async function harness() {
-  const {domHarness} = await import('../../procedural-beta/testing/dom-harness.mjs');
-  const h = domHarness(readFileSync(join(__dirname, '../instructor.html'), 'utf8'), '/qgh-voice/instructor-led/');
+  const h = domHarness(suiteSource('instructor.html'), '/qgh-voice/instructor-led/');
   const blobs = [];
   Object.assign(h.context, {
-    ATCSuiteCore: require('../suite-core.js'), ATCSuiteSensors: require('../suite-sensors.js'), ATCSuiteSession: require('../suite-session.js'),
+    ATCSuiteCore: require('../atc-suite/suite-core.js'), ATCSuiteSensors: require('../atc-suite/suite-sensors.js'), ATCSuiteSession: require('../atc-suite/suite-session.js'),
     structuredClone, confirm: () => true,
     URL: {createObjectURL(blob) {blobs.push(blob); return 'blob:test';}, revokeObjectURL(){}},
   });
-  let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
+  let code = suiteSource('suite-instructor.js');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
     '\n globalThis.api={savePresetAsNew,savePreset,duplicatePreset,renamePreset,removePreset,loadPreset,exportPreset,importPreset,captureSetup,restoreSetup,syncRoster};syncRoster();})();';
   vm.runInContext(code, h.context);
