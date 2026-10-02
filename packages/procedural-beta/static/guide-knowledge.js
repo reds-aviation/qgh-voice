@@ -1,6 +1,6 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "2026.10.03.4",
+  "revision": "2026.10.03.5",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -110,7 +110,7 @@
     },
     {
       "id": "local-pin-recovery",
-      "title": "Recover a rejected local session PIN",
+      "title": "Update safely or recover a rejected local PIN",
       "topics": [
         "suite",
         "qgh",
@@ -122,12 +122,13 @@
       "controls": [],
       "anchor": "session",
       "priority": true,
-      "match": "\\b(?:wrong|incorrect|expired|rejected|invalid)\\b.*\\bpin\\b|\\bpin\\b.*\\b(?:wrong|incorrect|expired|rejected|invalid|not working)\\b",
-      "text": "Check that both positions use the same Exercise connection. This device needs the same PC, browser profile and site address; other devices need Online room with internet on both. Copy the PIN currently shown in the instructor Session panel. If an older cached release rejects that local PIN, finish the exercise, return to Suite home, choose Update available · reload, then create a new session and share its new PIN. An old PIN does not join a newly created session.",
+      "match": "\\b(?:wrong|incorrect|expired|rejected|invalid)\\b.*\\bpin\\b|\\bpin\\b.*\\b(?:wrong|incorrect|expired|rejected|invalid|not working)\\b|\\b(?:update available|update the app|update simulator|update safely|cached layout|older layout)\\b",
+      "text": "Update outside the exercise: finish first, return to Suite home or the exercise entry page, accept Update available · reload if offered, then reopen your exercise flow. No update prompt is needed while traffic runs. For a rejected PIN, check that both positions use the same Exercise connection. This device needs the same PC, browser profile and site address; other devices need Online room with internet on both. Copy the PIN currently shown in the instructor Session panel. If an older cached release rejected it, update at entry before creating a new session and sharing its new PIN. An old PIN does not join a newly created session.",
       "questions": [
         "Why is my PIN rejected?",
         "Incorrect session PIN",
-        "The local PIN is not working"
+        "The local PIN is not working",
+        "Where can I update the app?"
       ]
     },
     {

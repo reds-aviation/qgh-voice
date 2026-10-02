@@ -16,6 +16,7 @@ on:
       - scripts/build-web.mjs
       - scripts/build-suite-web.mjs
       - scripts/build-procedural-beta.mjs
+      - scripts/version-hosted-assets.mjs
       - scripts/build-suite-guides.mjs
       - scripts/build-entry-theme.mjs
       - scripts/build-installed-brand.mjs

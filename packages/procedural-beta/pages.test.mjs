@@ -12,6 +12,7 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   execFileSync(process.execPath,['scripts/build-web.mjs'],{cwd:root,env:{...process.env,QGH_PROCEDURAL_BETA:'1'},stdio:'pipe'});
   const dist=resolve(root,'apps/web/dist');
   const base='https://example.test/qgh-voice/';
+  const release=JSON.parse(readFileSync(resolve(root,'packages/procedural-beta/manifest.json'),'utf8')).version;
   for(const file of ['offline-setup.html','offline-setup.md','offline-guide.css']) assert.equal(existsSync(resolve(dist,file)),false,'private handbook must not be published');
   const pages=['index.html','qgh.html','single.html','tactical.html','training-centre.html','user-guide.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','instructor-led/training-guide.html','procedural-beta/index.html','procedural-beta/procedural.html','procedural-beta/procedural-guide.html'];
   for(const page of pages) {
@@ -29,6 +30,9 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
       if(!url.href.startsWith(base)) continue;
       const path=decodeURIComponent(url.pathname.slice('/qgh-voice/'.length));
       assert.ok(existsSync(resolve(dist,path.endsWith('/')?path+'index.html':path)),`${page}: missing ${value}`);
+      if ((el.tagName === 'SCRIPT' || (el.tagName === 'LINK' && el.getAttribute('rel') === 'stylesheet')) && /\.(?:css|m?js)$/.test(path) && !/(?:^|\/)(?:service-worker|browser-worker)\.js$/.test(path) && !/^(?:pilot-voices\/|vendor\/pilot-tts\/)/.test(path)) {
+        assert.equal(url.searchParams.get('release'),release,`${page}: runtime ${value} uses this release`);
+      }
     }
   }
   for(const page of ['training-centre.html','user-guide.html']) {
@@ -44,7 +48,7 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     assert.ok(document.querySelector(`a[href="${destination}"]`),`${page}: usable redirect fallback`);
     const {document:common}=parseHTML(readFileSync(resolve(dist,'user-guide.html'),'utf8'));
     assert.ok(common.getElementById(anchor),`${page}: common guide destination exists`);
-    assert.ok(common.querySelector('script[src="procedural-beta/suite-guide-chat.js"]'),`${page}: common guide has Gyani`);
+    assert.ok([...common.querySelectorAll('script[src]')].some(script => new URL(script.getAttribute('src'),base).pathname === '/qgh-voice/procedural-beta/suite-guide-chat.js'),`${page}: common guide has Gyani`);
     assert.equal(document.querySelectorAll('#current-flow').length,0,`${page}: no competing handbook`);
   }
   const context=vm.createContext({URL,Request,Response,console,self:{registration:{scope:base},location:{origin:'https://example.test'},addEventListener(){}}});
@@ -56,7 +60,6 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.ok(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?position=student&connection=online',base))));
   assert.equal(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?untrusted=1',base))),null);
   assert.equal(sw.shellCacheKey(new Request('https://example.supabase.co/rest/v1/rpc/atc_session')),null);
-  const release=JSON.parse(readFileSync(resolve(root,'packages/procedural-beta/manifest.json'),'utf8')).version;
   assert.equal(sw.shellCacheKey(new Request(new URL('flow-theme.css?release='+release,base))).url,new URL('flow-theme.css',base).href);
   assert.equal(sw.shellCacheKey(new Request(new URL('flow-theme.css?release=untrusted',base))),null);
   for(const file of ['service-worker.js','instructor-led/service-worker.js']) {

@@ -1,6 +1,7 @@
 import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {buildEntryTheme} from './build-entry-theme.mjs';
 import {buildInstalledBrand} from './build-installed-brand.mjs';
+import {releaseQueryGuard, versionHostedAssets} from './version-hosted-assets.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -138,20 +139,19 @@ export async function buildProceduralBeta(outputRoot) {
     && [...requestUrl.searchParams.keys()].every(key => ['position','connection'].includes(key))
     && requestUrl.searchParams.get('position') === 'student'
     && ['online','local',null].includes(requestUrl.searchParams.get('connection'));
-  const isSuiteAsset = [new URL('./flow-theme.css', self.registration.scope).pathname, new URL('./suite-landing-register.js', self.registration.scope).pathname].includes(requestUrl.pathname)
-    && requestUrl.search === '?release=${manifest.version}';
+  ${releaseQueryGuard(manifest.version)}
   if (requestUrl.search && !isRoomWorker && !isControllerPage && !isSuiteAsset) {`);
   await writeFile(swPath,sw);
   const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
   let instructorSW = await readFile(instructorSWPath,'utf8');
   instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../qgh-cloudbreak.png',\n  '../qgh-towers.png',\n  '../hero-airspace.png',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
-  instructorSW = instructorSW.replace('  if (requestUrl.search) {', `  const isSuiteAsset = [new URL('../flow-theme.css', self.registration.scope).pathname, new URL('../suite-landing-register.js', self.registration.scope).pathname].includes(requestUrl.pathname)
-    && requestUrl.search === '?release=${manifest.version}';
+  instructorSW = instructorSW.replace('  if (requestUrl.search) {', `  ${releaseQueryGuard(manifest.version)}
   if (requestUrl.search && !isSuiteAsset) {`);
   instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
+  await versionHostedAssets(outputRoot, manifest.version);
   console.log(`Built ATC Training Suite with Procedural Beta ${manifest.version}`);
 }
