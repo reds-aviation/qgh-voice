@@ -1041,3 +1041,21 @@ body.desk-open input::placeholder,body.desk-open textarea::placeholder { color:#
   .traffic-review-toolbar input[type=range] { flex-basis:100%; }
   body.desk-open.review-open #work-panel { position:fixed; top:0; height:var(--usable-height,100dvh); }
 }
+
+/* Student phones keep the mobile instrument / plot rows when Options closes.
+   A desktop five-row template would assign the plot only 62px, then the local
+   estimate summary would consume it. The estimate editor cannot shrink the
+   canvas away when opened, including after the instructor ends the exercise. */
+@media (max-width:700px) {
+  body.student-desk.options-collapsed #desk .scope-panel {
+    grid-template-rows:0 0 132px minmax(0,1fr) 51px 0 24px;
+  }
+  body.student-desk.drawer-open #desk .scope-panel {
+    grid-template-rows:0 0 132px minmax(0,1fr) 0 0 0;
+  }
+  body.student-desk #desk .scope-wrap { overflow-x:hidden; overflow-y:auto; }
+  body.student-desk #desk .scope-plot { flex:1 1 200px; min-height:200px; }
+  body.student-desk #desk .student-estimate-panel[open] {
+    max-height:min(350px,40dvh); overflow-y:auto;
+  }
+}
