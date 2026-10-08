@@ -1,7 +1,8 @@
 {
-  "name": "Reds ATC Training Suite",
-  "releaseName": "v0.2.12-beta.1 \u00b7 Scope focus and preparation",
-  "releaseStage": "beta-user-trials",
-  "version": "0.2.12-beta.1",
-  "updated": "2026-10-03"
+  "name": "ATS SIM BOX",
+  "releaseName": "ATS SIM BOX · Version 1",
+  "releaseStage": "release",
+  "version": "1.0.0",
+  "updated": "2026-10-08",
+  "displayVersion": "Version 1"
 }

@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Start with the whole path",
@@ -33,5 +33,6 @@
       "title": "Practise one improvement",
       "start": 52.073357
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

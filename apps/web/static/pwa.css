@@ -196,7 +196,7 @@
   .entry-native-downloads a { transition: none; }
 }
 /* Web-only release gateway. Native packages retain their existing entry view
-   until they deliberately bundle the instructor-led beta. */
+   until they deliberately bundle the instructor-led package. */
 .entry-program-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -239,7 +239,7 @@
   font-size: 8px;
 }
 
-.entry-beta-note {
+.entry-training-note {
   margin: 12px 0 0;
   color: var(--entry-muted);
   font-size: 13px;

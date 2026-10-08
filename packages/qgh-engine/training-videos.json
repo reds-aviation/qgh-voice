@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "versionSource": "app-version.json",
-  "version": "5.0.5",
+  "version": "1.0.0",
   "productionStatus": "screen-guides-ready",
   "generatedWith": "Offline Windows SAPI and ffmpeg; actual release screenshot captures",
   "videos": [
@@ -9,7 +9,7 @@
       "id": "complete-walkthrough",
       "title": "Complete QGH walkthrough",
       "description": "Seven narrated screen guides in one chaptered walkthrough. Actual interface captures; not a live recognition test.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/complete-walkthrough/complete-walkthrough.mp4",
       "captions": "training-media/complete-walkthrough/complete-walkthrough.vtt",
       "transcript": "training-media/complete-walkthrough/complete-walkthrough.txt",
@@ -48,13 +48,14 @@
       "bytes": 11149073,
       "duration": "7:00",
       "durationSeconds": 420.226009,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "basic-controls",
       "title": "Basic controls",
       "description": "Single, Normal and U/S Compass: a narrated screen guide.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/basic-controls/basic-controls.mp4",
       "captions": "training-media/basic-controls/basic-controls.vtt",
       "transcript": "training-media/basic-controls/basic-controls.txt",
@@ -97,13 +98,14 @@
       "bytes": 1407206,
       "duration": "0:58",
       "durationSeconds": 58.210612,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "offline-voice-setup",
       "title": "Offline voice setup",
       "description": "Prepare local resources and test headphone output.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/offline-voice-setup/offline-voice-setup.mp4",
       "captions": "training-media/offline-voice-setup/offline-voice-setup.vtt",
       "transcript": "training-media/offline-voice-setup/offline-voice-setup.txt",
@@ -146,13 +148,14 @@
       "bytes": 1698493,
       "duration": "1:00",
       "durationSeconds": 59.865873,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "ptt-continuous",
       "title": "PTT and Continuous Listening",
       "description": "Transmission boundaries, readback and controller priority.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/ptt-continuous/ptt-continuous.mp4",
       "captions": "training-media/ptt-continuous/ptt-continuous.vtt",
       "transcript": "training-media/ptt-continuous/ptt-continuous.txt",
@@ -195,13 +198,14 @@
       "bytes": 1365651,
       "duration": "0:56",
       "durationSeconds": 56.123537,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "accepted-calls",
       "title": "Accepted calls and outcomes",
       "description": "Clearances, reports, information and calls outside the model.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/accepted-calls/accepted-calls.mp4",
       "captions": "training-media/accepted-calls/accepted-calls.vtt",
       "transcript": "training-media/accepted-calls/accepted-calls.txt",
@@ -244,13 +248,14 @@
       "bytes": 1578460,
       "duration": "1:01",
       "durationSeconds": 61.034896,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "tactical-formation",
       "title": "Tactical QGH and formation",
       "description": "Addressed aircraft, selection and independent control.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/tactical-formation/tactical-formation.mp4",
       "captions": "training-media/tactical-formation/tactical-formation.vtt",
       "transcript": "training-media/tactical-formation/tactical-formation.txt",
@@ -293,13 +298,14 @@
       "bytes": 1783052,
       "duration": "1:00",
       "durationSeconds": 60.425586,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "review-debrief",
       "title": "Review and debrief",
       "description": "Read the track, replay events and choose one improvement.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/review-debrief/review-debrief.mp4",
       "captions": "training-media/review-debrief/review-debrief.vtt",
       "transcript": "training-media/review-debrief/review-debrief.txt",
@@ -342,13 +348,14 @@
       "bytes": 1532151,
       "duration": "1:02",
       "durationSeconds": 61.663281,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     },
     {
       "id": "phone-use",
       "title": "Phone use and offline practice",
       "description": "Responsive controls, audio routes and release updates.",
-  "version": "5.0.5",
+      "version": "1.0.0",
       "src": "training-media/phone-use/phone-use.mp4",
       "captions": "training-media/phone-use/phone-use.vtt",
       "transcript": "training-media/phone-use/phone-use.txt",
@@ -391,7 +398,10 @@
       "bytes": 1792368,
       "duration": "1:03",
       "durationSeconds": 62.902222,
-      "presentation": "narrated-screen-guide"
+      "presentation": "narrated-screen-guide",
+      "captureVersion": "5.0.5"
     }
-  ]
+  ],
+  "captureVersion": "5.0.5",
+  "compatibilityNote": "ATS SIM BOX Version 1 combines all training modules. Existing focused recordings remain available; use the current shared guide for the latest controls and online startup steps."
 }

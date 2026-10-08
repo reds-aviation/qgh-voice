@@ -37,6 +37,21 @@ if (!androidName || !androidCode) {
 
 const mismatches = [
   {
+    label: 'ATS suite version',
+    actual: JSON.parse(readFileSync(resolve(repositoryRoot, 'apps', 'suite-web', 'static', 'app-version.json'), 'utf8')).version,
+    expected: release.version,
+  },
+  {
+    label: 'Procedural version',
+    actual: JSON.parse(readFileSync(resolve(repositoryRoot, 'packages', 'procedural-beta', 'manifest.json'), 'utf8')).version,
+    expected: release.version,
+  },
+  {
+    label: 'Shared guide version',
+    actual: readFileSync(resolve(repositoryRoot, 'packages', 'procedural-beta', 'static', 'guide-knowledge.js'), 'utf8').match(/"revision":\s*"([^"]+)"/)?.[1],
+    expected: release.version,
+  },
+  {
     label: 'Windows package version',
     actual: windowsPackage.version,
     expected: release.version,

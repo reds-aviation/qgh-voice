@@ -18,12 +18,15 @@ const suiteProbe = resolve(repositoryRoot, 'packages', 'atc-suite', '__suite-bui
 const staticProbe = resolve(repositoryRoot, 'apps', 'suite-web', 'static', '__suite-static-probe__.txt');
 
 const expectedFiles = [
+  'meeting-room.js',
   'index.html',
   'instructor.html',
   'student.html',
   'training-guide.html',
   'suite-command-reference.js',
   'suite.css',
+  'suite-entry.js',
+  'suite-entry.css',
   'suite-core.js',
   'suite-display.js',
   'suite-instructor.js',
@@ -39,6 +42,7 @@ const expectedFiles = [
   'workspace-shell.js',
   'workspace-shell.css',
   'simulator-core.js',
+  'scope-visuals.js',
   'procedure-core.js',
   'fonts/ibm-plex-mono-500.ttf',
   'fonts/ibm-plex-sans-400.ttf',
@@ -90,12 +94,14 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
   const sourceVersion = JSON.parse(readFileSync(resolve(repositoryRoot, 'apps/suite-web/static/app-version.json'), 'utf8')).version;
   assert.equal(version, sourceVersion);
   const guide = readFileSync(resolve(outputRoot, 'training-guide.html'), 'utf8');
-  assert.ok(guide.includes(`BETA TRAINING GUIDE · ${version}`));
-  assert.ok(!guide.includes('BETA_DIRECT_COMMANDS') && !guide.includes('__ATC_GUIDE_VERSION__'));
+  assert.ok(guide.includes('TRAINING GUIDE · Version 1'));
+  assert.ok(!guide.includes('DIRECT_COMMANDS') && !guide.includes('__ATC_GUIDE_VERSION__'));
   for (const row of commandReference.commands) for (const alias of row.aliases) assert.ok(guide.includes(`<code>${alias}</code>`), `Guide includes executable alias ${alias}`);
 
   for (const page of ['index.html', 'instructor.html', 'student.html', 'training-guide.html']) {
     const html = readFileSync(resolve(outputRoot, page), 'utf8');
+    assert.match(html, /ATS SIM BOX · Version 1/, `${page}: common public product and version`);
+    assert.doesNotMatch(html.replace(/<[^>]+>/g, ' '), /\bBETA\b|UNDER DEVELOPMENT|USER TRIALS/i, `${page}: no old release-stage labels`);
     const localAssets = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css)\?v=([^"]+))"/g)];
     assert.ok(localAssets.length > 0, `${page} contains version-qualified local assets`);
     for (const [, , assetVersion] of localAssets) assert.equal(assetVersion, version);
@@ -113,7 +119,15 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
     }
   }
   const entry = readFileSync(resolve(outputRoot, 'index.html'), 'utf8');
-  assert.match(entry, new RegExp(`BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · ${version.replaceAll('.', '\\.')}`));
+  assert.match(entry, /ATS SIM BOX · Version 1/);
+  assert.ok(entry.includes(`suite-entry.js?v=${version}`), 'entry navigation is bundled and versioned');
+  for (const page of ['index.html','student.html']) {
+    assert.ok(readFileSync(resolve(outputRoot,page),'utf8').includes(`suite-entry.css?v=${version}`), `${page} uses shared entry layout`);
+  }
+  const instructor = readFileSync(resolve(outputRoot,'instructor.html'),'utf8');
+  assert.ok(instructor.indexOf('scope-visuals.js?') < instructor.indexOf('suite-display.js?'), 'scope helper loads before instructor renderers');
+  assert.equal(sha256(resolve(outputRoot,'scope-visuals.js')),sha256(resolve(repositoryRoot,'packages/qgh-engine/scope-visuals.js')), 'suite scope helper is the canonical source');
+  assert.equal(sha256(resolve(outputRoot,'suite-entry.css')),sha256(resolve(repositoryRoot,'packages/procedural-beta/static/suite-entry.css')), 'both training families share one entry stylesheet');
 
   const css = readFileSync(resolve(outputRoot, 'suite.css'), 'utf8');
   for (const [, reference] of css.matchAll(/url\(['"]?([^)'"?#]+)[^)]*\)/g)) {
@@ -125,7 +139,8 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
   assert.ok(worker.includes(`const APP_VERSION = '${version}'`));
 
   const manifest = JSON.parse(readFileSync(resolve(outputRoot, 'manifest.webmanifest'), 'utf8'));
-  assert.equal(manifest.name, 'Reds ATC Training Suite');
+  assert.equal(manifest.name, 'ATS SIM BOX');
+  assert.equal(manifest.short_name, 'ATS SIM BOX');
   assert.equal(manifest.id, './reds-atc-training-suite');
   assert.notEqual(manifest.id, './');
 

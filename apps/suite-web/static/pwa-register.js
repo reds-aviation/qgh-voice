@@ -39,7 +39,7 @@
       updateNotice.className = 'pwa-update-notice';
       updateNotice.setAttribute('role', 'status');
       updateNotice.setAttribute('aria-live', 'polite');
-      updateNotice.innerHTML = '<span data-update-copy>A new ATC Suite version is ready.</span> <button type="button">UPDATE</button>';
+      updateNotice.innerHTML = '<span data-update-copy>A new ATS SIM BOX version is ready.</span> <button type="button">UPDATE</button>';
       updateNotice.querySelector('button').addEventListener('click', () => {
         if (hasActiveLocalSession()) {
           setNoticeText('End the active local session or review before updating.');
@@ -47,7 +47,7 @@
         }
 
         reloadApproved = true;
-        setNoticeText('Updating ATS SIMBOX…');
+        setNoticeText('Updating ATS SIM BOX…');
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       });
       document.body.append(updateNotice);

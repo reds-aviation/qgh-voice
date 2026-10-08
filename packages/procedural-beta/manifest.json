@@ -1,16 +1,16 @@
 {
-  "version": "2026.10.03.8",
-  "go": "1.25.0",
+  "version": "1.0.0",
+  "go": "1.27.1",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 42994,
-      "sha256": "66e6e66a3bf2f4b7b5970ac6d3ccfdbb29ab21902610d119167981eb6f5fea4a"
+      "bytes": 43953,
+      "sha256": "58f130c23ff60e08353100e68ae0b0319dede7c114e73289ad54faac2172cab2"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 109172,
-      "sha256": "5b328a5e1a3ece1e38ad75790f1da6fe54c73235fae06da6490576f34b9acf59"
+      "bytes": 126565,
+      "sha256": "dff7194892aaf42879b705f7f33be971ecbc790d5a093f698be9aaae906b1342"
     },
     {
       "path": "static/procedural.css",
@@ -34,8 +34,8 @@
     },
     {
       "path": "static/chart-workshop.js",
-      "bytes": 31816,
-      "sha256": "782a4fb0386c47d96c77e58774652c38a84d46a99e28d0d3c0c07772a6482a3d"
+      "bytes": 37684,
+      "sha256": "1c51252ed96f534917c50925c268db93867921a3c6c3c4d5386bffaadde4f78e"
     },
     {
       "path": "static/chart-geometry.js",
@@ -49,8 +49,8 @@
     },
     {
       "path": "static/traffic-setup.js",
-      "bytes": 15006,
-      "sha256": "016b94981464e8e4a166c7466f17db9e3f23380db1a6d7f214a7e70ebd8bf010"
+      "bytes": 16545,
+      "sha256": "aca9cde271ff9d5f37ec02e6c9aa0a782013b9b82bcbc844bb53b639b287a2dd"
     },
     {
       "path": "static/india-airspace.json",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 34310,
-      "sha256": "a64bf509db7eee0acdc06b6fc62bb10b4769b989040ec4c4f57d6883c4908f60"
+      "bytes": 34800,
+      "sha256": "ac38cb3663b20443a5988a204fe662c677522d34d299e44a8efdb7674c7d9967"
     },
     {
       "path": "static/style.css",
@@ -89,8 +89,8 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 15001,
-      "sha256": "cd3b064c4f2dbccec2105e17f926b92f40abf71b32ffb3a7ab1117559eaa1a2f"
+      "bytes": 15066,
+      "sha256": "681e89d512d9ee5c8fbc0366eba5fe587c5293013cb68878a30ff93b471f1978"
     },
     {
       "path": "static/suite-guide-chat.css",
@@ -119,18 +119,18 @@
     },
     {
       "path": "static/browser-worker.js",
-      "bytes": 11859,
-      "sha256": "a51934eaefee97a970ab9c19a024db96b57ae8641e2e2fc5de3b034d14a56cdc"
+      "bytes": 11866,
+      "sha256": "300e5a4c0d8e725522dccf396f05ba968eaf3b6d09fc6b6468fc17d644718cf1"
     },
     {
       "path": "static/browser-client.js",
-      "bytes": 9798,
-      "sha256": "252ee01abd8b0a2e6313f33b269366c92806007ab959510089ab27d8624d6750"
+      "bytes": 11151,
+      "sha256": "587fa4989bb98043bea8a88ff42f2339e05121f5596cf7a131c6c348358c0555"
     },
     {
       "path": "static/procedural-engine.wasm",
-      "bytes": 6276883,
-      "sha256": "4d26fb8c7eed4b2c9fdcb765f509a3df33d0b20673ebffe0007aa3fdf7ff9b96"
+      "bytes": 6254959,
+      "sha256": "3bbcc14711a70bbdd7be3c502e9e2ae97450de48483c73abd170b3b846c344e8"
     },
     {
       "path": "static/wasm_exec.js",
@@ -169,8 +169,8 @@
     },
     {
       "path": "engine/internal/procedural/motion.go",
-      "bytes": 15648,
-      "sha256": "160e28b58a9f9780e15f35d2a9313312cf71581fb5d308bdc2086a82a87c81df"
+      "bytes": 19393,
+      "sha256": "1ebf9bb2a2b97c13df12a07a02d586b0862c316a01e89429d5666d9501c8ebc3"
     },
     {
       "path": "engine/internal/procedural/presets.go",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 54687,
-      "sha256": "40e72afbf51f977eb02b58e5334a46162fac03d40dd34ea37e1993294f0c04db"
+      "bytes": 82472,
+      "sha256": "509c9f307c65152aa607909d91ea97fe7f695a439679d1f47e1973213c47e6ba"
     },
     {
       "path": "static/gyani-fox.png",
@@ -229,8 +229,8 @@
     },
     {
       "path": "static/scope-interaction.js",
-      "bytes": 1848,
-      "sha256": "6848c4b1b8f9e4de5bf00c08e98dbcf4735f14af0b7425455358ef5ad35c44a3"
+      "bytes": 4108,
+      "sha256": "43653605a0d394c4282c104d203601c5e9b7a6e5c9469f09a03651112e7f66eb"
     },
     {
       "path": "static/remote-config.js",
@@ -244,8 +244,8 @@
     },
     {
       "path": "static/remote-room.js",
-      "bytes": 6234,
-      "sha256": "f8229fc8d0d990d373c56880d939bbda51dba61e85510fa1a295a081b5dea697"
+      "bytes": 7428,
+      "sha256": "678500463b5d93ee0c27fe60fe8c46f8280d8f871f0226ce015d45624c2092f5"
     },
     {
       "path": "static/guide-search.js",
@@ -254,8 +254,8 @@
     },
     {
       "path": "static/suite-tour.js",
-      "bytes": 7597,
-      "sha256": "6695aba5a20251b4e7b74d65b84ff341b7382b394e0076d9b3172a20cd33aa74"
+      "bytes": 7678,
+      "sha256": "89e8f88cbafbbe0eb91f7c760704947718d3ec6640f15ea7ec73ecf99fdefd1a"
     },
     {
       "path": "static/suite-tour.css",
@@ -279,18 +279,18 @@
     },
     {
       "path": "static/airspace-preparation.js",
-      "bytes": 24634,
-      "sha256": "aff8d5d7bb0a5df6d72cba2eea27b3af8115f23b25f2cb5a9641e77f9a76204b"
+      "bytes": 29566,
+      "sha256": "2eeb789390cca56fc12e9f21e03bc6a3f2142aa59892c5c63cb54bf88b19d450"
     },
     {
       "path": "static/airspace-preparation.css",
-      "bytes": 2804,
-      "sha256": "95b750f033241054d2a96d165473af6687a4e7d3b376f2b468756afccc88ec7e"
+      "bytes": 4191,
+      "sha256": "1df0d80b01351c0c382fead9cd4935ac0539635afdfffde16d2633a9c2b77b8b"
     },
     {
       "path": "static/scenario-library.js",
-      "bytes": 19323,
-      "sha256": "d8d7c6f8c448c835cd8d34d24c848a10280188b9643b4d71610bf85e4131eced"
+      "bytes": 21391,
+      "sha256": "6d9d8dc910e3f96014eb2260b9d54609e6b4efbfcd9bf09a59cc220fb57ee667"
     },
     {
       "path": "static/scenario-library.css",
@@ -309,18 +309,33 @@
     },
     {
       "path": "static/traffic-review.js",
-      "bytes": 13660,
-      "sha256": "519990bedea78e01a36e0932001ab13320c33c7859d345a2c7c6e3141aab3f45"
+      "bytes": 13712,
+      "sha256": "74757fdcf133d307cb4abbd10849d44295ae082c1166a77439eeb764b70ddc62"
     },
     {
       "path": "static/workspace-shell.js",
-      "bytes": 1452,
-      "sha256": "d24250dde829a790cee51b2bb0aa45d6bcef873dad5946f5d805f4ec7c3baedb"
+      "bytes": 31802,
+      "sha256": "adbdbd0937070814ad89e2e6bebf27b2e21f6f8946e9139ea4010e3ac73e5777"
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 1067,
-      "sha256": "bf498e5b89658f3d8f07140cd5215b92523155bc373688bca34aa27a0fe1844a"
+      "bytes": 52830,
+      "sha256": "be1e957c3da399868107acad54e2291bf2219210177a5cb96302c8c683e461b1"
+    },
+    {
+      "path": "static/meeting-room.js",
+      "bytes": 11338,
+      "sha256": "ea350e8aac85553f946168a6b2974b26cf9e8d553afdbb569c253dec04b8a57c"
+    },
+    {
+      "path": "static/scope-visuals.js",
+      "bytes": 12173,
+      "sha256": "9f342e6c85e2cfa6b45cf8e0730a7042eccf726afd2c0cbd539cbbe985c0e569"
+    },
+    {
+      "path": "static/suite-entry.css",
+      "bytes": 10297,
+      "sha256": "400bb0a3ce8d6136032500912af8c83c3233dd6c2f4639074314b622df62ae0a"
     }
   ]
 }

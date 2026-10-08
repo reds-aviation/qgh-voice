@@ -1,8 +1,9 @@
 {
-  "name": "Reds QGH Simulator",
-  "releaseName": "v5.0.5 · Instructor-led Beta Gateway",
-  "releaseStage": "public-release",
-  "version": "5.0.5",
-  "androidVersionCode": 35,
-  "updated": "2026-09-22"
+  "name": "ATS SIM BOX",
+  "releaseName": "ATS SIM BOX · Version 1",
+  "releaseStage": "release",
+  "version": "1.0.0",
+  "androidVersionCode": 41,
+  "updated": "2026-10-08",
+  "displayVersion": "Version 1"
 }

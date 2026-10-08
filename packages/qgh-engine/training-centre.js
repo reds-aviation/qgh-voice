@@ -106,8 +106,9 @@
     return response.json();
   }).then(data => {
     if (typeof data.version !== 'string' || !/^[\w.\-]+$/.test(data.version)) throw new Error('Release information is invalid');
-    $('guideVersion').textContent = data.releaseName || `Version ${data.version}`;
-    $('releaseDetail').textContent = `${data.name || 'Reds QGH Simulator'} · ${data.releaseName || data.version}${data.updated ? ` · Updated ${data.updated}` : ''}. Guide and catalogue are delivered with this installation.`;
+    const displayVersion = data.displayVersion || 'Version 1';
+    $('guideVersion').textContent = displayVersion;
+    $('releaseDetail').textContent = `${data.name || 'ATS SIM BOX'} · ${displayVersion}${data.updated ? ` · Updated ${data.updated}` : ''}. Guide and catalogue are delivered with this installation.`;
     return data;
   }).catch(() => {
     $('guideVersion').textContent = 'Release information unavailable';

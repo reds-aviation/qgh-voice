@@ -80,3 +80,5 @@ a.procedural-card:focus-visible{outline:3px solid #bd762d;outline-offset:5px}
 .suite-update{max-width:220px;min-height:36px;padding:7px 11px;border:1px solid #7296a5;border-radius:6px;background:transparent;color:#166474;font:600 12px/1.4 Plex,Arial,sans-serif;cursor:pointer}
 .suite-update[hidden]{display:none!important}
 .simulator-grid>*{min-width:0}.path-card>*{min-width:0}.path-content .beta-badge-small{margin:5px 0 0}.path-content strong .beta-badge{white-space:nowrap}.path-card{row-gap:14px}.simulator-card h3{overflow-wrap:anywhere}
+
+.suite-brand small{display:block;margin-top:5px;font-size:11px;line-height:1.3;letter-spacing:.08em}

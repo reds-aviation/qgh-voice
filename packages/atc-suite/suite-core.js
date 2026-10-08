@@ -780,12 +780,13 @@
       draft.revision += 1;
       for (const aircraft of draft.aircraftList) {
         const delta = turnDelta(aircraft, STEP_SECONDS);
-        const motion = Flight.advanceArc(
+        const motion = Flight.advanceHeadingMotion(
           { x: aircraft.position.xNm, y: aircraft.position.yNm },
           aircraft.headingDeg,
           aircraft.speedKt,
-          delta / STEP_SECONDS,
-          STEP_SECONDS
+          aircraft.rateDegPerSecond,
+          STEP_SECONDS,
+          delta
         );
         aircraft.position = { xNm: motion.x, yNm: motion.y };
         aircraft.headingDeg = motion.heading;

@@ -1,6 +1,7 @@
 import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {buildEntryTheme} from './build-entry-theme.mjs';
 import {buildInstalledBrand} from './build-installed-brand.mjs';
+import {verifyProceduralScopeVisuals} from './sync-procedural-scope-visuals.mjs';
 import {releaseQueryGuard, versionHostedAssets} from './version-hosted-assets.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
 import {resolve, dirname} from 'node:path';
@@ -10,6 +11,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export async function buildProceduralBeta(outputRoot) {
   if (resolve(outputRoot) !== resolve(root,'apps/web/dist')) throw new Error('Unexpected suite output');
   const source = resolve(root,'packages/procedural-beta');
+  await verifyProceduralScopeVisuals(root);
   const manifest = JSON.parse(await readFile(resolve(source,'manifest.json'),'utf8'));
   const seen = new Set();
   for (const file of manifest.files) {
@@ -21,6 +23,9 @@ export async function buildProceduralBeta(outputRoot) {
     const target = resolve(outputRoot,'procedural-beta',file.path.slice(7));
     await mkdir(dirname(target),{recursive:true});
     await writeFile(target,data);
+  }
+  for (const asset of ['static/scope-visuals.js','static/suite-entry.css']) {
+    if (!seen.has(asset)) throw new Error(`Missing Procedural manifest asset: ${asset}`);
   }
   await copyFile(resolve(outputRoot,'procedural-beta/procedural.html'),resolve(outputRoot,'procedural-beta/index.html'));
   const landingRoot = resolve(root,'packages/site-landing');
@@ -35,9 +40,9 @@ export async function buildProceduralBeta(outputRoot) {
   const individualTab = '<a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>';
   if (!qgh.includes(individualTab)) throw new Error('Missing QGH navigation tab');
   qgh = qgh.replace(individualTab,'<a class="entry-program-tab" href="index.html">SUITE HOME</a>');
-  qgh = qgh.replaceAll('Reds QGH Simulator','QGH Simulator').replaceAll('Reds QGH','ATC Training Suite')
-    .replace('INSTALL QGH ON THIS DEVICE','INSTALL ATC SUITE ON THIS DEVICE')
-    .replace('Install QGH Simulator','Install ATC Training Suite');
+  qgh = qgh.replaceAll('Reds QGH Simulator','ATS SIM BOX').replaceAll('Reds QGH','ATS SIM BOX')
+    .replace('INSTALL QGH ON THIS DEVICE','INSTALL ATS SIM BOX ON THIS DEVICE')
+    .replace('Install QGH Simulator','Install ATS SIM BOX');
   await writeFile(resolve(outputRoot,'qgh.html'),qgh);
   const landingHTML = await readFile(resolve(landingRoot,'index.html'),'utf8');
   await writeFile(homePath, landingHTML.replace('src="suite-landing-register.js"',`src="suite-landing-register.js?release=${manifest.version}"`));
@@ -45,15 +50,15 @@ export async function buildProceduralBeta(outputRoot) {
   for (const page of ['single.html','tactical.html','training-centre.html','user-guide.html']) {
     const path = resolve(outputRoot,page);
     let html = await readFile(path,'utf8');
-    html = html.replaceAll('href="index.html"','href="qgh.html"').replaceAll('Reds QGH Simulator','QGH Simulator')
-      .replaceAll('Reds QGH','ATC Training Suite');
+    html = html.replaceAll('href="index.html"','href="qgh.html"').replaceAll('Reds QGH Simulator','ATS SIM BOX')
+      .replaceAll('Reds QGH','ATS SIM BOX');
     const suiteLink = '<a class="mode-home-link" href="./">ATC SUITE</a>';
     if (page === 'single.html') {
-      const marker = '<div class="brand"><h1>QGH SIMULATOR</h1>';
+      const marker = '<div class="brand"><h1>ATS SIM BOX</h1>';
       if (!html.includes(marker)) throw new Error('Missing Single QGH header for suite link');
       html = html.replace(marker, marker + suiteLink);
     } else if (page === 'tactical.html') {
-      const marker = '<div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1>';
+      const marker = '<div class="tactical-brand"><h1>ATS SIM BOX</h1>';
       if (!html.includes(marker)) throw new Error('Missing Tactical QGH header for suite link');
       html = html.replace(marker, marker + '<a class="tactical-mode-home" href="./">ATC SUITE</a>');
     } else if (page === 'training-centre.html') {
@@ -67,9 +72,9 @@ export async function buildProceduralBeta(outputRoot) {
     const path = resolve(outputRoot,'instructor-led',page);
     let html = await readFile(path,'utf8');
     html = html.replace("connect-src 'self';", "connect-src 'self' https://yigmtmdrqpufdwvzswjd.supabase.co;");
-    html = html.replaceAll('<span>REDS</span> ATC TRAINING SUITE','ATC TRAINING SUITE')
-      .replaceAll('REDS ATC TRAINING SUITE','ATC TRAINING SUITE')
-      .replaceAll('Reds ATC Training Suite','ATC Training Suite')
+    html = html.replaceAll('<span>REDS</span> ATC TRAINING SUITE','ATS SIM BOX')
+      .replaceAll('REDS ATC TRAINING SUITE','ATS SIM BOX')
+      .replaceAll('Reds ATC Training Suite','ATS SIM BOX')
       .replaceAll('Reds ATC Suite','ATC Suite')
       .replaceAll('>INDIVIDUAL PRACTICE</a>','>SUITE HOME</a>');
     await writeFile(path,html);
@@ -78,7 +83,7 @@ export async function buildProceduralBeta(outputRoot) {
     const path = resolve(outputRoot,'procedural-beta',page);
     let html = await readFile(path,'utf8');
     html = html.replace('<span class="brand-mark">R</span>','<span class="brand-mark">⌖</span>')
-      .replace('REDS · PROCEDURAL TRAINING','ATC · PROCEDURAL TRAINING')
+      .replace('REDS · PROCEDURAL TRAINING','ATS SIM BOX · PROCEDURAL TRAINING')
       .replace('</head>',`<script defer src="../suite-landing-register.js?release=${manifest.version}"></script></head>`);
     await writeFile(path,html);
   }
@@ -92,7 +97,7 @@ export async function buildProceduralBeta(outputRoot) {
     if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}guide-search.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
     await writeFile(path,html);
   }
-  for (const page of ['single.html','tactical.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
+  for (const page of ['single.html','tactical.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
     const prefix = page.startsWith('procedural-beta/') ? '' : page.includes('/') ? '../procedural-beta/' : 'procedural-beta/';
     const path = resolve(outputRoot,page);
     const html = await readFile(path,'utf8');
@@ -101,14 +106,13 @@ export async function buildProceduralBeta(outputRoot) {
   const manifestPath = resolve(outputRoot,'manifest.webmanifest');
   await buildEntryTheme(outputRoot, root, manifest.version);
   const qghManifest = JSON.parse(await readFile(manifestPath,'utf8'));
-  qghManifest.name = 'ATC Training Suite';
-  qghManifest.short_name = 'ATC Suite';
+  qghManifest.name = 'ATS SIM BOX';
+  qghManifest.short_name = 'ATS SIM BOX';
   qghManifest.start_url = './index.html';
   await writeFile(manifestPath,JSON.stringify(qghManifest,null,2)+'\n');
   const distributionPath = resolve(outputRoot,'web-distribution.js');
   const distribution = await readFile(distributionPath,'utf8');
-  if (!distribution.includes('INSTALL QGH ON THIS DEVICE')) throw new Error('Missing QGH install label');
-  await writeFile(distributionPath,distribution.replaceAll('INSTALL QGH ON THIS DEVICE','INSTALL ATC SUITE ON THIS DEVICE'));
+  if (!distribution.includes('INSTALL ATS SIM BOX ON THIS DEVICE')) throw new Error('Missing ATS SIM BOX install label');
 
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
@@ -153,5 +157,5 @@ export async function buildProceduralBeta(outputRoot) {
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
   await versionHostedAssets(outputRoot, manifest.version);
-  console.log(`Built ATC Training Suite with Procedural Beta ${manifest.version}`);
+  console.log(`Built ATS SIM BOX Version 1 with Procedural (${manifest.version})`);
 }

@@ -1,11 +1,12 @@
 import { createMapWorkshop } from './map-workshop.js';
 import { alignmentBriefing } from './chart-calibration.js';
-import { createAircraftGestures, nearestAircraft } from './scope-interaction.js';
+import { createAircraftGestures, nearestAircraft, bindMiddleMouseStop } from './scope-interaction.js';
 import { createRadarSweep } from './radar-sweep.js';
 import { recordTrail, trailDots, trailSpacing } from './scope-history.js';
 import { createTrafficReview } from './traffic-review.js';
 import { createStudentPlotting } from './student-plotting.js';
 import './workspace-shell.js';
+import './meeting-room.js';
 import { createTrafficSetup } from './traffic-setup.js';
 import { createChartWorkshop, drawAreas, routeWindowOpen } from './chart-workshop.js';
 import { visibleSegment, reserveLabel, fitNavigation, approachReference } from './scope-navigation.js';
@@ -21,7 +22,10 @@ window.visualViewport?.addEventListener('resize', sizeDeskToViewport);
 window.addEventListener('resize', sizeDeskToViewport);
 sizeDeskToViewport();
 const pad = (v) => String(Math.round(norm(v)) % 360).padStart(3, '0');
-const clock = (n) => new Date((36000 + n) * 1000).toISOString().slice(11, 19);
+const clock = (n) => {
+    const total = Math.max(0, Math.floor(Number(n) || 0));
+    return `${String(Math.floor(total / 3600)).padStart(2, '0')}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
 const elapsed = (n) => `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, '0')}`;
 const make = (tag, content, className) => {
     const e = document.createElement(tag);
@@ -36,6 +40,52 @@ let stage = 'entry';
 let room = null;
 let drawerReturn = null;
 let session = null, view = null, selected = '', generation = 0, pollTimer = 0, loginBusy = false, commandBusy = false;
+let loginGeneration = 0;
+let exerciseConnectionAvailable = false;
+let audioParticipants = '';
+const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: $('tab-session'),
+    onReadinessChange: () => { if (session) renderClockControls(); },
+    onSave: async url => {
+        if (!session?.cloud || session.role !== 'instructor') throw new Error('Open an online instructor exercise first.');
+        const auth = session, stamp = generation;
+        const result = await request('/api/procedural/meeting', { meetingUrl: url });
+        if (auth !== session || stamp !== generation) throw new Error('The session changed. Reopen Google Meet · exercise voice.');
+        session.meetingUrl = result.meetingUrl;
+        sessionStorage.setItem(key, JSON.stringify(session));
+        if (room) room.meetingUrl = result.meetingUrl;
+        if (view) view.meetingUrl = result.meetingUrl;
+        renderMeeting();
+        return { status: url ? result.shared ? 'Meeting link shared. Controllers receive it after pressing Ready.' : 'Meeting link saved. Sharing resumes when the exercise connection returns.' : 'Meeting link cleared.' };
+    }
+});
+meetingPanel?.addShortcut($('clock-controls').parentElement);
+const startupChecklist = globalThis.ATCSuiteMeeting?.createStartupChecklist({container:$('tab-session')});
+function startupOptions() {
+    const admitted = (room?.students || []).filter(student => ['admitted','ready'].includes(student.status));
+    return {online:!!session?.cloud,connected:exerciseConnectionAvailable && view?.available !== false,
+        meetingUrl:room?.meetingUrl ?? session?.meetingUrl ?? '',voiceReady:meetingPanel?.isVoiceReady?.() === true,
+        admitted:session?.cloud ? admitted.length > 0 : true,ready:admitted.every(student => student.status === 'ready')};
+}
+function startupStatus() {
+    const options = startupOptions();
+    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:!options.online && options.ready,reason:options.online ? 'Online startup tools did not load. Reload this page.' : 'Wait for admitted controllers to press Ready.'};
+}
+function openStartSetup() { tab('session'); meetingPanel?.open?.(); }
+function requireStartup() { const status = startupStatus(); if (status.allowed) return; text('start-setup-status',status.reason); openStartSetup(); throw new Error(status.reason); }
+function renderMeeting() {
+    if (session?.cloud && (!exerciseConnectionAvailable || view?.available === false)) meetingPanel?.resetVoice?.();
+    const hostMeetingUrl = room?.meetingUrl ?? session?.meetingUrl ?? '';
+    if (session?.role === 'instructor' && session.cloud && session.meetingUrl !== hostMeetingUrl) {
+        session.meetingUrl = hostMeetingUrl;
+        sessionStorage.setItem(key, JSON.stringify(session));
+    }
+    meetingPanel?.update({ online: !!session?.cloud, role: session?.role || 'student',
+        roomKey: `${generation}:${session?.cloud?.id || room?.pin || ''}:${view?.exerciseId || ''}`,
+        meetingUrl: session?.role === 'instructor' ? hostMeetingUrl : room?.status === 'ready' ? room?.meetingUrl ?? view?.meetingUrl ?? '' : '',
+        status: session?.role === 'student' && room?.status !== 'ready' ? 'After admission, press Ready to receive the instructor’s shared meeting link.' : undefined });
+    startupChecklist?.update(startupOptions());
+    if (startupChecklist) startupChecklist.element.hidden = session?.role !== 'instructor';
+}
 let range = 60, showMap = false, mapId = '', mapURL = '', mapImage = null, mapLoading = '', mapGeneration = 0, receivedAt = 0, lastAudio = '', messageTimer = 0;
 let settingsLoaded = false, chartIdentity = '';
 const environmentDirty = new Set();
@@ -54,7 +104,9 @@ function syncEnvironmentInputs() {
 }
 let lastElapsed = -1, trailHistory = new Map(), drafts = new Map(), stripRevision = 0;
 let pan = { x: 0, y: 0 }, ruler = [], pointer = null;
-const display = { areas: true, rings: true, routes: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, trailCount: 8, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 15 };
+const display = { areas: true, rings: true, ringSpacing: 10, routes: true, labels: true, labelMode: 'selected', areaLabels: false, routeLabels: true, fixLabels: true, trails: true, trailCount: 8, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 15 };
+const assignmentDrafts = new Map(), commandDrafts = new Map();
+let assignmentDraftIdentity = '', draftCommandKey = '';
 let linkedCallId = '', focusExerciseId = '';
 const trafficReview = createTrafficReview($('traffic-review'));
 function applyWorkspaceOptions(open) {
@@ -209,9 +261,13 @@ function storeDraftIfDirty() {
 }
 function tab(name, open = true) {
     if (session?.role !== 'instructor' && ['pilot','build','debrief'].includes(name)) return;
-    document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    document.querySelectorAll('[data-tab]').forEach(b => {
+        if (b.getAttribute('role') === 'tab') b.setAttribute('aria-selected', String(b.dataset.tab === name));
+        else { b.removeAttribute('aria-selected'); b.setAttribute('aria-expanded', String(open && b.dataset.tab === name)); }
+    });
+    $('quick-more').setAttribute('aria-expanded', String(open && name === 'pilot'));
     document.querySelectorAll('.tab-content').forEach(p => p.hidden = p.id !== `tab-${name}`);
-    text('drawer-title', { strip: 'Controller calls', pilot: 'Aircraft controls', build: 'Prepare airspace', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope' }[name] || name);
+    text('drawer-title', { strip: 'Controller calls', pilot: 'Aircraft controls', build: 'Prepare exercise', airspace: 'Chart briefing', approach: '3° approach reference', separation: 'Separation', debrief: 'Exercise review', session: 'Session', layers: session?.role === 'student' ? 'Instructor-set chart layers' : 'Declutter scope' }[name] || name);
     $('work-panel').hidden = !open;
     document.body.classList.toggle('drawer-open', open);
     document.body.classList.toggle('review-open', open && name === 'debrief');
@@ -222,7 +278,7 @@ function tab(name, open = true) {
         $('drawer-close').focus({ preventScroll: true });
     }
 }
-function closeDrawer() { $('work-panel').hidden = true; document.body.classList.remove('drawer-open', 'review-open'); trafficReview.close(); drawerReturn?.focus(); }
+function closeDrawer(restoreFocus = true) { $('work-panel').hidden = true; document.body.classList.remove('drawer-open', 'review-open'); document.querySelectorAll('[data-tab]:not([role="tab"])').forEach(b => b.setAttribute('aria-expanded', 'false')); $('quick-more').setAttribute('aria-expanded', 'false'); trafficReview.close(); if (restoreFocus !== false) drawerReturn?.focus(); }
 function setStage(next) {
     const changed = stage !== next;
     if (next !== 'desk') resetScopePointer();
@@ -241,6 +297,7 @@ function setStage(next) {
         document.body.classList.remove('drawer-open');
     $('back-flow').hidden = !session || next === 'entry';
     $('return-desk').hidden = !session || next !== 'entry';
+    renderMeeting();
     if (changed && next === 'desk') globalThis.ATCSuiteWorkspace?.enter($('desk'));
 }
 function leave() {
@@ -268,6 +325,7 @@ function leave() {
         URL.revokeObjectURL(mapURL);
     mapURL = '';
     room = null;
+    renderMeeting();
     conditionAircraft = '';
     trafficSetup.close();
     $('work-panel').hidden = true;
@@ -277,6 +335,22 @@ function leave() {
     for (const id of ['fleet', 'events', 'alerts', 'calls', 'reports', 'criteria', 'truth-readout'])
         $(id).replaceChildren();
     draw();
+}
+async function logoutToHome() {
+    const estimateIdentity = session?.cloud?.clientId || sessionStorage.getItem('ats-student-plot-identity');
+    const estimateKey = view && session?.role === 'student' && estimateIdentity
+        ? 'ats-simbox-student-estimates-v1:' + encodeURIComponent(`${view.exerciseId}:${estimateIdentity}:${session.name || ''}`) : '';
+    ++loginGeneration;
+    loginBusy = false;
+    document.querySelectorAll('#entry button').forEach(button => button.disabled = false);
+    leave();
+    exerciseConnectionAvailable = false;
+    refreshPending = null;
+    environmentDirty.clear();
+    chartWorkshop.discardDraft?.();
+    for (const progressKey of ['reds-procedural-drafts', 'reds-procedural-draft-exercise', 'ats-procedural-replay', 'ats-student-plot-identity']) sessionStorage.removeItem(progressKey);
+    if (estimateKey) localStorage.removeItem(estimateKey);
+    await globalThis.ProceduralBrowserSession?.logout?.();
 }
 function enter(s, startPolling = true) {
     resetScopePointer();
@@ -316,10 +390,11 @@ function enter(s, startPolling = true) {
         document.querySelectorAll(`[data-tab="${name}"]`).forEach(el => el.hidden = !instructor);
     }
     $('traffic-setup').hidden = !instructor;
-    $('scenario-library-open').hidden = !instructor;
+    $('scenario-library-open').hidden = true;
     $('incoming-calls-open').hidden = !instructor;
     $('instructor-room').hidden = !instructor;
     document.querySelectorAll('[data-instructor-tool]').forEach(el => el.hidden = !instructor);
+    document.querySelectorAll('[data-prepare-secondary]').forEach(el => el.hidden = true);
     $('criterion-form').hidden = !instructor;
     $('alert-controls').hidden = !instructor;
     $('scope-options').hidden = false;
@@ -335,6 +410,7 @@ async function openSession(role, resumeRoom = false) {
     if (loginBusy)
         return;
     loginBusy = true;
+    const loginAttempt = ++loginGeneration;
     const stamp = ++generation;
     commandBusy = false;
     pendingClock = '';
@@ -349,7 +425,7 @@ async function openSession(role, resumeRoom = false) {
             try {
                 await refresh(current);
                 if (current === generation && role === 'instructor' && !resumeRoom)
-                    await showTrafficSetup();
+                    await showTrafficSetup('airspace');
             }
             finally {
                 if (current === generation)
@@ -366,8 +442,10 @@ async function openSession(role, resumeRoom = false) {
         throw error;
     }
     finally {
-        loginBusy = false;
-        document.querySelectorAll('#entry button').forEach(b => b.disabled = false);
+        if (loginAttempt === loginGeneration) {
+            loginBusy = false;
+            document.querySelectorAll('#entry button').forEach(b => b.disabled = false);
+        }
     }
 }
 let refreshPending = null;
@@ -402,7 +480,9 @@ async function refreshState(stamp) {
     if (stamp !== generation || !session)
         return;
     room = nextRoom;
+    exerciseConnectionAvailable = true;
     renderRoom();
+    renderMeeting();
     if (session.role === 'student' && room?.status !== 'ready') {
         view = null;
         clearAudio();
@@ -414,6 +494,8 @@ async function refreshState(stamp) {
     if (stamp !== generation)
         return;
     view = next;
+    exerciseConnectionAvailable = next.available !== false;
+    renderMeeting();
     receivedAt = performance.now();
     text('connection', next.available ? 'LIVE CONNECTION' : 'HOST UNAVAILABLE');
     $('scope-wrap').classList.toggle('stale', !next.available);
@@ -429,6 +511,8 @@ async function poll(stamp) {
     }
     catch (e) {
         if (stamp === generation) {
+            exerciseConnectionAvailable = false;
+            meetingPanel?.resetVoice?.();
             text('connection', 'RECONNECTING');
             $('scope-wrap').classList.add('stale');
             clearAudio();
@@ -460,6 +544,8 @@ function renderRoom() {
         return;
     if (session.role === 'instructor') {
         const students = room.students || [];
+        const participants = JSON.stringify(students.filter(student => ['admitted','ready'].includes(student.status)).map(student => [student.id,student.status]));
+        if (participants !== audioParticipants) { audioParticipants = participants; meetingPanel?.resetVoice?.(); }
         const waiting = students.filter((s) => s.status === 'waiting').length;
         const ready = students.filter(s => s.status === 'ready').length;
         text('session-link-status', `${session.cloud ? 'ONLINE · different devices' : 'THIS DEVICE · same browser'} → ${waiting ? `${waiting} waiting for admission` : ready ? `${ready} controller ready` : students.length ? 'Waiting for controller Ready' : 'Share PIN → Admit → Ready → Run'}`);
@@ -477,7 +563,8 @@ function renderRoom() {
     else {
         text('join-title', room.status === 'admitted' ? 'You are admitted' : room.status === 'rejected' ? 'This join request has ended' : 'Waiting for the instructor');
         text('session-link-status', `${session.cloud ? 'Online room' : 'This device'} · ${room.status || 'connecting'}`);
-        text('join-status', room.status === 'admitted' ? 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
+        text('join-status', room.status === 'admitted' ? session.cloud ? 'Press Ready to open your display and meeting link. Then Join Meet, allow the microphone in Google if asked, check audio together and tell the instructor you can hear each other.' : 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
+        text('student-ready',session.cloud ? 'Ready — open display & meeting link' : 'Ready — open my scope');
         $('student-ready').hidden = room.status !== 'admitted';
         text('student-room-status', `${room.name || session.name || 'Controller'} · ${room.status}`);
     }
@@ -488,9 +575,14 @@ function renderClockControls() {
     const instructor = session?.role === 'instructor', ended = !!view?.terminated, running = !!view?.running;
     const waiting = room?.students?.filter((s) => s.status === 'admitted').length || 0;
     const unavailable = !view?.available, busy = commandBusy;
-    $('resume').disabled = unavailable || busy || ended || running || waiting > 0;
+    const startup = startupStatus(), startupBlocked = instructor && !!session?.cloud && !startup.allowed;
+    text('start-setup-status', startup.allowed ? session?.cloud ? 'Ready to Run. Keep Meet open throughout the exercise.' : `Select Run to ${view?.elapsed > 0 ? 'continue' : 'begin'} aircraft movement.` : startup.reason);
+    $('start-setup-status').hidden = !instructor || running || ended;
+    $('open-start-setup').hidden = !instructor || running || ended;
+    $('resume').setAttribute('aria-describedby','start-setup-status');
+    $('resume').disabled = unavailable || busy || ended || running || waiting > 0 || startupBlocked;
     $('pause').disabled = unavailable || busy || ended || !running;
-    $('step').disabled = unavailable || busy || ended || running;
+    $('step').disabled = unavailable || busy || ended || running || startupBlocked;
     for (const id of ['terminate', 'terminate-quick']) {
         $(id).disabled = !instructor || unavailable || busy || ended;
         $(id).setAttribute('aria-pressed', String(ended || $('terminate-confirm').open));
@@ -515,7 +607,7 @@ function renderClockControls() {
     if (ended) gestures.reset();
     $('notice-session').hidden = ended || !blocked;
     $('notice-review').hidden = !ended || !instructor;
-    $('resume').title = ended ? 'Reopen the ended exercise first' : waiting ? 'Waiting for admitted controllers to press Ready' : running ? 'Exercise is already running' : 'Start traffic';
+    $('resume').title = ended ? 'Reopen the ended exercise first' : startupBlocked ? startup.reason : waiting ? 'Waiting for admitted controllers to press Ready' : running ? 'Exercise is already running' : 'Start traffic';
     $('pause').title = ended ? 'Exercise has ended' : running ? 'Freeze traffic and the exercise clock' : 'Exercise is already paused';
 }
 async function roomAction(action, studentId) {
@@ -525,12 +617,14 @@ async function roomAction(action, studentId) {
         await refresh(stamp);
 }
 async function startExercise() {
+    requireStartup();
     if (room?.students?.some((s) => s.status === 'admitted'))
         throw new Error('Wait for the admitted controller to press Ready.');
     await command('clock', { action: 'resume' });
     globalThis.ATCSuiteWorkspace?.enter($('desk'));
 }
-async function showTrafficSetup() {
+async function advanceMinute() { if (session?.cloud) requireStartup(); await command('clock', {action:'step',seconds:60}); }
+async function showTrafficSetup(step = 'traffic') {
     if (session?.role !== 'instructor')
         return;
     const stamp = generation;
@@ -538,9 +632,10 @@ async function showTrafficSetup() {
         await command('clock', { action: 'pause' });
     if (stamp !== generation)
         return;
-    closeDrawer();
-    setStage('setup');
-    trafficSetup.open();
+    setStage('desk');
+    tab('build');
+    chartWorkshop.openStep?.(step);
+    if (step === 'traffic') trafficSetup.open();
 }
 let layerSaving = false;
 const areaKindNames = { prohibited: 'P · Prohibited', restricted: 'R · Restricted', danger: 'D · Danger', 'local-flying': 'LFA · Local flying area', 'control-zone': 'CTR · Control zone' };
@@ -702,7 +797,35 @@ function renderSelection() {
         text('truth-readout', '');
     for (const id of ['strip-form', 'call-form', 'clearance-form', 'transmit-form'])
         $(id).querySelectorAll('button').forEach(b => b.disabled = !row || !!view.terminated || commandBusy);
-    clearanceFields();
+    syncAssignmentTargets();
+    switchCommandDraft();
+}
+function selectedTargetValue(action, reference = 'qnh') {
+    const a = view?.aircraft?.find(a => a.id === selected);
+    if (action === 'speed') return Math.round(a?.targetSpeedKt ?? a?.speedKt ?? 240);
+    if (action === 'altitude') {
+        const altitude = a?.targetAltitudeFt ?? a?.altitudeFt ?? 10000;
+        return Math.round(reference === 'standard' ? (altitude + (1013.25 - (view?.environment.qnhHpa ?? 1013.25)) * 27) / 100 : altitude);
+    }
+    return Math.round(norm(a?.targetHeadingDeg ?? a?.headingDeg ?? 90)) % 360;
+}
+function assignmentDraftKey(id) {
+    const reference = id === 'scope-level-form' ? val(id, 'reference') : '';
+    return `${assignmentDraftIdentity}:${id}:${reference}`;
+}
+function syncAssignmentTargets() {
+    if (session?.role !== 'instructor' || !view?.aircraft?.some(a => a.id === selected)) return;
+    assignmentDraftIdentity = `${view.exerciseId}:${selected}`;
+    for (const [id, action] of [['scope-heading-form', 'heading'], ['scope-speed-form', 'speed'], ['scope-level-form', 'altitude']]) {
+        const input = field(id, 'value'), reference = id === 'scope-level-form' ? val(id, 'reference') : 'qnh';
+        input.value = assignmentDrafts.get(assignmentDraftKey(id)) ?? String(selectedTargetValue(action, reference));
+        input.min = action === 'altitude' && reference !== 'standard' ? String(view.environment.aerodromeElevationFt ?? 0) : '0';
+        input.max = action === 'heading' ? '360' : action === 'speed' || reference === 'standard' ? '600' : '60000';
+        const caption = action === 'heading' ? 'Target heading °T' : action === 'speed' ? 'Target speed kt' : reference === 'standard' ? 'Target flight level' : 'Target altitude ft QNH';
+        const label = input.closest('label');
+        if (label?.firstChild?.nodeType === 3) label.firstChild.textContent = caption;
+        input.setAttribute('aria-label', caption);
+    }
 }
 function render() {
     if (!view)
@@ -721,7 +844,7 @@ function render() {
         clearanceFields();
         updateTransmitForm();
         commandDrafts.clear();
-        draftCommandKey = 'heading:qnh';
+        assignmentDrafts.clear(); assignmentDraftIdentity = ''; draftCommandKey = '';
         trailHistory.clear();
         lastElapsed = -1;
         selected = '';
@@ -954,7 +1077,7 @@ const studentPlotting = createStudentPlotting({ canvas, screenToPoint: position,
 });
 studentPlotting.mount(studentPlotPanel); studentPlotting.setEnabled(false);
 $('scope-wrap').append(studentPlotPanel);
-globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls')});
+globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls'),onLogout:logoutToHome});
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 function draw() {
     sweep.update();
@@ -990,12 +1113,19 @@ function draw() {
     ctx.strokeStyle = '#363c40';
     ctx.fillStyle = '#8c969e';
     if (display.rings) {
-        for (let i = 1; i <= 4; i++) {
-            const rad = range * g.scale * i / 4;
-            ctx.beginPath();
-            ctx.arc(stationX, stationY, rad, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.fillText(`${range * i / 4} NM`, stationX + 6, stationY - rad + 12);
+        const visuals = globalThis.ATCScopeVisuals;
+        if (visuals) visuals.drawRangeRings(ctx, { rangeNm: range, spacingNm: display.ringSpacing, scale: g.scale,
+            cx: stationX, cy: stationY, width: g.width, height: g.height, font: '11px PlexMono,monospace',
+            obstacles: visuals.overlayObstacles(canvas, { document, width: g.width, height: g.height }) });
+        else {
+            const distances = [];
+            for (let distance = display.ringSpacing; distance <= range; distance += display.ringSpacing) distances.push(distance);
+            if (distances.at(-1) !== range) distances.push(range);
+            for (const distance of distances) {
+                const rad = distance * g.scale;
+                ctx.beginPath(); ctx.arc(stationX, stationY, rad, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillText(`${distance} NM`, stationX + 6, stationY - rad + 12);
+            }
         }
         ctx.strokeStyle = '#252a2e';
         line(stationX, 0, stationX, g.height);
@@ -1108,6 +1238,7 @@ function draw() {
     ctx.fillText(stationLabel, stationX + 8, stationY - 8);
     if (session?.role === 'instructor') {
         const labels = [];
+        const symbols = [];
         for (const a of view.aircraft || []) {
             if (a.status === 'scheduled')
                 continue;
@@ -1124,26 +1255,30 @@ function draw() {
                 });
                 ctx.globalAlpha = 1;
             }
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
-            ctx.lineWidth = active ? 1.8 : 1.2;
-            ctx.beginPath();
-            ctx.rect(x - 3, y - 3, 6, 6);
-            ctx.stroke();
-            if (active) {
-                ctx.beginPath();
-                ctx.arc(x, y, 9, 0, Math.PI * 2);
-                ctx.stroke();
+            symbols.push({ x, y });
+            if (globalThis.ATCScopeVisuals) globalThis.ATCScopeVisuals.drawAircraftGlyph(ctx, { x, y, headingDeg: a.headingDeg, color, selected: active });
+            else {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(a.headingDeg * Math.PI / 180);
+                ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 5); ctx.lineTo(0, 3); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+                if (active) { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.stroke(); }
             }
             const rad = a.headingDeg * Math.PI / 180;
             if (display.vectors) {
-                const length = Math.max(12, a.speedKt / 60 * g.scale);
-                line(x, y, x + Math.sin(rad) * length, y - Math.cos(rad) * length);
+                ctx.strokeStyle = color; ctx.lineWidth = 1;
+                const stopped = ['ground', 'stopped'].includes(a.mode);
+                const airborne = !stopped && !['taxi', 'line-up'].includes(a.mode) && a.status !== 'takeoff-roll' && a.status !== 'landed';
+                const options = { headingDeg: a.headingDeg, speedKt: stopped ? 0 : a.speedKt, airborne,
+                    windDirectionDeg: env.windDirectionDeg, windSpeedKt: env.windSpeedKt };
+                const wind = airborne ? (env.windSpeedKt || 0) / 60 : 0, windRad = ((env.windDirectionDeg || 0) + 180) * Math.PI / 180;
+                const vector = globalThis.ATCScopeVisuals?.minuteVectorNm?.(options) || {
+                    xNm: Math.sin(rad) * options.speedKt / 60 + Math.sin(windRad) * wind,
+                    yNm: Math.cos(rad) * options.speedKt / 60 + Math.cos(windRad) * wind };
+                line(x, y, x + vector.xNm * g.scale, y - vector.yNm * g.scale);
             }
             if (display.labels)
                 labels.push({ a, x, y, active, color });
         }
-        drawTrafficLabels(labels, g.width, g.height);
+        drawTrafficLabels(labels, g.width, g.height, symbols);
     }
     const df = currentDF();
     if (df?.valid && df.qteDeg != null) {
@@ -1232,7 +1367,19 @@ function renderApproachReference() {
         return row;
     }));
 }
-function drawTrafficLabels(labels, width, height) {
+function drawTrafficLabels(labels, width, height, symbols = labels) {
+    const visuals = globalThis.ATCScopeVisuals;
+    if (visuals) {
+        ctx.save(); ctx.font = '11px PlexMono,monospace';
+        const aircraft = labels.map(({a, x, y, active, color}) => ({ id: a.id, callsign: a.callsign, x, y, selected: active, color,
+            details: [Math.round(a.altitudeFt) + ' FT  ' + Math.round(a.speedKt) + ' KT', pad(a.headingDeg) + ' H ' + String(a.mode || '').toUpperCase()] }));
+        const items = visuals.aircraftLabels(aircraft, { mode: display.labelMode, measure: text => ctx.measureText(text).width });
+        const placements = visuals.placeAircraftLabels(items, { width, height, aircraft: symbols,
+            obstacles: visuals.overlayObstacles(canvas, { document, width, height }) });
+        visuals.drawAircraftLabels(ctx, placements, { font: '11px PlexMono,monospace' }); ctx.restore();
+        return;
+    }
+    if (display.labelMode === 'off') return;
     const occupied = [];
     const scopeBounds = canvas.getBoundingClientRect(), homingBounds = $('homing').getBoundingClientRect();
     occupied.push({ x: homingBounds.left - scopeBounds.left, y: homingBounds.top - scopeBounds.top, width: homingBounds.width, height: homingBounds.height });
@@ -1240,8 +1387,8 @@ function drawTrafficLabels(labels, width, height) {
         if (x < 0 || y < 0 || x > width || y > height)
             continue;
         const lines = [a.callsign];
-        if (active)
-            lines.push(Math.round(a.altitudeFt) + ' FT  ' + Math.round(a.speedKt) + ' KT', pad(a.headingDeg) + '°T ' + a.mode.toUpperCase());
+        if (active || display.labelMode === 'all')
+            lines.push(Math.round(a.altitudeFt) + ' FT  ' + Math.round(a.speedKt) + ' KT', pad(a.headingDeg) + ' H ' + a.mode.toUpperCase());
         const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 10, h = lines.length * 15 + 5;
         let box;
         for (const dy of [-18, 25, -55, 60, -92, 98])
@@ -1316,7 +1463,7 @@ function drawHoming(df) {
 const toolsPanel = make('div', undefined, 'scope-options');
 toolsPanel.id = 'scope-options';
 const toolsBody = make('div', undefined, 'scope-options-body');
-for (const [id, label] of Object.entries({ areas: 'Airspace boundaries', areaLabels: 'Boundary names & limits', rings: 'Range rings', routes: 'Routes & fixes', routeLabels: 'Route names · spaced', fixLabels: 'Fix names · local zoom', labels: 'Aircraft callsigns', trails: 'Truth trails', vectors: '1-minute vectors', runway: 'Runway / final', approach: '3° approach marks · NM / altitude' })) {
+for (const [id, label] of Object.entries({ areas: 'Airspace boundaries', areaLabels: 'Boundary names & limits', rings: 'Range rings', routes: 'Routes & fixes', routeLabels: 'Route names · spaced', fixLabels: 'Fix names · local zoom', trails: 'Truth trails', vectors: '1-minute vectors', runway: 'Runway / final', approach: '3° approach marks · NM / altitude' })) {
     const l = make('label', undefined, 'check');
     if (['labels', 'trails', 'vectors'].includes(id))
         l.dataset.instructorTool = '';
@@ -1356,6 +1503,17 @@ for (const n of [5,8,12,16]) trailCount.append(new Option(`${n} dots`, String(n)
 trailCount.value = String(display.trailCount); trailLabel.append(trailCount);
 trailCount.onchange = () => { display.trailCount = Number(trailCount.value); draw(); };
 toolsBody.append(sweepRow, make('small', '15 RPM · one scan every 4 seconds.'), trailLabel);
+const ringLabel = make('label', 'Ring spacing');
+const ringSpacing = document.createElement('select'); ringSpacing.id = 'ring-spacing';
+for (const interval of [5, 10]) ringSpacing.append(new Option(`${interval} NM`, String(interval)));
+ringSpacing.value = String(display.ringSpacing); ringLabel.append(ringSpacing);
+ringSpacing.onchange = () => { display.ringSpacing = Number(ringSpacing.value) === 5 ? 5 : 10; draw(); };
+const aircraftLabel = make('label', 'Labels'); aircraftLabel.dataset.instructorTool = '';
+const aircraftLabels = document.createElement('select'); aircraftLabels.id = 'aircraft-labels';
+for (const [value, caption] of [['selected', 'Selected'], ['all', 'All'], ['off', 'Off']]) aircraftLabels.append(new Option(caption, value));
+aircraftLabels.value = display.labelMode; aircraftLabel.append(aircraftLabels);
+aircraftLabels.onchange = () => { display.labelMode = aircraftLabels.value; display.labels = display.labelMode !== 'off'; draw(); };
+toolsBody.append(ringLabel, aircraftLabel);
 toolsPanel.append(toolsBody);
 $('layer-controls').append(toolsPanel);
 for (const group of ['route', 'area']) {
@@ -1379,6 +1537,7 @@ const gestures = createAircraftGestures({onTransmit: id => { void safe(() => tra
 function resetScopePointer() {
     chartWorkshop.cancelSketch?.();
     gestures.reset();
+    middleMouseStop?.cancel();
     const capture = pointer?.id;
     pointer = null;
     if (capture !== undefined && canvas.hasPointerCapture(capture)) canvas.releasePointerCapture(capture);
@@ -1389,6 +1548,14 @@ function hitAircraft(e) {
         ? nearestAircraft(view?.aircraft, position(e), geometry().scale, e.pointerType === 'touch' ? 30 : 24) : null;
 }
 function hideAircraftHover() { $('aircraft-hover').hidden = true; }
+function openBoundaryScope() {
+    // Entering the editor must not carry an aircraft click or capture into it.
+    gestures.reset(); middleMouseStop?.cancel();
+    const capture = pointer?.id; pointer = null;
+    if (capture !== undefined && canvas.hasPointerCapture(capture)) canvas.releasePointerCapture(capture);
+    closeDrawer(false); hideAircraftHover();
+    canvas.focus({ preventScroll: true }); canvas.style.cursor = 'crosshair';
+}
 async function immediateTurn(action, id = selected) {
     if (session?.role !== 'instructor' || !id || view?.terminated) return;
     gestures.reset();
@@ -1409,7 +1576,15 @@ async function quickHeadingTurn(direction) {
 }
 canvas.addEventListener('contextmenu', e => { if (session?.role === 'instructor') e.preventDefault(); });
 canvas.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+const middleMouseStop = bindMiddleMouseStop(canvas, {
+    isAllowed: id => session?.role === 'instructor' && stage === 'desk' && !!view && !view.terminated && !chartWorkshop.isSketching?.()
+        && (!id || view.aircraft?.some(aircraft => aircraft.id === id && aircraft.status !== 'scheduled')),
+    getTargetId: e => hitAircraft(e)?.id || selected,
+    onReset() { gestures.reset(); pointer = null; hideAircraftHover(); },
+    onStop(id) { if (id !== selected) choose(id); void safe(() => immediateTurn('stop-turn', id))(); }
+});
 canvas.addEventListener('pointerdown', e => {
+    if (e.button === 1) return;
     if (!session || !e.isPrimary || ![0, 1, 2].includes(e.button)) return;
     if (session.role === 'student' && studentPlotting.onPointerDown(e)) return;
     if (session.role === 'instructor' && chartWorkshop.isSketching?.()) { e.preventDefault(); gestures.reset(); chartWorkshop.onPointer(e); draw(); return; }
@@ -1419,7 +1594,10 @@ canvas.addEventListener('pointerdown', e => {
     pointer = { id: e.pointerId, button: e.button, startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, dragging: false };
 });
 canvas.addEventListener('pointermove', e => {
-    if (session?.role === 'instructor' && chartWorkshop.onPointerMove?.(e)) return;
+    if (session?.role === 'instructor' && chartWorkshop.isSketching?.()) {
+        e.preventDefault(); hideAircraftHover(); canvas.style.cursor = 'crosshair';
+        chartWorkshop.onPointerMove?.(e); return;
+    }
     if (session?.role === 'student' && studentPlotting.onPointerMove(e)) return;
     if (!pointer) {
         const a = e.pointerType === 'mouse' ? hitAircraft(e) : null;
@@ -1471,6 +1649,8 @@ for (const event of ['pointercancel', 'lostpointercapture'])
 for (const direction of ['left', 'right']) $('quick-' + direction).onclick = safe(() => immediateTurn(direction));
 $('quick-stop').onclick = safe(() => immediateTurn('stop-turn'));
 $('quick-transmit').onclick = safe(() => { gestures.reset(); return transmitAircraft(); });
+$('quick-more').setAttribute('aria-controls', 'work-panel');
+$('quick-more').setAttribute('aria-expanded', 'false');
 $('quick-more').onclick = () => tab('pilot');
 for (const direction of ['left', 'right']) $('quick-heading-' + direction).onclick = safe(() => quickHeadingTurn(direction));
 $('quick-heading-form').onsubmit = e => { e.preventDefault(); $('quick-heading-left').focus(); };
@@ -1523,7 +1703,8 @@ $('resume-local-exercise').onclick = safe(() => openSession('instructor', true))
 $('signout').onclick = leave;
 $('resume').onclick = safe(startExercise);
 $('pause').onclick = safe(() => command('clock', { action: 'pause' }));
-$('step').onclick = safe(() => command('clock', { action: 'step', seconds: 60 }));
+$('step').onclick = safe(advanceMinute);
+$('open-start-setup').onclick = openStartSetup;
 const quickControls = make('div', undefined, 'quick-controls');
 async function turnSelected(direction) {
     const a = view?.aircraft?.find(a => a.id === selected);
@@ -1589,6 +1770,10 @@ arrangeControls();
 bindForm('scope-heading-form', () => command('clearance', { action: 'heading', value: num('scope-heading-form', 'value'), direction: val('scope-heading-form', 'direction') }, selected));
 bindForm('scope-speed-form', () => command('clearance', { action: 'speed', value: num('scope-speed-form', 'value') }, selected));
 bindForm('scope-level-form', () => command('clearance', { action: 'altitude', value: num('scope-level-form', 'value'), reference: val('scope-level-form', 'reference') }, selected));
+for (const id of ['scope-heading-form', 'scope-speed-form', 'scope-level-form']) $(id).addEventListener('input', e => {
+    if (e.target.name === 'value' && assignmentDraftIdentity) assignmentDrafts.set(assignmentDraftKey(id), field(id, 'value').value);
+});
+field('scope-level-form', 'reference').addEventListener('change', syncAssignmentTargets);
 for (const action of ['climb', 'descend'])
     $(`${action}-to`).onclick = safe(async () => {
         if (!$('scope-level-form').reportValidity())
@@ -1684,9 +1869,14 @@ bindForm('aircraft-condition', async () => {
 });
 $('interrupt').onclick = safe(() => command('interrupt'));
 bindForm('preset-form', async () => {
-    if (!confirm('Replace the current exercise? Download it first if you want to keep this attempt.'))
+    const stamp = generation, exerciseId = view?.exerciseId;
+    const prompt = `Replace the current exercise${chartWorkshop.hasDraft?.() || trafficSetup.hasDraft?.() || environmentDirty.size ? ' and unsaved airspace / traffic entries' : ''}? Download it first if you want to keep this attempt.`;
+    if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.(prompt, {confirmLabel:'Replace exercise'}) ?? confirm(prompt)))
         return;
+    if (stamp !== generation || exerciseId !== view?.exerciseId) throw new Error('The exercise changed. Choose sample traffic again.');
     await command('preset', { mode: val('preset-form', 'mode') });
+    chartWorkshop.discardDraft?.(); environmentDirty.clear();
+    trafficSetup.resetFromScenario?.((await request('/api/procedural/export')).scenario);
     drafts.clear();
     sessionStorage.removeItem('reds-procedural-drafts');
     trailHistory.clear();
@@ -1817,8 +2007,10 @@ $('import').addEventListener('change', () => void safe(async () => {
         throw new Error('The exercise changed. Choose the file again.');
     if (bundle.version !== 1 || !bundle.scenario)
         throw new Error('Unsupported scenario version.');
-    if (!confirm('Restore this scenario and replace the current exercise? It will open paused.'))
+    const prompt = `Restore this scenario and replace the current exercise${chartWorkshop.hasDraft?.() || trafficSetup.hasDraft?.() || environmentDirty.size ? ' and unsaved airspace / traffic entries' : ''}? It will open paused.`;
+    if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.(prompt, {confirmLabel:'Restore exercise'}) ?? confirm(prompt)))
         return;
+    if (stamp !== generation || auth !== session || exerciseId !== view?.exerciseId) throw new Error('The exercise changed. Choose the file again.');
     if (bundle.mapAsset) {
         const bytes = Uint8Array.from(atob(bundle.mapAsset.data), c => c.charCodeAt(0));
         const uploaded = await request('/api/procedural/map', new Blob([bytes], { type: bundle.mapAsset.mime }));
@@ -1832,6 +2024,7 @@ $('import').addEventListener('change', () => void safe(async () => {
     await command('import', { scenario: bundle.scenario }, undefined, exerciseId);
     if (stamp !== generation || auth !== session)
         return;
+    chartWorkshop.discardDraft?.(); trafficSetup.resetFromScenario?.(bundle.scenario); environmentDirty.clear();
     drafts.clear();
     sessionStorage.removeItem('reds-procedural-drafts');
     trailHistory.clear();
@@ -1852,8 +2045,11 @@ $('audio-enable').addEventListener('change', () => {
     }
 });
 document.addEventListener('keydown', e => {
-    if (e.target.closest('input,textarea,select,[contenteditable=true]') || !session || stage !== 'desk')
+    if (e.target.closest('input,textarea,select,[contenteditable=true],dialog[open]') || document.activeElement?.closest?.('dialog[open]') || !session || stage !== 'desk')
         return;
+    // The boundary editor owns Enter/Delete/Escape. Keep its keyboard actions
+    // separate from aircraft instructions and the simulation clock.
+    if (session.role === 'instructor' && (chartWorkshop.isSketching?.() || e.target.closest('#boundary-sketch'))) return;
     if (e.key === 'Escape')
         closeDrawer();
     if (e.target === canvas && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(e.key)) {
@@ -1886,7 +2082,7 @@ document.addEventListener('keydown', e => {
     }
     if (e.key.toLowerCase() === 'g' && !view?.running) {
         e.preventDefault();
-        void safe(() => command('clock', { action: 'step', seconds: 60 }))();
+        void safe(advanceMinute)();
     }
     const shortcut = e.key.toLowerCase();
     if (['a', 'd', 'x'].includes(shortcut)) {
@@ -1903,26 +2099,31 @@ document.addEventListener('keydown', e => {
         choose(view.roster[(index + (shortcut === ']' ? 1 : -1) + view.roster.length) % view.roster.length].id);
     }
 });
+const workshopTraffic = document.createElement('div'); workshopTraffic.id = 'prepare-traffic'; $('tab-build').append(workshopTraffic);
 const trafficSetup = createTrafficSetup({
-    container: $('setup'), view: () => view,
+    container: workshopTraffic, view: () => view,
     submit: async (payload, isCurrent) => {
         const stamp = generation;
-        if (!confirm('Create this exercise and replace the current traffic? The session will open paused with a new PIN.'))
+        if (chartWorkshop.hasDraft?.() || environmentDirty.size) throw new Error('Save or discard your airspace entries before creating traffic. Your entries are kept.');
+        const exerciseId = view?.exerciseId;
+        if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.('Create this exercise and replace the current traffic? The session will open paused with a new PIN.', {confirmLabel:'Create exercise'}) ?? confirm('Create this exercise and replace the current traffic? The session will open paused with a new PIN.')))
             throw new Error('Creation cancelled. Your traffic entries are still available.');
+        if (stamp !== generation || exerciseId !== view?.exerciseId || !isCurrent()) throw new Error('The exercise changed. Review your traffic and create again.');
         await command('scenario-setup', payload);
         if (stamp !== generation)
             return;
         if (!isCurrent())
             return;
+        trafficSetup.markApplied?.();
         trafficSetup.close();
         setStage('desk');
         tab('session');
         message('Exercise created. Share the PIN and admit your controller.');
     },
-    cancel: () => { trafficSetup.close(); setStage('desk'); },
-    airspace: () => { trafficSetup.close(); setStage('desk'); tab('build'); }
+    cancel: () => { trafficSetup.close(); setStage('desk'); closeDrawer(); },
+    airspace: () => { trafficSetup.close(); setStage('desk'); tab('build'); chartWorkshop.openStep?.('airspace'); }
 });
-$('traffic-setup').onclick = safe(showTrafficSetup);
+$('traffic-setup').onclick = safe(() => showTrafficSetup('airspace'));
 $('drawer-close').onclick = closeDrawer;
 $('waiting-leave').onclick = leave;
 $('student-ready').onclick = safe(() => roomAction('ready'));
@@ -1995,7 +2196,8 @@ $('browser-fullscreen').onclick = safe(async () => { if (document.fullscreenElem
 else
     await document.documentElement.requestFullscreen(); });
 $('declutter').onclick = () => {
-    Object.assign(display, { rings: true, labels: true, areaLabels: false, routeLabels: true, fixLabels: true, trails: true, vectors: false, runway: true, approach: false, ruler: false });
+    Object.assign(display, { rings: true, ringSpacing: 10, labels: true, labelMode: 'selected', areaLabels: false, routeLabels: true, fixLabels: true, trails: true, vectors: false, runway: true, approach: false, ruler: false });
+    ringSpacing.value = String(display.ringSpacing); aircraftLabels.value = display.labelMode;
     showMap = false;
     ruler = [];
     $('map-toggle').setAttribute('aria-pressed', 'false');
@@ -2006,12 +2208,18 @@ $('declutter').onclick = () => {
     draw();
 };
 const mapWorkshop = createMapWorkshop({ view: () => view, generation: () => generation, command, request, message, showMap: () => { showMap = true; $('map-toggle').setAttribute('aria-pressed', 'true'); draw(); } });
-const chartWorkshop = createChartWorkshop({ view: () => view, generation: () => generation, command, request, message, scope: { canvas, screenToPoint: position, drawChanged: draw, openScope: closeDrawer }, changed: () => { settingsLoaded = false; signatures.clear(); trailHistory.clear(); render(); } });
+const chartWorkshop = createChartWorkshop({ view: () => view, generation: () => generation, command, request, message,
+    openTraffic: () => trafficSetup.open(), closeTraffic: () => trafficSetup.close(), hasDraft: () => trafficSetup.hasDraft?.() || environmentDirty.size > 0,
+    discardAirspace: () => { environmentDirty.clear(); settingsLoaded = false; signatures.clear(); },
+    loaded: scenario => { chartWorkshop.discardDraft?.(); trafficSetup.resetFromScenario?.(scenario); environmentDirty.clear(); settingsLoaded = false; signatures.clear(); render(); closeDrawer(); message('Saved exercise loaded, paused. Select Run when ready.'); },
+    scope: { canvas, screenToPoint: position, drawChanged: draw, openScope: openBoundaryScope }, changed: () => { settingsLoaded = false; signatures.clear(); trailHistory.clear(); render(); } });
 $('scenario-library-open').onclick = () => { tab('build'); chartWorkshop.openLibrary?.(); };
 function clearanceFields() {
     const action = val('clearance-form', 'action');
     text('clearance-value-name', action === 'heading' ? 'Heading °T' : action === 'speed' ? 'Speed kt' : val('clearance-form', 'reference') === 'standard' ? 'Flight level' : 'Altitude ft QNH');
-    field('clearance-form', 'value').max = action === 'heading' ? '359' : action === 'speed' ? '600' : val('clearance-form', 'reference') === 'standard' ? '600' : '60000';
+    const standard = val('clearance-form', 'reference') === 'standard';
+    field('clearance-form', 'value').min = action === 'altitude' && !standard ? String(view?.environment.aerodromeElevationFt ?? 0) : '0';
+    field('clearance-form', 'value').max = action === 'heading' ? '360' : action === 'speed' || standard ? '600' : '60000';
     field('clearance-form', 'value').required = ['heading', 'altitude', 'speed'].includes(action);
     for (const [name, show] of Object.entries({ value: ['heading', 'altitude', 'speed'].includes(action), direction: ['heading', 'hold'].includes(action), reference: action === 'altitude', fixId: ['direct', 'hold'].includes(action), routeId: action === 'route' })) {
         field('clearance-form', name).closest('label').hidden = !show;
@@ -2020,19 +2228,17 @@ function clearanceFields() {
     field('clearance-form', 'inboundCourseDeg').closest('details').hidden = action !== 'hold';
     field('clearance-form', 'inboundCourseDeg').closest('details').querySelectorAll('input,select').forEach(input => input.disabled = action !== 'hold');
     const a = view?.aircraft?.find(a => a.id === selected), proposed = val('clearance-form','value');
-    const current = action === 'heading' ? `${pad(a?.headingDeg ?? 0)}°T` : action === 'speed' ? `${Math.round(a?.speedKt ?? 0)} kt` : `${Math.round(a?.altitudeFt ?? 0)} ft`;
+    const current = action === 'heading' ? `${pad(a?.headingDeg ?? 0)}°T` : action === 'speed' ? `${Math.round(a?.speedKt ?? 0)} kt` : standard
+        ? `FL ${Math.round(((a?.altitudeFt ?? 0) + (1013.25 - (view?.environment.qnhHpa ?? 1013.25)) * 27) / 100)}` : `${Math.round(a?.altitudeFt ?? 0)} ft`;
     text('clearance-preview', ['heading','speed','altitude'].includes(action) ? `${a?.callsign || 'Aircraft'} · current ${current} → ${proposed} ${action === 'heading' ? '°T' : action === 'speed' ? 'kt' : val('clearance-form','reference') === 'standard' ? 'FL' : 'ft QNH'}` : '');
 }
-field('clearance-form','value').addEventListener('input',clearanceFields);
-const commandDrafts = new Map();
-let draftCommandKey = 'heading:qnh';
+field('clearance-form','value').addEventListener('input', () => {
+    commandDrafts.set(draftCommandKey, field('clearance-form', 'value').value); clearanceFields();
+});
 function switchCommandDraft() {
-    commandDrafts.set(draftCommandKey, field('clearance-form','value').value);
     const action = val('clearance-form','action'), reference = val('clearance-form','reference');
-    draftCommandKey = `${action}:${reference}`;
-    const a = view?.aircraft?.find(a => a.id === selected);
-    const defaults = action === 'speed' ? a?.speedKt ?? 240 : action === 'altitude' ? (reference === 'standard' ? Math.round((a?.altitudeFt ?? 10000) / 100) : a?.altitudeFt ?? 10000) : Math.round(a?.headingDeg ?? 90);
-    field('clearance-form','value').value = commandDrafts.get(draftCommandKey) ?? String(defaults);
+    draftCommandKey = `${view?.exerciseId || ''}:${selected}:${action}:${reference}`;
+    field('clearance-form','value').value = commandDrafts.get(draftCommandKey) ?? String(selectedTargetValue(action, reference));
     clearanceFields();
 }
 field('clearance-form', 'action').addEventListener('change', switchCommandDraft);

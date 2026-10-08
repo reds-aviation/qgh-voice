@@ -1,4 +1,4 @@
-name: Deploy QGH PWA to GitHub Pages
+name: Deploy ATS SIM BOX to GitHub Pages
 
 on:
   push:
@@ -47,7 +47,7 @@ jobs:
           node-version: 22
       - name: Validate simulator and web package
         run: node --test packages/qgh-engine/test/*.test.js apps/web/test/*.test.mjs
-      - name: Validate instructor-led beta suite
+      - name: Validate instructor-led suite
         run: node --test packages/atc-suite/test/*.test.js apps/suite-web/test/*.test.mjs
       - name: Install procedural test dependencies
         run: npm ci --prefix packages/procedural-beta --ignore-scripts --no-audit --no-fund

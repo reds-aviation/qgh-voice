@@ -75,6 +75,11 @@ export function drawAreas(ctx, areas, projectPoint, labels = true) {
     }
 }
 export function createChartWorkshop(context) {
+    async function ask(prompt, confirmLabel = 'Confirm') {
+        const exerciseId = context.view()?.exerciseId, stamp = context.generation();
+        const approved = await (globalThis.ATCSuiteWorkspace?.confirmAction?.(prompt, {confirmLabel}) ?? confirm(prompt));
+        return approved && exerciseId === context.view()?.exerciseId && stamp === context.generation();
+    }
     let catalogue = [], signature = '', formExercise = '';
     let enroute;
     for (const href of ['airspace-preparation.css', 'scenario-library.css']) {
@@ -82,8 +87,48 @@ export function createChartWorkshop(context) {
             const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; document.head.append(link);
         }
     }
-    const preparation = createAirspacePreparation(context);
-    const library = createScenarioLibrary(context);
+    const container = document.getElementById('tab-build');
+    const steps = new Map();
+    const step = (id, label) => {
+        const panel = document.createElement('details'); panel.id = id; panel.className = 'prepare-step';
+        const summary = document.createElement('summary'); summary.textContent = label; panel.append(summary); steps.set(id, panel); return panel;
+    };
+    const airspace = step('prepare-airspace', '1 · Choose or edit airspace');
+    const traffic = step('prepare-traffic-step', '2 · Set traffic & create exercise');
+    const saved = step('prepare-save-load', '3 · Save or load an exercise');
+    const currentAirspace = document.createElement('p'); currentAirspace.id = 'prepare-airspace-current'; currentAirspace.className = 'hint'; airspace.append(currentAirspace);
+    const choices = document.createElement('div'); choices.className = 'airspace-preparation-actions';
+    const published = document.createElement('div'); published.id = 'prepare-published';
+    const custom = document.createElement('div'); custom.id = 'prepare-custom';
+    const advanced = document.createElement('details'); advanced.id = 'prepare-advanced';
+    const advancedTitle = document.createElement('summary'); advancedTitle.textContent = 'Advanced chart tools & references'; advanced.append(advancedTitle);
+    const publishedDetails = $('aerodrome-form').closest('details');
+    // The Published choice already discloses this form; avoid a second accordion.
+    published.append($('aerodrome-form')); publishedDetails.remove();
+    for (const id of ['map-align-form','chart-form','chart-fixes-form','area-form','environment-form']) {
+        const details = $(id)?.closest('details'); if (details && !advanced.contains(details)) { details.open = false; advanced.append(details); }
+    }
+    const sample = $('preset-form').closest('details'); sample.open = false; sample.querySelector('summary').textContent = 'Add aircraft or sample traffic (advanced)'; traffic.append(sample);
+    const progress = $('import').closest('details'); progress.open = false; progress.querySelector('summary').textContent = 'Current progress file (includes records)'; saved.append(progress);
+    const trafficContainer = $('prepare-traffic'); if (trafficContainer) traffic.prepend(trafficContainer);
+    for (const heading of container.querySelectorAll(':scope > h2')) heading.textContent = 'Prepare exercise';
+    container.querySelector(':scope > .eyebrow').textContent = 'AIRSPACE · TRAFFIC · SAVE / LOAD';
+    const openStep = id => { for (const [key, panel] of steps) panel.open = key === id; if (id === 'prepare-traffic-step') context.openTraffic?.(); else context.closeTraffic?.(); };
+    const chooseSource = mode => {
+        published.hidden = mode !== 'published'; custom.hidden = mode !== 'custom';
+        choices.querySelectorAll('button').forEach(button => button.setAttribute('aria-expanded', String(button.dataset.source === mode)));
+    };
+    for (const [mode,label] of [['published','Published airspace'],['custom','Custom airspace']]) {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.dataset.source = mode;
+        button.setAttribute('aria-controls', mode === 'published' ? published.id : custom.id); button.onclick = () => chooseSource(mode); choices.append(button);
+    }
+    airspace.append(choices,published,custom,advanced);
+    const continueButton = document.createElement('button'); continueButton.type = 'button'; continueButton.id = 'prepare-traffic-next'; continueButton.textContent = 'Continue to traffic'; continueButton.onclick = () => openStep('prepare-traffic-step'); airspace.append(continueButton);
+    container.append(airspace,traffic,saved); chooseSource('published'); openStep('prepare-airspace');
+    traffic.addEventListener('toggle', () => { if (traffic.open) context.openTraffic?.(); else context.closeTraffic?.(); });
+    const preparation = createAirspacePreparation({...context,container:custom,showDiscard:false});
+    const library = createScenarioLibrary({...context,container:saved,hasDraft:()=>preparation.hasDraft?.() || dirtyFields.size > 0 || context.hasDraft?.()});
+    for (const panel of steps.values()) panel.prepend(panel.querySelector(':scope > summary'));
     const legacyBoundary = $('area-form')?.closest('details');
     if (legacyBoundary) legacyBoundary.hidden = true;
     const oldChartDetails = $('chart-form')?.closest('details');
@@ -91,6 +136,9 @@ export function createChartWorkshop(context) {
     const selection = document.createElement('div'); selection.id = 'aerodrome-selection'; selection.className = 'aerodrome-selection';
     $('aerodrome-preview').after(selection);
     const dirtyFields = new Set();
+    const discardAirspace = document.createElement('button'); discardAirspace.type = 'button'; discardAirspace.id = 'prepare-airspace-discard'; discardAirspace.textContent = 'Discard unsaved airspace entries';
+    discardAirspace.onclick = async () => { if (!await ask('Discard unsaved airspace entries? Saved airspace and traffic are kept.', 'Discard entries')) return; dirtyFields.clear(); preparation.discardDraft?.(); signature = ''; context.discardAirspace?.(); context.changed?.(); };
+    airspace.append(discardAirspace);
     $('arp-file').addEventListener('change', async () => {
         const file = $('arp-file').files?.[0], exercise = context.view()?.exerciseId, generation = context.generation();
         if (!file) return;
@@ -205,7 +253,7 @@ export function createChartWorkshop(context) {
         if (payload.chartOrigin !== undefined && JSON.stringify(payload.chartOrigin) !== JSON.stringify(oldOrigin || null)) {
             if (context.view()?.running) throw new Error('Pause before changing the ARP.');
             if (!value('chart-form', 'chartReference') || !value('chart-form', 'effectiveInfo')) throw new Error('Enter the ARP source reference and edition / effective date.');
-            if (oldOrigin && !confirm('Change the ARP? Existing traffic, routes, boundaries and station offsets keep their local positions; they are NOT reprojected. The current image will be removed. Reload the published aerodrome to restore its sourced geography, or enter your custom coordinates after this change.')) return;
+            if (oldOrigin && !await ask('Change the ARP? Existing traffic, routes, boundaries and station offsets keep their local positions; they are NOT reprojected. The current image will be removed. Reload the published aerodrome to restore its sourced geography, or enter your custom coordinates after this change.', 'Change ARP')) return;
             payload.map = { ...context.view().environment.map, imageId: '' };
             payload.briefing = alignmentBriefing(payload.briefing ?? context.view().environment.briefing, 'ARP changed; any previous image alignment is invalid. Calibrate a new image for this origin.');
         }
@@ -311,7 +359,7 @@ export function createChartWorkshop(context) {
         if (!extra)
             throw new Error('Published route and airspace catalogue is unavailable.');
         const chosen = chosenPublished(item, extra);
-        if (!confirm(`Load ${item.name} with ${chosen.routes.length} routes and ${chosen.areas.length} areas? Existing custom / assigned navigation and traffic keep their local positions. The image is removed and the exercise pauses.${context.view()?.terminated ? ' This reopens the ended exercise while paused.' : ''}`))
+        if (!await ask(`Load ${item.name} with ${chosen.routes.length} routes and ${chosen.areas.length} areas? Existing custom / assigned navigation and traffic keep their local positions. The image is removed and the exercise pauses.${preparation.hasDraft?.() || dirtyFields.size ? ' Unsaved airspace entries will be discarded.' : ''}${context.view()?.terminated ? ' This reopens the ended exercise while paused.' : ''}`, 'Load airspace'))
             return;
         const exerciseId = context.view()?.exerciseId, generation = context.generation();
         if (!exerciseId)
@@ -339,6 +387,7 @@ export function createChartWorkshop(context) {
         // A different chart must not inherit hidden IDs from the previous base.
         scenario.scopeDisplay = { hiddenRouteIds: [], hiddenAreaIds: [], routesHidden: false, areasHidden: false };
         await context.command('import', { scenario, expectedRevision: scenario.revision }, undefined, exerciseId);
+        dirtyFields.clear(); preparation.discardDraft?.(); signature = '';
         context.changed();
         context.message(`${item.name}: ${chosen.routes.length} selected routes and ${areas.length} areas shared. Exercise paused.`);
     });
@@ -356,6 +405,9 @@ export function createChartWorkshop(context) {
         preview();
     }).catch(e => $('aerodrome-preview').textContent = e.message);
     return {
+        openStep: name => openStep(name === 'traffic' ? 'prepare-traffic-step' : name === 'saved' ? 'prepare-save-load' : 'prepare-airspace'),
+        hasDraft: () => preparation.hasDraft?.() || dirtyFields.size > 0,
+        discardDraft: () => { dirtyFields.clear(); preparation.discardDraft?.(); signature = ''; },
         isSketching: preparation.isSketching,
         onPointer: preparation.onPointer,
         onPointerMove: preparation.onPointerMove,
@@ -363,7 +415,7 @@ export function createChartWorkshop(context) {
         onPointerCancel: preparation.onPointerCancel,
         cancelSketch: preparation.cancelSketch,
         draw: preparation.draw,
-        openLibrary: library.open,
+        openLibrary: () => { openStep('prepare-save-load'); library.open(); },
         render() {
             const state = context.view();
             if (!state) {
@@ -373,6 +425,7 @@ export function createChartWorkshop(context) {
                 return;
             }
             preparation.render(); library.render();
+            currentAirspace.textContent = `Current airspace: ${state.environment.aerodromeName || 'Custom airspace'}. Apply changes with Save ARP, Save boundary or Load aerodrome airspace.`;
             const env = state.environment, areas = state.areas || [], next = JSON.stringify([env, areas, state.fixes, state.routes, state.routes.map(r => routeWindowOpen(r, state.elapsed)), state.role, state.exerciseId]);
             if (next === signature)
                 return;
@@ -408,7 +461,7 @@ export function createChartWorkshop(context) {
             $('area-list').replaceChildren(...(state.role === 'instructor' ? areas.map(a => {
                 const r = record(`${categories[a.kind]?.short} · ${a.name}`, `${a.floorLabel} / ${a.ceilingLabel} · ${a.active ? 'ACTIVE' : 'INACTIVE'}`);
                 r.append(button('Edit', async () => editArea(a)), button(a.active ? 'Deactivate' : 'Activate', async () => { await context.command('area-upsert', { ...a, active: !a.active }); }), button('Delete', async () => {
-                    if (confirm(`Delete boundary ${a.name}?`))
+                    if (await ask(`Delete boundary ${a.name}?`, 'Delete boundary'))
                         await context.command('area-delete', { id: a.id });
                 }));
                 return r;

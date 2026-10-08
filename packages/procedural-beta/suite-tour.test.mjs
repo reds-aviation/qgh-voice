@@ -6,6 +6,25 @@ import {domHarness} from './testing/dom-harness.mjs';
 
 const source=readFileSync(new URL('./static/suite-tour.js',import.meta.url),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+test('instructor entry offers three manual header steps without admission or navigation',()=>{
+  const h=domHarness('<html><body><header><nav class="suite-header-left"></nav></header><select id="exerciseConnection"></select><a id="openInstructorSetup" href="instructor.html">Instructor setup</a><form id="entryJoinForm"><input id="entryJoinPin"></form></body></html>','/qgh-voice/instructor-led/index.html');
+  h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};
+  h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=844;
+  vm.runInContext(readFileSync(new URL('./static/guide-knowledge.js',import.meta.url),'utf8'),h.context);
+  vm.runInContext(source,h.context);
+  const button=h.document.getElementById('suite-tour-open'),panel=h.document.getElementById('suite-tour');
+  assert.equal(button.parentElement.className,'suite-header-left');
+  assert.equal(panel.hidden,true,'entry tour opens only on request');
+  button.click();
+  for(const [index,id] of ['exerciseConnection','openInstructorSetup','entryJoinForm'].entries()){
+    assert.equal(h.document.querySelector('.suite-tour-target').id,id);
+    assert.match(panel.textContent,new RegExp(`${index+1} / 3`));
+    panel.querySelectorAll('button')[1].click();
+  }
+  assert.equal(panel.hidden,true);
+  assert.equal(h.context.location.pathname,'/qgh-voice/instructor-led/index.html');
+  assert.equal(h.document.getElementById('entryJoinPin').value,'');
+});
 function studentTour({ready=false,workspace=false,phase='READY',compactStatus=false,releaseKnowledge=false}={}) {
   const h=domHarness(`<html><body class="student-page"><header></header><section id="readyPanel" ${ready?'':'hidden'}><button id="studentReady">POSITION READY</button></section><section id="studentWorkspace" ${workspace?'':'hidden'}><b id="studentExerciseState">${phase}</b><canvas id="studentScope"></canvas></section><section id="studentEnded" hidden></section><time id="studentClock">00:00</time></body></html>`,'/qgh-voice/instructor-led/student.html');
   h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden||(compactStatus&&this.id==='studentExerciseState')?[]:[{}];};

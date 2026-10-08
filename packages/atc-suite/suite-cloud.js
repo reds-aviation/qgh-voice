@@ -96,6 +96,8 @@
     const { remoteConfig } = await import('./remote-config.js');
     const available = !!remoteConfig.url && !!remoteConfig.publishableKey;
     select.querySelector('[value="online"]').disabled = !available;
+    const requested = new URLSearchParams(globalThis.location?.search || '').get('connection');
+    if (requested === 'local' || requested === 'online') select.value = requested;
     if (!available) select.value = 'local';
     const update = () => {
       const online = select.value === 'online';

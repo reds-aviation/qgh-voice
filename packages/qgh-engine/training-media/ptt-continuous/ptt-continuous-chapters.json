@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Choose your listening mode",
@@ -33,5 +33,6 @@
       "title": "Practice complete calls",
       "start": 48.986326
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Two to four aircraft",
@@ -33,5 +33,6 @@
       "title": "Review all aircraft",
       "start": 52.002336
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

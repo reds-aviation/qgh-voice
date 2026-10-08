@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  // These aliases drive BOTH execution and the generated beta guide.
+  // These aliases drive BOTH execution and the generated training guide.
   const commands = [
     ['transmit', ['DF','D/F','TRANSMIT DF','TRANSMIT D/F','TRANSMIT FOR DF','TRANSMIT FOR D/F'], 'QGH only: request a pilot transmission and D/F indication.'],
     ['report', ['REPORT'], 'Normal QGH: heading report. Radar: position report. Unavailable in U/S Compass.'],

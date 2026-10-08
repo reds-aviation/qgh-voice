@@ -50,20 +50,20 @@ func routeAvailable(s *State, a *Aircraft, r *Route) bool {
 	}
 	return a.AltitudeFt >= r.MinAltitudeFt && a.AltitudeFt <= r.MaxAltitudeFt
 }
-func turn(a *Aircraft, dt float64) {
+func turn(a *Aircraft, dt float64) float64 {
 	step := a.TurnRateDegSec * dt
 	if a.ContinuousTurn {
 		if a.TurnDirection == "left" {
 			step = -step
 		}
 		a.HeadingDeg = normalize(a.HeadingDeg + step)
-		return
+		return step
 	}
 	d := deltaHeading(a.HeadingDeg, a.TargetHeadingDeg)
 	if math.Abs(d) < 1e-9 {
 		a.HeadingDeg = normalize(a.TargetHeadingDeg)
 		a.TurnDirection = ""
-		return
+		return 0
 	}
 	if a.TurnDirection == "left" && d > 0 {
 		d -= 360
@@ -74,9 +74,70 @@ func turn(a *Aircraft, dt float64) {
 	if math.Abs(d) <= step {
 		a.HeadingDeg = normalize(a.TargetHeadingDeg)
 		a.TurnDirection = ""
+		return d
 	} else {
-		a.HeadingDeg = normalize(a.HeadingDeg + math.Copysign(step, d))
+		delta := math.Copysign(step, d)
+		a.HeadingDeg = normalize(a.HeadingDeg + delta)
+		return delta
 	}
+}
+
+// moveAirSegment integrates constant turn rate and linear speed change in the
+// airmass. Wind is added separately, so no-wind arcs retain their exact radius.
+func moveAirSegment(a *Aircraft, speedKt, accelerationKtSec, rateDegSec, seconds float64) {
+	start := a.HeadingDeg * math.Pi / 180
+	rate := rateDegSec * math.Pi / 180
+	if math.Abs(rate) < 1e-12 {
+		distance := (speedKt*seconds + accelerationKtSec*seconds*seconds/2) / 3600
+		a.XNm += math.Sin(start) * distance
+		a.YNm += math.Cos(start) * distance
+		return
+	}
+	end := start + rate*seconds
+	a.XNm += (speedKt*(math.Cos(start)-math.Cos(end))/rate + accelerationKtSec*(-seconds*math.Cos(end)/rate+(math.Sin(end)-math.Sin(start))/(rate*rate))) / 3600
+	a.YNm += (speedKt*(math.Sin(end)-math.Sin(start))/rate + accelerationKtSec*(seconds*math.Sin(end)/rate+(math.Cos(end)-math.Cos(start))/(rate*rate))) / 3600
+	a.HeadingDeg = normalize(end * 180 / math.Pi)
+}
+
+// Split at the speed target as well as at the heading target. End-step speed
+// alone overestimates acceleration distance and changes with callback cadence.
+func moveAtRate(a *Aircraft, initialSpeed, targetSpeed, acceleration, signedRate, seconds, offset float64) {
+	speed := approach(initialSpeed, targetSpeed, acceleration*offset)
+	rampSeconds := math.Min(seconds, math.Abs(targetSpeed-speed)/acceleration)
+	if rampSeconds > 0 {
+		moveAirSegment(a, speed, math.Copysign(acceleration, targetSpeed-speed), signedRate, rampSeconds)
+	}
+	if seconds > rampSeconds {
+		moveAirSegment(a, targetSpeed, 0, signedRate, seconds-rampSeconds)
+	}
+}
+
+func moveHeading(a *Aircraft, dt, initialSpeed, targetSpeed, acceleration float64) {
+	start := a.HeadingDeg
+	delta := turn(a, dt)
+	end := a.HeadingDeg
+	a.HeadingDeg = start
+	turnSeconds := math.Min(dt, math.Abs(delta)/a.TurnRateDegSec)
+	if turnSeconds > 0 {
+		moveAtRate(a, initialSpeed, targetSpeed, acceleration, math.Copysign(a.TurnRateDegSec, delta), turnSeconds, 0)
+	}
+	if dt > turnSeconds {
+		moveAtRate(a, initialSpeed, targetSpeed, acceleration, 0, dt-turnSeconds, turnSeconds)
+	}
+	a.HeadingDeg = end
+}
+
+func speedDistance(initial, target, acceleration, dt float64) (float64, float64) {
+	rampSeconds := math.Min(dt, math.Abs(target-initial)/acceleration)
+	end := approach(initial, target, acceleration*dt)
+	distance := ((initial+end)*rampSeconds/2 + target*(dt-rampSeconds)) / 3600
+	return end, distance
+}
+
+func driftWithWind(s *State, a *Aircraft, dt float64) {
+	wx, wy := unit(s.Environment.WindDirectionDeg + 180)
+	a.XNm += wx * s.Environment.WindSpeedKt * dt / 3600
+	a.YNm += wy * s.Environment.WindSpeedKt * dt / 3600
 }
 func segmentDistance(px, py, x1, y1, x2, y2 float64) float64 {
 	dx, dy := x2-x1, y2-y1
@@ -104,6 +165,33 @@ func advance(s *State, seconds float64) {
 			for _, c := range a.PendingClearances {
 				if c.Condition != nil && c.Condition.Kind == "time" && c.Condition.At > s.Elapsed && c.Condition.At < s.Elapsed+dt {
 					dt = c.Condition.At - s.Elapsed
+				}
+			}
+			if a.Status != "scheduled" && !isGround(&a) && a.Mode != "landing" && a.Mode != "stopped" && a.VerticalRateFpm > 0 {
+				reaching := math.Abs(a.TargetAltitudeFt-a.AltitudeFt) * 60 / a.VerticalRateFpm
+				if reaching > 1e-9 && reaching < dt {
+					dt = reaching
+				}
+			}
+			if a.Status != "scheduled" && a.Mode == "hold" && a.Hold != nil {
+				h := a.Hold
+				boundary := math.Inf(1)
+				switch h.Phase {
+				case "outbound":
+					boundary = h.LegSeconds - h.PhaseElapsed
+				case "turn-outbound", "turn-inbound":
+					target := h.InboundCourseDeg
+					if h.Phase == "turn-outbound" {
+						target = normalize(target + 180)
+					}
+					remaining := normalize(target - a.HeadingDeg)
+					if h.Direction == "left" {
+						remaining = normalize(a.HeadingDeg - target)
+					}
+					boundary = remaining / a.TurnRateDegSec
+				}
+				if boundary > 1e-9 && boundary < dt {
+					dt = boundary
 				}
 			}
 		}
@@ -203,9 +291,8 @@ func moveAircraft(s *State, a *Aircraft, dt float64) {
 	}
 	previousAltitude := a.AltitudeFt
 	a.AltitudeFt = approach(a.AltitudeFt, a.TargetAltitudeFt, a.VerticalRateFpm*dt/60)
-	if previousAltitude != a.TargetAltitudeFt && a.AltitudeFt == a.TargetAltitudeFt {
-		emitPilot(s, a, a.Callsign+", maintaining "+altitudeReport(s, a)+".", "level-report")
-	}
+	reachedAltitude := previousAltitude != a.TargetAltitudeFt && a.AltitudeFt == a.TargetAltitudeFt
+	initialSpeed := a.SpeedKt
 	a.SpeedKt = approach(a.SpeedKt, a.TargetSpeedKt, 5*dt)
 	var fix *Fix
 	if a.Mode == "route" {
@@ -249,16 +336,15 @@ func moveAircraft(s *State, a *Aircraft, dt float64) {
 	}
 	oldX, oldY := a.XNm, a.YNm
 	if a.Orbit != nil {
-		moveOrbit(s, a, dt)
+		moveOrbit(s, a, dt, initialSpeed)
 	} else {
-		turn(a, dt)
-		ux, uy := unit(a.HeadingDeg)
-		a.XNm += ux * a.SpeedKt * dt / 3600
-		a.YNm += uy * a.SpeedKt * dt / 3600
+		moveHeading(a, dt, initialSpeed, a.TargetSpeedKt, 5)
 	}
-	wx, wy := unit(s.Environment.WindDirectionDeg + 180)
-	a.XNm += wx * s.Environment.WindSpeedKt * dt / 3600
-	a.YNm += wy * s.Environment.WindSpeedKt * dt / 3600
+	driftWithWind(s, a, dt)
+	if a.Mode == "hold" && a.Hold != nil {
+		a.Hold.PhaseElapsed += dt
+		completeHoldPhase(a)
+	}
 	if math.Abs(a.XNm) > 2000 || math.Abs(a.YNm) > 2000 {
 		a.XNm = math.Max(-2000, math.Min(2000, a.XNm))
 		a.YNm = math.Max(-2000, math.Min(2000, a.YNm))
@@ -269,6 +355,14 @@ func moveAircraft(s *State, a *Aircraft, dt float64) {
 		a.Orbit = nil
 		record(s, "exercise-boundary", a.Callsign+" stopped at model boundary", a.ID)
 		return
+	}
+	if reachedAltitude {
+		// Reports describe the bounded physical sample at the end of this
+		// movement, not the older start-of-step position and clock.
+		startTime := s.Elapsed
+		s.Elapsed += dt
+		emitPilot(s, a, a.Callsign+", maintaining "+altitudeReport(s, a)+".", "level-report")
+		s.Elapsed = startTime
 	}
 	reached := ""
 	if fix != nil && segmentDistance(fix.XNm, fix.YNm, oldX, oldY, a.XNm, a.YNm) <= math.Max(0.04, a.SpeedKt*dt/3600*0.6) {
@@ -302,7 +396,7 @@ func moveAircraft(s *State, a *Aircraft, dt float64) {
 
 // moveOrbit integrates the circular arc at the selected turn rate. A requested
 // exit completes this lap, then flies any remaining step on the entry heading.
-func moveOrbit(s *State, a *Aircraft, dt float64) {
+func moveOrbit(s *State, a *Aircraft, dt, initialSpeed float64) {
 	o := a.Orbit
 	turnSeconds := dt
 	remaining := math.Inf(1)
@@ -313,16 +407,11 @@ func moveOrbit(s *State, a *Aircraft, dt float64) {
 		}
 		turnSeconds = math.Min(dt, remaining)
 	}
-	rate := a.TurnRateDegSec * math.Pi / 180
+	rate := a.TurnRateDegSec
 	if o.Direction == "left" {
 		rate = -rate
 	}
-	start := a.HeadingDeg * math.Pi / 180
-	end := start + rate*turnSeconds
-	speed := a.SpeedKt / 3600
-	a.XNm += (math.Cos(start) - math.Cos(end)) * speed / rate
-	a.YNm += (math.Sin(end) - math.Sin(start)) * speed / rate
-	a.HeadingDeg = normalize(end * 180 / math.Pi)
+	moveAtRate(a, initialSpeed, a.TargetSpeedKt, 5, rate, turnSeconds, 0)
 	total := o.Degrees + a.TurnRateDegSec*turnSeconds
 	o.Laps += int(math.Floor((total + 1e-9) / 360))
 	o.Degrees = math.Mod(total, 360)
@@ -333,12 +422,41 @@ func moveOrbit(s *State, a *Aircraft, dt float64) {
 		a.HeadingDeg, a.TargetHeadingDeg = o.EntryHeadingDeg, o.EntryHeadingDeg
 		a.Orbit = nil
 		a.Mode, a.TurnDirection = "heading", ""
-		ux, uy := unit(a.HeadingDeg)
-		a.XNm += ux * speed * (dt - turnSeconds)
-		a.YNm += uy * speed * (dt - turnSeconds)
+		moveAtRate(a, initialSpeed, a.TargetSpeedKt, 5, 0, dt-turnSeconds, turnSeconds)
 		emitPilot(s, a, a.Callsign+", orbit complete, resuming entry heading.", "orbit-report")
 	}
 }
+func completeHoldPhase(a *Aircraft) {
+	h := a.Hold
+	if h == nil {
+		return
+	}
+	for {
+		switch h.Phase {
+		case "turn-outbound":
+			if math.Abs(deltaHeading(a.HeadingDeg, normalize(h.InboundCourseDeg+180))) > 1e-9 {
+				return
+			}
+			h.Phase, h.PhaseElapsed = "outbound", 0
+			a.TurnDirection = ""
+		case "outbound":
+			if h.PhaseElapsed < h.LegSeconds-1e-9 {
+				return
+			}
+			h.Phase, h.PhaseElapsed = "turn-inbound", 0
+			a.TargetHeadingDeg, a.TurnDirection = h.InboundCourseDeg, h.Direction
+		case "turn-inbound":
+			if math.Abs(deltaHeading(a.HeadingDeg, h.InboundCourseDeg)) > 1e-9 {
+				return
+			}
+			h.Phase, h.PhaseElapsed = "inbound", 0
+			a.TurnDirection = ""
+		default:
+			return
+		}
+	}
+}
+
 func holdGuidance(s *State, a *Aircraft, dt float64) *Fix {
 	h := a.Hold
 	if h == nil {
@@ -346,34 +464,18 @@ func holdGuidance(s *State, a *Aircraft, dt float64) *Fix {
 		return nil
 	}
 	a.Status = "holding"
-	h.PhaseElapsed += dt
+	completeHoldPhase(a)
 	switch h.Phase {
 	case "entry", "inbound":
 		return findFix(s, h.FixID)
 	case "turn-outbound":
 		a.TargetHeadingDeg = normalize(h.InboundCourseDeg + 180)
 		a.TurnDirection = h.Direction
-		if math.Abs(deltaHeading(a.HeadingDeg, a.TargetHeadingDeg)) < 0.1 {
-			h.Phase = "outbound"
-			h.PhaseElapsed = 0
-			a.TurnDirection = ""
-		}
 	case "outbound":
 		a.TargetHeadingDeg = normalize(h.InboundCourseDeg + 180)
-		if h.PhaseElapsed >= h.LegSeconds {
-			h.Phase = "turn-inbound"
-			h.PhaseElapsed = 0
-			a.TargetHeadingDeg = h.InboundCourseDeg
-			a.TurnDirection = h.Direction
-		}
 	case "turn-inbound":
 		a.TargetHeadingDeg = h.InboundCourseDeg
 		a.TurnDirection = h.Direction
-		if math.Abs(deltaHeading(a.HeadingDeg, a.TargetHeadingDeg)) < 0.1 {
-			h.Phase = "inbound"
-			h.PhaseElapsed = 0
-			a.TurnDirection = ""
-		}
 	}
 	return nil
 }
@@ -383,8 +485,8 @@ func moveGround(s *State, a *Aircraft, dt float64) {
 	}
 	dx, dy := a.GroundTargetX-a.XNm, a.GroundTargetY-a.YNm
 	distance := math.Hypot(dx, dy)
-	a.SpeedKt = approach(a.SpeedKt, a.TargetSpeedKt, 3*dt)
-	travel := a.SpeedKt * dt / 3600
+	var travel float64
+	a.SpeedKt, travel = speedDistance(a.SpeedKt, a.TargetSpeedKt, 3, dt)
 	if distance <= math.Max(travel, 0.005) {
 		a.XNm = a.GroundTargetX
 		a.YNm = a.GroundTargetY
@@ -409,9 +511,9 @@ func moveGround(s *State, a *Aircraft, dt float64) {
 	a.AltitudeFt = s.Environment.AerodromeElevationFt
 }
 func moveTakeoff(s *State, a *Aircraft, dt float64) {
-	a.SpeedKt = approach(a.SpeedKt, a.TargetSpeedKt, 8*dt)
+	var travel float64
+	a.SpeedKt, travel = speedDistance(a.SpeedKt, a.TargetSpeedKt, 8, dt)
 	ux, uy := unit(s.Environment.RunwayHeadingDeg)
-	travel := a.SpeedKt * dt / 3600
 	a.XNm += ux * travel
 	a.YNm += uy * travel
 	a.RunwayProgress += travel
@@ -438,8 +540,8 @@ func moveLanding(s *State, a *Aircraft, dt float64) {
 	along, _ := runwayCoordinates(s, a)
 	ux, uy := unit(s.Environment.RunwayHeadingDeg)
 	if a.Status == "landed" {
-		a.SpeedKt = approach(a.SpeedKt, 0, 5*dt)
-		travel := a.SpeedKt * dt / 3600
+		var travel float64
+		a.SpeedKt, travel = speedDistance(a.SpeedKt, 0, 5, dt)
 		a.XNm += ux * travel
 		a.YNm += uy * travel
 		a.RunwayProgress += travel
@@ -455,15 +557,14 @@ func moveLanding(s *State, a *Aircraft, dt float64) {
 	tx, ty := threshold(s)
 	a.TargetHeadingDeg = bearing(tx-a.XNm, ty-a.YNm)
 	a.TurnDirection = ""
-	turn(a, dt)
-	a.SpeedKt = approach(a.SpeedKt, math.Max(65, a.TargetSpeedKt), 3*dt)
+	initialSpeed := a.SpeedKt
+	targetSpeed := math.Max(65, a.TargetSpeedKt)
+	a.SpeedKt = approach(a.SpeedKt, targetSpeed, 3*dt)
 	pathAltitude := s.Environment.AerodromeElevationFt + math.Max(0, -along)*318
 	a.TargetAltitudeFt = pathAltitude
 	a.AltitudeFt = approach(a.AltitudeFt, pathAltitude, math.Max(a.VerticalRateFpm, 1200)*dt/60)
-	vx, vy := unit(a.HeadingDeg)
-	travel := a.SpeedKt * dt / 3600
-	a.XNm += vx * travel
-	a.YNm += vy * travel
+	moveHeading(a, dt, initialSpeed, targetSpeed, 3)
+	driftWithWind(s, a, dt)
 	newAlong, cross := runwayCoordinates(s, a)
 	if newAlong >= 0 {
 		if math.Abs(cross) > 0.1 || a.AltitudeFt > s.Environment.AerodromeElevationFt+100 {

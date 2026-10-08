@@ -18,6 +18,7 @@ const suiteFiles = [
   'training-guide.html',
   'suite-command-reference.js',
   'suite.css',
+  'suite-entry.js',
   'suite-core.js',
   'suite-display.js',
   'suite-instructor.js',
@@ -29,11 +30,21 @@ const suiteFiles = [
 ];
 const sharedEngineFiles = [
   'simulator-core.js',
+  'scope-visuals.js',
   'procedure-core.js',
   'fonts/ibm-plex-mono-500.ttf',
   'fonts/ibm-plex-sans-400.ttf',
   'fonts/ibm-plex-sans-600.ttf',
   'fonts/OFL-1.1.txt',
+];
+const sharedProceduralFiles = [
+  'remote-service.js',
+  'student-plotting.js',
+  'student-plotting.css',
+  'workspace-shell.js',
+  'workspace-shell.css',
+  'meeting-room.js',
+  'suite-entry.css',
 ];
 const staticFiles = [
   'manifest.webmanifest',
@@ -65,14 +76,14 @@ async function readSuiteVersion() {
 
 function preparePage(source, version) {
   const escape = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-  let html = source.replaceAll('__ATC_GUIDE_VERSION__', version).replace('<!-- BETA_DIRECT_COMMANDS -->',
+  let html = source.replaceAll('__ATC_GUIDE_VERSION__', version).replace('<!-- DIRECT_COMMANDS -->',
     commandReference.commands.map(row => `<tr><td>${row.aliases.map(alias => `<code>${escape(alias)}</code>`).join(' / ')}</td><td>${escape(row.description)}</td></tr>`).join('\n'));
   if (!html.includes('pwa.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="pwa.css">\n</head>');
   }
   html = html.replace(
     /BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · [0-9]+\.[0-9]+\.[0-9]+(?:[-+][a-zA-Z0-9.-]+)?/g,
-    `BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · ${version}`
+    'ATS SIM BOX · Version 1'
   );
   return html.replace(
     /((?:src|href)=")([^"#?]+\.(?:js|css))("\s*)/g,
@@ -103,20 +114,18 @@ async function build() {
   await Promise.all([
     ...suiteFiles.map(file => copyFrom(suiteRoot, file)),
     ...sharedEngineFiles.map(file => copyFrom(engineRoot, file)),
+    ...sharedProceduralFiles.map(file => copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), file)),
     ...staticFiles.map(file => copyFrom(staticRoot, file)),
     ...sharedIcons.map(file => copyFrom(sharedIconRoot, file, `icons/${file}`)),
   ]);
   await applyBuildVersion(version);
-  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'remote-service.js');
-  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'student-plotting.js');
-  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'student-plotting.css');
-  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'workspace-shell.js');
-  await copyFrom(resolve(repositoryRoot, 'packages/procedural-beta/static'), 'workspace-shell.css');
   await writeFile(resolve(outputRoot,'remote-config.js'), 'export const remoteConfig = Object.freeze({url:"",publishableKey:""});\n');
 
   const expectedOutput = [
+    'remote-config.js',
     ...suiteFiles,
     ...sharedEngineFiles,
+    ...sharedProceduralFiles,
     ...staticFiles,
     ...sharedIcons.map(file => `icons/${file}`),
   ];
@@ -128,7 +137,7 @@ async function build() {
     }
   }));
 
-  console.log(`Built Reds ATC Training Suite v${version} at ${outputRoot}`);
+  console.log(`Built ATS SIM BOX Version 1 (${version}) at ${outputRoot}`);
 }
 
 await build();

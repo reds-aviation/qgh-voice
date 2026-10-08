@@ -54,7 +54,7 @@ const started = (async () => {
     const request = indexedDB.open('qgh-procedural-browser-v1', 1);
     request.onupgradeneeded = () => request.result.createObjectStore('exercise');
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(new Error('Allow browser storage to open Procedural Beta.'));
+    request.onerror = () => reject(new Error('Allow browser storage to open ATS SIM BOX Procedural.'));
     request.onblocked = () => reject(new Error('Close older procedural tabs and try again.'));
   });
   checkpoint = await transaction('readonly', store => store.get(storageKey('checkpoint')));

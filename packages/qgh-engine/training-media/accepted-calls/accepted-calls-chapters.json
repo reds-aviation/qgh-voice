@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Find the exact contract",
@@ -33,5 +33,6 @@
       "title": "Manual demonstration",
       "start": 53.811678
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

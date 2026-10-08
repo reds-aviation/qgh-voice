@@ -1,12 +1,13 @@
-# QGH Simulator web app
+# ATS SIM BOX · Version 1 web app
 
-This folder creates the hosted Progressive Web App (PWA) edition of QGH Voice. The current local candidate is v4.4.3 - Voice Safety & U/S Turns. It packages the canonical files in `packages/qgh-engine` into `apps/web/dist` without modifying the Windows or Android native bundles.
+This folder creates the ATS SIM BOX Version 1 hosted Progressive Web App (release `1.0.0`). It packages individual QGH, instructor-led QGH/SRE/SRA and Procedural exercises into `apps/web/dist`. Windows and Android native bundles are built separately.
 
 ## Build locally
 
 From the repository root:
 
 ~~~powershell
+$env:QGH_PROCEDURAL_BETA = '1' # Internal compatibility flag; the public suite is Version 1.
 node .\scripts\build-web.mjs
 python -m http.server 57172 --bind 127.0.0.1 --directory .\apps\web\dist
 ~~~
@@ -23,7 +24,7 @@ Open `http://127.0.0.1:57172/index.html`. A service worker is enabled for HTTPS 
 - An optional first-run Guided Familiarisation with Skip and later Guided Tour access.
 - A clean allowlist build that excludes local state, stale duplicate screens, tests, installers, and signing material.
 
-The simulator itself remains browser-only and keeps exercise state in memory. Reloading the page starts a new exercise; no flight data is stored by the PWA.
+Individual QGH keeps the current attempt in memory. Instructor-led exercises support documented browser recovery and saved exercise libraries. Logout clears the current tab's session recovery and returns Home; it retains saved exercises. This device/offline requires the same PC, browser profile and site address. Online room uses different devices with internet on both.
 
 ## Native download links
 

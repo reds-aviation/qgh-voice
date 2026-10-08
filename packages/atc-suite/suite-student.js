@@ -2,6 +2,33 @@
   'use strict';
   const Session = globalThis.ATCSuiteSession;
   if (!Session) return;
+  // Entry and PIN collection share the paired portal. Only an explicit request
+  // or an existing seat recovery opens this protected controller route.
+  try {
+    const params = new URLSearchParams(location.search), pin = params.get('pin');
+    let recovery = false, savedMode = 'local';
+    try {
+      const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');
+      savedMode = sessionStorage.getItem('atc-suite-connection') === 'online' ? 'online' : 'local';
+      const seat = JSON.parse(sessionStorage.getItem(`reds.atc-suite.seat.${savedPin}`) || 'null');
+      const selectedMode = params.get('connection');
+      recovery = /^\d{6}$/.test(savedPin || '') && seat
+        && typeof seat.sessionId === 'string' && seat.sessionId.length > 0 && /^[A-Za-z0-9_-]{8,64}$/.test(seat.clientId || '')
+        && typeof seat.seatToken === 'string' && seat.seatToken.length > 0 && seat.seatToken.length <= 64
+        && Number.isSafeInteger(seat.revision) && seat.revision >= 0
+        && (!params.has('pin') || pin === savedPin)
+        && (!(selectedMode === 'local' || selectedMode === 'online') || selectedMode === savedMode);
+    } catch (_) { /* The shared entry remains usable without browser storage. */ }
+    if (!(params.get('join') === '1' && /^\d{6}$/.test(pin || '')) && !recovery) {
+      const portal = new URL('index.html', location.href);
+      const mode = params.get('connection');
+      portal.searchParams.set('connection', mode === 'local' || mode === 'online' ? mode : savedMode);
+      if (/^\d{6}$/.test(pin || '')) portal.searchParams.set('pin', pin);
+      portal.hash = 'controllerposition';
+      location.replace(portal.href);
+      return;
+    }
+  } catch (_) { /* Test/embedded hosts without navigation keep the controller form. */ }
   const byId = id => document.getElementById(id);
   const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function enterWorkspace(element) {
@@ -11,8 +38,10 @@
   }
   const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null, cloudTransport: null, joining: false,
     radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false,
-    scopePan: { x: 0, y: 0 }, scopeDrag: null, plotting: null, observationReceivedAt: null };
-  const clock = seconds => `${String(Math.floor(Math.max(0, seconds) / 60)).padStart(2, '0')}:${String(Math.floor(Math.max(0, seconds)) % 60).padStart(2, '0')}`;
+    scopePan: { x: 0, y: 0 }, scopeDrag: null, plotting: null, observationReceivedAt: null,
+    loggingOut: false, freshnessTimer: null, animationFrame: null };
+  let joinGeneration = 0;
+  const clock = seconds => { const total = Math.max(0, Math.floor(Number(seconds) || 0)); return `${String(Math.floor(total / 3600)).padStart(2, '0')}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`; };
   const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0');
   const modeLabel = mode => ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || 'CONTROLLER POSITION';
   const radarLabelFields = [
@@ -20,17 +49,27 @@
     ['groundSpeed', 'radarLabelSpeed'], ['heading', 'radarLabelHeading'], ['bearingRange', 'radarLabelBearingRange']
   ];
   globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('studentWorkspace'), scope: byId('radarScope'),
-    shelf: byId('student-estimate-panel'), actions: byId('studentWorkspace')?.querySelector?.('.student-head') });
+    shelf: byId('student-estimate-panel'), actions: byId('studentWorkspace')?.querySelector?.('.student-head'), onLogout: logout });
   byId('studentEstimateScope').classList?.add?.('ats-scope-surface');
+  const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: byId('readyPanel'), role: 'student' });
+  meetingPanel?.addShortcut(byId('studentWorkspace')?.querySelector('.student-head'));
+  function renderMeeting() {
+    const visible = ['readyPanel', 'studentWorkspace', 'studentEnded'].find(id => !byId(id).hidden);
+    if (visible) meetingPanel?.move(visible === 'studentWorkspace' ? byId('studentNavigation') : byId(visible));
+    meetingPanel?.update({ online: !!state.cloudTransport, role: 'student', meetingUrl: state.metadata?.meetingUrl || '', roomKey:state.session?.sessionId || '' });
+  }
 
   function show(id, { scroll = true } = {}) {
     const entering = byId(id).hidden;
     for (const name of ['joinPanel', 'waitingPanel', 'readyPanel', 'studentWorkspace', 'studentEnded', 'orientationGate']) byId(name).hidden = name !== id;
+    if (id === 'joinPanel') byId('studentNavigation').open = true;
     if (id !== 'studentWorkspace') document.body.classList.toggle('narrow-radar', false);
     if (entering && scroll) enterWorkspace(byId(id));
+    renderMeeting();
   }
 
   function onSessionEvent(event) {
+    if (state.loggingOut) return;
     const priorMode = state.metadata?.mode, priorProfile = state.metadata?.radarProfile;
     const snapshot = event.snapshot || state.session?.snapshot();
     if (snapshot) {
@@ -40,7 +79,8 @@
       byId('studentClock').textContent = clock(snapshot.simulationTime);
     }
     if (event.kind === 'admitted' || event.kind === 'rejoined') {
-      byId('studentReady').disabled = false; byId('studentReady').textContent = 'READY';
+      meetingPanel?.resetVoice?.();
+      byId('studentReady').disabled = false; byId('studentReady').textContent = state.cloudTransport ? 'Ready — open display & meeting link' : 'READY';
       show('readyPanel'); byId('readyMode').textContent = modeLabel(state.metadata.mode);
       if (event.kind === 'rejoined') setPilotAudio(false);
     } else if (event.kind === 'join-rejected') {
@@ -66,6 +106,7 @@
     } else if (event.kind === 'observation-rejected') {
       state.pictureError = true;
     } else if (event.kind === 'disconnected') {
+      meetingPanel?.resetVoice?.();
       setPilotAudio(false);
       byId('connectionState').textContent = 'DISCONNECTED'; byId('studentExerciseState').textContent = 'PICTURE FROZEN';
     } else if (event.kind === 'terminated') {
@@ -76,21 +117,26 @@
       } else show('studentEnded');
     }
     renderFreshness(snapshot);
+    renderMeeting();
   }
 
   async function requestJoin() {
-    if (state.joining) return;
+    if (state.loggingOut || state.joining) return;
     const pin = byId('joinPin').value.replace(/\D/g, '');
     if (!/^\d{6}$/.test(pin)) { byId('joinStatus').textContent = 'Enter all six digits.'; return; }
+    const generation = ++joinGeneration;
     state.joining = true; byId('joinSession').disabled = true;
     try {
     state.session?.close();
     const online = byId('exerciseConnection')?.value === 'online';
     try { sessionStorage.setItem('atc-suite-connection', online ? 'online' : 'local'); } catch (_) {}
     const cloud = online ? await globalThis.ATCSuiteCloud.prepareStudent(pin, Session, status => {
-      if (!status.connected) { byId('connectionState').textContent = 'ONLINE LINK LOST'; byId('waitingMessage').textContent = status.error; }
+      if (generation !== joinGeneration) return;
+      if (!status.connected) { meetingPanel?.resetVoice?.(); byId('connectionState').textContent = 'ONLINE LINK LOST'; byId('waitingMessage').textContent = status.error; }
     }) : null;
+    if (generation !== joinGeneration) { cloud?.transport?.close(); return; }
     state.cloudTransport = cloud?.transport || null;
+    state.metadata = null; renderMeeting();
     state.session = Session.createStudentSession({ pin, storage: online ? undefined : localStorage, ...(cloud || {}),
       recoveryStorage: typeof sessionStorage === 'undefined' ? undefined : sessionStorage,
       transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
@@ -99,13 +145,34 @@
     if (state.session.requestJoin()) { /* Admission events determine the next panel. */ }
     else { show('joinPanel'); byId('joinStatus').textContent = 'No active session matches that PIN. Check the selected connection mode.'; }
     state.cloudTransport?.start();
-    } catch (error) { state.cloudTransport?.close(); state.cloudTransport = null; show('joinPanel'); byId('joinStatus').textContent = error.message; }
-    finally { state.joining = false; byId('joinSession').disabled = false; }
+    } catch (error) { if (generation === joinGeneration) { state.cloudTransport?.close(); state.cloudTransport = null; show('joinPanel'); byId('joinStatus').textContent = error.message; } }
+    finally { if (generation === joinGeneration) { state.joining = false; byId('joinSession').disabled = false; } }
+  }
+
+  function logout() {
+    ++joinGeneration; state.loggingOut = true; state.joining = false;
+    const snapshot = state.session?.snapshot?.(), pin = byId('joinPin').value.replace(/\D/g, '');
+    cancelPilotAudio(); meetingPanel?.resetVoice?.();
+    if (typeof clearInterval === 'function') { clearInterval(state.heartbeat); clearInterval(state.freshnessTimer); }
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.animationFrame);
+    const drag = state.scopeDrag;
+    if (drag) studentScopeCanvas().releasePointerCapture?.(drag.id);
+    state.scopeDrag = null; state.radarDrag = null;
+    state.plotting?.onPointerCancel?.({pointerId:drag?.id});
+    state.session?.close(); state.cloudTransport?.close(); state.session = null; state.cloudTransport = null;
+    state.metadata = null; state.observation = null; state.plotting = null;
+    try {
+      const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');
+      if (/^\d{6}$/.test(savedPin || '')) sessionStorage.removeItem(`reds.atc-suite.seat.${savedPin}`);
+      if (/^\d{6}$/.test(pin)) sessionStorage.removeItem(`reds.atc-suite.seat.${pin}`);
+      sessionStorage.removeItem('reds.atc-suite.last-pin'); sessionStorage.removeItem('atc-suite-student-auth');
+      if (snapshot?.sessionId && snapshot?.clientId) localStorage.removeItem(`ats-simbox-student-estimates-v1:${encodeURIComponent(`${snapshot.sessionId}:${snapshot.clientId}`)}`);
+    } catch (_) { /* Session transport is closed even when storage is unavailable. */ }
   }
 
   function ready() {
     if (!state.session?.ready(byId('studentAudio').checked ? 'audio' : 'captions')) return;
-    byId('studentReady').disabled = true; byId('studentReady').textContent = 'READY · WAITING FOR START';
+    byId('studentReady').disabled = true; byId('studentReady').textContent = state.cloudTransport ? 'READY · JOIN MEET & CHECK AUDIO' : 'READY · WAITING FOR START';
   }
 
   function renderLifecycle(lifecycle) {
@@ -281,7 +348,7 @@
     drawRadarLabels(context, canvas, plots);
     state.plotting?.draw(context);
     updateRadarInspection(plots);
-    byId('scanRate').textContent = `${state.metadata.scanRpm || 15} RPM · ${state.metadata.revisitSeconds || 4} SEC REVISIT`;
+    byId('scanRate').textContent = `${state.metadata.scanRpm || 15} RPM · ${state.metadata.revisitSeconds || 4} SIM SEC REVISIT`;
     const hasSecondary = correlatedRadarProfile() && plots.some(plot => plot.surveillance?.secondary === true);
     byId('radarProfileStatus').textContent = correlatedRadarProfile()
       ? `CORRELATED TRAINING · + PRIMARY · □ SSR${hasSecondary ? '' : ' · NO SSR RETURN'}`
@@ -346,6 +413,7 @@
   async function initialiseStudentPlotting() {
     try {
       const { createStudentPlotting } = await import('./student-plotting.js');
+      if (state.loggingOut) return;
       state.plotting = createStudentPlotting({ get canvas() { return studentScopeCanvas(); }, screenToPoint: inverseStudentPoint,
         projectPoint: projectStudentPoint, requestDraw: renderObservation, sessionKey: () => {
           const snapshot = state.session?.snapshot(); return snapshot?.sessionId && snapshot?.clientId ? `${snapshot.sessionId}:${snapshot.clientId}` : '';
@@ -365,7 +433,7 @@
     const squawk = nonEmptyText(plot?.surveillance?.squawk);
     return squawk && /^[0-7]{4}$/.test(squawk) ? squawk : null;
   }
-  function displayedHeading(plot) { return Number.isFinite(plot?.headingDeg) ? `${pad(plot.headingDeg)}°` : null; }
+  function displayedHeading(plot, suffix = '°') { return Number.isFinite(plot?.headingDeg) ? `${pad(plot.headingDeg)}${suffix}` : null; }
   function displayedGroundSpeed(plot) { return Number.isFinite(plot?.groundSpeedKt) ? `${Math.round(plot.groundSpeedKt)} KT` : null; }
   function displayedLevel(plot) { return Number.isFinite(plot?.altitudeFt) ? `${Math.round(plot.altitudeFt).toLocaleString()} FT` : null; }
   function displayedBearingRange(plot) {
@@ -384,7 +452,7 @@
     if (preferences.modeS) tokens.push(plot.surveillance?.modeS === true ? 'SSR MODE S' : 'SSR MODE A');
     if (preferences.level) tokens.push(`LVL ${notReported(displayedLevel(plot))}`);
     if (preferences.groundSpeed) tokens.push(`GS ${notReported(displayedGroundSpeed(plot))}`);
-    if (preferences.heading) tokens.push(`HDG ${notReported(displayedHeading(plot))}`);
+    if (preferences.heading) tokens.push(`HDG ${notReported(displayedHeading(plot, ' H'))}`);
     if (preferences.bearingRange) tokens.push(notReported(displayedBearingRange(plot)));
     return tokens;
   }
@@ -820,20 +888,30 @@
   addEventListener('resize', () => state.metadata && chooseMode(state.metadata.mode)); addEventListener('orientationchange', () => setTimeout(() => state.metadata && chooseMode(state.metadata.mode), 100));
   addEventListener('beforeunload', () => { cancelPilotAudio(); state.session?.close(); });
   state.heartbeat = setInterval(() => { state.session?.heartbeat(); state.session?.tick(); }, 4000);
-  setInterval(renderFreshness, 1000);
+  state.freshnessTimer = setInterval(renderFreshness, 1000);
   void initialiseStudentPlotting();
   if (typeof requestAnimationFrame === 'function') {
     let priorFrame = 0;
     const animateScan = timestamp => {
-      requestAnimationFrame(animateScan);
+      if (state.loggingOut) return;
+      state.animationFrame = requestAnimationFrame(animateScan);
       if (reducedMotion() || timestamp - priorFrame < 33 || byId('studentWorkspace').hidden || !['sra', 'surveillance'].includes(state.metadata?.mode) || state.session?.snapshot().state !== 'running') return;
       priorFrame = timestamp;
       try { renderRadar(); } catch (_) { state.pictureError = true; }
     };
-    requestAnimationFrame(animateScan);
+    state.animationFrame = requestAnimationFrame(animateScan);
   }
   try {
-    if (new URLSearchParams(location.search).get('connection') === 'online' || sessionStorage.getItem('atc-suite-connection') === 'online') byId('exerciseConnection').value = 'online';
+    const params = new URLSearchParams(location.search);
+    const selectedConnection = params.get('connection');
+    byId('exerciseConnection').value = selectedConnection === 'local' || selectedConnection === 'online'
+      ? selectedConnection : sessionStorage.getItem('atc-suite-connection') === 'online' ? 'online' : 'local';
+    const requestedPin = params.get('pin');
+    if (/^\d{6}$/.test(requestedPin || '')) {
+      byId('joinPin').value = requestedPin;
+      if (params.get('join') === '1') requestJoin();
+      return;
+    }
     const savedPin = sessionStorage.getItem('reds.atc-suite.last-pin');
     if (/^\d{6}$/.test(savedPin || '') && sessionStorage.getItem(`reds.atc-suite.seat.${savedPin}`)) {
       byId('joinPin').value = savedPin; requestJoin();

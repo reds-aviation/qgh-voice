@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Prepare before practice",
@@ -33,5 +33,6 @@
       "title": "Test on your device",
       "start": 52.663650999999994
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

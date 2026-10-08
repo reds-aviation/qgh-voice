@@ -61,6 +61,7 @@ test('install precaches the complete local two-position shell', async () => {
   assert.equal(harness.calls.addAll.length, 1);
   const shell = harness.calls.addAll[0];
   const expectedShell = [
+    './meeting-room.js',
     './',
     './index.html',
     './instructor.html',
@@ -68,6 +69,8 @@ test('install precaches the complete local two-position shell', async () => {
     './training-guide.html',
     './suite-command-reference.js',
     './suite.css',
+    './suite-entry.js',
+    './suite-entry.css',
     './suite-core.js',
     './suite-display.js',
     './suite-instructor.js',
@@ -83,6 +86,7 @@ test('install precaches the complete local two-position shell', async () => {
     './workspace-shell.js',
     './workspace-shell.css',
     './simulator-core.js',
+    './scope-visuals.js',
     './procedure-core.js',
     './fonts/ibm-plex-mono-500.ttf',
     './fonts/ibm-plex-sans-400.ttf',
@@ -143,6 +147,16 @@ test('query-tainted, wrong-version, cross-origin and non-GET requests bypass the
     assert.equal(response, undefined, `${request.method} ${request.url} is not intercepted`);
   }
   assert.deepEqual(harness.calls.match, []);
+});
+
+test('entry navigation, shared entry layout and scope graphics survive offline use', async () => {
+  const harness = createWorkerHarness({cachedResponse:new Response('bundled asset'),networkFails:true});
+  for (const path of ['suite-entry.js','suite-entry.css','scope-visuals.js']) {
+    let response;
+    harness.handlers.get('fetch')({request:new Request(`${scope}${path}?v=0.1.0`),respondWith:value=>{response=value;}});
+    assert.equal(await (await response).text(),'bundled asset',path);
+  }
+  assert.deepEqual(harness.calls.match,['suite-entry.js','suite-entry.css','scope-visuals.js'].map(path=>`${scope}${path}`));
 });
 
 test('activation removes only earlier ATC suite generations', async () => {
@@ -255,8 +269,8 @@ test('skip-waiting messages are accepted only from this suite scope', () => {
 
 test('suite cache and manifest identities cannot collide with the QGH PWA', () => {
   const manifest = JSON.parse(readFileSync(resolve(staticRoot, 'manifest.webmanifest'), 'utf8'));
-  assert.equal(manifest.name, 'Reds ATC Training Suite');
-  assert.equal(manifest.short_name, 'Reds ATC');
+  assert.equal(manifest.name, 'ATS SIM BOX');
+  assert.equal(manifest.short_name, 'ATS SIM BOX');
   assert.equal(manifest.id, './reds-atc-training-suite');
   assert.match(workerTemplate, /reds-atc-suite-/);
   assert.doesNotMatch(workerTemplate, /qgh-simulator-/);

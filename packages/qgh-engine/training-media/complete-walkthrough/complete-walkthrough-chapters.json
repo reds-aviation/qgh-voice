@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "Basic controls",
@@ -29,5 +29,6 @@
       "title": "Phone use and offline practice",
       "start": 357.323785
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

@@ -73,12 +73,13 @@ function button(text, action) { const e = element('button', text); e.type = 'but
 export function createScenarioLibrary(host) {
     const container = host.container || document.getElementById('tab-build');
     const section = element('section', '', 'scenario-library'); section.id = 'scenario-library';
-    section.append(element('h2', 'Saved exercises'), element('p', 'Save the starting setup. Reuse the same traffic and airspace.', 'hint'));
+    section.append(element('p', 'Save the paused starting setup on this device, or load a saved airspace and traffic setup.', 'hint'));
     const nameLabel = element('label', 'Exercise name'), name = element('input'); name.id = 'template-name'; name.maxLength = 80; name.placeholder = 'e.g. Crossing traffic · assessment 1'; nameLabel.append(name);
-    const selectLabel = element('label', 'Choose saved exercise'), select = element('select'); select.id = 'template-select'; selectLabel.append(select);
+    const selectLabel = element('label', 'Load saved exercise'), select = element('select'); select.id = 'template-select'; selectLabel.append(select);
     const status = element('p', '', 'scenario-library-status'); status.id = 'scenario-library-status'; status.setAttribute('role', 'status');
     const actions = element('div', '', 'scenario-library-actions');
-    let templates = [], pending = false, openRequested = false;
+    let templates = [], pending = false, openRequested = false, nameEdited = false;
+    name.addEventListener('input', () => { nameEdited = true; });
     function read() { try { const data = JSON.parse(localStorage.getItem(storageKey) || '[]'); if (!Array.isArray(data) || data.length > 50) throw new Error('Saved exercise list is invalid.'); templates = data.map(t => parseExerciseTemplate(JSON.stringify(t), { allowLegacy24: true })); if (new Set(templates.map(t => t.id)).size !== templates.length) throw new Error('Saved exercise identities are duplicated.'); } catch (e) { templates = []; status.textContent = 'Saved exercise storage could not be read. Import a downloaded exercise to restore it.'; } }
     function update() { const chosen = select.value; select.replaceChildren(new Option(templates.length ? 'Select exercise…' : 'No exercises saved on this device', ''), ...templates.map(t => new Option(`${t.name} · ${t.bundle.scenario.aircraft.length} aircraft`, t.id))); if (templates.some(t => t.id === chosen)) select.value = chosen; }
     function persist() { try { localStorage.setItem(storageKey, JSON.stringify(templates)); } catch { throw new Error('Device storage is full or unavailable. Download the exercise file to keep it.'); } update(); }
@@ -86,20 +87,25 @@ export function createScenarioLibrary(host) {
     const selected = () => { const t = templates.find(t => t.id === select.value); if (!t) throw new Error('Select a saved exercise.'); return t; };
     async function saveStarting(asNew = false) {
         const state = host.view(); if (!state || state.role !== 'instructor') throw new Error('Open instructor setup first.');
-        if (state.running || state.elapsed !== 0) throw new Error('Save before Run, while the starting exercise is paused at 00:00.');
+        if (host.hasDraft?.()) throw new Error('Apply your airspace changes and create the traffic before saving the starting setup. Your entries are kept.');
+        if (state.running || state.elapsed !== 0) throw new Error('Save before Run, while the starting exercise is paused at 00:00:00.');
         const stamp = host.generation(), exerciseId = state.exerciseId, bundle = await host.request('/api/procedural/export');
         if (stamp !== host.generation() || exerciseId !== host.view()?.exerciseId) throw new Error('The exercise changed. Save again.');
         if (bundle.scenario.exerciseId !== exerciseId) throw new Error('The exported exercise changed. Save again.');
-        const old = templates.find(t => t.name.toLowerCase() === name.value.trim().toLowerCase());
-        if (asNew && old) throw new Error('Use a different name for Save as new. Rename or replace the existing exercise instead.');
-        if (old && !confirm(`Replace saved exercise ${old.name}?`)) return;
+        if (Number.isSafeInteger(host.view()?.revision) && bundle.scenario.revision !== host.view().revision) throw new Error('The exercise changed while saving. Save again.');
+        const old = !asNew ? templates.find(t => t.id === select.value) : undefined;
+        if (asNew && templates.some(t => t.name.toLowerCase() === name.value.trim().toLowerCase())) throw new Error('Use a different name for Save as new. Rename or replace the existing exercise instead.');
+        uniqueName(name.value.trim(), old?.id);
+        if (old && !await (globalThis.ATCSuiteWorkspace?.confirmAction?.(`Replace saved exercise ${old.name}?`, {confirmLabel:'Replace saved exercise'}) ?? confirm(`Replace saved exercise ${old.name}?`))) return;
+        if (stamp !== host.generation() || exerciseId !== host.view()?.exerciseId || state.running !== host.view()?.running || host.view()?.elapsed !== 0 || host.hasDraft?.()) throw new Error('The exercise changed. Save again.');
+        if (Number.isSafeInteger(host.view()?.revision) && bundle.scenario.revision !== host.view().revision) throw new Error('The exercise changed while confirming. Save again.');
         const template = prepareExerciseTemplate(bundle, name.value, old?.id, old?.createdAt);
         if (templates.length >= 50 && !old) throw new Error('Up to 50 exercises can be kept on this device. Download and remove one first.');
         templates = [...templates.filter(t => t.id !== template.id), template];
         try { persist(); } catch { update(); select.value = template.id; status.textContent = 'Device storage is full. This setup is kept for this page only. Use Export selected to keep the exercise file.'; return; }
         select.value = template.id; status.textContent = 'Starting setup saved on this device. Export it to share or back it up.';
     }
-    const save = button('Save starting setup', () => void perform(save, () => saveStarting())); save.id = 'template-save';
+    const save = button('Save current setup', () => void perform(save, () => saveStarting())); save.id = 'template-save';
     const saveAs = button('Save as new', () => void perform(saveAs, () => saveStarting(true))); saveAs.id = 'template-save-as';
     function uniqueName(label, exceptID = '') { if (templates.some(t => t.id !== exceptID && t.name.toLowerCase() === label.trim().toLowerCase())) throw new Error('That exercise name is already used. Choose another name.'); }
     const duplicate = button('Duplicate selected', () => void perform(duplicate, async () => {
@@ -117,24 +123,30 @@ export function createScenarioLibrary(host) {
         templates = templates.map(t => t.id === source.id ? renamed : t); try { persist(); } catch (error) { templates = previous; update(); select.value = source.id; throw error; }
         select.value = source.id; status.textContent = 'Saved exercise renamed. Starting traffic and chart selections are unchanged.';
     })); rename.id = 'template-rename';
-    const load = button('Use selected exercise', () => void perform(load, async () => {
+    const load = button('Load', () => void perform(load, async () => {
         const state = host.view(); if (!state || state.role !== 'instructor') throw new Error('Open the instructor desk first.');
         const template = selected();
-        if (!confirm(`Replace current traffic with ${template.name}? The saved setup opens paused at 00:00. Current progress will be replaced.`)) return;
         const exerciseId = state.exerciseId, stamp = host.generation(), current = () => stamp === host.generation() && exerciseId === host.view()?.exerciseId;
+        const prompt = `Load ${template.name} and replace the current exercise? It opens paused at 00:00:00. Current progress${host.hasDraft?.() ? ' and unsaved airspace / traffic entries' : ''} will be replaced.`;
+        if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.(prompt, {confirmLabel:'Load exercise'}) ?? confirm(prompt))) return;
+        if (!current()) throw new Error('The exercise changed. Select the template again.');
         if (state.running) await host.command('clock', { action: 'pause' }, undefined, exerciseId);
         if (!current()) throw new Error('The exercise changed. Select the template again.');
         const bundle = template.bundle;
         if (bundle.mapAsset) { const asset = bundle.mapAsset; const bytes = Uint8Array.from(atob(asset.data), c => c.charCodeAt(0)); const uploaded = await host.request('/api/procedural/map', new Blob([bytes], { type: asset.mime })); if (!current()) throw new Error('The exercise changed during map upload.'); if (uploaded.imageId !== asset.id) throw new Error('Saved map checksum does not match.'); }
         if (!current()) throw new Error('The exercise changed. Select the template again.');
-        await host.command('import', { scenario: bundle.scenario, expectedRevision: host.view()?.revision }, undefined, exerciseId); host.changed?.(); status.textContent = `${template.name} loaded with its original starting traffic. Exercise paused.`; host.loaded?.();
+        await host.command('import', { scenario: bundle.scenario, expectedRevision: host.view()?.revision }, undefined, exerciseId); host.changed?.(); status.textContent = `${template.name} loaded with its original starting traffic. Exercise paused.`; host.loaded?.(bundle.scenario);
     })); load.id = 'template-load';
     const download = button('Export selected', () => { try { const t = selected(); const url = URL.createObjectURL(new Blob([JSON.stringify(t, null, 2)], { type: 'application/json' })); const a = element('a'); a.href = url; a.download = `${t.name.replace(/[^A-Za-z0-9_-]+/g, '-').slice(0, 60) || 'exercise'}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 2000); } catch (e) { status.textContent = e.message; } }); download.id = 'template-download';
-    const remove = button('Remove selected', () => { try { const t = selected(); if (!confirm(`Remove ${t.name} from this device? Downloaded files are unaffected.`)) return; const before = templates; templates = templates.filter(x => x.id !== t.id); try { persist(); } catch (e) { templates = before; throw e; } status.textContent = 'Saved exercise removed.'; } catch (e) { status.textContent = e.message; } });
+    const remove = button('Remove selected', async () => { try { const t = selected(); if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.(`Remove ${t.name} from this device? Downloaded files are unaffected.`, {confirmLabel:'Remove saved exercise'}) ?? confirm(`Remove ${t.name} from this device? Downloaded files are unaffected.`))) return; const before = templates; templates = templates.filter(x => x.id !== t.id); try { persist(); } catch (e) { templates = before; throw e; } status.textContent = 'Saved exercise removed.'; } catch (e) { status.textContent = e.message; } });
     const fileLabel = element('label', 'Import exercise file'), file = element('input'); file.id = 'template-import'; file.type = 'file'; file.accept = '.json,application/json'; fileLabel.append(file);
-    file.addEventListener('change', () => void perform(file, async () => { const chosen = file.files?.[0]; if (!chosen) return; if (chosen.size > 20 * 1024 * 1024) throw new Error('Exercise file must be smaller than 20 MB.'); const t = parseExerciseTemplate(await chosen.text()); const duplicate = templates.find(x => x.id === t.id); if (templates.length >= 50 && !duplicate) throw new Error('Remove one saved exercise before importing.'); uniqueName(t.name, t.id); if (duplicate && !confirm(`Replace the stored copy of ${t.name}?`)) return; const previous = templates; templates = [...templates.filter(x => x.id !== t.id), t]; try { persist(); } catch (e) { templates = previous; update(); throw e; } select.value = t.id; name.value = t.name; status.textContent = 'Imported into your library. Use selected exercise applies it to the scope.'; file.value = ''; }));
-    select.addEventListener('change', () => { const t = templates.find(t => t.id === select.value); if (t) name.value = t.name; });
-    actions.append(save, saveAs, duplicate, rename, load, download, remove); section.append(nameLabel, selectLabel, actions, fileLabel, status); container.prepend(section); read(); update();
-    function open() { openRequested = true; section.scrollIntoView({ block: 'start' }); name.focus(); }
-    return { open, render() { if (!name.value && host.view()?.elapsed === 0) name.value = host.view().title || ''; if (openRequested) { section.scrollIntoView({ block: 'start' }); openRequested = false; } } };
+    file.addEventListener('change', () => void perform(file, async () => { const chosen = file.files?.[0]; if (!chosen) return; if (chosen.size > 20 * 1024 * 1024) throw new Error('Exercise file must be smaller than 20 MB.'); const t = parseExerciseTemplate(await chosen.text()); const duplicate = templates.find(x => x.id === t.id); if (templates.length >= 50 && !duplicate) throw new Error('Remove one saved exercise before importing.'); uniqueName(t.name, t.id); if (duplicate && !await (globalThis.ATCSuiteWorkspace?.confirmAction?.(`Replace the stored copy of ${t.name}?`, {confirmLabel:'Replace saved copy'}) ?? confirm(`Replace the stored copy of ${t.name}?`))) return; const previous = templates; templates = [...templates.filter(x => x.id !== t.id), t]; try { persist(); } catch (e) { templates = previous; update(); throw e; } select.value = t.id; name.value = t.name; status.textContent = 'Imported into your library. Select Load to apply the saved exercise.'; file.value = ''; }));
+    select.addEventListener('change', () => { const t = templates.find(t => t.id === select.value); if (t) { name.value = t.name; nameEdited = false; } });
+    const loadRow = element('div', '', 'scenario-library-actions'); loadRow.append(selectLabel, load);
+    const saveRow = element('div', '', 'scenario-library-actions'); saveRow.append(nameLabel, save);
+    const manage = element('details'); manage.id = 'template-manage'; manage.append(element('summary', 'Manage exercises & files'));
+    actions.append(saveAs, duplicate, rename, download, remove); manage.append(actions,fileLabel);
+    section.append(loadRow,saveRow,manage,status); container.prepend(section); read(); update();
+    function open() { openRequested = true; section.scrollIntoView({ block: 'start' }); select.focus({preventScroll:true}); }
+    return { open, render() { if (!select.value && !nameEdited && host.view()?.elapsed === 0) name.value = host.view().title || ''; if (openRequested) { section.scrollIntoView({ block: 'start' }); openRequested = false; } } };
 }

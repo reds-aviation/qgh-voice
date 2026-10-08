@@ -1567,3 +1567,5 @@ select:focus-visible {
   .tactical-count { flex:0 0 144px; }
   .tactical-count button { min-height:44px; }
 }
+
+.product-version{font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;white-space:nowrap}

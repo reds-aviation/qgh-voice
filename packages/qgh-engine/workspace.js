@@ -2,6 +2,7 @@
   'use strict';
 
   const { normalize, radians } = window.QGHCore;
+  const padHeading = value => String(normalize(Math.round(Number(value)))).padStart(3, '0');
 
   function pointOnBearing(cx, cy, radius, bearing) {
     const angle = radians(bearing);
@@ -43,6 +44,9 @@
   }
 
   function drawAircraft(context, x, y, heading) {
+    if (window.ATCScopeVisuals) return window.ATCScopeVisuals.drawAircraftGlyph(context, {
+      x, y, headingDeg: heading, color: '#17262b', outline: '#fffefa', selected: true, selectionColor: '#007d7d'
+    });
     context.save();
     context.translate(x, y);
     context.rotate(radians(heading));
@@ -50,10 +54,10 @@
     context.strokeStyle = '#fffefa';
     context.lineWidth = 1.5;
     context.beginPath();
-    context.moveTo(0, -8);
-    context.lineTo(5, 6);
-    context.lineTo(0, 4);
-    context.lineTo(-5, 6);
+    context.moveTo(0, -6);
+    context.lineTo(5, 5);
+    context.lineTo(0, 3);
+    context.lineTo(-5, 5);
     context.closePath();
     context.fill();
     context.stroke();
@@ -113,6 +117,7 @@
     pinchStart: null,
     bound: false
   };
+  let lastModel = null;
 
   function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
@@ -138,7 +143,8 @@
 
   function applyViewport(canvas) {
     if (!canvas) return;
-    canvas.style.transform = `translate(${viewport.offsetX}px, ${viewport.offsetY}px) scale(${viewport.zoom})`;
+    canvas.style.transform = '';
+    if (lastModel) drawReview(lastModel);
   }
 
   function pointerDistance(points) {
@@ -267,14 +273,15 @@
     const canvas = document.getElementById('plot');
     if (!canvas || !model || !model.cfg || !model.path.length) return;
 
+    lastModel = model;
     bindViewport(canvas);
     const { context, width, height } = canvasSize(canvas);
     const count = Math.max(1, Math.min(model.count || model.path.length, model.path.length));
     const { cfg, path } = model;
-    const cx = width / 2;
-    const cy = height / 2;
+    const cx = width / 2 + viewport.offsetX;
+    const cy = height / 2 + viewport.offsetY;
     const maxRange = Math.max(35, Math.ceil((model.maxRange || cfg.distance) / 5) * 5);
-    const scale = Math.min(width, height) * .47 / maxRange;
+    const scale = Math.min(width, height) * .47 / maxRange * viewport.zoom;
     const outerRadius = maxRange * scale * .95;
     const finalRadial = normalize(cfg.inbound + 180);
 
@@ -284,16 +291,21 @@
 
     context.strokeStyle = '#d1d8d4';
     context.lineWidth = 1;
-    for (let ring = 5; ring <= maxRange; ring += 5) {
+    const ringSpacing = Number(model.ringSpacing) === 5 ? 5 : 10;
+    if (window.ATCScopeVisuals) window.ATCScopeVisuals.drawRangeRings(context, { rangeNm: maxRange, spacingNm: ringSpacing,
+      cx, cy, scale, width, height, strokeStyle: '#d1d8d4', fillStyle: '#617177', font: '11px IBM Plex Sans, Arial' });
+    else for (let ring = ringSpacing; ring <= maxRange + ringSpacing; ring += ringSpacing) {
+      const distance = Math.min(ring, maxRange);
       context.beginPath();
-      context.arc(cx, cy, ring * scale, 0, Math.PI * 2);
+      context.arc(cx, cy, distance * scale, 0, Math.PI * 2);
       context.stroke();
-      if (ring % 10 === 0) {
+      if (distance % 10 === 0 || distance === maxRange) {
         context.fillStyle = '#617177';
         context.font = '11px IBM Plex Sans, Arial';
         context.textAlign = 'left';
-        context.fillText(`${ring} NM`, cx + 7, cy - ring * scale + 14);
+        context.fillText(`${distance} NM`, cx + 7, cy - distance * scale + 14);
       }
+      if (distance === maxRange) break;
     }
 
     const cardinals = [
@@ -338,7 +350,7 @@
     const outboundEnd = pointOnBearing(cx, cy, outerRadius * .86, cfg.outbound);
     drawArrow(context, outboundStart, outboundEnd, '#2d7b79', 2);
     drawCourseLabel(context, cx, cy, outerRadius * .72, cfg.outbound, [
-      `OUTBOUND ${String(Math.round(cfg.outbound)).padStart(3, '0')}°M`,
+      `OUTBOUND ${padHeading(cfg.outbound)}°M`,
       'AWAY FROM VDF'
     ], '#286967');
 
@@ -346,8 +358,8 @@
     const inboundEnd = pointOnBearing(cx, cy, outerRadius * .17, finalRadial);
     drawArrow(context, inboundStart, inboundEnd, '#6b4b96', 2);
     drawCourseLabel(context, cx, cy, outerRadius * .74, finalRadial, [
-      `FINAL / INBOUND ${String(Math.round(cfg.inbound)).padStart(3, '0')}°M`,
-      `QDR ${String(Math.round(finalRadial)).padStart(3, '0')}°M · RADIAL FROM VDF`
+      `FINAL / INBOUND ${padHeading(cfg.inbound)}°M`,
+      `QDR ${padHeading(finalRadial)}°M · RADIAL FROM VDF`
     ], '#5b427f');
 
     context.save();
@@ -361,7 +373,7 @@
     context.fillStyle = '#52646a';
     context.font = '600 11px IBM Plex Sans, Arial';
     context.textAlign = 'left';
-    context.fillText(`RWY ${String(Math.round(cfg.runway)).padStart(3, '0')}°M`, cx + 11, cy - 40);
+    context.fillText(`RWY ${padHeading(cfg.runway)}°M`, cx + 11, cy - 40);
 
     if (model.turns && (model.turns.overhead || model.turns.base)) {
       context.fillStyle = '#52646a';

@@ -1,5 +1,5 @@
 {
-  "version": "5.0.5",
+  "version": "1.0.0",
   "chapters": [
     {
       "title": "A smaller screen",
@@ -33,5 +33,6 @@
       "title": "Keep a manual fallback",
       "start": 54.069002
     }
-  ]
+  ],
+  "captureVersion": "5.0.5"
 }

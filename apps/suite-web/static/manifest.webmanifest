@@ -1,6 +1,6 @@
 {
-  "name": "Reds ATC Training Suite",
-  "short_name": "Reds ATC",
+  "name": "ATS SIM BOX",
+  "short_name": "ATS SIM BOX",
   "description": "QGH, SRA and vectoring instructor training. Offline: same PC and browser profile. Online: different devices with internet on both.",
   "id": "./reds-atc-training-suite",
   "start_url": "./index.html",

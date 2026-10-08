@@ -1,8 +1,8 @@
-# QGH Voice
+# ATS SIM BOX · Version 1
 
-Offline-first QGH training simulator for Windows, Android, iPhone, iPad, and modern web browsers.
+ATC training with individual QGH, instructor-led QGH/SRE/SRA, and Procedural exercises.
 
-Individual Practice is **v5.0.5 - Instructor-led Beta Gateway**. Its QGH workflow is unchanged; the gateway simply adds the separate [Instructor-led ATC Training Suite beta](https://reds-aviation.github.io/qgh-voice/instructor-led/) for user trials. [Open the GitHub Pages simulator](https://reds-aviation.github.io/qgh-voice/) or read the [v5.0.5 release checks](docs/qa/v5.0.5-instructor-led-beta-release.md). Windows and Android packages are built and distributed separately; this web publication does not update installed native apps.
+The public product is **ATS SIM BOX · Version 1**, release `1.0.0`. [Open GitHub Pages](https://reds-aviation.github.io/qgh-voice/); the Netlify deployment packages the same suite. Windows and Android packages are built and distributed separately; publishing the web suite does not update installed native apps.
 
 See [USER_GUIDE.md](USER_GUIDE.md) for installation, exercise, replay, tactical, and voice-control guidance.
 
@@ -16,7 +16,8 @@ The simulator provides Normal QGH and U/S Compass exercises, live D/F homing and
 | apps/android | Android | Local Android WebView application |
 | apps/web | Web, iPhone, and iPad | Hosted Progressive Web App build layer and supported Apple-device route |
 | packages/qgh-engine | Shared | Canonical HTML, CSS, JavaScript, and local fonts |
-| packages/atc-suite | Web beta | Instructor-led QGH/D/F, surveillance/SRA and PAR training suite |
+| packages/atc-suite | Web | Instructor-led QGH/D/F, SRE/vectoring and SRA training |
+| packages/procedural-beta | Web | Procedural control; the stable directory name preserves existing links |
 
 Windows and Android package the canonical files from `packages/qgh-engine`. The hosted PWA is the supported iPhone and iPad route for this release.
 
@@ -38,18 +39,18 @@ $tests = Get-ChildItem .\packages\qgh-engine\test\*.test.js | ForEach-Object Ful
 node --test $tests .\apps\web\test\*.test.mjs
 ~~~
 
-The generated `apps/web/dist` directory supports a browser-installed PWA on desktop and phones. Wait for the initial offline download to finish before going offline. Exercise data remains in memory and is intentionally cleared by a page reload. Browser voice recognition has one additional, user-selected first-time step: open **VOICE** and select **SET UP OFFLINE VOICE** while online to cache the self-hosted Vosk model (about 40 MB). The bundled male pilot replies require a fresh headphone test and user confirmation each session; no hardware-detection guarantee is made. The public PWA is published independently at `https://reds-aviation.github.io/qgh-voice/` after its Pages workflow completes. See [docs/WEB_PWA_DEPLOYMENT.md](docs/WEB_PWA_DEPLOYMENT.md) for hosting and installation instructions.
+The generated `apps/web/dist` directory supports a browser-installed PWA on desktop and phones. Wait for the initial offline download to finish before going offline. Individual QGH keeps its attempt in memory; instructor-led exercises have their documented refresh recovery. Logout discards the current tab's attempt and session recovery; saved exercise libraries remain. Individual QGH voice recognition has a user-selected first-time step: open **VOICE** and select **SET UP OFFLINE VOICE** while online to cache the self-hosted Vosk model (about 40 MB). Pilot voice is optional and muted by default. See [docs/WEB_PWA_DEPLOYMENT.md](docs/WEB_PWA_DEPLOYMENT.md) for hosting and installation instructions.
 
-### Instructor-led beta
+### Instructor-led exercises
 
-The instructor-led beta is packaged under `/instructor-led/` within the GitHub Pages site, with its own PWA cache and install identity. It supports instructor and controller positions in two tabs of the same browser profile, seeded scenarios, QGH/D/F, surveillance/SRA and PAR training views, plus primary, Mode A and Mode S training returns. It is a beta training representation, not an operational or certified ATC system; separate-device networking, operational data feeds and physical-device acceptance remain outside this beta.
+Instructor-led QGH/SRE/SRA is available under `/instructor-led/`; Procedural remains under `/procedural-beta/` for link compatibility. This device/offline uses one PC, the same browser profile and site address, with separate instructor and student windows. Use extended displays. Online room connects different devices with internet on both; the instructor admits the PIN request and waits for Ready. Google Meet carries conversation and screen sharing for debrief. The simulator provides training representations and configured kinematics; it is not certified equipment or an operational ATC service. PAR is deferred and unavailable.
 
 ### Versioned releases
 
 The PWA release record at 'apps/web/static/app-version.json' is shared by every platform. Set every platform's version together, then verify it before building:
 
 ~~~powershell
-.\scripts\Set-QghReleaseVersion.ps1 -Version 5.0.5 -AndroidVersionCode 35
+.\scripts\Set-QghReleaseVersion.ps1 -Version 1.0.0 -AndroidVersionCode 41
 node .\scripts\verify-release-version.mjs
 ~~~
 
@@ -86,7 +87,7 @@ Use the hosted PWA in Safari. Its installation and offline-use instructions are 
 
 ## Privacy and security
 
-All shipped app variants are intended to be offline-first. The hosted PWA caches its same-origin application shell and, only after the user chooses voice setup, its same-origin Vosk model. It does not retain exercise tracks or cache installers. Do not add signing keys, provisioning profiles, credentials, installers, or generated builds to this repository.
+The hosted PWA caches its same-origin application shell and, only after the user chooses voice setup, its same-origin Vosk model. Instructor-led exercises retain documented local recovery, saved exercises and chart data in the browser. Online rooms require the configured network service; recognition and installed pilot speech retain their documented local behavior. Do not add signing keys, provisioning profiles, credentials, installers, or generated builds to this repository.
 
 See SECURITY.md for reporting guidance.
 

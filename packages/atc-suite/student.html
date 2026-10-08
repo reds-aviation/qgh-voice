@@ -5,30 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
-  <title>Controller Position · ATC Training Suite</title>
+  <title>Controller Position · ATS SIM BOX · Version 1</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
   <link rel="stylesheet" href="workspace-shell.css">
   <script defer src="workspace-shell.js"></script>
   <link rel="stylesheet" href="student-plotting.css">
+  <link rel="stylesheet" href="suite-entry.css">
+  <script defer src="meeting-room.js"></script>
   <script defer src="suite-session.js"></script>
   <script defer src="suite-cloud.js"></script>
   <script defer src="suite-student.js"></script>
 </head>
 <body class="student-page">
   <main class="shell shell--student">
-    <details class="console-navigation" id="studentNavigation" open><summary>QGH + SRA &amp; vectoring · Navigation &amp; help</summary><header class="site-header"><div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">CONTROLLER POSITION</span><a href="training-guide.html" target="_blank" rel="noopener">TRAINING GUIDE ↗</a></div></header></details>
+    <details class="console-navigation" id="studentNavigation" open><summary>QGH + SRA &amp; vectoring · Navigation &amp; help</summary><header class="site-header suite-entry-header"><a class="entry-brand" href="../index.html">ATS SIM BOX<small>Version 1 · QGH · SRE / SRA · VECTORING</small></a><div class="entry-credit"><strong>Flt Lt Balaram Reddy</strong><small>Service No. 38703</small></div><nav class="entry-nav suite-header-left" aria-label="Page navigation"><a href="index.html">Choose your position</a><a href="../index.html">Suite home</a><a href="training-guide.html" target="_blank" rel="noopener">Training guide ↗</a></nav></header></details>
 
-    <section class="join-panel" id="joinPanel">
-      <div class="join-card"><span class="eyebrow">JOIN INSTRUCTOR SESSION</span><h1>Enter the six-digit PIN</h1><label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label><p id="connectionHelp">Use the same connection setting as the instructor. Offline: same PC and browser profile. Online: internet on both devices.</p><label>SESSION PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">REQUEST TO JOIN</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
+    <section class="join-panel suite-entry suite-entry-join" id="joinPanel">
+      <div class="entry-copy"><span class="eyebrow">INSTRUCTOR LED · QGH / SRE / SRA</span><h1>Controller position</h1><p>Join the instructor's exercise with the six-digit session PIN.</p></div>
+      <div class="session-connection"><label for="exerciseConnection">Exercise connection<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label><p id="connectionHelp">Use the same connection setting as the instructor. Offline: same PC and browser profile. Online: internet on both devices.</p></div>
+      <div class="entry-role"><span class="eyebrow">02 / CONTROLLER</span><label for="joinPin">Six-digit session PIN<input id="joinPin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000"></label><button id="joinSession" class="primary-action" type="button">Request to join →</button><output id="joinStatus" aria-live="polite">Ask the instructor for the active PIN.</output></div>
     </section>
 
     <section class="waiting-panel" id="waitingPanel" hidden><div class="waiting-pulse" aria-hidden="true"></div><span class="eyebrow">JOIN REQUEST SENT</span><h1>Waiting for instructor</h1><p id="waitingMessage">Your display will open after the instructor admits this position.</p><button id="cancelJoin" type="button">CANCEL</button></section>
 
-    <section class="ready-panel" id="readyPanel" hidden><div><span class="eyebrow">POSITION ADMITTED</span><h1 id="readyMode">QGH / DIRECTION FINDING</h1><p>The sensor display will remain blank until the instructor starts the exercise.</p></div><label class="audio-option"><input id="studentAudio" type="checkbox"><span><b>OPTIONAL PILOT AUDIO</b><small id="audioAvailability">Uses an installed device voice. Captions remain authoritative.</small></span></label><button id="studentReady" class="primary-action" type="button">POSITION READY</button></section>
+    <section class="ready-panel" id="readyPanel" hidden><div><span class="eyebrow">POSITION ADMITTED</span><h1 id="readyMode">QGH / DIRECTION FINDING</h1><p>Ready opens your display. For an online exercise, then Join Meet, check microphone/audio with the instructor and tell them you can hear each other. Aircraft movement begins when the instructor presses Start.</p></div><label class="audio-option"><input id="studentAudio" type="checkbox"><span><b>OPTIONAL PILOT AUDIO</b><small id="audioAvailability">Uses an installed device voice. Captions remain authoritative.</small></span></label><button id="studentReady" class="primary-action" type="button">POSITION READY</button></section>
 
     <section class="student-workspace active-workspace" id="studentWorkspace" tabindex="-1" hidden>
-      <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><time id="studentClock" class="header-clock">00:00</time><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><button id="reconnectStudent" type="button">RECONNECT</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span><span id="pictureFreshness" role="status">AWAITING PICTURE</span></div></header>
+      <header class="student-head"><div><span class="eyebrow" id="studentModeKicker">QGH / DIRECTION FINDING</span><h1 id="studentModeTitle">Direction finding console</h1></div><time id="studentClock" class="header-clock">00:00:00</time><button id="togglePilotAudio" class="pilot-audio-toggle" type="button" aria-pressed="false" aria-label="Enable pilot audio using an installed device voice">PILOT AUDIO · MUTED</button><button id="reconnectStudent" type="button">RECONNECT</button><div class="status-stack"><b id="studentExerciseState">RUNNING</b><span id="connectionState">CONNECTED</span><span id="pictureFreshness" role="status">AWAITING PICTURE</span></div></header>
 
       <output id="studentCaption" class="pilot-caption" aria-live="polite"><small>PILOT</small><strong>Awaiting transmission</strong></output>
 
@@ -48,7 +52,7 @@
             <dl><div><dt>CALLSIGN</dt><dd id="inspectTrack">—</dd></div><div><dt>MODE A / SQUAWK</dt><dd id="inspectSquawk">—</dd></div><div><dt>LEVEL</dt><dd id="inspectAltitude">—</dd></div><div><dt>GROUND SPEED</dt><dd id="inspectGroundSpeed">—</dd></div><div><dt>HEADING</dt><dd id="inspectHeading">—</dd></div><div><dt>BEARING / RANGE</dt><dd id="inspectBearingRange">—</dd></div><div><dt>MODE S</dt><dd id="inspectModeS">—</dd></div></dl>
             <small>Cooperative training data only · heading and ground speed are sampled track estimates · drag this panel to reposition.</small>
           </aside>
-          <div class="radar-status"><span id="scanRate">15 RPM · 4 SEC REVISIT</span><span id="radarProfileStatus">PRIMARY ONLY</span><span id="lastPlot">NO PLOT</span></div>
+          <div class="radar-status"><span id="scanRate">15 RPM · 4 SIM SEC REVISIT</span><span id="radarProfileStatus">PRIMARY ONLY</span><span id="lastPlot">NO PLOT</span></div>
           <p class="instrument-note" id="radarGuideNote">North up · sampled returns only · range rings in NM · runway symbol schematic</p>
         </div>
       </section>
@@ -64,7 +68,7 @@
 
     <section class="orientation-gate" id="orientationGate" hidden><div class="rotate-symbol" aria-hidden="true">↻</div><h1>More display width required</h1><p>For a wider view of surveillance/vectoring and SRA, rotate this device to landscape or use a tablet or desktop.</p></section>
 
-    <section class="student-ended" id="studentEnded" hidden><span class="eyebrow">EXERCISE COMPLETE</span><h1>Instructor review in progress</h1><p>Your sensor picture is frozen at the last valid observation.</p><a class="primary-action" href="student.html">LEAVE SESSION</a></section>
+    <section class="student-ended" id="studentEnded" hidden><span class="eyebrow">EXERCISE COMPLETE</span><h1>Instructor review in progress</h1><p>Your sensor picture is frozen at the last valid observation.</p><a class="primary-action" href="index.html#controllerposition">LEAVE SESSION</a></section>
   </main>
   <script defer src="pwa-register.js"></script>
 </body>

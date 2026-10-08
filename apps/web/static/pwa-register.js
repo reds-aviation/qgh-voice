@@ -79,7 +79,7 @@
         }
 
         reloadApproved = true;
-        setNoticeText(updateNotice, 'Updating QGH Simulator…');
+        setNoticeText(updateNotice, 'Updating ATS SIM BOX…');
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
       });
       document.body.append(updateNotice);

@@ -23,6 +23,7 @@ const engineFiles = [
   'rt-reference.md',
   'single.html',
   'simulator-core.js',
+  'scope-visuals.js',
   'procedure-core.js',
   'procedure-intent.js',
   'procedure-workspace.js',
@@ -81,8 +82,8 @@ const webHead = version => `
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Reds QGH">
-  <meta property="og:title" content="Reds QGH Simulator">
+  <meta name="apple-mobile-web-app-title" content="ATS SIM BOX">
+  <meta property="og:title" content="ATS SIM BOX · Version 1">
   <meta property="og:description" content="Offline single-aircraft and tactical QGH training simulator.">
   <link rel="stylesheet" href="pwa.css?v=${version}">
 `;
@@ -91,11 +92,11 @@ const webDistribution = version => `
         <!-- QGH_WEB_DISTRIBUTION -->
         <section class="entry-web-distribution" id="webDistribution" aria-label="Install and downloads" hidden>
           <div class="entry-web-distribution-head">
-            <span>QGH SIMULATOR · WEB APP</span>
-            <small id="webVersion">VERSION ${version}</small>
+            <span>ATS SIM BOX · WEB APP</span>
+            <small id="webVersion">Version 1</small>
           </div>
           <div class="entry-web-grid">
-            <button class="entry-web-install" id="installWebApp" type="button">INSTALL QGH ON THIS DEVICE</button>
+            <button class="entry-web-install" id="installWebApp" type="button">INSTALL ATS SIM BOX ON THIS DEVICE</button>
             <div class="entry-native-downloads" id="nativeDownloads" hidden>
               <a id="downloadWindows" href="#" target="_blank" rel="noopener noreferrer" hidden>WINDOWS INSTALLER</a>
               <a id="downloadAndroid" href="#" target="_blank" rel="noopener noreferrer" hidden>ANDROID APK</a>
@@ -106,8 +107,8 @@ const webDistribution = version => `
         <dialog class="pwa-install-sheet" id="pwaInstallSheet" aria-labelledby="pwaInstallTitle">
           <div class="pwa-install-sheet-card">
             <button class="pwa-install-close" id="closeInstallSheet" type="button" aria-label="Close install instructions">×</button>
-            <span>QGH WEB APP</span>
-            <h2 id="pwaInstallTitle">Install QGH Simulator</h2>
+            <span>ATS SIM BOX · Version 1</span>
+            <h2 id="pwaInstallTitle">Install ATS SIM BOX</h2>
             <div id="pwaInstallContent"></div>
           </div>
         </dialog>
@@ -117,12 +118,12 @@ const webInstructorGateway = `
         <!-- QGH_WEB_INSTRUCTOR_GATEWAY -->
         <nav class="entry-program-tabs" aria-label="Training route">
           <a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>
-          <a class="entry-program-tab entry-program-tab--beta" href="instructor-led/index.html">INSTRUCTOR-LED <span>BETA</span></a>
+          <a class="entry-program-tab" href="instructor-led/index.html">INSTRUCTOR-LED</a>
         </nav>
 `;
 
 const webInstructorGatewayNote = `
-        <p class="entry-beta-note">Instructor-led radar training is available as a separate beta for user trials.</p>
+        <p class="entry-training-note">Train with an instructor and controller in QGH, SRE/vectoring or SRA.</p>
 `;
 
 function assertReplaced(html, target, replacement, pageName) {
@@ -210,7 +211,7 @@ async function applyVersionToServiceWorker(version) {
 }
 
 async function buildInstructorLedSuite() {
-  // The instructor-led beta is built as its own PWA first. Copying that
+  // The instructor-led package is built as its own PWA first. Copying that
   // allowlisted package into a subdirectory gives it a separate service-worker
   // scope, cache namespace and install identity without widening the existing
   // QGH application's offline cache boundary.
@@ -224,7 +225,7 @@ async function buildInstructorLedSuite() {
     try {
       await access(resolve(instructorLedOutputRoot, page));
     } catch {
-      throw new Error(`Instructor-led beta build is missing required output: ${page}`);
+      throw new Error(`Instructor-led build is missing required output: ${page}`);
     }
   }
 }
@@ -292,7 +293,7 @@ async function build() {
     await buildProceduralBeta(outputRoot);
   }
 
-  console.log(`Built QGH Simulator v${version} web package at ${outputRoot}`);
+  console.log(`Built ATS SIM BOX Version 1 (${version}) web package at ${outputRoot}`);
 }
 
 await build();

@@ -109,6 +109,15 @@ test('service worker serves release-qualified current assets offline', async () 
   assert.equal(harness.networkCalls(), 0);
 });
 
+test('shared scope graphics remain available in the approved offline shell', async () => {
+  const harness = createWorkerHarness({cachedResponse:new Response('scope graphics')});
+  let response;
+  harness.fetchHandler({request:new Request(`${scope}scope-visuals.js?v=4.0.2&release=4.0.2`),respondWith:value=>{response=value;}});
+  assert.equal(await (await response).text(),'scope graphics');
+  assert.deepEqual(harness.cacheCalls.match,[`${scope}scope-visuals.js`]);
+  assert.equal(harness.networkCalls(),0);
+});
+
 test('service worker clears only its scoped cache generation and the known legacy cache', async () => {
   const harness = createWorkerHarness({
     cacheNames: [

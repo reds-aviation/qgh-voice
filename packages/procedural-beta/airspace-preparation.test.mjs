@@ -60,6 +60,7 @@ test('custom editor shares validated polygon geometry and keeps sketch changes s
     const state = { role: 'instructor', exerciseId: 'ex1', running: false, environment: { chartOrigin: origin, rangeNm: 60, aerodromeName: 'Test', chartReference: 'Test chart', effectiveInfo: '2026-10-03', map: {} }, areas: [] };
     const commands = []; Object.assign(h.context, geometry, { host: { view: () => state, generation: () => 1, command: async (...args) => commands.push(args), changed() {}, message() {} } });
     vm.runInContext(source('airspace-preparation.js').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '') + ';globalThis.editor=createAirspacePreparation(host); editor.render();', h.context);
+    assert.equal(h.document.getElementById('custom-airspace-discard').hidden, false, 'standalone custom editor retains its discard action');
     const form = h.document.getElementById('custom-boundary-form');
     form.elements.namedItem('name').value = 'Test LFA'; form.elements.namedItem('mode').value = 'local'; form.elements.namedItem('points').value = '-10,-10\n10,-10\n10,10\n-10,10';
     assert.equal(commands.length, 0);
@@ -148,4 +149,109 @@ test('template Save as new, Duplicate, Rename, Load and quota/invalid-import pat
     name.value = 'Failed rename'; await click('template-rename'); assert.equal(read()[1].name, 'Renamed'); assert.doesNotMatch(status.textContent, /renamed/);
     name.value = 'Temporary copy'; await click('template-duplicate'); assert.match(status.textContent, /page only/); assert.doesNotMatch(status.textContent, /saved/); assert.equal(read().length, 2);
     h.context.localStorage.setItem = originalSet;
+});
+
+function mouseDrawingHarness(withOrigin = true) {
+    const h = domHarness('<html><body><div id="scope-wrap"><canvas id="scope"></canvas></div><section id="tab-build"></section></body></html>');
+    const state = { role: 'instructor', exerciseId: 'mouse-drawing', running: false,
+        environment: { ...(withOrigin ? { chartOrigin: origin } : {}), rangeNm: 60, map: {} }, areas: [] };
+    const commands = [], scope = h.document.getElementById('scope');
+    Object.assign(h.context, geometry, { host: { view: () => state, generation: () => 1,
+        command: async (name, payload, _, exerciseId) => {
+            const value = JSON.parse(JSON.stringify(payload)); commands.push({ name, payload: value, exerciseId });
+            if (name === 'environment') Object.assign(state.environment, value);
+            if (name === 'area-upsert') state.areas.push({ id: 'mouse-area', ...value });
+        }, changed: () => h.context.editor.render(), message() {},
+        scope: { canvas: scope, screenToPoint: () => ({ x: 0, y: 0 }), drawChanged() {}, openScope() {} },
+    } });
+    vm.runInContext(source('airspace-preparation.js').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')
+        + ';globalThis.editor=createAirspacePreparation(host);editor.render();', h.context);
+    const get = id => h.document.getElementById(id), preview = get('boundary-sketch-canvas');
+    preview.getBoundingClientRect = () => ({ left: 40, top: 20, width: 360, height: 190 });
+    const form = get('custom-boundary-form'), points = form.elements.namedItem('points');
+    form.elements.namedItem('mode').value = 'local'; form.elements.namedItem('mode').dispatchEvent(new h.Event('change'));
+    const emit = (type, x, y) => {
+        const event = new h.Event(type, { bubbles: true, cancelable: true }), factor = 380 * .44 / 60;
+        Object.assign(event, { button: 0, isPrimary: true, pointerType: 'mouse', pointerId: 7,
+            clientX: 40 + (360 + x * factor) / 2, clientY: 20 + (190 - y * factor) / 2 });
+        preview.dispatchEvent(event); return event;
+    };
+    const clickPoint = (x, y) => { emit('pointerdown', x, y); emit('pointerup', x, y); };
+    const sketchButton = label => [...get('boundary-sketch').querySelectorAll('button')].find(button => button.textContent === label);
+    const edit = (input, value) => { input.value = String(value); input.dispatchEvent(new h.Event('input', { bubbles: true })); };
+    const submit = async id => { get(id).dispatchEvent(new h.Event('submit', { cancelable: true })); await new Promise(resolve => setImmediate(resolve)); };
+    return { ...h, state, commands, get, preview, form, points, emit, clickPoint, sketchButton, edit, submit, editor: h.context.editor };
+}
+
+test('mouse drawing explains missing/unsaved ARP and running state beside the canvas and directs the instructor to the required field', async () => {
+    const h = mouseDrawingHarness(false), arpForm = h.get('custom-arp-form');
+    const status = h.get('boundary-drawing-status');
+    assert.ok(status, 'Drawing readiness must be visible next to the preview');
+    assert.equal(status.parentElement === h.preview.parentElement, true);
+    assert.match(status.textContent, /Save.*ARP/i);
+    assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
+    assert.equal(h.get('boundary-scope-edit').disabled, true);
+    h.clickPoint(-10, -10); assert.equal(h.points.value, ''); assert.equal(h.commands.length, 0);
+    h.get('boundary-go-arp').click(); assert.equal(h.document.activeElement === arpForm.elements.namedItem('latitude'), true);
+    h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
+    await h.submit('custom-arp-form');
+    assert.equal(h.preview.getAttribute('aria-disabled'), 'false');
+    assert.equal(h.get('boundary-scope-edit').disabled, false);
+    h.clickPoint(-10, -10);
+    const selectedDraft = h.points.value;
+    const deleteControls = [h.get('boundary-vertex-delete'), h.get('boundary-scope-delete')];
+    for (const control of deleteControls) assert.equal(control.disabled, false, 'A selected vertex can be deleted when drawing is ready');
+    h.edit(arpForm.elements.namedItem('reference'), 'Unapplied chart reference');
+    assert.match(status.textContent, /save|apply/i); assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
+    assert.equal(h.get('boundary-scope-edit').disabled, true);
+    for (const control of deleteControls) assert.equal(control.disabled, true, 'Unsaved ARP changes block deleting the selected vertex');
+    await h.submit('custom-arp-form');
+    for (const control of deleteControls) assert.equal(control.disabled, false, 'Saving the same ARP enables selected-vertex deletion again');
+    h.state.running = true; h.editor.render();
+    assert.match(status.textContent, /pause/i); assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
+    for (const control of deleteControls) assert.equal(control.disabled, true, 'A running exercise blocks deleting the selected vertex');
+    h.clickPoint(10, 10); assert.equal(h.points.value, selectedDraft);
+    h.state.running = false; h.editor.render();
+    assert.equal(h.preview.getAttribute('aria-disabled'), 'false'); assert.match(status.textContent, /click|draw/i);
+    for (const control of deleteControls) assert.equal(control.disabled, false, 'Pausing enables selected-vertex deletion again');
+});
+
+test('a new empty mouse draft at scaled CSS size closes and saves named airspace with exact type, limits and coordinate metadata', async () => {
+    const h = mouseDrawingHarness(), closeBoundary = h.sketchButton('Close boundary');
+    assert.equal(h.points.value, ''); assert.equal(closeBoundary.disabled, true);
+    h.clickPoint(-10, -10); assert.equal(closeBoundary.disabled, true);
+    h.clickPoint(10, -10); h.clickPoint(0, 10);
+    assert.equal(h.commands.length, 0, 'Drawing stays local until Save');
+    assert.equal(closeBoundary.disabled, false); assert.match(h.get('boundary-drawing-status').textContent, /3/);
+    const drawn = airspace.parseBoundary(h.points.value, 'local', origin);
+    drawn.points.forEach((p, i) => {
+        assert.ok(Math.abs(p.xNm - [-10, 10, 0][i]) < .0001);
+        assert.ok(Math.abs(p.yNm - [-10, -10, 10][i]) < .0001);
+    });
+    closeBoundary.click(); assert.match(h.get('boundary-drawing-status').textContent, /save/i);
+    h.form.elements.namedItem('name').value = 'Mouse restricted area'; h.form.elements.namedItem('kind').value = 'restricted';
+    h.form.elements.namedItem('floorLabel').value = 'FL100'; h.form.elements.namedItem('ceilingLabel').value = 'FL200';
+    await h.submit('custom-boundary-form');
+    assert.equal(h.commands.length, 1); const saved = h.commands[0];
+    assert.equal(saved.name, 'area-upsert'); assert.equal(saved.exerciseId, 'mouse-drawing');
+    assert.equal(saved.payload.id, undefined); assert.equal(saved.payload.name, 'Mouse restricted area');
+    assert.equal(saved.payload.kind, 'restricted'); assert.equal(saved.payload.floorLabel, 'FL100'); assert.equal(saved.payload.ceilingLabel, 'FL200');
+    assert.equal(saved.payload.points.length, 3); assert.equal(saved.payload.geoPoints.length, 3);
+    assert.deepEqual(saved.payload.coordinateOrigin, origin);
+    saved.payload.geoPoints.forEach((p, i) => assert.ok(Math.hypot(geometry.project(p, origin).xNm - drawn.points[i].xNm,
+        geometry.project(p, origin).yNm - drawn.points[i].yNm) < .0001));
+    assert.equal(h.points.value, ''); assert.equal(h.form.elements.namedItem('name').value, '');
+    assert.equal(h.editor.hasDraft(), false);
+});
+
+test('pointer cancellation rolls back a new mouse point and an in-progress vertex drag without changing saved airspace', () => {
+    const h = mouseDrawingHarness(); h.clickPoint(-10, -10);
+    const initial = h.points.value;
+    h.emit('pointerdown', 10, -10); h.emit('pointercancel', 10, -10);
+    assert.equal(h.points.value, initial, 'Cancelled point must not remain in the boundary');
+    h.clickPoint(10, -10); h.clickPoint(0, 10);
+    const triangle = h.points.value;
+    h.emit('pointerdown', -10, -10); h.emit('pointermove', -20, -8); h.emit('pointercancel', -20, -8);
+    assert.equal(h.points.value, triangle, 'Cancelled vertex drag restores the coordinates before the gesture');
+    assert.equal(h.commands.length, 0); assert.equal(h.state.areas.length, 0);
 });

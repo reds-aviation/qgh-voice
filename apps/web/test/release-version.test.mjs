@@ -62,6 +62,27 @@ test('release version guard rejects an empty prerelease identifier', () => {
   }
 });
 
+test('unified release guard rejects a different version in a suite module', () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'ats-release-version-'));
+  const paths = ['apps/web/static/app-version.json', 'apps/suite-web/static/app-version.json',
+    'apps/windows/package.json', 'apps/android/app/build.gradle.kts',
+    'packages/procedural-beta/manifest.json', 'packages/procedural-beta/static/guide-knowledge.js'];
+  try {
+    for (const path of paths) {
+      const target = join(fixtureRoot, path);
+      mkdirSync(resolve(target, '..'), {recursive: true});
+      writeFileSync(target, readFileSync(resolve(repositoryRoot, path)));
+    }
+    const target = join(fixtureRoot, 'apps/suite-web/static/app-version.json');
+    const suite = JSON.parse(readFileSync(target, 'utf8')); suite.version = '0.0.1';
+    writeFileSync(target, JSON.stringify(suite));
+    assert.throws(() => execFileSync(process.execPath,
+      [resolve(repositoryRoot, 'scripts/verify-release-version.mjs')],
+      {cwd: repositoryRoot, env: {...process.env, QGH_RELEASE_VALIDATION_ROOT: fixtureRoot}, stdio: 'pipe'}),
+      /ATS suite version is 0\.0\.1/);
+  } finally { rmSync(fixtureRoot, {recursive: true, force: true}); }
+});
+
 test(
   'PowerShell release updater rejects an empty prerelease identifier',
   { skip: process.platform !== 'win32' },

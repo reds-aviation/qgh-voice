@@ -6,14 +6,14 @@ import vm from 'node:vm';
 import {parseHTML} from 'linkedom';
 import {webcrypto} from 'node:crypto';
 import {IDBFactory} from 'fake-indexeddb';
-import {renderCurrentGuide} from '../../scripts/build-suite-guides.mjs';
+import {renderCurrentGuide,renderCommonGuide} from '../../scripts/build-suite-guides.mjs';
 import {domHarness} from './testing/dom-harness.mjs';
 const require=createRequire(import.meta.url);
 const {matchGuideQuestion,topicForPage}=require('./static/suite-guide-chat.js');
 const knowledge=require('./static/guide-knowledge.js');
 const source=name=>readFileSync(new URL('./static/'+name,import.meta.url),'utf8');
 const loadModule=async name=>import('data:text/javascript;base64,'+Buffer.from(source(name)).toString('base64'));
-const {createAircraftGestures,nearestAircraft}=await loadModule('scope-interaction.js');
+const {createAircraftGestures,nearestAircraft,bindMiddleMouseStop}=await loadModule('scope-interaction.js');
 const {advanceSweep}=await loadModule('radar-sweep.js');
 
 test('offline update requires an explicit choice outside the active exercise',async()=>{
@@ -105,6 +105,65 @@ test('generated guides and Gyani use the same control explanations',()=>{
   const procedural=source('procedural.html');assert.ok(!procedural.includes('tab-feedback'));assert.ok(!source('procedural.js').includes('feedback-form'));
 });
 
+test('Version 1 entry pages and common guide use ATS SIM BOX branding without beta labels',()=>{
+ for(const path of ['../site-landing/index.html','../atc-suite/index.html','../atc-suite/instructor.html','../atc-suite/student.html','../qgh-engine/index.html','../qgh-engine/single.html','../qgh-engine/tactical.html','../qgh-engine/training-centre.html','./static/procedural.html']){
+   const{document}=parseHTML(readFileSync(new URL(path,import.meta.url),'utf8'));
+   assert.match(document.querySelector('title').textContent,/ATS SIM BOX · Version 1/,path);
+   assert.match(document.body.textContent,/ATS SIM BOX/,path);assert.match(document.body.textContent,/Version 1/,path);
+   assert.doesNotMatch(document.body.textContent,/\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,path);
+ }
+ const{document}=parseHTML(renderCommonGuide());assert.match(document.querySelector('title').textContent,/ATS SIM BOX · Version 1/);assert.match(document.body.textContent,/Version 1/);
+ assert.ok(knowledge.entries.every(entry=>!(/\bbeta\b/i.test(entry.text))),'Gyani retains training limitations without a beta release label');
+ assert.equal(document.querySelector('#current-flow').getAttribute('data-guide-revision'),knowledge.revision,'display branding never replaces the release identity used for cache/guide compatibility');
+});
+
+test('drawing help distinguishes saved ARP, staged points, closing and applying a boundary',()=>{
+  const entry=knowledge.entries.find(item=>item.id==='custom-polygons');
+  for(const id of ['boundary-drawing-status','boundary-go-arp','boundary-scope-edit','boundary-scope-tools','custom-boundary-form']) assert.ok(entry.controls.includes(id));
+  assert.match(entry.text,/Save ARP before drawing/);
+  assert.match(entry.text,/readiness message.*point count/);
+  assert.match(entry.text,/Close boundary.*then Save boundary applies/);
+  assert.match(entry.text,/Closing alone does not save/);
+  assert.match(entry.text,/Cancel drawing.*keeps the unsaved points/);
+  assert.match(entry.text,/aircraft turns, transmissions, panning and exercise shortcuts are isolated/);
+  assert.match(entry.text,/Move handle.*Home or Reset/);
+  for(const question of ['Why is mouse drawing unavailable?','Does Close boundary save the polygon?','Does Cancel drawing keep my points?','How do I move the boundary drawing toolbar?']) {
+    assert.equal(matchGuideQuestion(question,'procedural').intent,'custom-polygons');
+  }
+  assert.equal(matchGuideQuestion('What is exercise time?','procedural').intent,'exercise-time');
+  assert.equal(matchGuideQuestion('How do I save an exercise that contains a boundary?','procedural').intent,'saved-exercises');
+  assert.equal(matchGuideQuestion('Can I drag and rename a dot?','procedural').intent,'student-estimates');
+  assert.equal(matchGuideQuestion('How do I rename a saved exercise?','procedural').intent,'saved-exercises');
+  const html=renderCurrentGuide('procedural','../');
+  assert.ok(html.includes('Closing alone does not save.'));
+  assert.ok(knowledge.tours.some(step=>step.selector==='#boundary-drawing-status'&&step.entry==='custom-polygons'));
+});
+
+test('review Home guidance names the suite destination and retains Restart and Replay',()=>{
+  const entry=knowledge.entries.find(item=>item.id==='review-controls');
+  assert.match(entry.text,/ATS suite Home in the review screen returns to the ATS Simulator Suite home page/);
+  assert.match(entry.text,/Use Restart.*Replay/);
+  for(const topic of ['qgh-instructor','procedural']) assert.equal(matchGuideQuestion('Where is Home after termination?',topic).intent,'review-controls');
+  for(const id of ['reviewSuiteHome','review-suite-home']) {
+    assert.ok(entry.controls.includes(id));
+    assert.ok(knowledge.tours.some(step=>step.selector==='#'+id&&step.entry==='review-controls'));
+  }
+});
+
+test('Logout help explains the current-position discard and Cancel preservation for instructor and student flows',()=>{
+  const entry=knowledge.entries.find(item=>item.id==='logout-position');
+  assert.match(entry.text,/top right/);
+  assert.match(entry.text,/Log out and return to ATS suite Home\? Current exercise progress will be lost\./);
+  assert.match(entry.text,/Cancel or Escape.*preserves the current attempt/);
+  assert.match(entry.text,/Log out discards this tab.*progress and recovery/);
+  assert.match(entry.text,/Saved starting exercises.*are retained/);
+  assert.ok(entry.controls.includes('workspaceLogout'));
+  assert.ok(knowledge.tours.some(step=>step.selector==='#workspaceLogout'&&step.entry==='logout-position'));
+  for(const topic of ['qgh-instructor','sra','procedural']) for(const question of entry.questions) {
+    assert.equal(matchGuideQuestion(question,topic).intent,'logout-position');
+  }
+});
+
 test('local room registry allocates collision-free PINs and expires closed rooms',async()=>{
   const context=vm.createContext({indexedDB:new IDBFactory(),crypto:webcrypto,Date,Uint32Array});
   vm.runInContext(source('browser-room-registry.js'),context);
@@ -137,11 +196,12 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
 test('procedural console boots after feedback removal; mouse/touch controls preserve roles',async()=>{
   const h=domHarness(source('procedural.html'));
   const timers=new Map();let timerId=0;
-  Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,
+  Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,bindMiddleMouseStop,
     createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],trailSpacing:()=>1,createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({close(){},open(){}}),
     createStudentPlotting:()=>({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
     createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
   });
+  vm.runInContext(source('meeting-room.js'),h.context);
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm,'')+`
     globalThis.commands=[]; command=async (...args)=>commands.push(args);
     globalThis.prepare=(role)=>{

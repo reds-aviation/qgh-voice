@@ -85,7 +85,7 @@ test('Gyani explains current shared controls, saved setups and retired PAR',()=>
     ['How do I draw an LFA polygon?','procedural','custom-polygons',/drag a vertex/],
     ['How do I delete a polygon vertex?','procedural','custom-polygons',/Delete selected vertex/],
     ['Can I duplicate or rename a saved exercise?','procedural','saved-exercises',/Duplicate selected/],
-    ['How do I save a QGH instructor exercise?','qgh-instructor','saved-exercises',/Update selected replaces/],
+    ['How do I save a QGH instructor exercise?','qgh-instructor','saved-exercises',/Save current setup updates the chosen exercise/],
     ['How do I send a custom message?','procedural','transmit',/Transmit custom message/],
     ['The trail is not visible','sra','sweep',/15 RPM/],
     ['Where are half-mile marks?','sra','approach-reference',/0\.5 NM/],
@@ -149,6 +149,6 @@ test('one common handbook has every answer anchor, current controls and the live
   assert.ok(document.querySelector('a[href="training-centre.html#calls"]'));
   assert.ok(!/PAR|Flight strips|1–60 RPM/.test(document.textContent||''));
   assert.equal(document.getElementById('current-flow').getAttribute('data-guide-revision'),knowledge.revision);
-  for(const step of knowledge.tours)assert.equal(step.text,knowledge.entries.find(e=>e.id===step.entry).text);
+  for(const step of knowledge.tours){const entry=knowledge.entries.find(e=>e.id===step.entry);assert.equal(step.text,(step.brief?entry.intro:entry.text)||entry.text);}
   for(const step of knowledge.firstUse)assert.equal(step.text,knowledge.entries.find(e=>e.id===step.entry).intro);
 });

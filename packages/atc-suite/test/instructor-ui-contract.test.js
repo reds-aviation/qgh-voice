@@ -15,10 +15,11 @@ test('instructor setup contains all manual scenario inputs and lifecycle control
     'studentDisplayStatus']) assert.match(page, new RegExp(`id="${id}"`));
 });
 
-test('instructor offers a dedicated same-browser student window and second-display placement', () => {
+test('instructor offers optional controller entry and second-display placement', () => {
   const page = html();
   assert.match(page, /same PC and browser profile/);
-  assert.match(page, /OPEN \/ FOCUS/);
+  assert.match(page, /OPEN CONTROLLER ENTRY/);
+  assert.doesNotMatch(page, /CREATE SESSION &amp; OPEN STUDENT DISPLAY/);
   assert.match(page, /MOVE TO SECOND DISPLAY/);
   assert.match(page, /aria-live="polite"/);
   assert.doesNotMatch(page, /Same-browser tabs only/);

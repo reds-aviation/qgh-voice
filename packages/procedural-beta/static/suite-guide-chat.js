@@ -39,7 +39,7 @@
     if(/^(?:please )?(?:show |open |find |read |where is |where are )?(?:me )?(?:the |all )?(?:common |suite |training )?(?:guide|guides|manual|documentation)$/.test(q))return {matched:true,topic,text:'One common training guide covers all exercises. Choose the task you need in its navigation.',links:allGuides};
     const candidates=knowledge.entries.filter(e=>e.topics.includes(topic)&&new RegExp(e.match,'i').test(q));
     // Specific intents take precedence over broad words such as "turn" or "start".
-    const specific=['stop-turn','extended-screens','guided-tour','mobile-workspace','local-pin-recovery','student-estimates','saved-exercises','custom-polygons','suite-turn','transmit','instructor-transmit','scope-tools','roster-mobile','approach-reference'];
+    const specific=['meeting-debrief','meeting-room','exercise-time','training-time','stop-turn','extended-screens','guided-tour','mobile-workspace','local-pin-recovery','student-estimates','saved-exercises','custom-polygons','suite-turn','transmit','instructor-transmit','scope-tools','roster-mobile','approach-reference'];
     const storedSetup=/\b(?:exercise|template|preset|setup)\b/.test(q)&&candidates.find(e=>e.id==='saved-exercises');
     const selected=storedSetup||specific.map(id=>candidates.find(e=>e.id===id)).find(Boolean)||candidates.find(e=>e.priority)||candidates[0];
     if(selected)return answerEntry(selected);

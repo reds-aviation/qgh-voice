@@ -23,10 +23,12 @@
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
     inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false, clickTimer: null,
-    studentWindow: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false,
+    studentWindow: null, studentWindowSessionId: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false,
     scopePan: { x: 0, y: 0 }, scopeDrag: null, lastRightClick: null, suppressClickUntil: 0,
-    initialScenario: null, restoreMessage: '', lastCheckpoint: 0
+    initialScenario: null, restoreMessage: '', lastCheckpoint: 0, meetingUrl: '', loggingOut: false,
+    heartbeatTimer: null, runtimeTimer: null, animationFrame: null
   };
+  let attemptGeneration = 0;
 
   const radioNow = () => performance.now() / 1000;
   const RECOVERY_KEY = 'atc-suite.instructor-attempt.v1';
@@ -35,7 +37,48 @@
   const focusPanelIds = ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'scopeSettings', 'aircraftControlDrawer', 'eventDrawer'];
   const focusMode = globalThis.ATCSuiteWorkspace?.createFocusMode?.({ root: byId('activeWorkspace'), panels: focusPanelIds.map(byId) });
   globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('activeWorkspace'), scope: byId('instructorScope'),
-    shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions') });
+    shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions'), onLogout: logout });
+  const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({
+    container: byId('sessionDrawer')?.querySelector('.session-rail'), role: 'instructor',
+    onReadinessChange: () => { if (state.simulation) updateAll(); },
+    onSave(url) {
+      if (!state.cloudTransport || !state.session?.setMeetingLink(url)) throw new Error('Open an active online exercise before sharing a meeting.');
+      state.meetingUrl = url; checkpoint(); renderMeeting();
+    }
+  });
+  meetingPanel?.addShortcut(byId('activeWorkspace')?.querySelector('.status-stack'));
+  meetingPanel?.addShortcut(byId('reviewScreen')?.querySelector('.workspace-head'));
+  const startupChecklist = globalThis.ATCSuiteMeeting?.createStartupChecklist({container:byId('sessionDrawer')?.querySelector('.session-rail')});
+  function startupOptions() {
+    const protocol = state.session?.snapshot?.(), admission = state.session?.recoverySnapshot?.()?.admitted;
+    return {online:!!state.cloudTransport,connected:!state.cloudTransport || state.cloudTransport.connected,
+      meetingUrl:state.meetingUrl,voiceReady:meetingPanel?.isVoiceReady?.() === true,
+      admitted:protocol ? !!protocol.admittedClientId : !!state.session,
+      ready:admission ? admission.ready === true : protocol ? ['ready','running','paused'].includes(protocol.state) : !!state.session,
+      disconnected:admission?.disconnected === true};
+  }
+  function startupStatus() {
+    const options = startupOptions();
+    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:!options.online && options.admitted && options.ready && !options.disconnected,reason:options.online ? 'Online startup tools did not load. Reload this page.' : 'Open Session: share the PIN, admit the controller and wait for Ready.'};
+  }
+  function openStartSetup() {
+    const trigger = document.querySelector?.('.ats-tool-button[aria-controls="sessionDrawer"]');
+    if (!byId('sessionDrawer').open && trigger?.click) trigger.click(); else byId('sessionDrawer').open = true;
+    meetingPanel?.open?.();
+  }
+  function requireStartup() {
+    const status = startupStatus();
+    if (status.allowed) return true;
+    byId('commandStatus').textContent = status.reason; byId('startSetupStatus').textContent = status.reason;
+    openStartSetup(); return false;
+  }
+  function renderMeeting() {
+    if (state.cloudTransport && !state.cloudTransport.connected) meetingPanel?.resetVoice?.();
+    meetingPanel?.update({ online: !!state.cloudTransport, role: 'instructor', meetingUrl: state.meetingUrl,
+      roomKey:state.session?.sessionId || state.session?.snapshot?.()?.sessionId || '',
+      canEdit: !!state.session && !['review', 'terminated'].includes(state.simulation?.lifecycle) });
+    startupChecklist?.update(startupOptions());
+  }
 
   function presets() {
     try { const data = JSON.parse(localStorage.getItem(PRESETS_KEY) || '[]'); return Array.isArray(data) ? data.slice(0, 40) : []; } catch (_) { return []; }
@@ -60,7 +103,7 @@
   }
 
   function uniquePresetName(name, exceptId = '') {
-    if (presets().some(item => item.id !== exceptId && item.name?.toLowerCase() === name.toLowerCase())) throw new Error('That exercise name is already used. Choose a new name or Update selected.');
+    if (presets().some(item => item.id !== exceptId && item.name?.toLowerCase() === name.toLowerCase())) throw new Error('That exercise name is already used. Choose it to update its setup, or enter a new name.');
   }
 
   function checkPresetCapacity(setup) {
@@ -99,6 +142,11 @@
       byId('savedExerciseName').value = item.name;
       byId('presetStatus').textContent = `${item.name} updated with the configured starting traffic.`;
     } catch (error) { byId('presetStatus').textContent = `Not saved: ${error.message}`; }
+  }
+
+  function saveCurrentSetup() {
+    if (presets().some(item => item.id === byId('savedExercise').value)) savePreset();
+    else savePresetAsNew();
   }
 
   function duplicatePreset() {
@@ -155,7 +203,7 @@
       const file = event.target.files?.[0]; if (!file) return;
       if (file.size > 128000) throw new Error('Exercise file is too large.');
       const data = JSON.parse(await file.text());
-      if (data.format !== 'ats-simbox-instructor-exercise' || data.version !== 1 || !Array.isArray(data.setup)) throw new Error('Use an exported ATS SIMBOX instructor exercise.');
+      if (data.format !== 'ats-simbox-instructor-exercise' || data.version !== 1 || !Array.isArray(data.setup)) throw new Error('Use an exported ATS SIM BOX instructor exercise.');
       const allowed = new Set(captureSetup().map(item => item.id));
       if (data.setup.some(item => !item || typeof item.id !== 'string' || !(allowed.has(item.id) || /^(callsign|squawk|radarReturn|aircraftType|initialBearing|initialRange|initialHeading|initialAltitude|initialSpeed|turnRate|verticalRate)-\d+$/.test(item.id)))) throw new Error('Exercise contains unsupported fields.');
       if (new Set(data.setup.map(item => item.id)).size !== data.setup.length) throw new Error('Exercise contains repeated fields.');
@@ -204,7 +252,7 @@
   }
 
   function checkpoint() {
-    if (!state.simulation || typeof sessionStorage === 'undefined') return;
+    if (state.loggingOut || !state.simulation || typeof sessionStorage === 'undefined') return;
     try {
       const timeline = state.review?.snapshot();
       // Keep exact commands and observations; sample recovery truth at one
@@ -215,30 +263,41 @@
       sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), setup: captureSetup(),
         simulation, initialScenario: state.initialScenario, review,
         protocol: state.session?.recoverySnapshot?.(), cloud: state.cloudTransport?.recoverySnapshot?.(),
-        trainingTimeRate: state.trainingTimeRate }));
+        trainingTimeRate: state.trainingTimeRate, meetingUrl: state.meetingUrl }));
       state.lastCheckpoint = performance.now();
     } catch (_) { byId('recoveryStatus').textContent = 'Recovery storage full · save/export the scenario before leaving.'; }
   }
 
   async function restoreAttempt() {
+    const generation = ++attemptGeneration;
     let saved;
     try { restoreSetup(JSON.parse(sessionStorage.getItem(SETUP_KEY) || 'null')); saved = JSON.parse(sessionStorage.getItem(RECOVERY_KEY) || 'null'); } catch (_) { return; }
     if (saved?.version !== 1 || !saved.simulation?.scenario || !Array.isArray(saved.simulation.aircraftList) || !saved.protocol) return;
     try {
       restoreSetup(saved.setup);
-      state.initialScenario = saved.initialScenario;
       const review = saved.simulation.lifecycle === 'review';
-      state.simulation = Core.setLifecycle(saved.simulation, review ? 'review' : saved.protocol.admitted?.ready ? 'paused' : 'ready');
-      state.running = false;
-      state.sensor = createSensor({ ...state.simulation.scenario, startSeconds: state.simulation.simulationSeconds });
+      const simulation = Core.setLifecycle(saved.simulation, review ? 'review' : saved.protocol.admitted?.ready ? 'paused' : 'ready');
+      const cloud = saved.cloud ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
+        if (generation !== attemptGeneration) return;
+        if (!status.connected) {
+          meetingPanel?.resetVoice?.();
+          setStudentDisplayStatus('ONLINE LINK LOST · retry connection, then resume.', 'attention');
+        }
+        state.dirty = true;
+        if (state.simulation) updateAll();
+      }, saved.cloud) : null;
+      // A new room or retry supersedes a slow online recovery. Its transport
+      // must never replace the current room, PIN or simulation after the await.
+      if (generation !== attemptGeneration) { cloud?.transport?.close(); return; }
+      state.initialScenario = saved.initialScenario;
+      state.simulation = simulation; state.running = false;
+      state.sensor = createSensor({ ...simulation.scenario, startSeconds: simulation.simulationSeconds });
       state.review = Sensors.createReviewTimeline();
       for (const entry of saved.review?.truth || []) state.review.recordTruth(entry);
       for (const entry of saved.review?.observations || []) state.review.recordObservation(entry.sensor, entry);
       for (const entry of saved.review?.events || []) state.review.recordEvent(entry);
-      const cloud = saved.cloud ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
-        if (!status.connected) setStudentDisplayStatus('ONLINE LINK LOST · retry connection, then resume.', 'attention');
-      }, saved.cloud) : null;
       state.cloudTransport = cloud?.transport || null;
+      state.meetingUrl = cloud ? globalThis.ATCSuiteMeeting.normalizeMeetUrl(saved.meetingUrl || '') : '';
       state.session = Session.createInstructorSession({ ...saved.protocol, recovery: saved.protocol,
         publicMetadata: publicMetadataForSimulation(), storage: cloud ? undefined : localStorage, ...(cloud || {}),
         transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
@@ -252,11 +311,11 @@
       byId('studentStatus').textContent = 'RECONNECT STUDENT';
       byId('studentDetail').textContent = 'The same PIN and student seat are retained. Select Reconnect on the student display.';
       byId('sessionConnectionLabel').textContent = cloud ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
-      collapseSetupControls(); updateAll();
+      collapseSetupControls(); updateAll(); renderMeeting();
       enterWorkspace(byId(review ? 'reviewScreen' : 'activeWorkspace'));
       if (review) { state.reviewTime = state.simulation.simulationSeconds; byId('reviewScrub').max = String(state.reviewTime); renderReview(); }
       state.cloudTransport?.start(); state.session.heartbeat(state.simulation.simulationSeconds);
-    } catch (error) { byId('setupPreview').textContent = `Recovery unavailable: ${error.message}. Saved setup is retained.`; }
+    } catch (error) { if (generation === attemptGeneration) byId('setupPreview').textContent = `Recovery unavailable: ${error.message}. Saved setup is retained.`; }
   }
 
   function collapseSetupControls() {
@@ -265,8 +324,12 @@
   }
 
   function retryScenario() {
+    ++attemptGeneration; state.creating = false;
+    const submit = byId('scenarioForm').querySelector?.('[type="submit"]');
+    if (submit) submit.disabled = false;
     state.running = false; finishTransmission();
-    state.session?.close(); state.cloudTransport = null; state.session = null;
+    state.session?.close(); state.cloudTransport?.close(); state.cloudTransport = null; state.session = null;
+    state.meetingUrl = ''; renderMeeting();
     state.simulation = null; state.sensor = null; state.latestObservation = null; state.lastRenderedEvent = 0;
     state.review = null; state.reviewPlaying = false; state.scopePan = { x: 0, y: 0 };
     try { sessionStorage.removeItem(RECOVERY_KEY); } catch (_) {}
@@ -276,7 +339,27 @@
     byId('setupPanel').scrollIntoView?.({ block: 'start' });
   }
 
+  async function logout() {
+    ++attemptGeneration; state.loggingOut = true; state.creating = false;
+    state.running = false; state.reviewPlaying = false; state.dirty = false;
+    clearTimeout(state.readbackTimer); clearTimeout(state.dfTimer); clearTimeout(state.clickTimer);
+    if (typeof clearInterval === 'function') { clearInterval(state.heartbeatTimer); clearInterval(state.runtimeTimer); }
+    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.animationFrame);
+    middleMouseStop?.cancel(); state.scopeDrag = null; state.transmission = null;
+    meetingPanel?.resetVoice?.();
+    const session = state.session, cloud = state.cloudTransport;
+    try {
+      session?.terminate?.('instructor-logout', state.simulation?.simulationSeconds || 0);
+      if (cloud?.sync) await cloud.sync();
+    } finally {
+      session?.close(); cloud?.close(); state.session = null; state.cloudTransport = null;
+      state.simulation = null; state.sensor = null; state.review = null; state.meetingUrl = '';
+      try { sessionStorage.removeItem(RECOVERY_KEY); sessionStorage.removeItem('atc-suite-host-auth'); } catch (_) {}
+    }
+  }
+
   function suspendExercise(message) {
+    if (state.cloudTransport) meetingPanel?.resetVoice?.();
     state.running = false; state.accumulator = 0;
     if (state.simulation?.lifecycle === 'running') {
       state.session.pause(state.simulation.simulationSeconds);
@@ -290,6 +373,7 @@
   // Scheduling and painting have separate owners. Ordinary background timer
   // delays are accounted for; a long suspension explicitly pauses the lesson.
   function runtimeTick(timestamp = performance.now()) {
+    if (state.loggingOut) return;
     const elapsed = state.previousTick == null ? 0 : Math.max(0, (timestamp - state.previousTick) / 1000);
     state.previousTick = timestamp;
     try {
@@ -317,20 +401,23 @@
       return { ok: false, reason: 'unsupported', window: null };
     }
     const windowMissing = !state.studentWindow || state.studentWindow.closed;
-    if (!windowMissing) {
+    const sessionKey = state.session?.sessionId || state.session?.pin || '';
+    if (!windowMissing && state.studentWindowSessionId === sessionKey) {
       try { state.studentWindow.focus(); } catch (_) { /* Browser focus policy may decline. */ }
-      setStudentDisplayStatus('STUDENT DISPLAY OPEN · enter the PIN there, or move it to a second display.');
+      setStudentDisplayStatus('CONTROLLER POSITION OPEN · use Request to join on the shared entry page, or move the window to a second display.');
       return { ok: true, reason: 'focused', window: state.studentWindow };
     }
-    const opened = Display.openStudentWindow({ url: state.cloudTransport ? 'student.html?connection=online' : 'student.html' });
+    const portal = `index.html?connection=${state.cloudTransport ? 'online' : 'local'}${/^\d{6}$/.test(state.session?.pin || '') ? `&pin=${state.session.pin}` : ''}#controllerposition`;
+    const opened = Display.openStudentWindow({ url: portal });
     if (!opened.ok) {
       setStudentDisplayStatus(opened.reason === 'popup-blocked'
-        ? 'POP-UP BLOCKED · allow pop-ups, then select Open / Focus.'
+        ? 'POP-UP BLOCKED · allow pop-ups, then select Open controller entry.'
         : 'STUDENT DISPLAY COULD NOT OPEN SAFELY · reload this page and try again.', 'attention');
       return opened;
     }
     state.studentWindow = opened.window;
-    setStudentDisplayStatus('STUDENT DISPLAY OPEN · enter the PIN there, or move it to a second display.');
+    state.studentWindowSessionId = sessionKey;
+    setStudentDisplayStatus('CONTROLLER ENTRY OPEN · the PIN is filled in. Select Request to join; admission and Ready are still required.');
     return opened;
   }
 
@@ -362,8 +449,29 @@
   }
 
   function number(id) { return Number(byId(id).value); }
+  function controlNumber(id, label, minimum, maximum, increment) {
+    const input = byId(id), raw = String(input.value ?? '').trim();
+    input.required = true;
+    const result = raw ? validateBarNumber(Number(raw), label, minimum, maximum, increment)
+      : commandRejected(`Enter ${label.toLowerCase()} before applying the command.`);
+    if (!result.accepted || input.reportValidity?.() === false) {
+      if (!result.accepted) input.reportValidity?.();
+      byId('commandStatus').textContent = result.accepted ? `Enter a valid ${label.toLowerCase()} before applying the command.` : result.message;
+      return null;
+    }
+    return Number(raw);
+  }
+  function headingCommand(controlId, inputId, side, type = 'turn-to-heading') {
+    const headingDeg = controlNumber(inputId, 'Heading', 0, 359);
+    if (headingDeg === null) return;
+    return command({ type, headingDeg, ...(side ? { side } : {}) }, controlId);
+  }
+  function speedCommand() {
+    const speedKt = controlNumber('liveSpeed', 'Speed', 60, 600, 5);
+    if (speedKt !== null) return command({ type: 'set-speed', speedKt }, 'liveSpeed');
+  }
   function pad(value) { return String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0'); }
-  function clock(seconds) { const total = Math.max(0, Math.floor(seconds)); return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`; }
+  function clock(seconds) { const total = Math.max(0, Math.floor(Number(seconds) || 0)); return `${String(Math.floor(total / 3600)).padStart(2, '0')}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`; }
   function modeLabel(mode) { return ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || mode; }
 
   function normaliseTrainingTimeRate(value) {
@@ -588,6 +696,7 @@
       ...(['surveillance', 'sra'].includes(input.exerciseFamily) ? { scanRpm: rpm, revisitSeconds: 60 / rpm, historyCount: 5 } : {}),
       ...(input.exerciseFamily === 'par' ? { parRefreshHz: Number(byId('parRefresh').value), historyCount: 3 } : {}),
       ...(input.radarEnvironment ? { radarEnvironment: input.radarEnvironment } : {}),
+      ...(state.cloudTransport ? { meetingUrl: state.meetingUrl } : {}),
       ...(['sra', 'par'].includes(input.exerciseFamily) && approachAircraft ? {
         approachSpeedKt: approachAircraft.speedKt, approachAircraftType: approachAircraft.aircraftType
       } : {})
@@ -612,6 +721,7 @@
       runwayOrientation: scenario.runwayOrientationDeg,
       finalTrack: scenario.finalTrackDeg
     };
+    if (state.cloudTransport) metadata.meetingUrl = state.meetingUrl;
     if (['surveillance', 'sra'].includes(mode)) {
       metadata.scanRpm = 15;
       metadata.revisitSeconds = 4;
@@ -665,7 +775,9 @@
   }
 
   function onSessionEvent(event) {
+    if (state.loggingOut) return;
     const snapshot = event.snapshot;
+    if (['student-admitted','student-disconnected','student-rejoined'].includes(event.kind)) meetingPanel?.resetVoice?.();
     if (event.kind === 'pilot-playback' && event.transmissionId === state.transmission?.id) {
       if (event.phase === 'started' && !state.transmission.audioStarted) {
         state.transmission.audioStarted = true; state.transmission.expiresAt = radioNow() + 30;
@@ -686,8 +798,8 @@
       byId('admitStudent').hidden = true; byId('rejectStudent').hidden = true;
     } else if (event.kind === 'student-ready') {
       byId('studentStatus').textContent = 'POSITION READY';
-      byId('studentDetail').textContent = 'The exercise can now start.';
-      byId('startExercise').disabled = false;
+      byId('studentDetail').textContent = state.cloudTransport ? 'Controller Ready. Both join Meet and confirm mutual audio before Start.' : 'The exercise can now start.';
+      byId('startExercise').disabled = !startupStatus().allowed;
     } else if (event.kind === 'student-disconnected') {
       byId('studentStatus').textContent = 'POSITION DISCONNECTED';
       if (state.running) suspendExercise('STUDENT DISCONNECTED · exercise paused. Reconnect before resuming.');
@@ -703,20 +815,28 @@
 
   async function createSession(event) {
     event.preventDefault();
-    if (state.creating || !byId('scenarioForm').reportValidity()) return;
+    if (state.loggingOut || state.creating || !byId('scenarioForm').reportValidity()) return;
+    const generation = ++attemptGeneration;
+    let cloud = null;
     state.creating = true;
     const submit = byId('scenarioForm').querySelector('[type="submit"]');
     if (submit) submit.disabled = true;
     try {
       const input = scenarioInput(); state.initialScenario = structuredClone(input);
       const online = byId('exerciseConnection')?.value === 'online';
-      const cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
+      cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
+        if (generation !== attemptGeneration) return;
         if (!status.connected) {
+          meetingPanel?.resetVoice?.();
           setStudentDisplayStatus('ONLINE LINK · ' + status.error, 'attention');
           if (state.running) suspendExercise('ONLINE LINK LOST · exercise paused. Select Resume after reconnection.');
         }
+        state.dirty = true;
+        if (state.simulation) updateAll();
       }) : null;
+      if (generation !== attemptGeneration) { cloud?.transport?.close(); return; }
       state.cloudTransport = cloud?.transport || null;
+      state.meetingUrl = '';
       resetTrainingTimeRate(input.exerciseFamily);
       state.simulation = Core.setLifecycle(Core.createState(input), 'ready');
       state.sensor = createSensor(input);
@@ -731,7 +851,7 @@
       state.pendingClient = null; state.radioAudio = false;
       state.running = false; state.accumulator = 0; state.previousFrame = null; state.previousTick = null; state.runtimeError = null;
       byId('studentStatus').textContent = 'WAITING TO JOIN';
-      byId('studentDetail').textContent = 'Enter this PIN in the Student Display, then request admission.';
+      byId('studentDetail').textContent = 'Use Controller position on the shared entry page, enter this PIN and request admission.';
       byId('admitStudent').hidden = true; byId('rejectStudent').hidden = true;
       byId('pauseExercise').textContent = 'PAUSE';
       byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
@@ -744,14 +864,18 @@
       renderAircraftTabs(); refreshSelectionInputs();
       configureActiveControls();
       byId('startExercise').disabled = true;
-      updateAll();
+      updateAll(); renderMeeting();
       enterWorkspace(byId('activeWorkspace'));
       checkpoint();
       state.cloudTransport?.start();
-      if (online) setStudentDisplayStatus('ONLINE ROOM · On the other PC/device open Controller position, select Online room and enter this PIN. Internet is required on both devices.');
-      else openStudentDisplay();
-    } catch (error) { state.cloudTransport?.close(); state.cloudTransport = null; byId('setupPreview').textContent = error.message; }
-    finally { state.creating = false; if (submit) submit.disabled = false; }
+      setStudentDisplayStatus(online
+        ? 'ONLINE ROOM · Open the shared entry page on the other device, select Online room and request admission with this PIN.'
+        : 'SESSION READY · Share this PIN. Join from Controller position on the shared entry page; Open controller entry is optional.');
+    } catch (error) {
+      if (generation === attemptGeneration) { state.cloudTransport?.close(); state.cloudTransport = null; byId('setupPreview').textContent = error.message; }
+      else cloud?.transport?.close();
+    }
+    finally { if (generation === attemptGeneration) { state.creating = false; if (submit) submit.disabled = false; } }
   }
 
   function truthForSensor(simulation = state.simulation) {
@@ -808,8 +932,9 @@
     publishCurrentObservation();
   }
 
-  function advanceBy(seconds) {
+  function advanceBy(seconds, manual = false) {
     if (!state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return;
+    if (manual && state.cloudTransport && !requireStartup()) return false;
     const steps = Math.round(seconds / .25);
     for (let index = 0; index < steps; index += 1) {
       const previous = state.simulation;
@@ -818,6 +943,7 @@
       advanceSensors(previous, state.simulation);
     }
     state.dirty = true;
+    return true;
   }
 
   function truthForReview() {
@@ -827,7 +953,8 @@
   }
 
   function frame(timestamp) {
-    requestAnimationFrame(frame);
+    if (state.loggingOut) return;
+    state.animationFrame = requestAnimationFrame(frame);
     if (state.previousFrame == null) state.previousFrame = timestamp;
     const elapsed = Math.min(1, Math.max(0, (timestamp - state.previousFrame) / 1000));
     state.previousFrame = timestamp;
@@ -940,8 +1067,8 @@
   }
 
   function startExercise() {
-    if (state.cloudTransport && !state.cloudTransport.connected) { byId('commandStatus').textContent = 'Wait for the online connection before Start.'; return false; }
     if (!state.session || !state.simulation || ['running', 'paused', 'review'].includes(state.simulation.lifecycle)) return false;
+    if (!requireStartup()) return false;
     if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
@@ -952,12 +1079,12 @@
   }
 
   function pauseExercise() {
-    if (state.simulation?.lifecycle === 'paused' && state.cloudTransport && !state.cloudTransport.connected) { byId('commandStatus').textContent = 'Wait for the online connection before Resume.'; return false; }
     if (!state.session || !state.simulation || !['running', 'paused'].includes(state.simulation.lifecycle)) return false;
     if (state.simulation.lifecycle === 'running') {
       state.running = false; state.session.pause(state.simulation.simulationSeconds);
       state.simulation = Core.setLifecycle(state.simulation, 'paused'); byId('pauseExercise').textContent = 'RESUME';
     } else {
+      if (!requireStartup()) return false;
       if (!state.session.resume(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be Ready and connected before Resume.'; return false; }
       state.simulation = Core.setLifecycle(state.simulation, 'running'); state.previousTick = performance.now(); state.runtimeError = null;
       state.running = true; state.previousFrame = null; byId('pauseExercise').textContent = 'PAUSE';
@@ -1007,6 +1134,7 @@
   }
 
   function updateAll() {
+    renderMeeting();
     if (!state.simulation) return;
     const snapshot = Core.truthSnapshot(state.simulation), a = snapshot.aircraft, b = snapshot.bearing;
     focusMode?.setPhase(snapshot.lifecycle);
@@ -1016,8 +1144,19 @@
       button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected));
     }
     const controllable = ['running', 'paused'].includes(snapshot.lifecycle);
+    // A restored paused attempt resumes through the Pause/Resume control.
+    // Start is only for a newly prepared attempt, never a second resume action.
+    byId('startExercise').hidden = ['running', 'paused', 'review'].includes(snapshot.lifecycle);
+    const startup = startupStatus();
+    byId('startExercise').disabled = snapshot.lifecycle !== 'ready' || !startup.allowed;
+    byId('startExercise').setAttribute('aria-describedby','startSetupStatus');
+    const startupAction = snapshot.lifecycle === 'paused' ? 'Resume' : 'Start';
+    byId('startSetupStatus').textContent = startup.allowed ? state.cloudTransport ? `Ready to ${startupAction}. Keep Meet open throughout the exercise.` : `Controller Ready. Select ${startupAction} to ${snapshot.lifecycle === 'paused' ? 'continue' : 'begin'} aircraft movement.` : startup.reason;
+    byId('startSetupStatus').hidden = !['ready','paused'].includes(snapshot.lifecycle);
+    byId('openStartSetup').hidden = !['ready','paused'].includes(snapshot.lifecycle);
     document.querySelectorAll('.command-grid button, .command-grid input, .command-grid select').forEach(control => { control.disabled = !controllable; });
     byId('pauseExercise').disabled = !controllable; byId('terminateExercise').disabled = !controllable;
+    if (snapshot.lifecycle === 'paused' && !startup.allowed) byId('pauseExercise').disabled = true;
     byId('pauseExercise').textContent = snapshot.lifecycle === 'paused' ? 'RESUME' : 'PAUSE';
     const transfer = snapshot.scenario.exerciseFamily === 'surveillance'
       ? Core.parTransferStatus(state.simulation) : null;
@@ -1039,7 +1178,9 @@
       ? a.surveillance.modeS === true ? 'SECONDARY · MODE S' : 'SECONDARY'
       : 'PRIMARY / NONE';
     byId('instructorClock').textContent = clock(snapshot.simulationSeconds);
-    byId('exerciseState').textContent = snapshot.lifecycle.toUpperCase();
+    const waitingForController=snapshot.lifecycle==='ready'&&byId('startExercise').disabled;
+    byId('exerciseState').textContent = waitingForController?'WAITING':snapshot.lifecycle.toUpperCase();
+    byId('exerciseState').title = waitingForController?startup.reason:'Exercise status';
     byId('modeKicker').textContent = modeLabel(snapshot.scenario.exerciseFamily);
     byId('scopeLabel').textContent = snapshot.scenario.exerciseFamily === 'qgh'
       ? 'CONTINUOUS TRUTH · D/F PREVIEW'
@@ -1088,12 +1229,30 @@
   }
 
   function drawBase(context, canvas, maxRange, runway, finalTrack = runway) {
-    const width = canvas.width, height = canvas.height, cx = width / 2 + (canvas.id === 'instructorScope' ? state.scopePan.x : 0), cy = height / 2 + (canvas.id === 'instructorScope' ? state.scopePan.y : 0);
+    const visuals = globalThis.ATCScopeVisuals;
+    const metrics = visuals?.canvasMetrics(canvas, globalThis.devicePixelRatio || 1);
+    const bounds = canvas.getBoundingClientRect?.();
+    const width = metrics?.width || canvas.clientWidth || bounds?.width || canvas.width, height = metrics?.height || canvas.clientHeight || bounds?.height || canvas.height;
+    const pixelRatio = metrics?.pixelRatio || globalThis.devicePixelRatio || 1;
+    if (!metrics) {
+      if (canvas.width !== Math.round(width * pixelRatio)) canvas.width = Math.round(width * pixelRatio);
+      if (canvas.height !== Math.round(height * pixelRatio)) canvas.height = Math.round(height * pixelRatio);
+      context.setTransform?.(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
+    const cx = width / 2 + (canvas.id === 'instructorScope' ? state.scopePan.x : 0), cy = height / 2 + (canvas.id === 'instructorScope' ? state.scopePan.y : 0);
+    const scale = Math.min(width, height) * .44 / maxRange;
+    const ringSpacing = Number(byId('ringSpacing')?.value) === 5 ? 5 : 10;
     context.clearRect(0, 0, width, height); context.fillStyle = '#0e1319'; context.fillRect(0, 0, width, height);
     context.strokeStyle = '#1d5551'; context.lineWidth = 1; context.fillStyle = '#79aaa4'; context.font = '16px IBM Plex Mono';
-    for (let range = 10; range <= maxRange; range += 10) { const radius = range / maxRange * Math.min(width, height) * .44; context.beginPath(); context.arc(cx, cy, radius, 0, Math.PI * 2); context.stroke(); context.fillText(`${range}`, cx + 4, cy - radius + 17); }
+    if (visuals) visuals.drawRangeRings(context, { rangeNm: maxRange, spacingNm: ringSpacing, scale, cx, cy, width, height,
+      font: '11px IBM Plex Mono', strokeStyle: '#1d5551', fillStyle: '#79aaa4',
+      obstacles: visuals.overlayObstacles(canvas, { document, width, height }) });
+    else for (let range = ringSpacing; range <= maxRange + ringSpacing; range += ringSpacing) {
+      const distance = Math.min(range, maxRange), radius = distance * scale;
+      context.beginPath(); context.arc(cx, cy, radius, 0, Math.PI * 2); context.stroke(); context.fillText(`${distance} NM`, cx + 4, cy - radius + 17);
+      if (distance === maxRange) break;
+    }
     context.beginPath(); context.moveTo(cx, 22); context.lineTo(cx, height - 22); context.moveTo(22, cy); context.lineTo(width - 22, cy); context.stroke();
-    const scale = Math.min(width, height) * .44 / maxRange;
     const finalAngle = finalTrack * Math.PI / 180, length = Math.min(width, height) * .42;
     context.strokeStyle = '#758f82'; context.lineWidth = 1; context.setLineDash([7, 8]);
     context.beginPath(); context.moveTo(cx - Math.sin(finalAngle) * length, cy + Math.cos(finalAngle) * length);
@@ -1103,7 +1262,7 @@
     context.moveTo(cx - Math.sin(angle) * runwayHalfLength, cy + Math.cos(angle) * runwayHalfLength);
     context.lineTo(cx + Math.sin(angle) * runwayHalfLength, cy - Math.cos(angle) * runwayHalfLength); context.stroke();
     context.fillStyle = '#b8d1ca'; context.fillText(`RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
-    return { cx, cy, scale };
+    return { cx, cy, scale, width, height, pixelRatio };
   }
 
   function displayRange() {
@@ -1116,15 +1275,34 @@
 
   function drawAircraft(context, transform, aircraft, selected) {
     const x = transform.cx + aircraft.xNm * transform.scale, y = transform.cy + aircraft.yNm * transform.scale;
-    if (selected) { context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.arc(x, y, 22, 0, Math.PI * 2); context.stroke(); }
+    const visuals = globalThis.ATCScopeVisuals, color = selected ? '#fff7d5' : '#9fe1d9';
+    if (visuals) {
+      visuals.drawAircraftGlyph(context, { x, y, headingDeg: aircraft.headingDeg, selected, color, selectionColor: '#efa93a' });
+      return { id: aircraft.id, callsign: aircraft.callsign, x, y, selected, color,
+        details: [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)} H`] };
+    }
+    if (selected) { context.strokeStyle = '#efa93a'; context.lineWidth = 1; context.beginPath(); context.arc(x, y, 10, 0, Math.PI * 2); context.stroke(); }
     context.save(); context.translate(x, y); context.rotate(aircraft.headingDeg * Math.PI / 180);
-    context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.beginPath(); context.moveTo(0, -14);
-    context.lineTo(9, 10); context.lineTo(0, 6); context.lineTo(-9, 10); context.closePath(); context.fill(); context.restore();
+    context.fillStyle = color; context.beginPath(); context.moveTo(0, -6);
+    context.lineTo(5, 5); context.lineTo(0, 3); context.lineTo(-5, 5); context.closePath(); context.fill(); context.restore();
+    const mode = byId('truthLabelMode')?.value || 'selected';
+    if (mode === 'off') return null;
     context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.font = '14px IBM Plex Mono';
-    const lines = [aircraft.callsign, ...(selected ? [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)}°M`] : [])];
+    const lines = [aircraft.callsign, ...(selected || mode === 'all' ? [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)} H`] : [])];
     const width = Math.max(...lines.map(line => context.measureText(line)?.width || line.length * 8));
     const labelX = Math.max(5, Math.min(x + 16, context.canvas?.width ? context.canvas.width - width - 5 : x + 16));
     for (let i = 0; i < lines.length; i++) context.fillText(lines[i], labelX, Math.max(16, y - 12) + i * 16);
+    return null;
+  }
+
+  function drawTruthLabels(context, canvas, transform, aircraft) {
+    const visuals = globalThis.ATCScopeVisuals;
+    if (!visuals) return;
+    context.font = '11px IBM Plex Mono';
+    const labels = visuals.aircraftLabels(aircraft, { mode: byId('truthLabelMode')?.value, measure: text => context.measureText(text)?.width || text.length * 7 });
+    const obstacles = visuals.overlayObstacles(canvas, { document, width: transform.width, height: transform.height });
+    const placements = visuals.placeAircraftLabels(labels, { width: transform.width, height: transform.height, aircraft, obstacles });
+    visuals.drawAircraftLabels(context, placements);
   }
 
   function drawPlots(context, transform, observation) {
@@ -1136,11 +1314,10 @@
   }
 
   function drawTruth(canvas, simulation, observation) {
-    const bounds = canvas.getBoundingClientRect?.();
-    if (bounds?.width > 0 && bounds?.height > 0) { canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height); }
     const context = canvas.getContext('2d');
     const transform = drawBase(context, canvas, displayRange(), simulation.scenario.runwayOrientationDeg, simulation.scenario.finalTrackDeg);
     state.scopeTransform = transform;
+    const labels = [];
     for (const aircraft of simulation.aircraftList) {
       const selected = aircraft.id === simulation.selectedAircraftId, trail = simulation.truthTrails[aircraft.id];
       if (byId('historyDots').checked && trail.length > 1) {
@@ -1155,7 +1332,8 @@
           anchor = point; shown++;
         }
       }
-      drawAircraft(context, transform, { ...aircraft, ...aircraft.position }, selected);
+      const label = drawAircraft(context, transform, { ...aircraft, ...aircraft.position }, selected);
+      if (label) labels.push(label);
     }
     if (simulation.scenario.exerciseFamily === 'qgh') {
       const signal = state.sensor.read(radioNow(), truthForSensor());
@@ -1170,12 +1348,13 @@
       if (!reducedMotion()) {
         const scanTime = simulation.simulationSeconds + (state.running ? Math.max(0, (performance.now() - state.previousTick) / 1000) * state.trainingTimeRate : 0);
         const angle = (scanTime * 90 - 90) * Math.PI / 180;
-        const radius = Math.min(canvas.width, canvas.height) * .44;
+        const radius = Math.min(transform.width, transform.height) * .44;
         context.strokeStyle = 'rgba(90,210,164,.5)'; context.lineWidth = 1; context.beginPath(); context.moveTo(transform.cx, transform.cy);
         context.lineTo(transform.cx + Math.cos(angle) * radius, transform.cy + Math.sin(angle) * radius); context.stroke();
       }
       if (simulation.scenario.exerciseFamily === 'sra') drawInstructorSra(context, transform, simulation);
     }
+    drawTruthLabels(context, canvas, transform, labels);
   }
 
   function drawInstructorSra(context, transform, simulation) {
@@ -1196,12 +1375,13 @@
   function inspectScope(event, select = false) {
     if (!state.simulation || !state.scopeTransform) return;
     const canvas = byId('instructorScope'), bounds = canvas.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) * canvas.width / bounds.width;
-    const y = (event.clientY - bounds.top) * canvas.height / bounds.height, t = state.scopeTransform;
+    const t = state.scopeTransform, width = t.width || canvas.width, height = t.height || canvas.height;
+    const x = (event.clientX - bounds.left) * width / bounds.width;
+    const y = (event.clientY - bounds.top) * height / bounds.height;
     const nearest = state.simulation.aircraftList.map(a => ({ a,
       distance: Math.hypot(x - t.cx - a.position.xNm * t.scale, y - t.cy - a.position.yNm * t.scale) }))
       .sort((a, b) => a.distance - b.distance)[0];
-    const hitRadius = 26 * canvas.width / bounds.width;
+    const hitRadius = 26 * width / bounds.width;
     state.inspectedAircraftId = nearest?.distance <= hitRadius ? nearest.a.id : null;
     if (select && state.inspectedAircraftId) selectAircraft(state.inspectedAircraftId);
     updateInspection();
@@ -1225,6 +1405,7 @@
   function quickTurn(side) { return command({ type: 'turn-now', side }, side === 'left' ? 'quickTurnLeft' : 'quickTurnRight'); }
 
   function scopeClick(event) {
+    if (event.button != null && event.button !== 0) return;
     if (performance.now() < state.suppressClickUntil || !inspectScope(event, true)) return;
     clearTimeout(state.clickTimer);
     state.clickTimer = setTimeout(() => { scopeTransmit(); }, 260);
@@ -1244,11 +1425,13 @@
   }
 
   function scopePointerDown(event) {
-    if (event.button === 1) {
-      event.preventDefault(); clearTimeout(state.clickTimer);
-      if (inspectScope(event, true)) command({ type: 'stop-turn' }, 'quickStopTurn');
-      return;
+    // Native canvas focus can scroll an overflow-hidden document and move the
+    // exercise header out of view. Keep keyboard focus without moving the desk.
+    if (event.button === 0 || event.button === 2) {
+      event.preventDefault();
+      byId('instructorScope').focus?.({ preventScroll: true });
     }
+    if (event.button === 1) return;
     if (event.button !== 0 || inspectScope(event)) return;
     state.scopeDrag = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, pan: { ...state.scopePan }, moved: false };
     byId('instructorScope').setPointerCapture?.(event.pointerId);
@@ -1261,7 +1444,8 @@
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
     drag.moved ||= Math.hypot(dx, dy) > 4;
     if (drag.moved) {
-      state.scopePan = { x: drag.pan.x + dx * canvas.width / bounds.width, y: drag.pan.y + dy * canvas.height / bounds.height };
+      state.scopePan = { x: drag.pan.x + dx * (state.scopeTransform?.width || canvas.width) / bounds.width,
+        y: drag.pan.y + dy * (state.scopeTransform?.height || canvas.height) / bounds.height };
       state.suppressClickUntil = performance.now() + 500; updateAll();
     }
   }
@@ -1270,6 +1454,14 @@
     if (state.scopeDrag?.pointerId !== event.pointerId) return;
     byId('instructorScope').releasePointerCapture?.(event.pointerId); state.scopeDrag = null;
   }
+
+  const middleMouseStop = Display?.bindMiddleMouseStop?.(byId('instructorScope'), {
+    isAllowed: id => !!state.simulation && ['running', 'paused'].includes(state.simulation.lifecycle)
+      && (!id || state.simulation.aircraftList.some(aircraft => aircraft.id === id)),
+    getTargetId: event => inspectScope(event) || state.simulation?.selectedAircraftId,
+    onReset() { clearTimeout(state.clickTimer); state.lastRightClick = null; state.scopeDrag = null; },
+    onStop(id) { selectAircraft(id); command({ type: 'stop-turn' }, 'quickStopTurn'); }
+  });
 
   function renderReview() {
     const record = state.review.snapshot(), simulation = state.simulation;
@@ -1289,6 +1481,7 @@
     const truth = record.truth.filter(item => item.timestamp <= state.reviewTime);
     const events = record.events.filter(item => item.timestamp <= state.reviewTime);
     if (enabled.truth) {
+      const labels = [];
       const tracks = new Map();
       for (const sample of truth) for (const aircraft of sample.aircraft || []) {
         if (!tracks.has(aircraft.id)) tracks.set(aircraft.id, []);
@@ -1297,8 +1490,11 @@
       for (const points of tracks.values()) {
         context.strokeStyle = '#2bd1c6'; context.lineWidth = 2; context.beginPath();
         points.forEach((point, index) => { const x = transform.cx + point.xNm * transform.scale, y = transform.cy + point.yNm * transform.scale; index ? context.lineTo(x, y) : context.moveTo(x, y); }); context.stroke();
-        drawAircraft(context, transform, points[points.length - 1], false);
+        const aircraft = points[points.length - 1];
+        const label = drawAircraft(context, transform, aircraft, aircraft.id === state.simulation.selectedAircraftId);
+        if (label) labels.push(label);
       }
+      drawTruthLabels(context, canvas, transform, labels);
     }
     if (enabled.observations) {
       const observations = record.observations.filter(item => item.timestamp <= state.reviewTime);
@@ -1307,7 +1503,7 @@
       if (last?.sensor === 'qgh' && last.bearingDeg != null) {
         const rad = (last.bearingDeg + (last.bearingType === 'qdm' ? 180 : 0)) * Math.PI / 180;
         context.strokeStyle = '#efa93a'; context.lineWidth = 2; context.beginPath(); context.moveTo(transform.cx, transform.cy);
-        context.lineTo(transform.cx + Math.sin(rad) * canvas.height * .44, transform.cy - Math.cos(rad) * canvas.height * .44); context.stroke();
+        context.lineTo(transform.cx + Math.sin(rad) * transform.height * .44, transform.cy - Math.cos(rad) * transform.height * .44); context.stroke();
       }
       if (last?.sensor === 'par') {
         context.fillStyle = '#efa93a'; context.font = '16px IBM Plex Mono';
@@ -1487,13 +1683,15 @@
       ? performInstructorAction({ action: 'report-heading' })
       : performInstructorAction({ action: 'report-position' });
     if (plan.action === 'advance') {
-      advanceBy(60);
+      if (!advanceBy(60,true)) return commandRejected(byId('commandStatus').textContent || 'Complete startup steps before advancing time.');
       return commandAccepted(`ADVANCED ONE MINUTE · ${selectedAircraftLabel()} REMAINS SELECTED.`);
     }
     if (plan.action === 'continue') {
       if (us) return commandRejected('CONTINUE is unavailable in U/S Compass QGH.');
       if (['sra', 'par'].includes(mode)) return invokeCoreCommand({ type: 'continue-approach' }, 'continueApproach');
-      return invokeCoreCommand({ type: 'continue-heading', headingDeg: number('turnHeadingInput') }, 'continueHeading');
+      const headingDeg = controlNumber('turnHeadingInput', 'Heading', 0, 359);
+      if (headingDeg === null) return commandRejected(byId('commandStatus').textContent);
+      return invokeCoreCommand({ type: 'continue-heading', headingDeg }, 'continueHeading');
     }
     if (plan.action === 'visual') {
       if (!['sra', 'par'].includes(mode)) return commandRejected('VISUAL is available only in SRA or PAR.');
@@ -1527,8 +1725,8 @@
     if (key === '[') return { action: 'previous' };
     if (key === ']') return { action: 'next' };
     if (key === ' ' || key === 'spacebar') return { action: 'lifecycle-toggle' };
-    if (key === 'a') return us ? { action: 'turn-left-now' } : { action: 'turn-heading', side: 'left', headingDeg: number('turnHeadingInput') };
-    if (key === 'd') return us ? { action: 'turn-right-now' } : { action: 'turn-heading', side: 'right', headingDeg: number('turnHeadingInput') };
+    if (key === 'a') return us ? { action: 'turn-left-now' } : { action: 'turn-heading', side: 'left', headingDeg: String(byId('turnHeadingInput').value).trim() ? number('turnHeadingInput') : NaN };
+    if (key === 'd') return us ? { action: 'turn-right-now' } : { action: 'turn-heading', side: 'right', headingDeg: String(byId('turnHeadingInput').value).trim() ? number('turnHeadingInput') : NaN };
     if (key === 'x') return { action: 'stop-turn' };
     if (key === 't') return { action: 'transmit' };
     if (key === 'h') return { action: 'report-heading' };
@@ -1561,7 +1759,7 @@
   }
 
   family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
-  byId('saveExercisePreset').addEventListener('click', savePreset);
+  byId('saveExercisePreset').addEventListener('click', saveCurrentSetup);
   byId('saveExercisePresetAs').addEventListener('click', savePresetAsNew);
   byId('duplicateExercisePreset').addEventListener('click', duplicatePreset);
   byId('renameExercisePreset').addEventListener('click', renamePreset);
@@ -1589,19 +1787,20 @@
     byId('pauseExercise').textContent = 'PAUSE'; updateAll();
   });
   byId('startExercise').addEventListener('click', startExercise); byId('pauseExercise').addEventListener('click', pauseExercise); byId('terminateExercise').addEventListener('click', terminateExercise);
+  byId('openStartSetup').addEventListener('click', openStartSetup);
   byId('executeKeyboardCommand').addEventListener('click', () => executeKeyboardCommand());
   byId('keyboardCommandInput').addEventListener('keydown', event => {
     if (event.key !== 'Enter' || event.isComposing) return;
     event.preventDefault(); executeKeyboardCommand();
   });
-  byId('turnLeftHeading').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'left', headingDeg: number('turnHeadingInput') }, 'turnLeftHeading'));
-  byId('turnRightHeading').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'right', headingDeg: number('turnHeadingInput') }, 'turnRightHeading'));
+  byId('turnLeftHeading').addEventListener('click', () => headingCommand('turnLeftHeading', 'turnHeadingInput', 'left'));
+  byId('turnRightHeading').addEventListener('click', () => headingCommand('turnRightHeading', 'turnHeadingInput', 'right'));
   byId('turnLeftNow').addEventListener('click', () => command({ type: 'turn-now', side: 'left' }, 'turnLeftNow'));
   byId('turnRightNow').addEventListener('click', () => command({ type: 'turn-now', side: 'right' }, 'turnRightNow'));
   byId('stopTurnNow').addEventListener('click', () => command({ type: 'stop-turn' }, 'stopTurnNow'));
   byId('transmitDf').addEventListener('click', () => command({ type: 'transmit' }, 'transmitDf'));
   byId('reportHeading').addEventListener('click', () => command({ type: 'report-heading' }, 'reportHeading'));
-  byId('continueHeading').addEventListener('click', () => command({ type: 'continue-heading', headingDeg: number('turnHeadingInput') }, 'continueHeading'));
+  byId('continueHeading').addEventListener('click', () => headingCommand('continueHeading', 'turnHeadingInput', null, 'continue-heading'));
   byId('climbTo').addEventListener('click', () => command({ type: 'set-altitude', direction: 'climb', altitudeFt: number('altitudeInput') }, 'climbTo'));
   byId('descendTo').addEventListener('click', () => command({ type: 'set-altitude', direction: 'descend', altitudeFt: number('altitudeInput') }, 'descendTo'));
   byId('reportPosition').addEventListener('click', () => command({ type: 'report-position' }, 'reportPosition'));
@@ -1614,8 +1813,8 @@
     byId('altitudeInput').value = target;
     command({ type: 'set-altitude', direction: 'climb', altitudeFt: target }, 'missedApproach');
   });
-  byId('advanceMinute').addEventListener('click', () => advanceBy(60));
-  byId('liveSpeed').addEventListener('change', () => command({ type: 'set-speed', speedKt: number('liveSpeed') }, 'liveSpeed'));
+  byId('advanceMinute').addEventListener('click', () => advanceBy(60,true));
+  byId('liveSpeed').addEventListener('change', speedCommand);
   byId('historyDots').addEventListener('change', updateAll);
   byId('instructorScope').addEventListener('pointermove', scopePointerMove);
   byId('instructorScope').addEventListener('pointerdown', scopePointerDown);
@@ -1627,14 +1826,16 @@
   byId('instructorScope').addEventListener('auxclick', event => { if (event.button === 1) event.preventDefault(); });
   byId('scopeRange').addEventListener('change', updateAll);
   byId('truthTrailCount').addEventListener('change', updateAll);
+  byId('ringSpacing')?.addEventListener('change', updateAll);
+  byId('truthLabelMode')?.addEventListener('change', updateAll);
   byId('instructorDfReference').addEventListener('change', updateAll);
   byId('resetScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; updateAll(); });
   byId('quickTurnLeft').addEventListener('click', () => quickTurn('left'));
   byId('quickTurnRight').addEventListener('click', () => quickTurn('right'));
   byId('quickStopTurn').addEventListener('click', () => command({ type: 'stop-turn' }, 'quickStopTurn'));
   byId('quickTransmit').addEventListener('click', scopeTransmit);
-  byId('quickHeadingLeft').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'left', headingDeg: number('quickHeading') }, 'quickHeadingLeft'));
-  byId('quickHeadingRight').addEventListener('click', () => command({ type: 'turn-to-heading', side: 'right', headingDeg: number('quickHeading') }, 'quickHeadingRight'));
+  byId('quickHeadingLeft').addEventListener('click', () => headingCommand('quickHeadingLeft', 'quickHeading', 'left'));
+  byId('quickHeadingRight').addEventListener('click', () => headingCommand('quickHeadingRight', 'quickHeading', 'right'));
   byId('moreAircraftControls').addEventListener('click', () => {
     const drawer = byId('aircraftControlDrawer'); drawer.open = !drawer.open;
     byId('moreAircraftControls').setAttribute('aria-expanded', String(drawer.open));
@@ -1649,8 +1850,8 @@
   });
   byId('newScenario').addEventListener('click', retryScenario); byId('restartExercise').addEventListener('click', retryScenario);
   document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
-  window.addEventListener('pagehide', () => { saveSetup(); checkpoint(); state.session?.detach?.(); });
-  setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
-  setInterval(runtimeTick, 100);
-  configureFields(); refreshPresets(); void restoreAttempt(); requestAnimationFrame(frame);
+  window.addEventListener('pagehide', () => { if (state.loggingOut) return; saveSetup(); checkpoint(); state.session?.detach?.(); });
+  state.heartbeatTimer = setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
+  state.runtimeTimer = setInterval(runtimeTick, 100);
+  configureFields(); refreshPresets(); void restoreAttempt(); state.animationFrame = requestAnimationFrame(frame);
 })();

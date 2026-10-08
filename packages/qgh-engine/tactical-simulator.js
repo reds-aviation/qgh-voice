@@ -6,7 +6,7 @@
   if (!Core || !Tactical) throw new Error('Tactical QGH flight core failed to load.');
 
   const DF_WINDOW_MS = 4000;
-  const REPLAY_FRAME_MS = 37;
+  const REPLAY_FRAME_MS = Tactical.STEP_SECONDS * 1000;
   const ADVANCE_FLIGHT_SECONDS = 60;
   const profiles = {
     fighter: { label: 'Fighter', speed: 240, rate: 3 },
@@ -48,7 +48,11 @@
     dfAircraftId: null,
     dfExpiry: null,
     flightTimer: null,
+    flightClock: null,
+    flightSuspended: false,
+    suspendedClockRunning: false,
     clockTimer: null,
+    stopwatchClock: null,
     clockRunning: false,
     clockSeconds: 0,
     terminationPending: null,
@@ -58,6 +62,9 @@
     replaySpeed: 1,
     replayIndex: 0,
     replayTimer: null,
+    replayLastWall: null,
+    replayRemainderSeconds: 0,
+    replayGeneration: 0,
     replayPaused: false,
     reviewZoomEnabled: false,
     toastTimer: null,
@@ -68,7 +75,8 @@
   };
 
   const $ = id => document.getElementById(id);
-  const padHeading = value => Tactical.padHeading(value);
+  const monotonicNow = () => window.performance?.now?.() ?? Date.now();
+  const padHeading = value => String(Core.normalize(Math.round(Number(value)))).padStart(3, '0');
   const receiver = window.QGHRadioSession.createReceiver({ observe: id => radioSnapshot(id), onChange: renderDF, setTimer: setTimeout, clearTimer: clearTimeout });
 
   function radioSnapshot(id = state.activeAircraftId) {
@@ -110,9 +118,12 @@
   }
 
   function formatTime(seconds) {
-    const minutes = String(Math.floor(Number(seconds) / 60)).padStart(2, '0');
-    const remaining = String(Math.floor(Number(seconds) % 60)).padStart(2, '0');
-    return minutes + ':' + remaining;
+    const numeric = Number(seconds);
+    const total = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
+    const hours = String(Math.floor(total / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor(total % 3600 / 60)).padStart(2, '0');
+    const remaining = String(total % 60).padStart(2, '0');
+    return hours + ':' + minutes + ':' + remaining;
   }
 
   function setPressed(element, selected) {
@@ -228,28 +239,52 @@
   function updateClock() {
     const time = formatTime(state.clockSeconds);
     $('tClock').textContent = time;
+    $('tClock').setAttribute('aria-label', `Operator stopwatch, ${state.clockRunning ? 'running' : 'stopped'}: ${time}`);
+    $('tClockStart').textContent = state.flightSuspended ? 'RESUME FLIGHT' : 'START';
     const readout = $('tHomingClock');
     if (readout) {
       readout.textContent = time;
-      readout.setAttribute('aria-label', `Exercise clock, ${state.clockRunning ? 'running' : 'stopped'}: ${time}`);
+      readout.setAttribute('aria-label', `Operator stopwatch, ${state.clockRunning ? 'running' : 'stopped'}: ${time}`);
     }
   }
 
   function startClock() {
+    if (state.flightSuspended) {
+      const resumeClock = state.suspendedClockRunning;
+      state.flightSuspended = false;
+      state.suspendedClockRunning = false;
+      startFlightLoop();
+      logCommand(null, 'FLIGHT RESUMED', 'Browser suspension cleared; all aircraft continue from their retained positions.');
+      showToast('FLIGHT RESUMED');
+      updateClock();
+      if (!resumeClock) return;
+    }
     if (state.clockRunning) return;
     state.clockRunning = true;
     if ($('tHomingClock')) $('tHomingClock').hidden = false;
     updateClock();
+    const clock = Core.createFlightClock(.001);
+    clock.reset(monotonicNow());
+    state.stopwatchClock = clock;
     state.clockTimer = setInterval(() => {
-      state.clockSeconds += 1;
+      if (state.stopwatchClock !== clock || !state.clockRunning) return;
+      const timing = clock.consume(monotonicNow());
+      if (timing.suspended) { suspendFlight(); return; }
+      state.clockSeconds += timing.steps / 1000;
       updateClock();
     }, 1000);
   }
 
   function stopClock() {
+    if (state.clockRunning && state.stopwatchClock) {
+      const timing = state.stopwatchClock.consume(monotonicNow());
+      if (!timing.suspended) state.clockSeconds += timing.steps / 1000;
+    }
     state.clockRunning = false;
     clearInterval(state.clockTimer);
     state.clockTimer = null;
+    state.stopwatchClock = null;
+    if (state.flightSuspended) state.suspendedClockRunning = false;
     updateClock();
   }
 
@@ -263,11 +298,30 @@
   function stopFlightLoop() {
     clearInterval(state.flightTimer);
     state.flightTimer = null;
+    state.flightClock = null;
+  }
+
+  function suspendFlight() {
+    if (state.flightSuspended) return;
+    const clockWasRunning = state.clockRunning;
+    state.flightSuspended = true;
+    stopFlightLoop(); stopClock();
+    state.suspendedClockRunning = clockWasRunning;
+    logCommand(null, 'BROWSER PAUSED', 'Processing gap exceeded two seconds. Flight and stopwatch paused; choose Resume flight in Stopwatch.');
+    showToast('BROWSER PAUSED · USE RESUME FLIGHT IN STOPWATCH');
   }
 
   function startFlightLoop() {
-    if (!state.exercise || state.flightTimer) return;
-    state.flightTimer = setInterval(() => physicsStep(Tactical.STEP_SECONDS), Tactical.STEP_SECONDS * 1000);
+    if (!state.exercise || state.flightTimer || state.flightSuspended) return;
+    const clock = Core.createFlightClock(Tactical.STEP_SECONDS);
+    clock.reset(monotonicNow()); state.flightClock = clock;
+    state.flightTimer = setInterval(() => {
+      if (state.flightClock !== clock) return;
+      const timing = clock.consume(monotonicNow());
+      if (timing.suspended) { suspendFlight(); return; }
+      for (let step = 0; step < timing.steps; step += 1) physicsStep(Tactical.STEP_SECONDS);
+      if (state.dfLive) renderDF();
+    }, Tactical.STEP_SECONDS * 1000);
   }
 
   function setSignal(live, text) {
@@ -783,6 +837,7 @@
       stopFlightLoop();
       clearDF();
       stopClock();
+      state.flightSuspended = false;
       const cfg = {
         procedure: state.procedure,
         runway: inputDegrees('tRunway', 'Runway orientation'),
@@ -1004,11 +1059,15 @@
   }
 
   function clearReplay(reset = true) {
+    if (!reset && state.replayTimer) advanceReplayCursor();
     clearTimeout(state.replayTimer);
     state.replayTimer = null;
+    state.replayLastWall = null;
+    state.replayGeneration += 1;
     if (reset) {
       state.replayPaused = false;
       state.replayIndex = 0;
+      state.replayRemainderSeconds = 0;
     }
     updateReplayButton();
   }
@@ -1035,6 +1094,18 @@
     });
   }
 
+  function advanceReplayCursor() {
+    const now = monotonicNow();
+    if (state.replayLastWall != null) {
+      state.replayRemainderSeconds += Math.max(0, (now - state.replayLastWall) / 1000) * state.replaySpeed;
+      const samples = Math.floor((state.replayRemainderSeconds + 1e-9) / Tactical.STEP_SECONDS);
+      state.replayRemainderSeconds = Math.max(0, state.replayRemainderSeconds - samples * Tactical.STEP_SECONDS);
+      state.replayIndex = Math.min(maxPathLength(), state.replayIndex + samples);
+      drawReview(state.replayIndex, true);
+    }
+    state.replayLastWall = now;
+  }
+
   function scheduleReplay() {
     const fullLength = maxPathLength();
     if (!fullLength || state.replayIndex >= fullLength) {
@@ -1043,9 +1114,11 @@
       updateReplayButton();
       return;
     }
+    if (state.replayLastWall == null) state.replayLastWall = monotonicNow();
+    const generation = state.replayGeneration;
     state.replayTimer = setTimeout(() => {
-      state.replayIndex = Math.min(fullLength, state.replayIndex + state.replaySpeed);
-      drawReview(state.replayIndex, true);
+      if (generation !== state.replayGeneration) return;
+      advanceReplayCursor();
       scheduleReplay();
     }, REPLAY_FRAME_MS);
   }
@@ -1068,6 +1141,7 @@
     }
     clearReplay(false);
     state.replayIndex = 1;
+    state.replayRemainderSeconds = 0;
     state.replayPaused = false;
     drawReview(state.replayIndex, true);
     scheduleReplay();
@@ -1076,6 +1150,7 @@
   }
 
   function chooseReplaySpeed(speed) {
+    if (state.replayTimer) advanceReplayCursor();
     state.replaySpeed = speed;
     document.querySelectorAll('[data-tactical-replay-speed]').forEach(button => {
       setPressed(button, Number(button.dataset.tacticalReplaySpeed) === speed);
@@ -1191,6 +1266,7 @@
     state.terminationPending = null;
     commitLiveSpeedChange();
     stopFlightLoop();
+    state.flightSuspended = false;
     clearDF();
     stopClock();
     clearReplay();

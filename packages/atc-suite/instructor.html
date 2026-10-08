@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
-  <title>Instructor Console · ATC Training Suite</title>
+  <title>Instructor Console · ATS SIM BOX · Version 1</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
   <link rel="stylesheet" href="workspace-shell.css">
@@ -14,8 +14,10 @@
   <script defer src="procedure-core.js"></script>
   <script defer src="suite-core.js"></script>
   <script defer src="suite-sensors.js"></script>
+  <script defer src="meeting-room.js"></script>
   <script defer src="suite-session.js"></script>
   <script defer src="suite-cloud.js"></script>
+  <script defer src="scope-visuals.js"></script>
   <script defer src="suite-display.js"></script>
   <script defer src="suite-review.js"></script>
   <script defer src="suite-command-reference.js"></script>
@@ -25,14 +27,22 @@
   <main class="shell shell--wide">
     <details class="console-navigation" id="consoleNavigation" open><summary>QGH + SRA &amp; vectoring · Navigation &amp; help</summary>
     <header class="site-header">
-      <div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><a href="training-guide.html" target="_blank" rel="noopener">FULL BETA GUIDE ↗</a></div>
+      <div class="header-left"><a class="wordmark" href="index.html">ATS SIM BOX</a><span class="product-version">Version 1</span><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><a href="training-guide.html" target="_blank" rel="noopener">TRAINING GUIDE ↗</a></div>
       <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
     </header>
     </details>
 
     <section class="setup-panel" id="setupPanel">
       <div class="section-title"><span>QGH + SRA &amp; VECTORING</span><h1>Build the exercise</h1><p>Choose a mode, set traffic and create a session.</p></div>
-      <div class="scenario-library"><label>Saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePresetAs" type="button">Save as new</button><button id="saveExercisePreset" type="button">Update selected</button><button id="duplicateExercisePreset" type="button">Duplicate selected</button><button id="renameExercisePreset" type="button">Rename selected</button><button id="loadExercisePreset" type="button">Load selected</button><button id="exportExercisePreset" type="button">Export selected</button><button id="removeExercisePreset" type="button">Remove selected</button><label class="preset-import">Import<input id="importExercisePreset" type="file" accept="application/json,.json"></label><output id="presetStatus" aria-live="polite"></output><output id="recoveryStatus" aria-live="polite"></output></div>
+      <section class="ats-saved-exercises" aria-labelledby="savedExercisesTitle"><h2 id="savedExercisesTitle">Saved exercises</h2>
+        <div class="scenario-library">
+          <label>Load saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><button id="loadExercisePreset" type="button">Load</button>
+          <label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePreset" type="button">Save current setup</button>
+          <p class="preset-help">Load fills the setup below; Create session starts a new room. Save current setup updates the chosen exercise, or saves a new one when none is selected.</p>
+          <details class="preset-management"><summary>Manage / files</summary><div class="preset-management-actions"><button id="saveExercisePresetAs" type="button">Save as new</button><button id="duplicateExercisePreset" type="button">Duplicate selected</button><button id="renameExercisePreset" type="button">Rename selected</button><button id="exportExercisePreset" type="button">Export selected</button><button id="removeExercisePreset" type="button">Remove selected</button><label class="preset-import">Import exercise file<input id="importExercisePreset" type="file" accept="application/json,.json"></label></div></details>
+          <output id="presetStatus" aria-live="polite"></output><output id="recoveryStatus" aria-live="polite"></output>
+        </div>
+      </section>
       <form id="scenarioForm" class="setup-form">
         <label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label>
         <p id="connectionHelp" class="connection-help">Offline: same PC and browser profile. Recommended: two monitors in Extend mode, with a separate student window. Online: different PCs with internet on both.</p>
@@ -44,7 +54,7 @@
         <label><span id="aircraftCountLabel">AIRCRAFT COUNT · 1–2</span><input id="aircraftCount" name="aircraftCount" type="number" min="1" max="2" value="1" inputmode="numeric"></label>
         <label>RUNWAY ORIENTATION · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
         <label>FINAL APPROACH TRACK · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
-        <label id="scanPresetField" hidden>RADAR SCAN<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 SEC</option></select></label>
+        <label id="scanPresetField" hidden>RADAR SCAN<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 SIM SEC</option></select></label>
         <label id="radarProfileField" hidden>RADAR ENVIRONMENT<select id="radarProfile"><option value="primary">PRIMARY · + PLOTS</option><option value="correlated">SECONDARY · □ SSR PLOTS</option></select></label>
         <label id="parRefreshField" hidden>PAR TRAINING REFRESH<select id="parRefresh"><option value="1">1 HZ</option><option value="5">5 HZ</option></select></label>
         <label id="approachAircraftField" hidden>DESIGNATED APPROACH AIRCRAFT<select id="approachAircraft"><option value="AC1">101</option></select></label>
@@ -76,20 +86,20 @@
           </div>
         </div>
         <div class="setup-preview" aria-live="polite"><span>START</span><b id="setupPreview">QTE 065 · 25 NM · HDG 225</b></div>
-        <button class="primary-action" id="createSession" type="submit">CREATE SESSION &amp; OPEN STUDENT DISPLAY</button>
+        <button class="primary-action" id="createSession" type="submit">CREATE SESSION</button>
       </form>
     </section>
 
     <section class="active-workspace" id="activeWorkspace" tabindex="-1" hidden>
       <details class="session-drawer" id="sessionDrawer" open><summary>Session <span id="compactPin">—</span> · <span id="compactConnection">Waiting</span></summary><aside class="session-rail" aria-label="Session management">
-        <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">COPY PIN</button><button id="openStudentDisplay" type="button">OPEN / FOCUS</button><button id="moveStudentDisplay" class="primary display-move-action" type="button">MOVE TO SECOND DISPLAY</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">A separate student window will open when the session is created.</output></div>
+        <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">COPY PIN</button><button id="openStudentDisplay" type="button">OPEN CONTROLLER ENTRY</button><button id="moveStudentDisplay" class="primary display-move-action" type="button">MOVE TO SECOND DISPLAY</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">Share the PIN on the paired entry page. Open a separate controller window only when needed.</output></div>
         <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Enter this PIN in the dedicated Student Display, then request admission.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>REJECT</button><button id="admitStudent" type="button" class="primary" hidden>ADMIT</button></div><button id="releaseStudent" type="button" title="Pause the exercise and release the current student seat for a replacement window">RELEASE STUDENT SEAT</button></div>
         <nav class="phase-list" aria-label="Exercise progress"><b class="active" data-phase="ready">1 · READY</b><b data-phase="running">2 · RUNNING</b><b data-phase="review">3 · REVIEW</b></nav>
         <button id="newScenario" type="button">← NEW SCENARIO</button>
       </aside></details>
 
       <section class="instructor-main">
-        <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor</h1></div><div class="status-stack"><b id="exerciseState">READY</b><time id="instructorClock">00:00</time><details class="clock-settings" id="clockSettings"><summary>Clock</summary><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Speeds the training clock only; aircraft speed and turn radius remain unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></details></div></header>
+        <header class="workspace-head"><div><span class="eyebrow" id="modeKicker">QGH / DIRECTION FINDING</span><h1 id="workspaceTitle">Instructor</h1></div><div class="status-stack"><b id="exerciseState">READY</b><p id="startSetupStatus" role="status">Open Session: share the PIN, admit the controller and wait for Ready.</p><button id="openStartSetup" type="button">Startup steps</button><time id="instructorClock">00:00:00</time><details class="clock-settings" id="clockSettings"><summary>Clock</summary><label class="training-rate-control">SIM TIME<select id="trainingTimeRate" aria-describedby="trainingRateStatus" title="Changes simulated seconds per real second. At 1×, one simulated second equals one real second; aircraft settings and turn radius stay unchanged."><option value="1">1× REAL</option><option value="5" selected>5× TRAINING</option><option value="10">10× FAST</option></select></label><small id="trainingRateStatus" aria-live="polite">SIMULATION · 5×</small></details></div></header>
         <div class="instructor-console">
           <div class="console-center">
             <div class="console-toolbar" aria-label="Aircraft selection and exercise controls">
@@ -99,7 +109,7 @@
             </div>
             <div class="truth-layout">
               <div class="scope-card">
-                <details id="scopeSettings" class="scope-settings" open><summary>Scope settings <b id="scopeLabel">CONTINUOUS TRUTH</b></summary><div class="card-head"><label>Range<select id="scopeRange"><option value="auto">Auto</option><option value="10">10 NM</option><option value="20">20 NM</option><option value="40">40 NM</option><option value="60">60 NM</option><option value="100">100 NM</option></select></label><button id="resetScopePan" type="button">Centre</button><label class="switch"><input id="historyDots" type="checkbox" checked><span>Trail</span></label><label>Trail<select id="truthTrailCount"><option value="5">5 dots</option><option value="8" selected>8 dots</option><option value="12">12 dots</option></select></label></div></details>
+                <details id="scopeSettings" class="scope-settings" open><summary>Scope settings <b id="scopeLabel">CONTINUOUS TRUTH</b></summary><div class="card-head"><label>Range<select id="scopeRange"><option value="auto">Auto</option><option value="10">10 NM</option><option value="20">20 NM</option><option value="40">40 NM</option><option value="60">60 NM</option><option value="100">100 NM</option></select></label><label>Ring spacing<select id="ringSpacing"><option value="5">5 NM</option><option value="10" selected>10 NM</option></select></label><label>Labels<select id="truthLabelMode"><option value="selected" selected>Selected</option><option value="all">All</option><option value="off">Off</option></select></label><button id="resetScopePan" type="button">Centre</button><label class="switch"><input id="historyDots" type="checkbox" checked><span>Trail</span></label><label>Trail<select id="truthTrailCount"><option value="5">5 dots</option><option value="8" selected>8 dots</option><option value="12">12 dots</option></select></label></div></details>
                 <canvas id="instructorScope" width="900" height="700" aria-label="Instructor aircraft truth display"></canvas>
                 <p id="scopeInspection" class="scope-inspection" aria-live="polite">Drag to pan · click aircraft to transmit · double left/right click to turn · middle click to stop.</p>
                 <div class="scope-legend"><span><i class="legend-truth"></i>TRUTH</span><span><i class="legend-observed"></i>STUDENT OBSERVATION</span><span><i class="legend-runway"></i>RUNWAY / FINAL</span></div>
@@ -150,13 +160,13 @@
           </aside></details>
         </div>
 
-        <details class="event-drawer" id="eventDrawer"><summary>Event history</summary><section class="event-card"><ol id="eventLog"><li><time>00:00</time><span>Scenario configured. Waiting for controller position.</span></li></ol></section></details>
+        <details class="event-drawer" id="eventDrawer"><summary>Event history</summary><section class="event-card"><ol id="eventLog"><li><time>00:00:00</time><span>Scenario configured. Waiting for controller position.</span></li></ol></section></details>
       </section>
     </section>
 
     <section class="review-screen" id="reviewScreen" hidden>
-      <header class="workspace-head"><div><span class="eyebrow">DEBRIEF</span><h1>Truth versus observation</h1></div><button id="restartExercise" class="primary" type="button">RESTART EXERCISE</button></header>
-      <div class="review-grid"><div class="scope-card"><canvas id="reviewScope" width="1000" height="720" aria-label="Exercise review"></canvas><div class="review-controls"><label><input type="checkbox" data-review-layer="truth" checked> TRUTH</label><label><input type="checkbox" data-review-layer="observations" checked> STUDENT OBSERVATIONS</label><label><input type="checkbox" data-review-layer="events" checked> COMMANDS</label></div><div class="review-playback"><button id="reviewPlay" type="button">PLAY</button><label>REPLAY SPEED<select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0"><output id="reviewTime">00:00</output></div></div><div class="review-summary"><span>EXERCISE SUMMARY</span><strong id="reviewMode">QGH</strong><dl><div><dt>DURATION</dt><dd id="reviewDuration">00:00</dd></div><div><dt>COMMANDS</dt><dd id="reviewCommandCount">0</dd></div><div><dt>OBSERVATIONS</dt><dd id="reviewObservationCount">0</dd></div><div><dt>TRACK END</dt><dd id="reviewEndState">—</dd></div></dl><ol id="reviewEvents"></ol></div></div>
+      <header class="workspace-head"><div><span class="eyebrow">DEBRIEF</span><h1>Truth versus observation</h1></div><button id="restartExercise" class="primary" type="button">RESTART EXERCISE</button><a id="reviewSuiteHome" href="../index.html">ATS suite Home</a></header>
+      <div class="review-grid"><div class="scope-card"><canvas id="reviewScope" width="1000" height="720" aria-label="Exercise review"></canvas><div class="review-controls"><label><input type="checkbox" data-review-layer="truth" checked> TRUTH</label><label><input type="checkbox" data-review-layer="observations" checked> STUDENT OBSERVATIONS</label><label><input type="checkbox" data-review-layer="events" checked> COMMANDS</label></div><div class="review-playback"><button id="reviewPlay" type="button">PLAY</button><label>REPLAY SPEED<select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0"><output id="reviewTime">00:00:00</output></div></div><div class="review-summary"><span>EXERCISE SUMMARY</span><strong id="reviewMode">QGH</strong><dl><div><dt>DURATION</dt><dd id="reviewDuration">00:00:00</dd></div><div><dt>COMMANDS</dt><dd id="reviewCommandCount">0</dd></div><div><dt>OBSERVATIONS</dt><dd id="reviewObservationCount">0</dd></div><div><dt>TRACK END</dt><dd id="reviewEndState">—</dd></div></dl><ol id="reviewEvents"></ol></div></div>
     </section>
     <p class="equipment-note">Each sensor view is an inspired training representation of publicly described functions, not an operational equipment replica.</p>
 

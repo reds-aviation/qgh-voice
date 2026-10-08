@@ -19,16 +19,27 @@ export async function buildEntryTheme(output, root, version) {
     const prefix = page.includes('/') ? '../' : '';
     const path = resolve(output, page);
     let html = await readFile(path, 'utf8');
+    // These entry rules own the final layout for both training families.
+    // Keep their existing version query while moving them after the Pages theme.
+    let entryStyle = '';
+    if (['instructor', 'join', 'procedural'].includes(surface)) {
+      html = html.replace(/<link\b[^>]*href="suite-entry\.css(?:\?[^\"]*)?"[^>]*>\s*/g, link => {
+        if (entryStyle) throw new Error(`Duplicate suite entry stylesheet: ${page}`);
+        entryStyle = link.trim();
+        return '';
+      });
+      if (!entryStyle) throw new Error(`Missing suite entry stylesheet: ${page}`);
+    }
     // Published Pages uses the shared tour; keep legacy engine assets for old recordings/builds.
     if(['qgh','single','tactical'].includes(surface))html=html.replace(/<script[^>]+src="guided-familiarisation\.js[^\"]*"[^>]*><\/script>\s*/g,'').replace(/<link[^>]+href="guided-familiarisation\.css[^\"]*"[^>]*>\s*/g,'');
     html = html.replace('<body', `<body data-suite-surface="${surface}"`)
-      .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}"></head>`);
+      .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}">${entryStyle}</head>`);
     if (['qgh', 'instructor', 'guide'].includes(surface)) {
       html = html.replace(/(<meta name="theme-color" content=")[^"]+/, '$1#fafaf8');
     }
     if (surface === 'qgh') {
-      html = html.replace('<title>QGH Simulator</title>', '<title>QGH · ATC Training Suite</title>')
-        .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATC TRAINING SUITE</h1>')
+      html = html.replace('<title>QGH Simulator</title>', '<title>ATS SIM BOX · Version 1 · QGH</title>')
+        .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATS SIM BOX</h1><span class="product-version">Version 1</span>')
         .replace('SELECT QGH TYPE', 'SINGLE QGH · INDIVIDUAL PRACTICE')
         .replace('Choose your exercise</h2>', 'QGH</h2><p class="flow-subtitle">Cloud-breaking procedure</p>')
         .replace('Practise one aircraft, or manage a small tactical flight. Each path opens its own setup before the exercise begins.', 'Practise the QGH cloud-breaking procedure. Choose a single aircraft or tactical flight, then prepare your exercise.')
@@ -43,13 +54,17 @@ export async function buildEntryTheme(output, root, version) {
       html = html.replace('INSTRUCTOR LED · PROCEDURAL CONTROL', 'PROCEDURAL CONTROL · INSTRUCTOR-LED')
         .replace('One airspace.<br>Your exercise.', 'One airspace.<br>Every decision matters.')
         .replace('Set the traffic. Share the PIN. Work the procedure.', 'Aerodrome, approach and area control in one shared exercise. Set the traffic. Work the procedure.')
-        .replace('<div class="entry-desks">', '<div class="flow-section-label">PREPARE YOUR POSITION<span></span></div><div class="entry-desks">')
         .replace('Build the exercise.', 'Instructor setup')
         .replace('Join with the session PIN.', 'Controller position');
+      // The shared entry already supplies this label. Older entry markup still
+      // needs the presentation-layer label, but a second copy crowds the form.
+      if (!html.includes('PREPARE YOUR POSITION')) {
+        html = html.replace('<div class="entry-desks">', '<div class="flow-section-label">PREPARE YOUR POSITION<span></span></div><div class="entry-desks">');
+      }
     }
     // Operational guides stay public; the owner’s hardware handbook is private.
     if (['qgh', 'instructor', 'procedural', 'guide'].includes(surface)) {
-      html = html.replace('</body>', `<footer class="flow-footer"><span>ATC TRAINING SUITE</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
+      html = html.replace('</body>', `<footer class="flow-footer"><span>ATS SIM BOX · Version 1</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
     }
     await writeFile(path, html);
   }

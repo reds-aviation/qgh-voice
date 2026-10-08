@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
-  <title>Reds QGH Simulator · Tactical</title>
+  <title>ATS SIM BOX · Version 1 · Tactical QGH</title>
   <link rel="stylesheet" href="tactical.css?v=4.2.0">
   <link rel="stylesheet" href="voice.css?v=4.2.0">
   <link rel="stylesheet" href="guided-familiarisation.css?v=4.2.0">
@@ -19,6 +19,7 @@
   <script defer src="radio-session.js?v=4.2.0"></script>
   <script defer src="tactical-core.js?v=4.2.0"></script>
   <script defer src="tactical-workspace.js?v=4.2.0"></script>
+  <script defer src="scope-visuals.js"></script>
   <script defer src="tactical-simulator.js?v=4.2.0"></script>
   <script defer src="pilot-voice-engine.js?v=4.4.2"></script>
   <script defer src="radio-workspace.js?v=4.2.0"></script>
@@ -30,7 +31,7 @@
 <body>
   <main class="tactical-app">
     <header class="tactical-app-header">
-      <div class="tactical-brand"><h1>TACTICAL QGH SIMULATOR</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="training-centre.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
+      <div class="tactical-brand"><h1>ATS SIM BOX</h1><span class="product-version">Version 1</span><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="training-centre.html" target="_blank" rel="noopener">TRAINING CENTRE</a></div>
       <div class="tactical-credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
@@ -136,7 +137,7 @@
           </div>
           <div class="voice-ack-slot">
             <output id="tVoiceCommandAck" class="voice-command-ack" aria-live="off" hidden></output>
-            <span id="tHomingClock" class="homing-clock" role="timer" aria-label="Exercise clock" aria-live="off" hidden>00:00</span>
+            <span id="tHomingClock" class="homing-clock" role="timer" aria-label="Operator stopwatch" aria-live="off" hidden>00:00:00</span>
           </div>
           <div class="tactical-display">
             <div class="tactical-readout">
@@ -183,8 +184,8 @@
             <div class="tactical-unit" data-unit="KT"><input id="tLiveSpeed" type="number" inputmode="numeric" min="60" max="600" step="5" value="240"></div>
           </div>
           <div class="tactical-clock">
-            <small>EXERCISE CLOCK</small>
-            <strong id="tClock">00:00</strong>
+            <small title="Start, stop and reset this stopwatch independently of exercise elapsed time.">STOPWATCH</small>
+            <strong id="tClock" role="timer" aria-label="Operator stopwatch" aria-live="off">00:00:00</strong>
             <div>
               <button id="tClockStart" type="button">START</button>
               <button id="tClockStop" type="button">STOP</button>
@@ -221,7 +222,7 @@
           <div class="tactical-formation-review" id="tReviewFormation">VERTICAL SEPARATION · 1,000 FT</div>
           <div class="tactical-plot">
           <canvas id="tTacticalPlot" width="960" height="720" tabindex="0" aria-describedby="tReviewZoomHelp" aria-label="Tactical flight path review chart. Enable zoom to inspect the replay with keyboard controls."></canvas>
-            <output class="tactical-replay-elapsed" id="tReplayElapsed" aria-label="Track replay elapsed time">TRACK 00:00</output>
+            <output class="tactical-replay-elapsed" id="tReplayElapsed" aria-label="Track elapsed time in hours, minutes and seconds">TRACK 00:00:00</output>
           </div>
           <p class="tactical-review-zoom-help" id="tReviewZoomHelp">Turn zoom on to pinch or scroll; drag to pan. Keyboard: + / −, arrows; 0 to fit.</p>
           <output id="tReviewVoiceAck" class="voice-command-ack" aria-live="off" hidden></output>
@@ -254,7 +255,7 @@
             <div id="tReviewRows" class="tactical-review-rows"></div>
           </section>
           <section class="tactical-log-panel">
-            <header><h3>COMMANDS ISSUED</h3></header>
+            <header><h3 title="Times show exercise elapsed time in hours, minutes and seconds.">COMMAND AND EVENT LOG</h3></header>
             <div class="tactical-logs" id="tLogs"></div>
           </section>
         </aside>

@@ -4,6 +4,7 @@
   const Core = window.QGHCore || {};
   const normalize = Core.normalize || (value => ((Number(value) % 360) + 360) % 360);
   const radians = Core.radians || (value => Number(value) * Math.PI / 180);
+  const padHeading = value => String(normalize(Math.round(Number(value)))).padStart(3, '0');
 
   function pointOnBearing(cx, cy, radius, bearing) {
     const angle = radians(bearing);
@@ -67,6 +68,10 @@
   }
 
   function drawAircraft(context, x, y, heading, color, callsign, focused) {
+    if (window.ATCScopeVisuals) {
+      window.ATCScopeVisuals.drawAircraftGlyph(context, { x, y, headingDeg: heading, color, outline: '#fffefa', selected: focused });
+      return;
+    }
     context.save();
     context.translate(x, y);
     context.rotate(radians(heading));
@@ -74,10 +79,10 @@
     context.strokeStyle = '#fffefa';
     context.lineWidth = 1.5;
     context.beginPath();
-    context.moveTo(0, -9);
-    context.lineTo(5.5, 7);
-    context.lineTo(0, 4.5);
-    context.lineTo(-5.5, 7);
+    context.moveTo(0, -6);
+    context.lineTo(5, 5);
+    context.lineTo(0, 3);
+    context.lineTo(-5, 5);
     context.closePath();
     context.fill();
     context.stroke();
@@ -86,8 +91,7 @@
     context.strokeStyle = color;
     context.lineWidth = focused ? 2.5 : 1.5;
     context.beginPath();
-    context.arc(x, y, focused ? 13 : 11, 0, Math.PI * 2);
-    context.stroke();
+    if (focused) { context.arc(x, y, 10, 0, Math.PI * 2); context.stroke(); }
     context.fillStyle = '#17262b';
     context.font = '600 10px IBM Plex Sans, Arial';
     context.textAlign = 'center';
@@ -95,25 +99,21 @@
     context.fillText(callsign, x, y - (focused ? 17 : 15));
   }
 
-  function drawFormationCluster(context, x, y, heading, leader, wingmen, focused) {
+  function drawFormationCluster(context, x, y, heading, leader, wingmen, focusedId) {
     drawAircraft(
-      context, x, y, heading, leader.color || '#007d7d', leader.callsign || leader.id || 'LEAD', focused
+      context, x, y, heading, leader.color || '#007d7d', leader.callsign || leader.id || 'LEAD', leader.id === focusedId
     );
     const offsets = [{ x: 12, y: 8 }, { x: -12, y: 8 }, { x: 0, y: 15 }];
-    context.save();
-    context.translate(x, y);
-    context.rotate(radians(heading));
+    const symbols = [{ aircraft: leader, x, y, heading }];
+    const angle = radians(heading);
     wingmen.forEach((wingman, index) => {
       const offset = offsets[index % offsets.length];
-      context.fillStyle = wingman.color || '#52646a';
-      context.strokeStyle = '#fffefa';
-      context.lineWidth = 1.5;
-      context.beginPath();
-      context.arc(offset.x, offset.y, 4.5, 0, Math.PI * 2);
-      context.fill();
-      context.stroke();
+      const wx = x + offset.x * Math.cos(angle) - offset.y * Math.sin(angle);
+      const wy = y + offset.x * Math.sin(angle) + offset.y * Math.cos(angle);
+      drawAircraft(context, wx, wy, heading, wingman.color || '#52646a', wingman.callsign || wingman.id, wingman.id === focusedId);
+      symbols.push({ aircraft: wingman, x: wx, y: wy, heading });
     });
-    context.restore();
+    return symbols;
   }
 
   function drawTrack(context, path, count, cx, cy, scale, aircraft, focusedId) {
@@ -171,6 +171,7 @@
     pinchStart: null,
     bound: false
   };
+  let lastModel = null;
 
   function clamp(value, minimum, maximum) {
     return Math.max(minimum, Math.min(maximum, value));
@@ -196,7 +197,8 @@
 
   function applyViewport(canvas) {
     if (!canvas) return;
-    canvas.style.transform = `translate(${viewport.offsetX}px, ${viewport.offsetY}px) scale(${viewport.zoom})`;
+    canvas.style.transform = '';
+    if (lastModel) draw(lastModel);
   }
 
   function pointerDistance(points) {
@@ -325,6 +327,7 @@
     if (!model || !model.cfg || !Array.isArray(model.aircraft) || !model.aircraft.length) return false;
     const canvas = resolveCanvas(model);
     if (!canvas || typeof canvas.getContext !== 'function') return false;
+    lastModel = model;
     bindViewport(canvas);
     const { context, width, height } = canvasSize(canvas, model);
     if (!context) return false;
@@ -338,9 +341,9 @@
         : maximum;
     }, 0);
     const maxRange = Math.max(35, Math.ceil(Math.max(Number(model.maxRange) || 0, maxPointRange) / 5) * 5);
-    const cx = width / 2;
-    const cy = height / 2;
-    const scale = Math.min(width, height) * .47 / maxRange;
+    const cx = width / 2 + viewport.offsetX;
+    const cy = height / 2 + viewport.offsetY;
+    const scale = Math.min(width, height) * .47 / maxRange * viewport.zoom;
     const outerRadius = maxRange * scale * .95;
     const cfg = model.cfg;
     const finalRadial = normalize(Number(cfg.inbound) + 180);
@@ -352,16 +355,21 @@
 
     context.strokeStyle = '#d1d8d4';
     context.lineWidth = 1;
-    for (let ring = 5; ring <= maxRange; ring += 5) {
+    const ringSpacing = Number(model.ringSpacing) === 5 ? 5 : 10;
+    if (window.ATCScopeVisuals) window.ATCScopeVisuals.drawRangeRings(context, { rangeNm: maxRange, spacingNm: ringSpacing,
+      cx, cy, scale, width, height, strokeStyle: '#d1d8d4', fillStyle: '#617177', font: '11px IBM Plex Sans, Arial' });
+    else for (let ring = ringSpacing; ring <= maxRange + ringSpacing; ring += ringSpacing) {
+      const distance = Math.min(ring, maxRange);
       context.beginPath();
-      context.arc(cx, cy, ring * scale, 0, Math.PI * 2);
+      context.arc(cx, cy, distance * scale, 0, Math.PI * 2);
       context.stroke();
-      if (ring % 10 === 0) {
+      if (distance % 10 === 0 || distance === maxRange) {
         context.fillStyle = '#617177';
         context.font = '11px IBM Plex Sans, Arial';
         context.textAlign = 'left';
-        context.fillText(`${ring} NM`, cx + 7, cy - ring * scale + 14);
+        context.fillText(`${distance} NM`, cx + 7, cy - distance * scale + 14);
       }
+      if (distance === maxRange) break;
     }
 
     const cardinals = [
@@ -402,15 +410,15 @@
     const outboundEnd = pointOnBearing(cx, cy, outerRadius * .86, outbound);
     drawArrow(context, outboundStart, outboundEnd, '#2d7b79', 2);
     drawCourseLabel(context, cx, cy, outerRadius * .72, outbound, [
-      `OUTBOUND ${String(Math.round(outbound)).padStart(3, '0')}°M`, 'AWAY FROM VDF'
+      `OUTBOUND ${padHeading(outbound)}°M`, 'AWAY FROM VDF'
     ], '#286967');
 
     const inboundStart = pointOnBearing(cx, cy, outerRadius * .9, finalRadial);
     const inboundEnd = pointOnBearing(cx, cy, outerRadius * .17, finalRadial);
     drawArrow(context, inboundStart, inboundEnd, '#6b4b96', 2);
     drawCourseLabel(context, cx, cy, outerRadius * .74, finalRadial, [
-      `FINAL / INBOUND ${String(Math.round(Number(cfg.inbound))).padStart(3, '0')}°M`,
-      `QDR ${String(Math.round(finalRadial)).padStart(3, '0')}°M · RADIAL FROM VDF`
+      `FINAL / INBOUND ${padHeading(cfg.inbound)}°M`,
+      `QDR ${padHeading(finalRadial)}°M · RADIAL FROM VDF`
     ], '#5b427f');
 
     context.save();
@@ -424,7 +432,7 @@
     context.fillStyle = '#52646a';
     context.font = '600 11px IBM Plex Sans, Arial';
     context.textAlign = 'left';
-    context.fillText(`RWY ${String(Math.round(Number(cfg.runway) || 0)).padStart(3, '0')}°M`, cx + 11, cy - 40);
+    context.fillText(`RWY ${padHeading(Number(cfg.runway) || 0)}°M`, cx + 11, cy - 40);
 
     const visibleAircraftList = Array.isArray(model.visibleIds)
       ? aircraft.filter(item => model.visibleIds.includes(item.id))
@@ -434,6 +442,7 @@
 
     const formationLeader = visibleAircraftList.find(item => item.formationRole === 'LEAD');
     const attachedWingmen = visibleAircraftList.filter(item => item.formationRole === 'FORMATION');
+    const symbols = [];
 
     visibleAircraftList.forEach(item => {
       const count = modelCount(model, item);
@@ -445,19 +454,20 @@
         context.arc(cx + start.x * scale, cy + start.y * scale, 6, 0, Math.PI * 2);
         context.fill();
       }
-      if (current && item.formationRole !== 'FORMATION' && !(item.formationRole === 'LEAD' && attachedWingmen.length)) drawAircraft(
-        context, cx + current.x * scale, cy + current.y * scale, current.heading || 0,
-        item.color || '#007d7d', item.callsign || item.id || 'AIRCRAFT', focusedId === item.id
-      );
+      if (current && item.formationRole !== 'FORMATION' && !(item.formationRole === 'LEAD' && attachedWingmen.length)) {
+        const x = cx + current.x * scale, y = cy + current.y * scale;
+        drawAircraft(context, x, y, current.heading || 0, item.color || '#007d7d', item.callsign || item.id || 'AIRCRAFT', focusedId === item.id);
+        symbols.push({ aircraft: item, x, y, heading: current.heading || 0 });
+      }
     });
 
     if (formationLeader && attachedWingmen.length) {
       const count = modelCount(model, formationLeader);
       const current = formationLeader.path[count - 1];
-      if (current) drawFormationCluster(
+      if (current) symbols.push(...drawFormationCluster(
         context, cx + current.x * scale, cy + current.y * scale, current.heading || 0,
-        formationLeader, attachedWingmen, focusedId === formationLeader.id
-      );
+        formationLeader, attachedWingmen, focusedId
+      ));
     }
 
     const visibleAircraft = visibleAircraftList.length;
@@ -475,6 +485,21 @@
     context.font = '600 13px IBM Plex Sans, Arial';
     context.textAlign = 'center';
     context.fillText('VDF / OVERHEAD', cx, cy + 5);
+    if (window.ATCScopeVisuals) {
+      const visuals = window.ATCScopeVisuals;
+      context.font = '11px IBM Plex Mono, monospace';
+      const labelAircraft = symbols.map(({aircraft: item, x, y, heading}) => {
+        const count = modelCount(model, item), current = item.path[count - 1], previous = item.path[count - 2];
+        const stepSeconds = window.QGHTacticalCore?.STEP_SECONDS || .25;
+        const gs = previous && current ? Math.hypot(current.x - previous.x, current.y - previous.y) * 3600 / stepSeconds : null;
+        return { id: item.id, callsign: item.callsign, x, y, selected: focusedId === item.id, color: item.color || '#007d7d',
+          details: [`${Math.round(item.level || 0)} FT  ${gs == null ? 'GS —' : `${Math.round(gs)} KT GS`}`, `${padHeading(heading)} H`] };
+      });
+      const labels = visuals.aircraftLabels(labelAircraft, { mode: model.labelMode, measure: text => context.measureText?.(text)?.width || text.length * 7 });
+      visuals.drawAircraftLabels(context, visuals.placeAircraftLabels(labels, { width, height, aircraft: labelAircraft,
+        obstacles: [...visuals.overlayObstacles(canvas, { document, width, height }), { x: 15, y: 10, width: 180, height: focused ? 38 : 22 }] }),
+        { background: '#fffefa' });
+    }
     return true;
   }
 

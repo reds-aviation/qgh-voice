@@ -129,7 +129,7 @@
     const skip = makeButton('SKIP FOR NOW', 'qgh-guide-button--quiet', () => { markSeen(); removeOverlay(); });
     const tactical = makeButton('TACTICAL TOUR', '', () => { writeStore(PENDING_KEY, 'tactical'); root.location.assign('tactical.html'); });
     const single = makeButton('SINGLE AIRCRAFT TOUR', 'qgh-guide-button--primary', () => { writeStore(PENDING_KEY, 'single'); root.location.assign('single.html'); });
-    createOverlay('WELCOME TO QGH SIMULATOR', 'GUIDED FAMILIARISATION · OPTIONAL', content, [skip, tactical, single]);
+    createOverlay('WELCOME TO ATS SIM BOX', 'GUIDED FAMILIARISATION · OPTIONAL', content, [skip, tactical, single]);
   }
 
   function tourSteps(kind) {

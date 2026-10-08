@@ -502,7 +502,7 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
-/* The version-linked beta manual remains readable on phones and in print. */
+/* The version-linked training manual remains readable on phones and in print. */
 .beta-guide { max-width: 1060px; }
 .beta-guide .site-header { justify-content: flex-start; flex-wrap: wrap; gap: 16px 24px; }
 .beta-guide .site-header .wordmark { margin-right: auto; }
@@ -532,6 +532,11 @@ body.narrow-radar .orientation-gate { display: grid !important; }
 .scenario-library output { flex:1 1 100%; font-size:.8rem; }
 .scenario-library .preset-import { flex:0 1 160px; }
 .scenario-library input[type=file] { max-width:100%; padding:7px; min-height:44px; }
+.ats-saved-exercises > h2 { margin:0; font-size:1.1rem; font-weight:600; }
+.scenario-library .preset-help { flex:1 1 100%; margin:0; color:var(--muted); font-size:.85rem; line-height:1.5; }
+.scenario-library .preset-management { flex:1 1 100%; min-width:0; }
+.preset-management > summary { min-height:40px; display:list-item; cursor:pointer; padding:10px 0; }
+.preset-management-actions { display:flex; flex-wrap:wrap; align-items:end; gap:8px; padding:8px 0; }
 .console-navigation > summary, .session-drawer > summary, .aircraft-control-drawer > summary, .event-drawer > summary, .clock-settings > summary { cursor:pointer; min-height:44px; padding:12px; font-weight:600; }
 .instructor-page .active-workspace { grid-template-columns:minmax(0,1fr); gap:6px; padding:8px 0; }
 .instructor-page .session-drawer { border:1px solid var(--line); border-radius:10px; }

@@ -18,6 +18,8 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   for(const page of pages) {
     const html=readFileSync(resolve(dist,page),'utf8'),{document}=parseHTML(html),ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
     assert.equal(new Set(ids).size,ids.length,`duplicate ID in ${page}`);
+    assert.match(document.querySelector('title').textContent,/ATS SIM BOX · Version 1/,`${page}: common product and public version`);
+    assert.doesNotMatch(document.body.textContent,/\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,`${page}: no stale visible branding or release stage`);
     assert.ok(!html.includes('offline-setup'), `private handbook link in ${page}`);
     if(!['instructor-led/training-guide.html','procedural-beta/procedural-guide.html'].includes(page))assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
     assert.ok(!html.includes('entry-theme.css'),`deferred theme included in ${page}`);
@@ -35,6 +37,26 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
       }
     }
   }
+  for (const page of ['instructor-led/index.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
+    const {document}=parseHTML(readFileSync(resolve(dist,page),'utf8'));
+    const styles=[...document.querySelectorAll('link[rel="stylesheet"]')].map(link=>new URL(link.getAttribute('href'),new URL(page,base)).pathname.split('/').at(-1));
+    assert.equal(styles.filter(path=>path==='suite-entry.css').length,1,`${page}: shared entry rules loaded once`);
+    assert.ok(styles.indexOf('suite-entry.css')>styles.indexOf('flow-theme.css'),`${page}: shared layout follows generated theme`);
+  }
+  for (const [page,renderer] of [['single.html','simulator.js'],['tactical.html','tactical-simulator.js'],['instructor-led/instructor.html','suite-display.js'],['procedural-beta/index.html','browser-client.js'],['procedural-beta/procedural.html','browser-client.js']]) {
+    const {document}=parseHTML(readFileSync(resolve(dist,page),'utf8'));
+    const scripts=[...document.querySelectorAll('script[src]')];
+    const names=scripts.map(script=>new URL(script.getAttribute('src'),new URL(page,base)).pathname.split('/').at(-1));
+    assert.equal(names.filter(path=>path==='scope-visuals.js').length,1,`${page}: one canonical scope helper`);
+    assert.ok(names.indexOf('scope-visuals.js')<names.indexOf(renderer),`${page}: scope helper loads before renderer`);
+    const helper=scripts[names.indexOf('scope-visuals.js')];
+    assert.ok(helper.hasAttribute('defer')&&!helper.hasAttribute('type'),`${page}: optional helper is a classic deferred script`);
+  }
+  const helper=readFileSync(resolve(root,'packages/qgh-engine/scope-visuals.js'),'utf8');
+  for (const path of ['scope-visuals.js','instructor-led/scope-visuals.js','procedural-beta/scope-visuals.js']) {
+    assert.equal(readFileSync(resolve(dist,path),'utf8'),helper,`${path}: identical canonical scope helper`);
+  }
+  assert.equal(readFileSync(resolve(dist,'instructor-led/suite-entry.css'),'utf8'),readFileSync(resolve(dist,'procedural-beta/suite-entry.css'),'utf8'),'both families receive one shared entry stylesheet');
   for(const page of ['training-centre.html','user-guide.html']) {
     const html=readFileSync(resolve(dist,page),'utf8');assert.equal((html.match(/id="current-flow"/g)||[]).length,1);
     if(page==='user-guide.html')assert.ok(html.includes('I am also learning.'),'common handbook explains Gyani limitations');
@@ -55,6 +77,10 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   const sw=vm.runInContext(readFileSync(resolve(dist,'service-worker.js'),'utf8')+';({APP_SHELL,shellCacheKey})',context);
   assert.equal(new Set(sw.APP_SHELL).size,sw.APP_SHELL.length,'duplicate precache URL');
   for(const path of sw.APP_SHELL) assert.ok(existsSync(resolve(dist,path.endsWith('/')?path+'index.html':path)),`missing precache ${path}`);
+  for (const path of ['scope-visuals.js','procedural-beta/scope-visuals.js','procedural-beta/suite-entry.css']) {
+    assert.ok(sw.APP_SHELL.includes('./'+path),`${path}: available in suite offline shell`);
+    assert.equal(sw.shellCacheKey(new Request(new URL(path+'?release='+release,base))).url,new URL(path,base).href,`${path}: current release uses offline asset`);
+  }
   const worker=new URL('procedural-beta/browser-worker.js?room=12345678-1234-1234-1234-123456789abc',base);
   assert.equal(sw.shellCacheKey(new Request(worker)).url,new URL('procedural-beta/browser-worker.js',base).href);
   assert.ok(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?position=student&connection=online',base))));

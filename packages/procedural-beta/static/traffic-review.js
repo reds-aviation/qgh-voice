@@ -46,7 +46,7 @@ export function createTrafficReview(container) {
   rateLabel.append(rate);
   const scrub=el('input');scrub.type='range';scrub.min='0';scrub.step='.2';scrub.setAttribute('aria-label','Traffic replay time');
   const aircraftLabel=el('label','Aircraft'),aircraftSelect=el('select');aircraftSelect.setAttribute('aria-label','Replay aircraft');aircraftLabel.append(aircraftSelect);
-  const readout=el('output','00:00');toolbar.append(play,viewLabel,aircraftLabel,rateLabel,scrub,readout);
+  const readout=el('output','00:00:00');toolbar.append(play,viewLabel,aircraftLabel,rateLabel,scrub,readout);
   const markers=el('div');markers.className='traffic-review-markers';markers.setAttribute('aria-label','Recorded command and event timeline');
   const eventDetails=el('details'),eventSummary=el('summary','Commands & events'),eventList=el('div');eventList.className='traffic-review-events';eventDetails.append(eventSummary,eventList);
   const canvas=el('canvas');canvas.className='traffic-review-canvas';canvas.setAttribute('aria-label','Instructor traffic replay with altitude and configured separation cues');
@@ -56,7 +56,7 @@ export function createTrafficReview(container) {
   container.append(toolbar,markers,canvas,cues,eventDetails,note,download);
   function persist(){try{sessionStorage.setItem('ats-procedural-replay',JSON.stringify({exercise,frames,events}));}catch{ /* Quota failure leaves the in-memory replay available. */ }}
   function seek(t){time=Math.max(frames[0]?.t || 0,Math.min(frames.at(-1)?.t || 0,t));playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);draw();}
-  const clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
+  const clock=t=>{const s=Math.max(0,Math.floor(Number(t)||0));return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(v=>String(v).padStart(2,'0')).join(':');};
   function renderTimeline(){
     const targets=[...new Map(frames.flatMap(f=>f.aircraft).map(a=>[a.id,a.callsign])).entries()];
     const signature=JSON.stringify(targets);

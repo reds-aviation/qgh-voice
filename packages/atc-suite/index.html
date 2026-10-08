@@ -5,47 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'">
-  <title>Instructor-led Training · ATC Training Suite</title>
+  <title>Instructor-led Training · ATS SIM BOX · Version 1</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="suite.css">
+  <link rel="stylesheet" href="suite-entry.css">
+  <script defer src="suite-cloud.js"></script>
+  <script defer src="suite-entry.js"></script>
 </head>
 <body class="entry-page">
   <main class="shell">
-    <header class="site-header">
-      <div class="header-left"><a class="wordmark" href="index.html">ATC TRAINING SUITE</a><a class="suite-return-link" href="../index.html">SUITE HOME</a></div>
-      <div class="creator"><small>CREATED BY</small><strong>Flt Lt Balaram Reddy</strong><small>SERVICE NO. 38703</small></div>
+    <header class="site-header suite-entry-header">
+      <a class="entry-brand" href="../index.html">ATS SIM BOX<small>Version 1 · QGH · SRE / SRA · VECTORING</small></a>
+      <div class="entry-credit"><strong>Flt Lt Balaram Reddy</strong><small>Service No. 38703</small></div>
+      <nav class="entry-nav suite-header-left" aria-label="Page navigation"><a href="../index.html">Suite home</a><a href="training-guide.html" target="_blank" rel="noopener">Training guide ↗</a></nav>
     </header>
 
-    <section class="entry-hero">
-      <div>
-        <span class="eyebrow">INSTRUCTOR · CONTROLLER TRAINING</span>
-        <h1>QGH + SRA<br>&amp; vectoring.</h1>
-        <p>Configure 1–24 aircraft. The instructor controls the exercise; the trainee works from the selected sensor picture.</p>
+    <section id="entry" class="suite-entry" aria-labelledby="chooseRole">
+      <div class="entry-copy">
+        <span class="eyebrow">INSTRUCTOR LED · QGH / SRE / SRA</span>
+        <h1>QGH, SRE / SRA &amp; vectoring</h1>
+        <p>Set the traffic. Share the PIN. Work the procedure.</p>
+        <ul class="entry-families" aria-label="Training families"><li>QGH / D/F</li><li>SRE / SRA</li><li>Vectoring</li></ul>
       </div>
-      <div class="mode-orbit" aria-label="Training families">
-        <div><b>01</b><span>QGH / D/F</span></div>
-        <div><b>02</b><span>SURVEILLANCE / SRA</span></div>
-        <div><b>03</b><span>VECTORING</span></div>
+      <div class="session-connection"><label for="exerciseConnection">Exercise connection<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label><p id="connectionHelp">Use the same connection setting on both positions. This device: same PC and browser profile, separate windows. Online room: internet on both devices.</p></div>
+      <span id="chooseRole" class="eyebrow">PREPARE YOUR POSITION</span>
+      <div class="entry-desks">
+        <article class="entry-role"><span class="eyebrow">01 / INSTRUCTOR</span><h2>Instructor setup</h2><p>Enter your traffic, prepare the exercise and admit your controller.</p><div class="entry-role-actions"><a id="openInstructorSetup" class="entry-action" href="instructor.html">Open instructor setup →</a></div><small>Keep the instructor desk open throughout the exercise.</small></article>
+        <article class="entry-role" id="controllerposition"><span class="eyebrow">02 / CONTROLLER</span><h2>Controller position</h2><p>Join the instructor's exercise with the six-digit session PIN.</p><form id="entryJoinForm" class="entry-role-actions" action="student.html"><label for="entryJoinPin">Six-digit session PIN<input id="entryJoinPin" name="pin" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" required></label><button class="primary" type="submit">Request to join →</button></form><a id="openControllerPosition" class="entry-secondary" href="#entryJoinPin">Enter PIN above ↑</a></article>
       </div>
-    </section>
-
-    <section class="role-grid" aria-labelledby="chooseRole">
-      <div class="section-title"><span>START</span><h2 id="chooseRole">Choose your position</h2></div>
-      <a class="role-card role-card--instructor" href="instructor.html">
-        <span class="role-index">01</span>
-        <div><small>CONTROL &amp; SUPERVISE</small><h3>Instructor console</h3><p>Set the scenario, admit the trainee, control the aircraft and review truth against observations.</p></div>
-        <b>OPEN →</b>
-      </a>
-      <a class="role-card" href="student.html">
-        <span class="role-index">02</span>
-        <div><small>JOIN WITH SESSION PIN</small><h3>Controller position</h3><p>Use the QGH homing display or SRA and vectoring radar picture.</p></div>
-        <b>JOIN →</b>
-      </a>
-    </section>
-
-    <section class="capability-note">
-      <strong>BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · 0.2.3-beta.1</strong>
-      <p>This device / offline: one PC, the same browser profile and separate windows. Best with two monitors in Extend mode. Online room: instructor and student on different PCs or devices, with internet on both. Equipment views are training representations—not operational replicas.</p><p><a href="training-guide.html">BETA TRAINING GUIDE &amp; ALL COMMANDS →</a></p>
+      <div class="entry-note"><strong>ATS SIM BOX · Version 1</strong><p>Equipment views are training representations. Use two extended displays for this-device training; Duplicate reveals the instructor picture.</p><a href="training-guide.html">Training guide &amp; commands →</a></div>
     </section>
   </main>
   <script defer src="pwa-register.js"></script>

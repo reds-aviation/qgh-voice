@@ -85,15 +85,20 @@ function harness({ formation = false, procedure = 'normal', rate = 3 } = {}) {
   elements.tSetup.classList.add('active');
   elements.tTerminateDialog.showModal = function () { this.open = true; };
   elements.tTerminateDialog.close = function () { this.open = false; };
+  const replayButtons = [1, 2, 3, 10].map(speed => {
+    const button = new Element(); button.dataset.tacticalReplaySpeed = String(speed); return button;
+  });
   const document = {
     getElementById: id => elements[id] || null,
     createElement: () => new Element(),
     createTextNode: text => ({ textContent: text }),
     createDocumentFragment: () => Object.assign(new Element(), { fragment: true }),
     querySelectorAll: selector => selector === '.tactical-aircraft-row'
-      ? elements.tAircraftRows.querySelectorAll(selector) : []
+      ? elements.tAircraftRows.querySelectorAll(selector)
+      : selector === '[data-tactical-replay-speed]' ? replayButtons : []
   };
   let now = 0;
+  let flightNow = 0;
   let nextTimer = 0;
   let randomState = 0x5a17c0de;
   const timers = new Map();
@@ -101,6 +106,7 @@ function harness({ formation = false, procedure = 'normal', rate = 3 } = {}) {
   const captions = [];
   const context = {
     document, console, Uint32Array,
+    performance: { now: () => flightNow },
     setTimeout(callback, delay = 0) {
       const id = ++nextTimer;
       timers.set(id, { callback, at: now + delay });
@@ -144,6 +150,13 @@ function harness({ formation = false, procedure = 'normal', rate = 3 } = {}) {
     state, elements, captions, radio: context.QGHRadioWorkspace, adapter: context.QGHRadioAdapter,
     aircraft: id => Tactical.getAircraft(state.exercise, id),
     click: id => elements[id].click(),
+    replaySpeed(rate) { replayButtons.find(button => Number(button.dataset.tacticalReplaySpeed) === rate).click(); },
+    replayFrame(milliseconds) {
+      const id = state.replayTimer, timer = timers.get(id);
+      assert.ok(timer, 'missing replay timer');
+      assert.equal(timer.at - now, 250, 'replay frame uses the recorded quarter-second cadence');
+      flightNow += milliseconds; timers.delete(id); timer.callback();
+    },
     select: id => state.railItems.get(id).select.click(),
     speed(value) {
       const input = elements.tLiveSpeed;
@@ -161,7 +174,11 @@ function harness({ formation = false, procedure = 'normal', rate = 3 } = {}) {
       elements[side === 'left' ? 'tTurnLeft' : 'tTurnRight'].click();
     },
     tick(count = 1) {
-      for (let index = 0; index < count; index += 1) intervals.get(state.flightTimer)?.();
+      for (let index = 0; index < count; index += 1) { flightNow += 250; intervals.get(state.flightTimer)?.(); }
+    },
+    elapsed(milliseconds) {
+      flightNow += milliseconds;
+      [...intervals.values()].forEach(callback => callback());
     },
     advanceTime(milliseconds) {
       const end = now + milliseconds;
@@ -389,4 +406,58 @@ test('resetting tactical microphone playback preserves an armed flight report', 
   h.tick(4);
   h.advanceTime(300);
   assert.equal(h.captions[0].text, 'HEADING PASSING 063°M · FALCON 11');
+});
+
+test('Tactical flight and stopwatch use elapsed time and require explicit resume after a browser gap', () => {
+  const h = harness(); h.click('tClockStart');
+  const a = h.aircraft('A');
+  a.plane = { x: 0, y: 0, heading: 90 }; a.cfg.speed = 240;
+  a.initialTurnSide = a.manualTurnSide = a.forcedTurnSide = null; a.targetHeading = 90;
+  const samples = a.path.length;
+  h.elapsed(750); h.elapsed(750);
+  assert.ok(Math.abs(a.plane.x - .1) < 1e-10);
+  assert.equal(a.path.length, samples + 6);
+  assert.equal(h.state.clockSeconds, 1.5);
+  const before = { ...a.plane };
+  h.elapsed(5000);
+  assert.deepEqual(a.plane, before);
+  assert.equal(h.state.flightSuspended, true);
+  assert.equal(h.state.clockRunning, false);
+  assert.equal(h.elements.tClockStart.textContent, 'RESUME FLIGHT');
+  h.click('tClockStart'); h.elapsed(500);
+  assert.equal(h.state.flightSuspended, false);
+  assert.equal(a.path.length, samples + 8);
+});
+
+test('Tactical flight resume restores only a stopwatch that was already running', () => {
+  for (const mode of ['never-started', 'stopped', 'running']) {
+    const h = harness();
+    if (mode !== 'never-started') { h.click('tClockStart'); h.elapsed(750); }
+    if (mode === 'stopped') h.click('tClockStop');
+    const before = h.state.clockSeconds;
+    h.elapsed(5000); h.click('tClockStart');
+    assert.equal(h.state.flightSuspended, false);
+    assert.notEqual(h.state.flightTimer, null);
+    assert.equal(h.state.clockRunning, mode === 'running', mode);
+    assert.equal(h.state.clockSeconds, before);
+    h.elapsed(250);
+    assert.equal(h.state.clockSeconds, before + (mode === 'running' ? .25 : 0), mode);
+  }
+});
+
+test('Tactical replay speed equals recorded seconds per real second and excludes pauses', () => {
+  for (const rate of [1, 2, 3, 10]) {
+    const h = harness(); h.click('tAdvance'); h.click('tTerminate'); h.click('tConfirmTerminate');
+    const recorded = clone(h.state.exercise);
+    h.replaySpeed(rate); h.click('tReplay'); h.replayFrame(1000);
+    assert.equal(h.state.replayIndex, 1 + 4 * rate, `${rate}×`);
+    assert.equal(h.elements.tReplayElapsed.textContent, `REPLAY 00:00:${String(rate).padStart(2, '0')}`);
+    assert.deepEqual(clone(h.state.exercise), recorded, 'replay never changes completed aircraft state');
+  }
+  const h = harness(); h.click('tAdvance'); h.click('tTerminate'); h.click('tConfirmTerminate'); h.click('tReplay');
+  h.replayFrame(600); assert.equal(h.state.replayIndex, 3);
+  h.elapsed(150); h.click('tReplay'); assert.equal(h.state.replayIndex, 4);
+  h.elapsed(5000); h.click('tReplay'); h.replayFrame(250);
+  assert.equal(h.state.replayIndex, 5);
+  assert.equal(h.elements.tReplayElapsed.textContent, 'REPLAY 00:00:01');
 });

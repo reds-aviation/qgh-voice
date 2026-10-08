@@ -429,7 +429,7 @@
     const deltaHeading = orbit ? 0 : turnDeltaForStep(aircraft, duration);
     const motion = orbit
       ? Core.advanceOrbitMotion(aircraft.plane, aircraft.cfg.speed, aircraft.cfg.rate, duration, orbit)
-      : advanceArc(aircraft.plane, aircraft.plane.heading, aircraft.cfg.speed, deltaHeading / duration, duration);
+      : Core.advanceHeadingMotion(aircraft.plane, aircraft.plane.heading, aircraft.cfg.speed, aircraft.cfg.rate, duration, deltaHeading);
     aircraft.plane = { x: motion.x, y: motion.y, heading: motion.heading };
     if (orbit) {
       for (let lap = orbit.laps - motion.completedLaps + 1; lap <= orbit.laps; lap += 1) {

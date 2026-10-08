@@ -74,7 +74,7 @@
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
-    installButton.textContent = 'INSTALL QGH ON THIS DEVICE';
+    installButton.textContent = 'INSTALL ATS SIM BOX ON THIS DEVICE';
   });
 
   installButton.addEventListener('click', async () => {

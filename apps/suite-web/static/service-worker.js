@@ -8,6 +8,7 @@ const CACHE_NAME = `${CACHE_PREFIX}v${APP_VERSION}`;
 // This explicit shell is the complete offline boundary. Session messages and
 // review data are intentionally never written to Cache Storage.
 const APP_SHELL = [
+  './meeting-room.js',
   './',
   './index.html',
   './instructor.html',
@@ -15,6 +16,8 @@ const APP_SHELL = [
   './training-guide.html',
   './suite-command-reference.js',
   './suite.css',
+  './suite-entry.js',
+  './suite-entry.css',
   './suite-core.js',
   './suite-display.js',
   './suite-instructor.js',
@@ -30,6 +33,7 @@ const APP_SHELL = [
   './workspace-shell.js',
   './workspace-shell.css',
   './simulator-core.js',
+  './scope-visuals.js',
   './procedure-core.js',
   './fonts/ibm-plex-mono-500.ttf',
   './fonts/ibm-plex-sans-400.ttf',

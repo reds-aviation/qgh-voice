@@ -1,9 +1,428 @@
-.ats-workspace-shell{--ats-action:#195b66;--ats-action-ink:#effcff;--ats-turn:#453c25;--ats-turn-ink:#ffdf94;--ats-danger:#782a39;--ats-danger-ink:#fff3f5;--ats-estimate:#d4b1ff;--ats-scope:#0e1319;font-family:Plex,"IBM Plex Sans",Arial,sans-serif;min-width:0}
+:root{--ats-page:#111820;--ats-panel:#1b2732;--ats-panel-raised:#263541;--ats-input:#111d27;--ats-border:#5f7584;--ats-text:#edf4f7;--ats-muted:#bbcad3;--ats-action:#195b66;--ats-action-ink:#effcff;--ats-turn:#453c25;--ats-turn-ink:#ffdf94;--ats-danger:#782a39;--ats-danger-ink:#fff3f5;--ats-estimate:#d4b1ff;--ats-scope:#0e1319;--ats-focus:#f4cd77;--ats-space-1:4px;--ats-space-2:8px;--ats-space-3:16px;--ats-space-4:24px;--ats-radius:8px;--ats-header-height:64px;--ats-tools-width:144px;--ats-drawer-width:384px}
+.ats-workspace-shell{font-family:Plex,"IBM Plex Sans",Arial,sans-serif;min-width:0}
 .ats-workspace-shell button,.ats-workspace-shell input,.ats-workspace-shell select,.ats-workspace-shell textarea{font-family:inherit}
 .ats-workspace-shell .ats-scope-surface{display:block;max-width:100%;background:var(--ats-scope);touch-action:none}
 .ats-aircraft-shelf,.ats-workspace-actions{min-width:0}
 .ats-workspace-shell .ats-workspace-actions button{min-height:40px}
 .ats-workspace-shell :focus-visible{outline:3px solid #e6bf69;outline-offset:3px}
 .ats-workspace-shell button:disabled{cursor:default;opacity:.55}
+.ats-logout-slot{position:fixed;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));z-index:85;font-family:Plex,"IBM Plex Sans",Arial,sans-serif}
+body .ats-logout-button{width:auto;min-width:76px;min-height:40px;margin:0;padding:8px 12px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel-raised);color:var(--ats-text);font:inherit;font-size:13px;line-height:1.2;letter-spacing:0}
+.ats-logout-button:focus-visible{outline:3px solid var(--ats-focus);outline-offset:2px}
+.ats-logout-button:disabled{opacity:.6;cursor:wait}
+.ats-logout-status{position:absolute;right:0;width:min(260px,calc(100vw - 24px));padding:12px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel);color:var(--ats-text);font-size:13px;line-height:1.4;box-sizing:border-box}
+body.ats-has-logout .workspace-head,body.ats-has-logout .student-head,body.ats-has-logout .exercisebar,body.ats-has-logout .site-header,body.ats-has-logout .topbar{padding-right:104px!important}
+@media(max-width:700px){body .ats-logout-button{min-width:72px;min-height:44px;padding:8px 10px}body.ats-has-logout .workspace-head,body.ats-has-logout .student-head,body.ats-has-logout .exercisebar,body.ats-has-logout .site-header,body.ats-has-logout .topbar{padding-right:96px!important}}
+.ats-overlay-header{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0;pointer-events:auto}
+.ats-overlay-header>strong{flex:1 1 100%;font-size:12px}
+.ats-overlay-tools{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;font-size:11px;font-weight:400}
+body.instructor-page .ats-overlay-tools button,body.instructor-desk .ats-overlay-tools button,.ats-overlay-tools button,body.instructor-page .ats-overlay-collapse,body.instructor-desk .ats-overlay-collapse{width:auto;min-width:0;min-height:30px;height:auto;margin:0;padding:4px 6px;font:inherit;line-height:1.25;letter-spacing:0;border:1px solid var(--ats-border);border-radius:5px;background:var(--ats-panel-raised);color:var(--ats-text)}
+.ats-overlay-move{cursor:grab;touch-action:none;user-select:none}
+.ats-overlay-move:active{cursor:grabbing}
+.ats-movable-overlay.ats-overlay-positioned{overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
+.ats-movable-overlay.ats-overlay-dragging{z-index:2001!important}
+body.instructor-page.exercise-console .ats-console-drawer>summary,body.instructor-desk.desk-open .drawer-head{flex-wrap:wrap}
+body.instructor-page.exercise-console .ats-console-drawer>summary>.ats-overlay-tools,body.instructor-desk.desk-open .drawer-head>.ats-overlay-tools{margin-left:auto}
+.ats-confirm-dialog h2,.suite-guide-chat__header,#suite-tour h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ats-confirm-dialog h2>.ats-overlay-tools,#suite-tour h2>.ats-overlay-tools{margin-left:auto}
+@media(max-width:700px){
+ .ats-overlay-desktop{display:none!important}
+ body.instructor-page .ats-overlay-tools button,body.instructor-desk .ats-overlay-tools button,.ats-overlay-tools button{min-height:44px;padding:6px 8px}
+ .ats-movable-overlay.ats-overlay-positioned{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+}
+.ats-instruments-toggle{display:none}
+body.student-desk .ats-instruments-toggle{display:none!important}
+.ats-confirm-dialog{position:fixed;inset:0;margin:auto;width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:20px;border:1px solid var(--ats-border);border-radius:12px;background:var(--ats-panel);color:var(--ats-text);box-shadow:0 12px 48px #0008;font-family:Plex,"IBM Plex Sans",Arial,sans-serif}
+.ats-confirm-dialog::backdrop{background:#0008}
+.ats-confirm-dialog h2{margin:0 0 12px;font-size:18px;color:var(--ats-text)}
+.ats-confirm-dialog p{font-size:14px;line-height:1.55;margin:0 0 20px;color:var(--ats-muted)}
+.ats-confirm-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.ats-confirm-actions button{min-height:44px;padding:8px 14px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel-raised);color:var(--ats-text);font:inherit}
+.ats-confirm-actions .ats-confirm-accept{background:var(--ats-action);color:var(--ats-action-ink);border-color:#78bac6}
+.ats-confirm-actions button:focus-visible{outline:3px solid var(--ats-focus);outline-offset:2px}
+.ats-clock-label{font-size:11px;color:var(--ats-muted)}
+#startSetupStatus,#start-setup-status{margin:0;max-width:190px;font-size:11px;line-height:1.3;color:var(--ats-muted);white-space:normal}
+body.instructor-page.exercise-console #openStartSetup,body.instructor-desk.desk-open #open-start-setup{flex:0 0 auto;min-height:36px;padding:6px 8px;font-size:12px;background:var(--ats-action);color:var(--ats-action-ink);border-color:#78bac6}
+.ats-startup-checklist{padding:12px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-input);font-size:13px;line-height:1.5}
+.ats-startup-checklist ol{padding-left:22px;margin:8px 0}
+body.instructor-page .ats-meeting-form .ats-meeting-audio-label,body.instructor-desk .ats-meeting-form .ats-meeting-audio-label{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.4}
+body.instructor-page .ats-meeting-form .ats-meeting-audio-label input,body.instructor-desk .ats-meeting-form .ats-meeting-audio-label input{width:auto;flex:0 0 auto;min-height:20px;height:20px;margin:0;padding:0}
+@media(max-width:700px){body.instructor-page.exercise-console #openStartSetup,body.instructor-desk.desk-open #open-start-setup{min-height:44px}#startSetupStatus,#start-setup-status{max-width:100%;flex:1 1 160px}}
+body.instructor-page.exercise-console .clock-settings>summary{min-height:36px;padding:6px 8px}
+body.instructor-page.exercise-console .clock-settings .ats-clock-popover{position:absolute;z-index:45;top:calc(100% + 6px);right:0;width:190px;display:grid;gap:8px;padding:12px;background:var(--ats-panel);border:1px solid var(--ats-border);border-radius:8px;box-shadow:0 4px 16px #0008;text-align:left;white-space:normal}
+body.instructor-page.exercise-console .clock-settings:not([open]) .ats-clock-popover{display:none}
+body.instructor-page.exercise-console .clock-settings .ats-clock-popover .training-rate-control{padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;font-size:11px}
+body.instructor-page.exercise-console .ats-clock-popover #trainingTimeRate{width:100%;min-width:0}
+body.instructor-page.exercise-console .ats-clock-popover #trainingRateStatus{font-size:11px;color:var(--ats-muted)}
 @media(max-width:700px){.ats-workspace-shell .ats-workspace-actions button{min-height:44px}.ats-aircraft-shelf{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.ats-workspace-shell *{scroll-behavior:auto;animation-duration:.001ms!important;transition-duration:.001ms!important}}
+
+/* Both instructor adapters use the same working regions and visual hierarchy. */
+body.instructor-page.exercise-console,body.instructor-desk.desk-open{--bg:var(--ats-page);--paper:var(--ats-panel);--paper-strong:var(--ats-panel-raised);--ink:var(--ats-text);--muted:var(--ats-muted);--line:var(--ats-border);--line-strong:var(--ats-border);--teal-dark:#b2e3ec;--radar-chrome:var(--ats-panel);--radar-panel:var(--ats-panel);--radar-line:var(--ats-border);--radar-text:var(--ats-text);--radar-muted:var(--ats-muted);--desk-header-height:0px;--desk-exercise-height:var(--ats-header-height);--scope-tools-width:var(--ats-tools-width);--desk-drawer-width:var(--ats-drawer-width);height:100dvh;overflow:hidden;background:var(--ats-page);color:var(--ats-text);font-size:14px;color-scheme:dark}
+.ats-skip{position:fixed;left:8px;top:-80px;z-index:100;background:var(--ats-panel);color:var(--ats-text);padding:16px;border:2px solid var(--ats-focus);border-radius:8px}
+.ats-skip:focus{top:8px}
+body.instructor-page.exercise-console>.shell{width:100%;max-width:none;margin:0;padding:0}
+body.instructor-page.exercise-console .equipment-note{display:none}
+body.instructor-page.exercise-console #activeWorkspace{height:100dvh;display:block;padding:0;margin:0}
+body.instructor-page.exercise-console .instructor-main{height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ats-header-height) minmax(0,1fr);min-width:0;padding:0}
+body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{display:flex;align-items:center;min-height:var(--ats-header-height);height:auto;padding:8px 16px;gap:8px;margin:0;border:0;border-bottom:1px solid var(--ats-border);background:var(--ats-panel)}
+body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{min-width:0;flex:1}
+body.instructor-page.exercise-console .workspace-head .eyebrow,body.instructor-desk.desk-open .exercisebar .eyebrow{color:var(--ats-muted);font-size:12px;letter-spacing:.04em}
+body.instructor-page.exercise-console .workspace-head h1{display:none}
+body.instructor-desk.desk-open .exercisebar h1{font-size:15px;line-height:1.3;margin:4px 0 0;max-width:34vw;text-overflow:ellipsis}
+body.instructor-page.exercise-console .status-stack,body.instructor-desk.desk-open .clockblock{display:flex;align-items:center;gap:8px;margin:0;font-size:12px;white-space:nowrap}
+body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:22px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ats-text)}
+body.instructor-page.exercise-console .status-stack>b,body.instructor-desk.desk-open #clock-state{border:1px solid var(--ats-border);border-radius:6px;padding:4px 8px;background:var(--ats-input);color:var(--ats-text);font-size:12px}
+body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{display:flex;gap:8px;flex:0 0 auto;margin:0}
+body.instructor-page.exercise-console :is(button,input,select,textarea),body.instructor-desk.desk-open :is(button,input,select,textarea){font-size:14px;letter-spacing:0;line-height:1.35;border-radius:var(--ats-radius)}
+body.instructor-page.exercise-console button,body.instructor-desk.desk-open button{min-height:44px;padding:8px 12px;background:var(--ats-panel-raised);color:var(--ats-text);border:1px solid var(--ats-border);box-shadow:none}
+body.instructor-page.exercise-console button:hover:not(:disabled),body.instructor-desk.desk-open button:hover:not(:disabled){border-color:#b2e3ec;background:#314857}
+body.instructor-page.exercise-console button.primary,body.instructor-desk.desk-open button.primary{background:var(--ats-action);color:var(--ats-action-ink);border-color:#78bac6}
+body.instructor-page.exercise-console :is(input,select,textarea),body.instructor-desk.desk-open :is(input,select,textarea){min-height:44px;background:var(--ats-input);color:var(--ats-text);border:1px solid var(--ats-border);padding:8px}
+body.instructor-page.exercise-console :is(input,textarea)::placeholder,body.instructor-desk.desk-open :is(input,textarea)::placeholder{color:var(--ats-muted);opacity:1}
+body.instructor-page.exercise-console :focus-visible,body.instructor-desk.desk-open :focus-visible{outline:3px solid var(--ats-focus);outline-offset:2px}
+body.instructor-page.exercise-console .instructor-console{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--ats-tools-width);gap:0;align-items:stretch}
+body.instructor-page.exercise-console .console-center{height:100%;max-height:100%;min-width:0;min-height:0;display:grid;grid-template-rows:48px minmax(0,1fr) auto;overflow:hidden}
+body.instructor-page.exercise-console .console-toolbar{display:flex;position:static;padding:0 8px;min-height:48px;margin:0;border:0;border-radius:0;background:var(--ats-panel);border-bottom:1px solid var(--ats-border);overflow:hidden}
+body.instructor-page.exercise-console .aircraft-tabs,body.instructor-desk.desk-open #scope-traffic-bar .fleet{display:flex;gap:8px;overflow-x:auto;min-width:0;width:100%;padding:4px 0;scrollbar-width:thin}
+body.instructor-page.exercise-console .aircraft-tabs button,body.instructor-desk.desk-open #scope-traffic-bar .fleet button{flex:0 0 auto;min-width:80px;min-height:40px;border-radius:6px;padding:8px 12px}
+body.instructor-page.exercise-console .aircraft-tabs button.selected,body.instructor-desk.desk-open #scope-traffic-bar .fleet button.selected{background:#314854;color:#fff1c7;border:1px solid var(--ats-focus);box-shadow:inset 0 -3px var(--ats-focus)}
+body.instructor-page.exercise-console .truth-layout{height:100%;min-height:0}
+body.instructor-page.exercise-console .scope-card{height:100%;min-height:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) 24px;border:0;border-radius:0;background:var(--ats-scope)}
+body.instructor-page.exercise-console #instructorScope{grid-row:2;width:100%;height:100%;min-height:0;display:block;background:var(--ats-scope)}
+body.instructor-page.exercise-console .scope-settings{grid-row:1}
+body.instructor-page.exercise-console .scope-settings>summary{display:none}
+body.instructor-page.exercise-console .scope-settings .card-head{min-height:48px;padding:4px 8px;display:flex;gap:16px;justify-content:flex-start;background:var(--ats-panel)}
+body.instructor-page.exercise-console .scope-settings .card-head label{font-size:12px;gap:8px;letter-spacing:0}
+body.instructor-page.exercise-console .scope-settings .card-head :is(button,select){min-height:40px;font-size:13px}
+body.instructor-page.exercise-console .scope-settings:not([open]),body.instructor-page.exercise-console .ats-focus-mode .scope-settings{display:none}
+body.instructor-page.exercise-console .scope-inspection{grid-row:3;height:24px;padding:4px 8px;overflow:hidden;white-space:nowrap;font-size:11px;color:var(--ats-muted)}
+.ats-tool-rail{padding:8px;display:flex;flex-direction:column;align-items:stretch;gap:8px;min-height:0;overflow:auto;background:var(--ats-panel);border-left:1px solid var(--ats-border)}
+body.instructor-page.exercise-console .ats-tool-button{width:100%;text-align:left;font-size:13px;padding:8px}
+.ats-tool-button span{display:block;font-variant-numeric:tabular-nums;font-size:12px;color:var(--ats-muted)}
+.ats-focus-mode .ats-tool-button[aria-controls="consoleNavigation"],.ats-focus-mode .ats-tool-button[aria-controls="scopeSettings"]{display:none}
+body.instructor-page.exercise-console .ats-console-drawer{position:fixed;z-index:35;top:var(--ats-header-height);bottom:0;right:0;width:var(--ats-drawer-width);height:auto;max-height:none;margin:0;overflow:auto;overscroll-behavior:contain;border:0;border-left:1px solid var(--ats-border);border-radius:0;background:var(--ats-panel);box-shadow:-8px 0 24px #0003}
+body.instructor-page.exercise-console .ats-console-drawer:not([open]){display:none}
+body.instructor-page.exercise-console .ats-console-drawer>summary{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;padding:8px 16px;background:var(--ats-panel);border-bottom:1px solid var(--ats-border);font-size:15px;list-style:none;cursor:default}
+.ats-console-drawer>summary::-webkit-details-marker{display:none}
+body.instructor-page.exercise-console .ats-console-drawer>summary .ats-drawer-close{min-height:40px;font-size:13px}
+body.instructor-page.exercise-console .ats-drawer-open .instructor-main{width:calc(100% - var(--ats-drawer-width))}
+body.instructor-page.exercise-console .session-rail{display:flex;flex-direction:column;gap:16px;padding:16px}
+body.instructor-page.exercise-console :is(.session-card,.student-card,.telemetry-card){background:var(--ats-panel-raised);border:1px solid var(--ats-border);border-radius:8px;padding:16px;font-size:14px;box-shadow:none}
+body.instructor-page.exercise-console .session-card>strong{display:block;font-size:32px;letter-spacing:.12em;margin:8px 0}
+body.instructor-page.exercise-console .session-card-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+body.instructor-page.exercise-console .session-card small,body.instructor-page.exercise-console .student-card p{font-size:13px;line-height:1.5;white-space:normal}
+body.instructor-page.exercise-console .console-control-rail{display:flex;flex-direction:column;max-height:none;overflow:visible;padding:16px;gap:16px}
+body.instructor-page.exercise-console .event-card{border:0;padding:16px;background:transparent}
+.ats-review-help{color:var(--ats-muted);font-size:14px;line-height:1.5}
+body.instructor-page.exercise-console .console-navigation .site-header{display:flex;flex-direction:column;align-items:stretch;border:0;padding:16px;gap:24px}
+body.instructor-page.exercise-console .console-navigation .header-left{display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+body.instructor-page.exercise-console .console-navigation .creator{text-align:left}
+body.instructor-page.exercise-console:has(#reviewScreen:not([hidden])){height:auto;min-height:100dvh;overflow-y:auto}
+body.instructor-page.exercise-console #reviewScreen{padding:16px;min-height:100dvh}
+body.instructor-page.exercise-console #reviewScreen .workspace-head{min-height:64px;height:auto;margin-bottom:16px;flex-wrap:wrap}
+body.instructor-page.exercise-console #reviewScreen .workspace-head h1{display:block;font-size:24px;margin:8px 0}
+body.instructor-page.exercise-console #reviewScreen .scope-card{height:auto;display:block;border:1px solid var(--ats-border);border-radius:8px}
+body.instructor-page.exercise-console #reviewScope{height:clamp(300px,60dvh,640px)}
+
+/* Quick manoeuvres, heading, homing and pilot reply keep the same order. */
+body.instructor-page.exercise-console .instrument-shelf,body.instructor-desk.desk-open #instructor-control-shelf{display:grid;grid-template-columns:minmax(300px,1.35fr) 152px minmax(210px,1fr);gap:8px;min-width:0;padding:8px;background:var(--ats-panel);border-top:1px solid var(--ats-border)}
+body.instructor-page.exercise-console .instrument-shelf>*,body.instructor-desk.desk-open #aircraft-quick-controls,body.instructor-desk.desk-open #homing,body.instructor-desk.desk-open #pilot-readback{border:1px solid var(--ats-border);border-radius:8px;padding:8px;background:var(--ats-panel-raised);min-width:0}
+body.instructor-page.exercise-console .quick-aircraft-controls,body.instructor-desk.desk-open #aircraft-quick-controls{display:grid;gap:8px;align-content:start}
+body.instructor-page.exercise-console .quick-aircraft-controls output,body.instructor-desk.desk-open #quick-aircraft-info{font-size:12px;line-height:1.4;color:var(--ats-turn-ink);grid-column:auto;grid-row:auto}
+body.instructor-page.exercise-console .ats-quick-turn-row,body.instructor-desk.desk-open #aircraft-quick-controls>div{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;grid-column:auto;grid-row:auto}
+body.instructor-page.exercise-console .ats-quick-turn-row button,body.instructor-desk.desk-open #aircraft-quick-controls>div button{font-size:12px;min-height:44px;padding:6px 4px;width:auto}
+body.instructor-page.exercise-console .quick-heading-row,body.instructor-desk.desk-open #quick-heading-form{display:grid;grid-template-columns:minmax(80px,1fr) 1fr 1fr;gap:8px;align-items:end;margin:0;grid-column:auto;grid-row:auto}
+body.instructor-page.exercise-console .quick-heading-row label,body.instructor-desk.desk-open #quick-heading-form label{font-size:12px;margin:0;min-width:0}
+body.instructor-page.exercise-console .quick-heading-row :is(input,button),body.instructor-desk.desk-open #quick-heading-form :is(input,button){width:100%;min-height:44px;min-width:0;padding:6px;font-size:13px;margin:4px 0 0}
+body.instructor-desk.desk-open #instructor-control-shelf #instrument-dock{display:contents;grid-template-columns:none;padding:0}
+body.instructor-desk.desk-open #instructor-control-shelf #homing,body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #homing{grid-column:2;grid-row:1;height:auto;min-height:136px}
+body.instructor-page.exercise-console .instructor-homing{grid-column:2;grid-row:1;background:var(--ats-input);gap:4px;align-content:start}
+body.instructor-desk.desk-open #instructor-control-shelf #homing{background:var(--ats-input);padding:8px}
+body.instructor-page.exercise-console .instructor-homing strong,body.instructor-desk.desk-open #instructor-control-shelf #bearing{font-size:32px;color:#fff1ba}
+body.instructor-page.exercise-console .instructor-homing :is(label,small),body.instructor-desk.desk-open #instructor-control-shelf :is(.homing-head strong,#df-source,#mag-reference-note){font-size:11px;line-height:1.3}
+body.instructor-page.exercise-console .instructor-homing select,body.instructor-desk.desk-open #instructor-control-shelf #bearing-type{min-height:40px;width:76px;font-size:13px;padding:4px}
+body.instructor-desk.desk-open #instructor-control-shelf #homing-dial{height:30px}
+body.instructor-page.exercise-console .instructor-pilot-channel,body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback,body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #pilot-readback{grid-column:3;grid-row:1;width:auto;max-height:none;background:#34212b;color:#ffbdc5;border-color:#986674;overflow-y:auto;min-height:136px;margin:0;padding:8px}
+body.instructor-page.exercise-console .instructor-pilot-channel>span,body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback .eyebrow{font-size:11px;letter-spacing:.04em;white-space:normal;color:#ffbdc5}
+body.instructor-page.exercise-console .instructor-pilot-channel p,body.instructor-desk.desk-open #instructor-control-shelf #radio-caption{font-size:14px;line-height:1.45;max-height:none;min-height:2.9em;margin:8px 0;color:#ffbdc5}
+body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[hidden]){grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[hidden]) .instructor-pilot-channel{grid-column:2}
+body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback>div{display:flex;flex-wrap:wrap;gap:8px;min-height:0}
+body.instructor-desk.desk-open #instructor-control-shelf #radio-state{font-size:11px;padding:2px 4px}
+body.instructor-page.exercise-console :is(#quickTurnLeft,#quickTurnRight,#quickStopTurn,#quickHeadingLeft,#quickHeadingRight),body.instructor-desk.desk-open :is(#quick-left,#quick-right,#quick-stop,#quick-heading-left,#quick-heading-right){background:var(--ats-turn);color:var(--ats-turn-ink);border-color:#b9a36b}
+body.instructor-page.exercise-console #terminateExercise,body.instructor-desk.desk-open #terminate-quick{background:var(--ats-danger);color:var(--ats-danger-ink);border-color:#ee91a0}
+
+/* Procedural uses the same regions; chart tools extend its rail. */
+body.instructor-desk.desk-open .topbar{display:none}
+body.instructor-desk.desk-open #main,body.instructor-desk.desk-open.drawer-open #main{height:100dvh;min-height:0}
+body.instructor-desk.desk-open #desk{grid-template-rows:var(--ats-header-height) minmax(0,1fr)}
+body.instructor-desk.desk-open #clock-controls [data-tab="debrief"]{display:none}
+body.instructor-desk.desk-open #desk .scope-panel,body.instructor-desk.desk-open.drawer-open #desk .scope-panel,body.instructor-desk.desk-open.controls-collapsed #desk .scope-panel{grid-template-columns:minmax(0,1fr) var(--ats-tools-width);grid-template-rows:48px 48px minmax(0,1fr) 0 24px;grid-template-areas:"toolbar toolbar" "traffic traffic" "plot tools" "flight flight" "legend legend"}
+body.instructor-desk.desk-open.options-collapsed #desk .scope-panel{grid-template-rows:0 48px minmax(0,1fr) 0 24px}
+body.instructor-desk.desk-open.options-collapsed .scope-traffic-bar{display:flex}
+body.instructor-desk.desk-open #desk .scope-toolbar{min-height:48px;height:auto;padding:4px 8px;gap:8px;background:var(--ats-panel)}
+body.instructor-desk.desk-open #desk .scope-toolbar>span{font-size:12px;color:var(--ats-muted)}
+body.instructor-desk.desk-open #desk .scope-toolbar label{font-size:12px;gap:8px}
+body.instructor-desk.desk-open #desk .scope-toolbar :is(button,select){font-size:13px;min-height:40px}
+body.instructor-desk.desk-open #scope-traffic-bar{min-height:48px;padding:0 8px;gap:8px;border-color:var(--ats-border);background:var(--ats-panel)}
+body.instructor-desk.desk-open #scope-traffic-bar .fleet small{font-size:11px}
+body.instructor-desk.desk-open #desk .scope-wrap{min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
+body.instructor-desk.desk-open #desk .scope-plot{flex:1 1 0;min-height:0;background:var(--ats-scope)}
+body.instructor-desk.desk-open #desk #scope{background:var(--ats-scope)}
+body.instructor-desk.desk-open #edge-actions{display:flex;flex-direction:column;padding:8px;gap:16px;width:var(--ats-tools-width);background:var(--ats-panel);border-left:1px solid var(--ats-border);overflow:auto}
+body.instructor-desk.desk-open #edge-actions .edge-group{gap:8px}
+body.instructor-desk.desk-open #edge-actions .edge-group-label{font-size:11px;color:var(--ats-muted)}
+body.instructor-desk.desk-open #edge-actions button{font-size:13px;min-height:44px;padding:8px;line-height:1.3}
+body.instructor-desk.desk-open.options-collapsed #edge-actions .ats-optional-tools{display:none}
+body.instructor-desk.desk-open #desk .scope-airspace-key{font-size:11px;line-height:1.3;gap:16px;padding:4px 8px;background:var(--ats-panel)}
+body.instructor-desk.desk-open #work-panel{top:var(--ats-header-height);bottom:0;height:auto;max-height:none;min-height:0;width:var(--ats-drawer-width);background:var(--ats-panel);border-left:1px solid var(--ats-border);border-radius:0}
+body.instructor-desk.desk-open #work-panel .drawer-head{min-height:56px;padding:8px 16px;background:var(--ats-panel);font-size:15px}
+body.instructor-desk.desk-open #work-panel .tab-content{height:calc(100% - 56px);padding:16px 16px 32px;font-size:14px}
+body.instructor-desk.desk-open #work-panel :is(label,.hint,small){font-size:13px;line-height:1.5}
+body.instructor-desk.desk-open.drawer-open .workspace{width:calc(100% - var(--ats-drawer-width));height:100%;min-height:0}
+body.instructor-desk.desk-open.controls-collapsed #instructor-control-shelf #aircraft-quick-controls,body.instructor-desk.desk-open.drawer-open #instructor-control-shelf #aircraft-quick-controls{display:grid}
+body.instructor-desk.desk-open.controls-collapsed #instructor-control-shelf #aircraft-quick-controls{display:none}
+body.instructor-desk.desk-open.controls-collapsed #instructor-control-shelf{grid-template-columns:152px minmax(0,1fr)}
+body.instructor-desk.desk-open.controls-collapsed #instructor-control-shelf #homing{grid-column:1}
+body.instructor-desk.desk-open.controls-collapsed #instructor-control-shelf #pilot-readback{grid-column:2}
+body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var(--ats-header-height);height:calc(100dvh - var(--ats-header-height))}
+
+/* Preparation retains the shared light theme and a clear primary action. */
+.instructor-page:not(.exercise-console) .setup-panel,body.setup-open #setup .setup-panel{max-width:1200px;margin:24px auto;padding:24px;border-radius:12px;box-shadow:none}
+.instructor-page .setup-form{gap:16px;margin-top:24px}
+.instructor-page .setup-form label{font-size:12px;letter-spacing:.03em;gap:8px}
+.instructor-page:not(.exercise-console) .console-navigation .ats-drawer-close{display:none}
+.ats-saved-exercises{padding:16px;border:1px solid var(--line);border-radius:8px;margin-top:24px}
+.ats-saved-exercises>summary{font-size:15px;min-height:32px;cursor:pointer}
+.ats-saved-exercises .scenario-library{margin:16px 0 0;gap:8px}
+
+.ats-meeting-panel{border:1px solid var(--ats-border);border-radius:8px;padding:16px;margin:16px 0;background:var(--ats-input);color:var(--ats-text)}
+.ats-meeting-panel>summary{cursor:pointer;min-height:32px;font-size:16px;font-weight:600}
+.ats-meeting-form{display:grid;gap:8px;margin-top:16px}
+.ats-meeting-form label{font-size:13px;line-height:1.5;display:grid;gap:8px}
+.ats-meeting-actions{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.ats-meeting-help,.ats-meeting-status{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.ats-meeting-panel a,.ats-meeting-join{color:#b2e3ec;text-underline-offset:3px}
+.ats-meeting-join{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:8px 12px;border:1px solid #78bac6;border-radius:8px;background:var(--ats-action);color:var(--ats-action-ink);font-size:13px;text-decoration:none;white-space:nowrap}
+
+@media(max-width:1240px){
+ :root{--ats-tools-width:128px;--ats-drawer-width:352px}
+ body.instructor-page.exercise-console .ats-drawer-open .instructor-main,body.instructor-desk.desk-open.drawer-open .workspace{width:100%}
+ body.instructor-page.exercise-console .ats-console-drawer,body.instructor-desk.desk-open #work-panel{box-shadow:-12px 0 32px #0008}
+ body.instructor-desk.desk-open .clockblock>span:first-child{display:none}
+ body.instructor-page.exercise-console .instrument-shelf,body.instructor-desk.desk-open #instructor-control-shelf{grid-template-columns:minmax(260px,1.3fr) 136px minmax(160px,1fr)}
+ body.instructor-page.exercise-console .ats-quick-turn-row,body.instructor-desk.desk-open #aircraft-quick-controls>div{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+/* Desktop instruments sit at the edges of a full-size scope. Opening a drawer
+   or the heading controls does not change the aircraft picture's scale. */
+@media(min-width:701px){
+ body.instructor-page.exercise-console>.suite-guide-chat{position:fixed;left:8px;right:auto;bottom:28px;padding:0;z-index:20;width:auto}
+ body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__invitation{display:none}
+ body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__launcher{padding:0;min-width:42px;min-height:42px}
+ body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__fox{width:42px;height:42px}
+ :root{--ats-header-height:56px;--ats-tools-width:144px}
+ body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{padding:6px 10px;flex-wrap:nowrap}
+ body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:20px}
+ body.instructor-page.exercise-console .status-stack>b{order:2}
+ body.instructor-page.exercise-console .status-stack .clock-settings{order:3}
+ body.instructor-page.exercise-console .workspace-head button,body.instructor-desk.desk-open .exercisebar button{min-height:36px;padding:6px 10px;font-size:13px}
+ body.instructor-page.exercise-console .workspace-head .eyebrow,body.instructor-desk.desk-open .exercisebar .eyebrow{font-size:11px}
+ body.instructor-desk.desk-open .clockblock>span:first-child{display:none}
+ body.instructor-page.exercise-console .ats-focus-mode #quickAdvanceMinute,
+ body.instructor-desk.desk-open.options-collapsed :is(#step,#incoming-calls-open){display:none}
+ body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:initial;flex:0 0 auto;gap:6px}
+ body.instructor-page.exercise-console .instructor-console{display:block;position:relative}
+ body.instructor-page.exercise-console .console-center{position:relative;grid-template-rows:44px minmax(0,1fr)}
+ body.instructor-page.exercise-console .console-toolbar{min-height:44px;padding:0 6px}
+ body.instructor-page.exercise-console .aircraft-tabs,body.instructor-desk.desk-open #scope-traffic-bar .fleet{padding:2px 0;gap:6px}
+ body.instructor-page.exercise-console .aircraft-tabs button,body.instructor-desk.desk-open #scope-traffic-bar .fleet button{min-height:38px;padding:6px 10px}
+ body.instructor-page.exercise-console .ats-drawer-open .instructor-main,
+ body.instructor-desk.desk-open.drawer-open .workspace{width:100%}
+ body.instructor-desk.desk-open .topbar,
+ body.instructor-desk.desk-open.exercise-running:not(.options-collapsed) .topbar{display:none}
+ body.instructor-desk.desk-open{--desk-header-height:0px}
+ body.instructor-desk.desk-open #desk .scope-panel,
+ body.instructor-desk.desk-open.drawer-open #desk .scope-panel,
+ body.instructor-desk.desk-open.controls-collapsed #desk .scope-panel{position:relative;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 44px minmax(0,1fr) 0 20px;grid-template-areas:"toolbar" "traffic" "plot" "flight" "legend"}
+ body.instructor-desk.desk-open.options-collapsed #desk .scope-panel{grid-template-rows:0 44px minmax(0,1fr) 0 20px}
+ body.instructor-desk.desk-open #scope-traffic-bar{min-height:44px;padding:0 6px}
+ body.instructor-desk.desk-open #desk .scope-toolbar>div{flex-wrap:wrap;justify-content:flex-end}
+ body.instructor-desk.desk-open #desk .scope-wrap{position:relative;display:block}
+ body.instructor-desk.desk-open #desk .scope-plot{height:100%;width:100%;min-height:0}
+ body.instructor-desk.desk-open #desk .scope-airspace-key{min-height:20px;height:20px;padding:2px 6px}
+ body.instructor-page.exercise-console .ats-tool-rail,
+ body.instructor-desk.desk-open #edge-actions{position:absolute;z-index:12;right:6px;top:50px;width:var(--ats-tools-width);max-height:calc(100% - 152px);height:auto;display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel);overflow:auto;box-shadow:0 3px 12px #0004}
+ body.instructor-page.exercise-console .ats-tool-rail,
+ body.instructor-desk.desk-open #edge-actions{grid-area:unset;top:calc(var(--ats-plot-top,44px) + 6px);max-height:calc(100% - var(--ats-plot-top,44px) - var(--ats-rail-bottom,108px) - 6px)}
+ body.instructor-desk.desk-open #toggle-controls{display:none}
+ body.instructor-page.exercise-console .ats-tool-button,
+ body.instructor-desk.desk-open #edge-actions button{min-height:36px;padding:6px;font-size:12px;line-height:1.25}
+ body.instructor-desk.desk-open #edge-actions .edge-group{gap:6px}
+ body.instructor-page.exercise-console .ats-instruments-toggle,
+ body.instructor-desk.desk-open #edge-actions .ats-instruments-toggle{display:block}
+ body.instructor-page.exercise-console .instrument-shelf,
+ body.instructor-desk.desk-open #instructor-control-shelf{position:absolute;z-index:10;left:6px;right:6px;bottom:28px;display:grid;grid-template-columns:minmax(250px,1.35fr) 128px minmax(180px,1fr);gap:6px;padding:0;pointer-events:none;background:transparent;border:0;align-items:end}
+ body.instructor-desk.desk-open #instructor-control-shelf{bottom:6px}
+ body.instructor-page.exercise-console .instrument-shelf>*,
+ body.instructor-desk.desk-open #instructor-control-shelf :is(#aircraft-quick-controls,#homing,#pilot-readback){pointer-events:auto;padding:6px;box-shadow:0 3px 12px #0004}
+ body.instructor-page.exercise-console .quick-aircraft-controls,
+ body.instructor-desk.desk-open #aircraft-quick-controls{gap:4px}
+ body.instructor-page.exercise-console .ats-quick-turn-row,
+ body.instructor-desk.desk-open #aircraft-quick-controls>div{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+ body.instructor-page.exercise-console .ats-quick-turn-row button,
+ body.instructor-desk.desk-open #aircraft-quick-controls>div button{font-size:12px;min-height:36px;padding:4px 3px}
+ body.instructor-page.exercise-console .ats-focus-mode .quick-heading-row,
+ body.instructor-desk.desk-open.options-collapsed #quick-heading-form{display:none}
+ body.instructor-page.exercise-console .instructor-homing,
+ body.instructor-desk.desk-open #instructor-control-shelf #homing,
+ body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #homing{min-height:74px;height:74px;padding:6px;overflow:hidden}
+ body.instructor-page.exercise-console .instructor-homing{display:grid;grid-template-columns:1fr 64px;grid-template-rows:26px 30px;gap:4px}
+ body.instructor-page.exercise-console .instructor-homing label{grid-column:1/-1;display:flex;justify-content:space-between;font-size:11px;align-self:center}
+ body.instructor-page.exercise-console .instructor-homing select,
+ body.instructor-desk.desk-open #instructor-control-shelf #bearing-type{min-height:26px;height:26px;width:64px;padding:2px;font-size:12px}
+ body.instructor-page.exercise-console .instructor-homing strong{grid-column:1/-1;font-size:28px;line-height:1.1}
+ body.instructor-page.exercise-console .instructor-homing small,
+ body.instructor-desk.desk-open #instructor-control-shelf :is(#homing-dial,#df-source,#mag-reference-note){display:none}
+ body.instructor-desk.desk-open #instructor-control-shelf .homing-head{min-height:26px;gap:4px}
+ body.instructor-desk.desk-open #instructor-control-shelf .homing-head strong{font-size:10px}
+ body.instructor-desk.desk-open #instructor-control-shelf .bearing{margin:0;line-height:1.1}
+ body.instructor-desk.desk-open #instructor-control-shelf #bearing{font-size:28px;line-height:1.1}
+ body.instructor-page.exercise-console .instructor-pilot-channel,
+ body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback,
+ body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #pilot-readback{min-height:74px;height:74px;max-height:74px;overflow-y:auto;padding:6px}
+ body.instructor-page.exercise-console .instructor-pilot-channel p,
+ body.instructor-desk.desk-open #instructor-control-shelf #radio-caption{font-size:12px;line-height:1.35;min-height:0;margin:4px 0}
+ body.instructor-desk.desk-open #instructor-control-shelf :is(.audio-choice,#audio-status){display:none}
+ body.instructor-page.exercise-console .ats-instruments-hidden .instrument-shelf,
+ body.instructor-desk.desk-open #desk.ats-instruments-hidden #instructor-control-shelf{display:none}
+}
+/* Only the bottom instruments share the left floating box. The original tools
+   retain their single vertical rail on the right. */
+.ats-instrument-box[hidden]{display:none}
+@media(min-width:701px){
+ .ats-instrument-box{position:absolute;z-index:12;left:6px;top:calc(var(--ats-plot-top,44px) + 6px);width:clamp(208px,18vw,250px);max-height:calc(100% - var(--ats-plot-top,44px) - 36px);display:flex;flex-direction:column;gap:6px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#91b5c7 #18242e;background:var(--ats-panel);border:1px solid var(--ats-border);border-radius:8px;padding:6px;box-shadow:0 3px 12px #0004}
+ body.instructor-page.exercise-console .ats-instrument-box .instrument-shelf,
+ body.instructor-desk.desk-open .ats-instrument-box #instructor-control-shelf{position:static;width:100%;display:flex;flex:0 0 auto;flex-direction:column;gap:6px;align-items:stretch;pointer-events:auto;padding:0}
+ body.instructor-page.exercise-console .ats-instrument-box .instrument-shelf>*,
+ body.instructor-desk.desk-open .ats-instrument-box #instructor-control-shelf :is(#aircraft-quick-controls,#homing,#pilot-readback){width:100%;box-shadow:none}
+ .ats-instrument-box :is(.quick-aircraft-controls,#aircraft-quick-controls){order:1}
+ .ats-instrument-box :is(.instructor-homing,#homing){order:2}
+ .ats-instrument-box :is(.instructor-pilot-channel,#pilot-readback){order:3}
+ body.instructor-page.exercise-console .ats-instrument-box .ats-quick-turn-row,
+ body.instructor-desk.desk-open .ats-instrument-box #aircraft-quick-controls>div{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .ats-instrument-box .ats-quick-turn-row button:nth-child(4),
+ .ats-instrument-box #aircraft-quick-controls>div button:nth-child(4){grid-column:1/3}
+ body.instructor-page.exercise-console .ats-instrument-box .quick-heading-row,
+ body.instructor-desk.desk-open .ats-instrument-box #quick-heading-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ats-instrument-box :is(.quick-heading-row,#quick-heading-form) label{grid-column:1/-1}
+ body.instructor-page.exercise-console .ats-instrument-box .instructor-homing,
+ body.instructor-desk.desk-open .ats-instrument-box #instructor-control-shelf #homing{min-height:74px;flex:0 0 auto}
+ body.instructor-page.exercise-console .ats-instrument-box .instructor-pilot-channel,
+ body.instructor-desk.desk-open .ats-instrument-box #instructor-control-shelf #pilot-readback{height:auto;min-height:84px;max-height:150px;overflow-y:auto}
+ body.instructor-page.exercise-console .ats-instruments-hidden .ats-instrument-box,
+ body.instructor-desk.desk-open #desk.ats-instruments-hidden .ats-instrument-box,
+ body.instructor-page.exercise-console .ats-instrument-box.ats-overlay-collapsed .instrument-shelf,
+ body.instructor-desk.desk-open .ats-instrument-box.ats-overlay-collapsed #instructor-control-shelf{display:none}
+}
+@media(min-width:701px) and (max-width:900px){
+ :root{--ats-header-height:88px}
+ body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{flex-wrap:wrap}
+ body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;justify-content:flex-end}
+ body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{flex:1 1 150px}
+}
+@media(min-width:701px) and (max-width:1240px){
+ body.instructor-desk.desk-open #desk .scope-toolbar>span{display:none}
+ body.instructor-desk.desk-open #desk .scope-toolbar>div{flex:1 1 100%}
+}
+
+/* The command panel uses the same dark, readable surfaces as its drawer. */
+body.instructor-page.exercise-console .keyboard-command-bar{background:var(--ats-input);color:var(--ats-text);border:1px solid var(--ats-border)}
+body.instructor-page.exercise-console .keyboard-command-bar :is(label,.keyboard-shortcuts summary){color:#b2e3ec}
+body.instructor-page.exercise-console .keyboard-command-bar :is(p,output){color:var(--ats-muted)}
+body.instructor-page.exercise-console .keyboard-command-bar output[data-state="rejected"]{color:#ffbdc5}
+body.instructor-page.exercise-console .keyboard-command-bar output[data-state="accepted"]{color:#b2e3ec}
+body.instructor-page.exercise-console .keyboard-shortcuts :is(kbd,code){background:var(--ats-panel-raised);color:var(--ats-text);border-color:var(--ats-border)}
+body.instructor-page.exercise-console .command-grid input.executed{background:var(--ats-turn);color:var(--ats-turn-ink)}
+body.instructor-page.exercise-console button:disabled,body.instructor-desk.desk-open button:disabled{opacity:1;color:#a9b8c0;background:#1b2732;border-color:#405360}
+@media(max-width:700px){
+ body.instructor-page.exercise-console .ats-tool-rail .ats-instruments-toggle,
+ body.instructor-desk.desk-open #edge-actions .ats-instruments-toggle{display:none}
+ :root{--ats-header-height:120px;--ats-drawer-width:100%;--ats-tools-width:100%}
+ body.instructor-page.exercise-console,body.instructor-desk.desk-open{height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:auto}
+ body.instructor-page.exercise-console #activeWorkspace,body.instructor-desk.desk-open #main,body.instructor-desk.desk-open.drawer-open #main{height:auto;min-height:100dvh}
+ body.instructor-page.exercise-console .instructor-main{height:auto;grid-template-rows:auto auto}
+ body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{min-height:120px;flex-wrap:wrap;gap:8px;padding:8px}
+ body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{flex:1 1 130px}
+ body.instructor-desk.desk-open .exercisebar h1{max-width:52vw;font-size:14px}
+ body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;justify-content:flex-end}
+ body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:20px}
+ body.instructor-page.exercise-console .status-stack{flex-wrap:wrap}
+ body.instructor-page.exercise-console .instructor-console{display:flex;flex-direction:column;height:auto}
+ body.instructor-page.exercise-console .console-center{display:flex;flex-direction:column;height:auto;max-height:none;overflow:visible}
+ body.instructor-page.exercise-console .ats-tool-rail{order:-1;flex-direction:row;flex-wrap:nowrap;gap:8px;padding:8px;overflow-x:auto;border-left:0;border-bottom:1px solid var(--ats-border)}
+ body.instructor-page.exercise-console .ats-tool-button{width:auto;flex:0 0 auto;white-space:nowrap;text-align:center}
+ .ats-tool-button span{display:inline;margin-left:8px}
+ body.instructor-page.exercise-console .truth-layout{height:auto}
+ body.instructor-page.exercise-console .scope-card{height:auto;grid-template-rows:auto 320px 24px}
+ body.instructor-page.exercise-console #instructorScope{height:320px;min-height:320px}
+ body.instructor-page.exercise-console .scope-settings .card-head{flex-wrap:wrap;gap:8px}
+ body.instructor-page.exercise-console .instrument-shelf,body.instructor-desk.desk-open #instructor-control-shelf{grid-template-columns:136px minmax(0,1fr);gap:8px;padding:8px}
+ body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[hidden]){grid-template-columns:minmax(0,1fr)}
+ body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[hidden]) .instructor-pilot-channel{grid-column:1;grid-row:2}
+ body.instructor-page.exercise-console .quick-aircraft-controls,body.instructor-desk.desk-open #aircraft-quick-controls{grid-column:1/-1;grid-row:1}
+ body.instructor-page.exercise-console .instructor-homing,body.instructor-desk.desk-open #instructor-control-shelf #homing,body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #homing{grid-column:1;grid-row:2;min-height:136px;height:auto}
+ body.instructor-page.exercise-console .instructor-pilot-channel,body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback,body.instructor-desk.desk-open .scope-panel.homing-right #instructor-control-shelf #pilot-readback{grid-column:2;grid-row:2;min-height:136px;max-height:none;height:auto}
+ body.instructor-page.exercise-console .ats-console-drawer,body.instructor-desk.desk-open #work-panel,body.instructor-desk.desk-open.review-open #work-panel{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100dvh;max-height:none}
+ body.instructor-desk.desk-open #desk{height:auto;grid-template-rows:auto auto}
+ body.instructor-desk.desk-open .workspace,body.instructor-desk.desk-open.drawer-open .workspace{height:auto;min-height:0;width:100%}
+ body.instructor-desk.desk-open #desk .scope-panel,body.instructor-desk.desk-open.drawer-open #desk .scope-panel,body.instructor-desk.desk-open.controls-collapsed #desk .scope-panel{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:auto 48px auto auto 24px;grid-template-areas:"toolbar" "traffic" "tools" "plot" "legend";overflow:visible}
+ body.instructor-desk.desk-open.options-collapsed #desk .scope-panel{grid-template-rows:0 48px auto auto 24px}
+ body.instructor-desk.desk-open #desk .scope-wrap{height:auto;min-height:0;overflow:visible}
+ body.instructor-desk.desk-open #desk .scope-plot{height:320px;flex:0 0 320px;min-height:320px}
+ body.instructor-desk.desk-open #edge-actions{width:100%;display:flex;flex-direction:row;gap:8px;overflow-x:auto;overflow-y:hidden;border-left:0;border-bottom:1px solid var(--ats-border);padding:8px}
+ body.instructor-desk.desk-open #edge-actions .edge-group{display:contents}
+ body.instructor-desk.desk-open #edge-actions .edge-group-label{display:none}
+ body.instructor-desk.desk-open #edge-actions button{flex:0 0 auto;white-space:nowrap}
+ body.instructor-desk.desk-open #desk .scope-toolbar{flex-wrap:wrap}
+ body.instructor-desk.desk-open #desk .scope-toolbar>div{flex-wrap:wrap;gap:8px}
+ body.instructor-desk.desk-open #desk .scope-airspace-key{overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:auto;min-height:36px;height:auto}
+ .instructor-page:not(.exercise-console) .setup-panel,body.setup-open #setup .setup-panel{margin:16px 8px;padding:16px}
+ .instructor-page .setup-form .primary-action{grid-column:1/-1}
+ .ats-meeting-join{min-height:44px}
+}
+
+/* Keep the phone arrangement; make existing scrolling paths easy to find. */
+.ats-scroll-wrap{display:contents}
+.ats-workspace-shell .ats-scroll-wrap input.ats-scroll-track{display:none}
+@media(max-width:700px){
+ body.instructor-page.exercise-console,body.instructor-desk.desk-open,
+ .ats-workspace-shell :is(.aircraft-tabs,.ats-tool-rail,.ats-console-drawer,.fleet,.scope-edge-actions,.scope-airspace-key,.tab-content,.record-list,.layer-item-list,.traffic-review-events,#calls){scrollbar-width:auto;scrollbar-color:#91b5c7 #18242e;scrollbar-gutter:stable}
+ .ats-workspace-shell :is(.aircraft-tabs,.ats-tool-rail,.fleet,.scope-edge-actions,.scope-airspace-key){-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+ .ats-workspace-shell :is(.aircraft-tabs,.ats-tool-rail,.fleet,.scope-edge-actions,.scope-airspace-key)::-webkit-scrollbar{height:12px}
+ .ats-workspace-shell :is(.ats-console-drawer,.tab-content,.record-list,.layer-item-list,.traffic-review-events,#calls)::-webkit-scrollbar{width:12px}
+ .ats-workspace-shell ::-webkit-scrollbar-thumb{background:#91b5c7;border:3px solid #18242e;border-radius:8px}
+ .ats-workspace-shell ::-webkit-scrollbar-track{background:#18242e;border-radius:8px}
+ body.instructor-page.exercise-console .console-toolbar,body.instructor-desk.desk-open #scope-traffic-bar{min-height:60px;height:auto;overflow:visible}
+ body.instructor-page.exercise-console .console-center .aircraft-tabs{min-height:56px}
+ body.instructor-desk.desk-open #scope-traffic-bar .fleet{min-height:56px}
+ body.instructor-desk.desk-open #desk .scope-panel,body.instructor-desk.desk-open.drawer-open #desk .scope-panel,body.instructor-desk.desk-open.controls-collapsed #desk .scope-panel{grid-template-rows:auto 60px auto auto 36px}
+ body.instructor-desk.desk-open.options-collapsed #desk .scope-panel{grid-template-rows:0 60px auto auto 36px}
+ body.instructor-desk.desk-open #desk .scope-airspace-key>*{flex-shrink:0}
+ .ats-workspace-shell .ats-scroll-wrap{display:flex;flex-direction:column;min-width:0;max-width:100%}
+ .ats-workspace-shell .ats-scroll-wrap--aircraft{flex:1 1 0;width:100%}
+ body.instructor-page.exercise-console .ats-scroll-wrap--tools{order:-1;flex:0 0 auto}
+ .ats-workspace-shell#desk .ats-scroll-wrap--tools{grid-area:tools}
+ .ats-workspace-shell#desk .ats-scroll-wrap--legend{grid-area:legend;min-height:36px}
+ .ats-workspace-shell:is(#activeWorkspace,#desk) .ats-scroll-wrap>:is(.aircraft-tabs,.ats-tool-rail,.fleet,.scope-edge-actions,.scope-airspace-key){scrollbar-width:none;scrollbar-gutter:auto;overflow-y:hidden}
+ .ats-workspace-shell .ats-scroll-wrap>:is(.aircraft-tabs,.ats-tool-rail,.fleet,.scope-edge-actions,.scope-airspace-key)::-webkit-scrollbar{height:0;width:0}
+ body.instructor-page.exercise-console .console-center .ats-scroll-wrap .aircraft-tabs,
+ body.instructor-desk.desk-open #scope-traffic-bar .ats-scroll-wrap .fleet{height:44px;min-height:44px;padding:2px 0}
+ body.instructor-desk.desk-open #desk .ats-scroll-wrap .scope-airspace-key{height:24px;min-height:24px;width:100%}
+ .ats-workspace-shell .ats-scroll-wrap input.ats-scroll-track{display:block;width:100%;height:12px;min-height:12px;max-height:12px;min-width:0;margin:0;padding:0;border:0;border-radius:6px;background:transparent;box-shadow:none;appearance:none;-webkit-appearance:none;cursor:ew-resize;touch-action:pan-y}
+ .ats-workspace-shell input.ats-scroll-track::-webkit-slider-runnable-track{height:8px;border:1px solid #7196a8;border-radius:6px;background:#18242e}
+ .ats-workspace-shell input.ats-scroll-track::-webkit-slider-thumb{width:28px;height:12px;margin-top:-3px;border:1px solid #eff9fc;border-radius:6px;background:#91b5c7;appearance:none;-webkit-appearance:none}
+ .ats-workspace-shell input.ats-scroll-track::-moz-range-track{height:8px;border:1px solid #7196a8;border-radius:6px;background:#18242e}
+ .ats-workspace-shell input.ats-scroll-track::-moz-range-thumb{width:28px;height:10px;border:1px solid #eff9fc;border-radius:6px;background:#91b5c7}
+}

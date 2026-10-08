@@ -303,6 +303,25 @@ test('primary returns use plus symbols while correlated SSR squares open only th
   assert.equal(h.node('radarInspection').hidden, true);
 });
 
+test('student cooperative radar scope tags use H while inspection and heading availability remain unchanged', () => {
+  const h = harness('surveillance', { metadata: { radarProfile: 'correlated-training' } });
+  h.node('radarLabelHeading').checked = true;
+  const ssr = { ...plot('T1', 20), headingDeg: 30, surveillance: { secondary: true, modeS: true, squawk: '4301' } };
+  h.emit({ plots: [ssr], history: [] });
+  assert.ok(h.node('radarScope').ctx.labels.includes('HDG 030 H'));
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  assert.equal(h.node('inspectHeading').textContent, '030°');
+  const unavailable = { ...ssr }; delete unavailable.headingDeg;
+  h.emit({ plots: [unavailable], history: [] });
+  assert.ok(h.node('radarScope').ctx.labels.includes('HDG NOT REPORTED'));
+  assert.equal(h.node('inspectHeading').textContent, 'NOT REPORTED');
+  h.emit({ plots: [{ ...plot('PRIMARY', 20), headingDeg: 30 }], history: [] });
+  assert.equal(h.node('radarScope').ctx.labels.some(label => /HDG|030 H/.test(label)), false, 'primary returns remain anonymous');
+  const qgh = harness('qgh'); qgh.node('radarLabelHeading').checked = true;
+  qgh.emit({ status: 'idle', plots: [ssr] });
+  assert.equal(qgh.node('radarScope').ctx.labels.some(label => /HDG|030 H/.test(label)), false, 'QGH still exposes no aircraft heading tag');
+});
+
 test('Mode A returns remain selectable SSR squares without a Mode S identity', () => {
   const h = harness('surveillance', { metadata: { radarProfile: 'correlated-training' } });
   const modeA = { ...plot('T2', 20), rangeNm: 8, callsign: 'RAVEN 21', altitudeFt: 12000,

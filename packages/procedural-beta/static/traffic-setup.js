@@ -28,7 +28,7 @@ function numberInput(name, min, max, value) {
 export function createTrafficSetup(host) {
     const panel = element('section', 'setup-panel');
     const heading = element('div', 'section-title');
-    heading.append(element('span', '', 'SCENARIO'), element('h1', '', 'Build the exercise'), element('p', '', 'Set each aircraft’s bearing, range and heading independently. The session starts paused.'));
+    heading.append(element('h3', '', 'Starting traffic'), element('p', '', 'Choose the aircraft count. Expand Initial traffic to set exact starting positions and performance.'));
     const form = element('form', 'setup-form');
     form.noValidate = true;
     const settings = element('div', 'setup-settings');
@@ -94,7 +94,7 @@ export function createTrafficSetup(host) {
     error.setAttribute('role', 'alert');
     error.hidden = true;
     const actions = element('div', 'setup-actions');
-    const create = element('button', 'primary', 'Create session');
+    const create = element('button', 'primary', 'Create exercise');
     create.type = 'submit';
     const cancel = element('button', 'secondary', 'Cancel');
     cancel.type = 'button';
@@ -111,6 +111,7 @@ export function createTrafficSetup(host) {
     let isOpen = false;
     let pending = false;
     let epoch = 0;
+    let dirty = false;
     const byteLength = (text) => new TextEncoder().encode(text).length;
     function addRow(index) {
         const row = element('div', 'roster-row');
@@ -172,7 +173,7 @@ export function createTrafficSetup(host) {
         }));
         jump.value = chosen && Number(chosen) < visibleCount ? chosen : '0';
         navigator.hidden = visibleCount < 2;
-        create.textContent = pending ? 'Creating session…' : 'Create session';
+        create.textContent = pending ? 'Creating exercise…' : 'Create exercise';
         form.setAttribute('aria-busy', String(pending));
     }
     function updateCount() {
@@ -249,6 +250,7 @@ export function createTrafficSetup(host) {
         host.container.hidden = true;
     }
     function open() {
+        if (isOpen) return;
         epoch++;
         isOpen = true;
         const view = host.view();
@@ -278,8 +280,9 @@ export function createTrafficSetup(host) {
         // Give the software keyboard time to resize the visible viewport.
         setTimeout(() => { if (document.activeElement === current) current.scrollIntoView({ block: 'center', behavior: 'auto' }); }, 300);
     });
-    form.addEventListener('change', event => { if (event.target.dataset.field === 'callsign') syncControls(); });
+    form.addEventListener('change', event => { dirty = true; if (event.target.dataset.field === 'callsign') syncControls(); });
     form.addEventListener('input', event => {
+        dirty = true;
         if (event.target instanceof HTMLElement)
             event.target.removeAttribute('aria-invalid');
         error.hidden = true;
@@ -312,5 +315,23 @@ export function createTrafficSetup(host) {
             syncControls();
         }
     });
-    return { open, close };
+    function resetFromScenario(scenario) {
+        if (!scenario) return;
+        epoch++; dirty = false; initialized = true; runwayEdited = false; qnhEdited = false;
+        title.value = scenario.title || 'Procedural training session'; mode.value = scenario.mode || 'area';
+        const aircraft = scenario.aircraft || [];
+        rows.length = 0; body.replaceChildren();
+        visibleCount = Math.max(1, aircraft.length); count.value = String(visibleCount); syncControls();
+        const env = scenario.environment || {};
+        runway.value = String(env.runwayHeadingDeg ?? 90); qnh.value = String(env.qnhHpa ?? 1013);
+        aircraft.forEach((item,index) => {
+            const target = rows[index].inputs, east = item.xNm - (env.stationXNm || 0), north = item.yNm - (env.stationYNm || 0);
+            target.callsign.value = item.callsign; target.type.value = item.type || 'TRAINER';
+            target.qteDeg.value = String((Math.atan2(east,north) * 180 / Math.PI + 360) % 360); target.rangeNm.value = String(Math.hypot(east,north));
+            for (const {key} of numericFields) if (key !== 'qteDeg' && key !== 'rangeNm') target[key].value = String(item[key] ?? (key === 'spawnTime' ? 0 : key === 'verticalRateFpm' ? 1000 : key === 'turnRateDegSec' ? 3 : 0));
+            target.compassUnserviceable.checked = !!item.compassUnserviceable;
+        });
+        syncControls();
+    }
+    return { open, close, hasDraft: () => dirty, markApplied: () => { dirty = false; }, resetFromScenario };
 }

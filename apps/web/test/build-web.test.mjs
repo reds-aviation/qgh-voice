@@ -19,12 +19,15 @@ const outputFiles = directory => absoluteFiles(directory)
   .sort();
 
 const instructorLedFiles = [
+  'meeting-room.js',
   'index.html',
   'instructor.html',
   'student.html',
   'training-guide.html',
   'suite-command-reference.js',
   'suite.css',
+  'suite-entry.js',
+  'suite-entry.css',
   'suite-core.js',
   'suite-display.js',
   'suite-instructor.js',
@@ -40,6 +43,7 @@ const instructorLedFiles = [
   'workspace-shell.js',
   'workspace-shell.css',
   'simulator-core.js',
+  'scope-visuals.js',
   'procedure-core.js',
   'fonts/ibm-plex-mono-500.ttf',
   'fonts/ibm-plex-sans-400.ttf',
@@ -72,6 +76,7 @@ test('web build creates an allowlisted PWA package', () => {
     'pilot-voice-worker.js',
     'pilot-voices/manifest.json',
     'single.html',
+    'scope-visuals.js',
   'simulator-core.js',
   'procedure-core.js',
   'procedure-intent.js',
@@ -121,6 +126,9 @@ test('web build creates an allowlisted PWA package', () => {
   try {
     execFileSync(process.execPath, [resolve(repositoryRoot, 'scripts', 'build-web.mjs')], {
       cwd: repositoryRoot,
+      // This fixture verifies the default individual package. The Pages output
+      // test separately verifies the complete suite with its compatibility flag.
+      env: { ...process.env, QGH_PROCEDURAL_BETA: '0' },
       stdio: 'pipe',
     });
   } finally {
@@ -137,7 +145,7 @@ test('web build creates an allowlisted PWA package', () => {
     .filter(path => path.startsWith('instructor-led/'))
     .map(path => path.slice('instructor-led/'.length));
   assert.deepEqual(qghOutput, expectedFiles, 'root output contains only the approved individual-practice PWA files');
-  assert.deepEqual(instructorOutput, instructorLedFiles, 'instructor-led output is the isolated allowlisted beta package');
+  assert.deepEqual(instructorOutput, instructorLedFiles, 'instructor-led output is the isolated allowlisted instructor package');
   assert.equal(existsSync(resolve(outputRoot, '__qgh-web-build-probe__.txt')), false, 'unlisted static content is excluded');
 
   assert.equal(existsSync(resolve(outputRoot, 'screens')), false, 'stale duplicate screens are excluded');
@@ -172,6 +180,9 @@ test('web build creates an allowlisted PWA package', () => {
   assert.match(single, /offline-voice-engine\.js/);
   assert.match(single, /guided-familiarisation\.js/);
   assert.match(single, /pwa-register\.js/);
+  assert.ok(single.indexOf('scope-visuals.js?') < single.indexOf('simulator.js?'), 'single scope helper loads before renderer');
+  assert.ok(tactical.indexOf('scope-visuals.js?') < tactical.indexOf('tactical-simulator.js?'), 'tactical scope helper loads before renderer');
+  assert.equal(readFileSync(resolve(outputRoot,'scope-visuals.js'),'utf8'),readFileSync(resolve(repositoryRoot,'packages/qgh-engine/scope-visuals.js'),'utf8'), 'individual scope helper is copied from the canonical source');
   assert.match(single, new RegExp(`voice-workspace\\.js\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(single, new RegExp(`voice\\.css\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(tactical, /manifest\.webmanifest/);
@@ -194,8 +205,12 @@ test('web build creates an allowlisted PWA package', () => {
   assert.match(registration, /QGH_WEB_ENVIRONMENT/);
   assert.match(environment, /appassets\.androidplatform\.net/);
   assert.match(distribution, /url\.protocol === 'https:'/);
-  assert.match(headers, /\/service-worker\.js\s+! Content-Security-Policy\s+Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'/);
-  assert.match(instructorEntry, /BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS/);
+  assert.equal(headers, readFileSync(resolve(repositoryRoot,'apps/web/static/_headers'),'utf8'), 'The built Netlify response policies match the independently checked source policies');
+  assert.match(headers, /\/service-worker\.js\s+Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'/);
+  assert.match(headers, /\/instructor-led\/\*\s+Content-Security-Policy:[^\n]+connect-src 'self' https:\/\/yigmtmdrqpufdwvzswjd\.supabase\.co;/);
+  assert.match(headers, /\/procedural-beta\/\*\s+Content-Security-Policy:[^\n]+connect-src 'self' https:\/\/yigmtmdrqpufdwvzswjd\.supabase\.co;/);
+  assert.match(instructorEntry, /ATS SIM BOX · Version 1/);
+  assert.doesNotMatch(instructorEntry.replace(/<[^>]+>/g,' '), /BETA PROJECT|UNDER DEVELOPMENT|USER TRIALS/);
   assert.match(instructorEntry, /href="\.\.\/index\.html"/);
   assert.match(instructorWorker, /reds-atc-suite-/);
 });

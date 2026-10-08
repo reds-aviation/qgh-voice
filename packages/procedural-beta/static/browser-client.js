@@ -6,7 +6,7 @@ const nativeFetch = window.fetch.bind(window);
 const pending = new Map();
 const sessionKey = 'qgh-procedural-browser-session-v1';
 const lastRoomKey = 'qgh-procedural-last-instructor-room';
-let worker, connectedRoom = '', remote, activeSession;
+let worker, connectedRoom = '', remote, activeSession, connectionGeneration = 0;
 const parsed = key => { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; } };
 const cloudKey = id => `atc-cloud-room:${id}`;
 const response = result => new Response(result.body instanceof Blob ? result.body : JSON.stringify(result.body), {status: result.status, headers: {'Content-Type': result.body instanceof Blob ? result.body.type : 'application/json'}});
@@ -18,11 +18,22 @@ function rpc(message, signal, port = worker?.port) {
     if (signal?.aborted) return abort();
     timer = setTimeout(abort, 30000);
     signal?.addEventListener('abort', abort, {once: true});
-    pending.set(id, result => { cleanup(); resolve(result); });
+    pending.set(id, Object.assign(result => { cleanup(); resolve(result); }, {cancel() { cleanup(); reject(new Error('Session closed. Reopen your desk.')); }}));
     port.postMessage({...message, id});
   });
 }
 function detach() { worker?.port.postMessage({kind: 'detach'}); }
+function logout() {
+  ++connectionGeneration;
+  const forgottenRooms = new Set([connectedRoom, activeSession?.roomId, sessionStorage.getItem(lastRoomKey)]);
+  remote?.stop(true); detach(); worker?.port.close();
+  worker = remote = activeSession = undefined; connectedRoom = '';
+  for (const request of [...pending.values()]) request.cancel?.();
+  sessionStorage.removeItem(sessionKey); sessionStorage.removeItem(lastRoomKey);
+  for (const id of forgottenRooms) if (id) sessionStorage.removeItem(cloudKey(id));
+  const restore = document.getElementById('resume-local-exercise'); if (restore) restore.hidden = true;
+}
+globalThis.ProceduralBrowserSession = Object.freeze({logout});
 function createConnection(roomId) {
   if (!window.SharedWorker || !window.WebAssembly || !window.indexedDB) throw new Error('Use a current browser with SharedWorker, WebAssembly and browser storage for the instructor or this-device session.');
   if (roomId !== 'legacy' && !/^[a-f0-9-]{36}$/.test(roomId)) throw new Error('Invalid room identifier. Open a new instructor setup.');
@@ -95,7 +106,8 @@ try {
     const message = {path, method: init.method || 'GET', headers, body: init.body};
     let result;
     if (path === 'session' && init.method === 'POST') {
-      let roomId, candidate, candidateRemote, auth;
+      let roomId, candidate, candidateRemote, auth, candidateService;
+      const stamp = ++connectionGeneration;
       const login = JSON.parse(init.body);
       try {
         const online = login.connection === 'online';
@@ -115,17 +127,21 @@ try {
         if (online) {
           const remembered = login.role === 'instructor' && login.resumeRoom && parsed(cloudKey(roomId));
           const clientId = remembered?.clientId || crypto.randomUUID(), hostKey = crypto.randomUUID();
-          const service = createRemoteService(remoteConfig,clientId,{fetcher:nativeFetch});
+          candidateService = createRemoteService(remoteConfig,clientId,{fetcher:nativeFetch});
           const opened = login.role === 'instructor'
-            ? await service.call(remembered ? 'claim' : 'create', remembered?.id || null, {hostKey,localId:roomId})
-            : await service.call('join',null,{pin:login.pin,name:login.name});
+            ? await candidateService.call(remembered ? 'claim' : 'create', remembered?.id || null, {hostKey,localId:roomId})
+            : await candidateService.call('join',null,{pin:login.pin,name:login.name});
           auth.cloud = {id:opened.id,clientId,hostKey:login.role === 'instructor' ? hostKey : undefined,sequence:opened.sequence || 0};
+          if (stamp !== connectionGeneration) throw new Error('Session closed. Reopen your desk.');
           candidateRemote = await cloudClient(auth,candidate);
+          if (stamp !== connectionGeneration) throw new Error('Session closed. Reopen your desk.');
           if (login.role === 'instructor') sessionStorage.setItem(cloudKey(roomId),JSON.stringify(auth.cloud));
         } else if (login.role === 'instructor') await localClient(candidate,auth)('cloud-heartbeat',{enabled:false});
+        if (stamp !== connectionGeneration) throw new Error('Session closed. Reopen your desk.');
         activate(candidate,roomId,candidateRemote,auth);
         result = {status:200,body:auth};
       } catch (error) {
+        if (!candidateRemote && candidateService && auth?.cloud && stamp !== connectionGeneration) createRemoteRoom({service:candidateService,session:auth}).stop(true);
         candidateRemote?.stop(true); candidate?.port.postMessage({kind:'detach'}); candidate?.port.close();
         return response({status:error.status || 503,body:{error:error.message}});
       }

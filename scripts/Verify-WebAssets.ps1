@@ -27,6 +27,7 @@ $engineFiles = @(
     'rt-reference.md',
     'single.html',
     'simulator-core.js',
+    'scope-visuals.js',
     'procedure-core.js',
     'procedure-intent.js',
     'procedure-workspace.js',

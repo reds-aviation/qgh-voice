@@ -19,7 +19,7 @@ async function harness() {
   });
   let code = suiteSource('suite-instructor.js');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.api={savePresetAsNew,savePreset,duplicatePreset,renamePreset,removePreset,loadPreset,exportPreset,importPreset,captureSetup,restoreSetup,syncRoster};syncRoster();})();';
+    '\n globalThis.api={state,saveCurrentSetup,savePresetAsNew,savePreset,duplicatePreset,renamePreset,removePreset,loadPreset,exportPreset,importPreset,captureSetup,restoreSetup,syncRoster};syncRoster();})();';
   vm.runInContext(code, h.context);
   const node = id => h.document.getElementById(id);
   return {...h, ...h.context.api, blobs, node,
@@ -90,4 +90,24 @@ test('invalid flight values cannot be saved or imported as a reusable exercise',
   h.node('initialSpeed').value='240'; const setup=h.captureSetup(); setup.find(item=>item.id==='turnRate').value='100';
   await h.importPreset({target:{files:[{size:100,text:async()=>JSON.stringify({format:'ats-simbox-instructor-exercise',version:1,name:'Invalid import',setup})}],value:'file'}});
   assert.equal(h.stored().length,0); assert.equal(h.node('turnRate').value,'3'); assert.match(h.node('presetStatus').textContent,/Not imported.*turn/i);
+});
+
+test('primary Save current setup creates or updates one record, and Load restores exact starting fields without opening a room', async () => {
+  const h = await harness();
+  const management = h.document.querySelector('.preset-management');
+  assert.equal(management.hasAttribute('open'), false);
+  for (const id of ['savedExercise', 'loadExercisePreset', 'savedExerciseName', 'saveExercisePreset']) assert.equal(h.node(id).closest('details'), null);
+  for (const id of ['saveExercisePresetAs', 'duplicateExercisePreset', 'renameExercisePreset', 'exportExercisePreset', 'removeExercisePreset', 'importExercisePreset']) assert.equal(h.node(id).closest('details'), management);
+  h.node('savedExerciseName').value = 'QGH briefing'; h.node('initialHeading').value = '127'; h.node('initialSpeed').value = '250';
+  h.saveCurrentSetup(); assert.equal(h.stored().length, 1);
+  const id = h.stored()[0].id;
+  h.node('initialHeading').value = '88'; h.saveCurrentSetup();
+  assert.equal(h.stored().length, 1); assert.equal(h.stored()[0].id, id);
+  assert.equal(h.value(h.stored()[0].setup, 'initialHeading'), '88');
+  h.node('initialHeading').value = '300'; h.node('initialSpeed').value = '400'; h.loadPreset();
+  assert.equal(h.node('initialHeading').value, '88'); assert.equal(h.node('initialSpeed').value, '250');
+  assert.match(h.node('presetStatus').textContent, /Create a session when ready/);
+  assert.equal(h.state.session, null); assert.equal(h.state.simulation, null);
+  h.node('savedExercise').value = ''; h.node('savedExerciseName').value = 'Another briefing'; h.saveCurrentSetup();
+  assert.equal(h.stored().length, 2); assert.notEqual(h.stored()[1].id, id);
 });

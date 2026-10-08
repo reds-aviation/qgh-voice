@@ -25,7 +25,7 @@ function call(id) { const entry = catalogue.find(item => item.id === id); if (!e
 const sentence = (screen, title, text, speech = text) => ({ screen, title, text, speech });
 const clips = [
   { id: 'basic-controls', title: 'Basic controls', description: 'Single, Normal and U/S Compass: a narrated screen guide.', sentences: [
-    sentence('entry', 'Choose your exercise', 'Welcome to Reds QGH Simulator. This narrated screen guide uses captures from the actual release. It explains the controls; it is not a live microphone recognition test.'),
+    sentence('entry', 'Choose your exercise', 'Welcome to ATS SIM BOX Version 1. This narrated screen guide uses captures from the actual release. It explains the controls; it is not a live microphone recognition test.'),
     sentence('setup', 'Check the setup', 'Choose Single Aircraft or Tactical, then check the procedure, tracks, aircraft profile, initial distance, speed and rate of turn.'),
     sentence('setup', 'Level and airfield', 'Check initial altitude and airfield settings. A runway designator is separate from runway orientation. Keep their units clear.'),
     sentence('normal', 'Normal QGH', `In Normal QGH, ${call('right-heading')} assigns a right turn to the selected heading. The aircraft follows a curved path at its configured rate.`, 'In Normal Q G H, turn right heading two three zero assigns a right turn to the selected heading. The aircraft follows a curved path at its configured rate.'),
@@ -175,7 +175,7 @@ for (const clip of clips) {
   const minimum = 56, totalSpeech = audioDurations.reduce((a, b) => a + b, 0);
   const padding = Math.max(.45, (minimum - totalSpeech) / clip.sentences.length);
   const titleFile = textFile(`${clip.id}-title.txt`, clip.title);
-  const labelFile = textFile(`${clip.id}-label.txt`, `REDS QGH  |  ${release.version}  |  NARRATED SCREEN GUIDE`);
+  const labelFile = textFile(`${clip.id}-label.txt`, `ATS SIM BOX  |  ${release.displayVersion || "Version 1"}  |  NARRATED SCREEN GUIDE`);
   for (let i = 0; i < clip.sentences.length; i++) {
     const item = clip.sentences[i], segmentDuration = audioDurations[i] + padding;
     const subtitleFile = textFile(`${clip.id}-${i}-subtitle.txt`, item.title);
@@ -201,7 +201,7 @@ for (const clip of clips) {
   const seconds = duration(movie);
   const vtt = ['WEBVTT', '', ...cues.flatMap(cue => [`${stamp(cue.start)} --> ${stamp(cue.end)}`, cue.text, ''])].join('\n');
   fs.writeFileSync(path.join(mediaDir, `${clip.id}.vtt`), vtt);
-  fs.writeFileSync(path.join(mediaDir, `${clip.id}.txt`), `${clip.title}\nReds QGH Simulator ${release.version}\nNarrated screen guide using actual UI captures. Not a live microphone-recognition test.\n\n${cues.map(cue => `${stamp(cue.start)} ${cue.text}`).join('\n\n')}\n`);
+  fs.writeFileSync(path.join(mediaDir, `${clip.id}.txt`), `${clip.title}\nATS SIM BOX · ${release.displayVersion || "Version 1"}\nNarrated screen guide using actual UI captures. Not a live microphone-recognition test.\n\n${cues.map(cue => `${stamp(cue.start)} ${cue.text}`).join('\n\n')}\n`);
   const chapters = clip.sentences.map((item, i) => ({ title: item.title, start: cues[i].start }));
   fs.writeFileSync(path.join(mediaDir, `${clip.id}-chapters.json`), JSON.stringify({ version: release.version, chapters }, null, 2));
   encode(['-ss', '0', '-i', movie, '-frames:v', '1', '-q:v', '3', path.join(mediaDir, `${clip.id}.jpg`)]);
@@ -221,7 +221,7 @@ encode(['-f', 'concat', '-safe', '0', '-i', distributionList, '-c', 'copy', '-mo
 const completeSeconds = duration(fullVideo);
 if (completeSeconds < 360 || completeSeconds > 480) throw new Error(`Walkthrough must be 6–8 minutes; measured ${completeSeconds}`);
 fs.writeFileSync(path.join(fullDir, `${fullId}.vtt`), ['WEBVTT', '', ...allCues.flatMap(cue => [`${stamp(cue.start)} --> ${stamp(cue.end)}`, cue.text, ''])].join('\n'));
-fs.writeFileSync(path.join(fullDir, `${fullId}.txt`), `Complete QGH walkthrough\nReds QGH Simulator ${release.version}\nNarrated screen guide using actual UI captures. This is not a live microphone-recognition test.\n\n${allCues.map(cue => `${stamp(cue.start)} ${cue.text}`).join('\n\n')}\n`);
+fs.writeFileSync(path.join(fullDir, `${fullId}.txt`), `Complete QGH walkthrough\nATS SIM BOX · ${release.displayVersion || "Version 1"}\nNarrated screen guide using actual UI captures. This is not a live microphone-recognition test.\n\n${allCues.map(cue => `${stamp(cue.start)} ${cue.text}`).join('\n\n')}\n`);
 fs.writeFileSync(path.join(fullDir, `${fullId}-chapters.json`), JSON.stringify({ version: release.version, chapters: allChapters }, null, 2));
 encode(['-ss', '0', '-i', fullVideo, '-frames:v', '1', '-q:v', '3', path.join(fullDir, `${fullId}.jpg`)]);
 records.unshift({ id: fullId, title: 'Complete QGH walkthrough', description: 'Seven narrated screen guides in one chaptered walkthrough. Actual interface captures; not a live recognition test.', version: release.version, src: `training-media/${fullId}/${fullId}.mp4`, captions: `training-media/${fullId}/${fullId}.vtt`, transcript: `training-media/${fullId}/${fullId}.txt`, poster: `training-media/${fullId}/${fullId}.jpg`, chaptersFile: `training-media/${fullId}/${fullId}-chapters.json`, chapters: allChapters, bytes: fs.statSync(fullVideo).size, duration: durationLabel(completeSeconds), durationSeconds: completeSeconds, presentation: 'narrated-screen-guide' });

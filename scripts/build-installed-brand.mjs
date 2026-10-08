@@ -11,7 +11,7 @@ export async function buildInstalledBrand(output, root) {
     for (const asset of assets) await copyFile(resolve(root, 'packages/site-landing/install-icons', asset), resolve(iconRoot, asset));
     const path = resolve(output, branch, 'manifest.webmanifest');
     const manifest = JSON.parse(await readFile(path, 'utf8'));
-    manifest.name = manifest.short_name = 'ATS SIMBOX';
+    manifest.name = manifest.short_name = 'ATS SIM BOX';
     manifest.description = `${branch ? 'QGH, SRA and vectoring instructor' : 'QGH, Procedural, SRA and vectoring'} training. Offline: same PC and browser profile. Online: different devices with internet on both.`;
     manifest.icons = [
       {src: 'icons/ats-simbox-192.png', sizes: '192x192', type: 'image/png', purpose: 'any'},
@@ -29,7 +29,7 @@ export async function buildInstalledBrand(output, root) {
     html = html.replace(/<meta name="apple-mobile-web-app-title"[^>]*>/g, '')
       .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
     const manifestLink = html.includes('rel="manifest"') ? '' : `<link rel="manifest" href="${prefix}manifest.webmanifest">`;
-    html = html.replace('</head>', `${manifestLink}<meta name="apple-mobile-web-app-title" content="ATS SIMBOX"><link rel="apple-touch-icon" sizes="180x180" href="${prefix}icons/ats-simbox-apple.png"></head>`);
+    html = html.replace('</head>', `${manifestLink}<meta name="apple-mobile-web-app-title" content="ATS SIM BOX"><link rel="apple-touch-icon" sizes="180x180" href="${prefix}icons/ats-simbox-apple.png"></head>`);
     await writeFile(path, html);
   }
   for (const branch of ['', 'instructor-led/']) {

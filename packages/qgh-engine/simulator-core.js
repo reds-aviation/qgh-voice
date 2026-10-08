@@ -107,6 +107,19 @@
     };
   }
 
+  // A heading target may be reached part way through a flight step. Keep the
+  // selected turn rate until that instant, then fly the leftover time straight.
+  function advanceHeadingMotion(point, heading, speed, rate, duration, signedDelta) {
+    if (![heading, speed, rate, duration, signedDelta].every(Number.isFinite)
+      || speed < 0 || rate <= 0 || duration < 0 || Math.abs(signedDelta) > rate * duration + EPSILON) {
+      throw new Error('Heading motion needs finite speed, positive rate and a bounded heading change.');
+    }
+    const turnSeconds = Math.min(duration, Math.abs(signedDelta) / rate);
+    const turning = advanceArc(point, heading, speed, Math.sign(signedDelta) * rate, turnSeconds);
+    const straight = advanceArc(turning, turning.heading, speed, 0, Math.max(0, duration - turnSeconds));
+    return { ...straight, distanceNm: turning.distanceNm + straight.distanceNm };
+  }
+
   function closestApproachToOverhead(start, end) {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -117,6 +130,31 @@
     return { x, y, t, rangeNm: Math.hypot(x, y) };
   }
 
-  return { normalize, radians, turnRadiusNm, advanceArc, closestApproachToOverhead,
-    createOrbit, advanceOrbit, resumeOrbit, advanceOrbitMotion };
+  // Browser callback count is not elapsed time. Keep fixed recorded samples,
+  // carry the fractional remainder, and refuse long silent catch-up intervals.
+  function createFlightClock(stepSeconds = .25, maximumGapSeconds = 2) {
+    if (![stepSeconds, maximumGapSeconds].every(Number.isFinite) || stepSeconds <= 0 || maximumGapSeconds < stepSeconds) {
+      throw new Error('Flight clock needs a positive step and bounded processing gap.');
+    }
+    let previous = null, accumulator = 0;
+    function reset(timestampMs) {
+      if (!Number.isFinite(timestampMs)) throw new Error('Flight clock timestamp must be finite.');
+      previous = timestampMs; accumulator = 0;
+    }
+    function consume(timestampMs) {
+      if (!Number.isFinite(timestampMs)) throw new Error('Flight clock timestamp must be finite.');
+      if (previous == null) { reset(timestampMs); return { steps: 0, suspended: false }; }
+      const elapsed = Math.max(0, (timestampMs - previous) / 1000);
+      previous = timestampMs;
+      if (elapsed > maximumGapSeconds) { accumulator = 0; return { steps: 0, suspended: true }; }
+      accumulator += elapsed;
+      const steps = Math.floor((accumulator + EPSILON) / stepSeconds);
+      accumulator = Math.max(0, accumulator - steps * stepSeconds);
+      return { steps, suspended: false };
+    }
+    return Object.freeze({ reset, consume });
+  }
+
+  return { normalize, radians, turnRadiusNm, advanceArc, advanceHeadingMotion, closestApproachToOverhead,
+    createOrbit, advanceOrbit, resumeOrbit, advanceOrbitMotion, createFlightClock };
 });

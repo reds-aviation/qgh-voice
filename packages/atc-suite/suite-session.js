@@ -4,6 +4,7 @@
   root.ATCSuiteSession = api;
 })(typeof globalThis === 'undefined' ? this : globalThis, function createSessionModule(root) {
   'use strict';
+  const Meeting = root.ATCSuiteMeeting || (typeof require === 'function' ? require('../procedural-beta/static/meeting-room.js') : null);
 
   const PROTOCOL_VERSION = 1;
   const PIN_TTL_MS = 15 * 60 * 1000;
@@ -257,6 +258,10 @@
     if (!hasOnlyKeys(message.payload, INSTRUCTOR_PAYLOAD_KEYS[message.type])) {
       return { ok: false, reason: 'invalid-instructor-payload' };
     }
+    if (message.payload.publicMetadata?.meetingUrl != null) {
+      try { Meeting.normalizeMeetUrl(message.payload.publicMetadata.meetingUrl); }
+      catch (_) { return { ok: false, reason: 'invalid-meeting-link' }; }
+    }
     return { ok: true };
   }
 
@@ -446,6 +451,7 @@
     copyNumber(safe, metadata, 'approachSpeedKt', 30, 700);
     copyText(safe, metadata, 'approachAircraftType', 20, ['fighter', 'transport', 'helicopter', 'general']);
     if (metadata.radarEnvironment != null) safe.radarEnvironment = sanitizeRadarEnvironment(metadata.radarEnvironment);
+    if (metadata.meetingUrl != null) safe.meetingUrl = Meeting.normalizeMeetUrl(metadata.meetingUrl);
     return deepFreeze(safe);
   }
 
@@ -672,7 +678,7 @@
       return true;
     }
 
-    function start(time = simulationTime) { return admitted?.ready ? transition('running', ['ready'], time) : false; }
+    function start(time = simulationTime) { return admitted?.ready && !admitted.disconnected ? transition('running', ['ready'], time) : false; }
     function pause(time = simulationTime) { return transition('paused', ['running'], time); }
     function resume(time = simulationTime) { return admitted?.ready && !admitted.disconnected ? transition('running', ['paused'], time) : false; }
 
@@ -700,6 +706,16 @@
       publicMetadata = nextMetadata;
       send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
       return publicMetadata;
+    }
+
+    // Coordination metadata travels only to the authorized controller seat.
+    // It may be shared before Start, without changing any flight or clock state.
+    function setMeetingLink(value) {
+      if (['terminated', 'expired'].includes(state)) return false;
+      publicMetadata = sanitizePublicMetadata({ ...publicMetadata, meetingUrl: Meeting.normalizeMeetUrl(value) });
+      if (admitted) send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
+      event('meeting-link', { meetingUrl: publicMetadata.meetingUrl });
+      return true;
     }
 
     function publishCaption(caption, time = simulationTime, transmissionId) {
@@ -768,7 +784,7 @@
 
     unsubscribe = transport.subscribe(receive);
     return Object.freeze({ pin, sessionId, channelName, senderId, admit, reject, start, pause, resume,
-      publishObservation, updatePublicMetadata, publishCaption, heartbeat, terminate, expire, tick, receive, close, detach, snapshot, recoverySnapshot, releaseStudent });
+      publishObservation, updatePublicMetadata, setMeetingLink, publishCaption, heartbeat, terminate, expire, tick, receive, close, detach, snapshot, recoverySnapshot, releaseStudent });
   }
 
   function createStudentSession(options = {}) {

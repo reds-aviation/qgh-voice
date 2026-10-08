@@ -147,11 +147,13 @@ function makeHarness() {
   const timeouts = new Map();
   let randomState = 0x5a17c0de;
   let radioNow = 0;
+  let wallNow = 0;
   const reviewModels = [];
   const context = {
     document,
     console,
     Uint32Array,
+    performance: { now: () => wallNow },
     setInterval: callback => {
       const id = ++intervalId;
       intervals.set(id, callback);
@@ -210,16 +212,22 @@ function makeHarness() {
     },
     tick(count) {
       for (let step = 0; step < count; step += 1) {
+        wallNow += 250;
         [...intervals.values()].forEach(callback => callback());
       }
+    },
+    elapsed(milliseconds) {
+      wallNow += milliseconds;
+      [...intervals.values()].forEach(callback => callback());
     },
     advanceRadioTime(milliseconds) {
       radioNow += milliseconds;
       [...intervals.values()].forEach(callback => callback());
     },
-    fireTimeout(id) {
+    fireTimeout(id, elapsedMilliseconds = 0) {
       const timeout = timeouts.get(id);
       assert.ok(timeout, `missing timeout ${id}`);
+      wallNow += elapsedMilliseconds;
       timeouts.delete(id);
       timeout.callback();
     },
@@ -343,27 +351,93 @@ test('the homing stopwatch mirrors the existing clock, stops, resumes and clears
     assert.equal(elements.homingClock.hidden, true);
     harness.click('clockStart');
     assert.equal(elements.homingClock.hidden, false);
-    assert.equal(elements.homingClock.textContent, '00:00');
-    harness.tick(2);
-    assert.equal(elements.homingClock.textContent, '00:02');
+    assert.equal(elements.homingClock.textContent, '00:00:00');
+    harness.tick(8);
+    assert.equal(elements.homingClock.textContent, '00:00:02');
     assert.equal(elements.homingClock.textContent, elements.clock.textContent);
     harness.click('clockStart');
-    harness.tick(1);
-    assert.equal(elements.homingClock.textContent, '00:03', 'a second Start must not duplicate the timer');
+    harness.tick(4);
+    assert.equal(elements.homingClock.textContent, '00:00:03', 'a second Start must not duplicate the timer');
     harness.click('clockStop');
-    harness.tick(2);
-    assert.equal(elements.homingClock.textContent, '00:03');
+    harness.tick(8);
+    assert.equal(elements.homingClock.textContent, '00:00:03');
     assert.equal(elements.homingClock.hidden, false);
     assert.match(elements.homingClock.getAttribute('aria-label'), /stopped/);
     harness.click('clockStart');
     state.clockSeconds = 59;
-    harness.tick(1);
-    assert.equal(elements.homingClock.textContent, '01:00');
+    harness.tick(4);
+    assert.equal(elements.homingClock.textContent, '00:01:00');
     harness.click('clockReset');
     assert.equal(elements.homingClock.hidden, true);
-    assert.equal(elements.homingClock.textContent, '00:00');
+    assert.equal(elements.homingClock.textContent, '00:00:00');
     assert.equal(state.clockRunning, false);
   }
+});
+
+test('Single flight catches short delayed callbacks and suspends long gaps until explicit resume', () => {
+  const h = makeHarness(); h.click('startExercise'); h.click('clockStart');
+  h.state.plane = { x: 0, y: 0, heading: 90 };
+  h.state.cfg.speed = 240; h.state.cfg.rate = 3;
+  h.state.manualTurnSide = h.state.initialTurnSide = h.state.forcedTurnSide = null;
+  h.state.targetHeading = 90;
+  h.state.path = [{ ...h.state.plane }];
+  h.elapsed(750); h.elapsed(750);
+  assert.ok(Math.abs(h.state.plane.x - .1) < 1e-10, '240 kt flies 0.1 NM in 1.5 seconds');
+  assert.equal(h.state.path.length, 7, 'six physical quarter-second samples');
+  assert.equal(h.state.clockSeconds, 1.5, 'stopwatch follows elapsed time, not callback count');
+  const before = { ...h.state.plane };
+  h.elapsed(5000);
+  assert.equal(JSON.stringify(h.state.plane), JSON.stringify(before), 'long browser gap never silently catches up');
+  assert.equal(h.state.flightSuspended, true);
+  assert.equal(h.state.clockRunning, false);
+  assert.equal(h.elements.clockStart.textContent, 'RESUME FLIGHT');
+  h.elements.headingInput.value = '100'; h.click('turnHeadingRight');
+  assert.equal(h.state.flightTimer, null, 'a manoeuvre does not silently resume suspended traffic');
+  h.click('clockStart');
+  assert.equal(h.state.flightSuspended, false);
+  h.elapsed(500);
+  assert.equal(h.state.path.length, 9);
+});
+
+test('the independent stopwatch retains fractional elapsed time over a manual stop and start', () => {
+  const h = makeHarness(); h.click('startExercise'); h.click('clockStart');
+  h.elapsed(600); h.click('clockStop');
+  assert.equal(h.state.clockSeconds, .6);
+  const samples = h.state.path.length;
+  h.elapsed(500);
+  assert.equal(h.state.clockSeconds, .6, 'manual stopwatch Stop does not count stopped time');
+  assert.equal(h.state.path.length, samples + 2, 'manual stopwatch Stop preserves independent aircraft movement');
+  h.click('clockStart'); h.elapsed(400);
+  assert.equal(h.state.clockSeconds, 1);
+  assert.equal(h.elements.clock.textContent, '00:00:01');
+});
+
+test('Single flight resume preserves a never-started, stopped or running independent stopwatch', () => {
+  for (const mode of ['never-started', 'stopped', 'running']) {
+    const h = makeHarness(); h.click('startExercise');
+    if (mode !== 'never-started') { h.click('clockStart'); h.elapsed(750); }
+    if (mode === 'stopped') h.click('clockStop');
+    const before = h.state.clockSeconds;
+    h.elapsed(5000); h.click('clockStart');
+    assert.equal(h.state.flightSuspended, false);
+    assert.notEqual(h.state.flightTimer, null);
+    assert.equal(h.state.clockRunning, mode === 'running', mode);
+    assert.equal(h.state.clockSeconds, before, 'paused gap is never added to the stopwatch');
+    h.elapsed(250);
+    assert.equal(h.state.clockSeconds, before + (mode === 'running' ? .25 : 0), mode);
+  }
+});
+
+test('Single target-heading completion uses the selected rate during the final partial step', () => {
+  const h = makeHarness(); h.click('startExercise');
+  h.state.plane = { x: 0, y: 0, heading: 0 };
+  h.state.cfg.speed = 240; h.state.cfg.rate = 3;
+  h.state.initialTurnSide = h.state.manualTurnSide = null;
+  h.state.targetHeading = 1; h.state.forcedTurnSide = 'right';
+  h.tick(4);
+  const radius = Core.turnRadiusNm(240, 3), angle = Math.PI / 180;
+  assert.ok(Math.abs(h.state.plane.x - (radius * (1 - Math.cos(angle)) + 240 / 3600 * (2 / 3) * Math.sin(angle))) < 1e-10);
+  assert.ok(Math.abs(h.state.plane.y - (-radius * Math.sin(angle) - 240 / 3600 * (2 / 3) * Math.cos(angle))) < 1e-10);
 });
 
 function setExercise(harness, scenario, procedure) {
@@ -588,7 +662,7 @@ test('continue-heading holds the active Normal QGH turn direction while amending
   assert.ok(headingError(state.plane.heading, 60) < .01);
 });
 
-test('replay keeps the fast 1× baseline, supports 10×, and pauses without losing its cursor', () => {
+test('replay 1× follows recorded seconds, supports 10×, and pauses without losing its cursor', () => {
   const harness = makeHarness();
   const scenario = { runway: 230, outbound: 65, inbound: 225, aircraft: 'fighter', distance: 8, speed: 360, rate: 4 };
   setExercise(harness, scenario, 'normal');
@@ -596,22 +670,22 @@ test('replay keeps the fast 1× baseline, supports 10×, and pauses without losi
   harness.click('terminate');
   harness.click('replay');
 
-  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 37, '1× replay must use the fast review baseline');
-  assert.equal(harness.elements.replayElapsed.textContent, 'REPLAY 00:00', 'replay must start with a minimal elapsed-time readout');
-  harness.fireTimeout(harness.state.replayTimer);
+  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 250, 'a recorded quarter second takes a real quarter second at 1×');
+  assert.equal(harness.elements.replayElapsed.textContent, 'REPLAY 00:00:00', 'replay must start with a zero elapsed-time readout');
+  harness.fireTimeout(harness.state.replayTimer, 250);
   assert.equal(harness.state.replayIndex, 2, '1× replay must advance one recorded point per frame');
 
   harness.clickReplaySpeed(3);
-  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 37, '3× replay keeps a smooth frame cadence');
+  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 250, '3× replay retains the recorded sample cadence');
   assert.equal(harness.elements.replay.textContent, 'PAUSE REPLAY', 'changing speed during replay must retain the active replay state');
   assert.equal(harness.elements.replay.getAttribute('aria-pressed'), 'true', 'the replay button must remain pressed while replay continues');
-  harness.fireTimeout(harness.state.replayTimer);
+  harness.fireTimeout(harness.state.replayTimer, 250);
   assert.equal(harness.state.replayIndex, 5, '3× replay must advance three recorded points per frame');
-  assert.equal(harness.elements.replayElapsed.textContent, 'REPLAY 00:01', 'replay elapsed time must follow the moving cursor');
+  assert.equal(harness.elements.replayElapsed.textContent, 'REPLAY 00:00:01', 'replay elapsed time must follow the moving cursor');
 
   harness.clickReplaySpeed(10);
-  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 37, '10× replay keeps the same smooth frame cadence');
-  harness.fireTimeout(harness.state.replayTimer);
+  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 250, '10× replay retains the sample cadence');
+  harness.fireTimeout(harness.state.replayTimer, 250);
   assert.equal(harness.state.replayIndex, 15, '10× replay must advance ten recorded points per frame');
 
   harness.click('replay');
@@ -621,7 +695,25 @@ test('replay keeps the fast 1× baseline, supports 10×, and pauses without losi
   harness.click('replay');
   assert.equal(harness.state.replayPaused, false, 'replay control must resume without restart');
   assert.equal(harness.state.replayIndex, pausedIndex, 'resume must retain the current replay cursor');
-  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 37, 'resume must retain the selected replay cadence');
+  assert.equal(harness.timeoutDelay(harness.state.replayTimer), 250, 'resume retains the selected replay cadence');
+});
+
+test('Single replay scales actual elapsed time and excludes paused wall time', () => {
+  for (const rate of [1, 2, 3, 10]) {
+    const h = makeHarness(); h.click('startExercise'); h.click('advanceFlight'); h.click('terminate');
+    h.clickReplaySpeed(rate); h.click('replay');
+    h.fireTimeout(h.state.replayTimer, 1000);
+    assert.equal(h.state.replayIndex, 1 + 4 * rate, `${rate}× should advance ${rate} recorded seconds per real second`);
+  }
+  const h = makeHarness(); h.click('startExercise'); h.click('advanceFlight'); h.click('terminate'); h.click('replay');
+  h.fireTimeout(h.state.replayTimer, 600);
+  assert.equal(h.state.replayIndex, 3, 'delayed callback preserves elapsed time and fractional remainder');
+  h.elapsed(150); h.click('replay');
+  assert.equal(h.state.replayIndex, 4, 'pause captures elapsed time since the last frame');
+  h.elapsed(5000); h.click('replay');
+  h.fireTimeout(h.state.replayTimer, 250);
+  assert.equal(h.state.replayIndex, 5, 'paused wall time does not enter replay');
+  assert.equal(h.elements.replayElapsed.textContent, 'REPLAY 00:00:01');
 });
 
 function buildScenarios() {

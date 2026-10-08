@@ -31,3 +31,42 @@ export function nearestAircraft(aircraft, point, scale, radius = 24) {
     }
     return nearest;
 }
+
+// Keep the dedicated Stop gesture separate from delayed single-click D/F and
+// double-click turning. The caller supplies current selection and authority.
+export function bindMiddleMouseStop(element, { isAllowed = () => false, getTargetId = () => null,
+    onReset = () => {}, onStop = () => {} } = {}) {
+    if (!element?.addEventListener) return null;
+    let pressed = null;
+    const preventDefault = event => { if (event.button === 1) event.preventDefault(); };
+    function cancel(event) {
+        if (event && pressed && event.pointerId !== pressed.pointerId) return;
+        const pointerId = pressed?.pointerId; pressed = null;
+        if (pointerId != null && element.hasPointerCapture?.(pointerId)) element.releasePointerCapture?.(pointerId);
+    }
+    function down(event) {
+        if (event.button !== 1) return;
+        event.preventDefault(); cancel();
+        if (event.isPrimary === false || event.pointerType && event.pointerType !== 'mouse' || !isAllowed()) return;
+        onReset();
+        const id = getTargetId(event);
+        if (!id || !isAllowed(id)) return;
+        pressed = { id, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+        if (event.pointerId != null) element.setPointerCapture?.(event.pointerId);
+    }
+    function move(event) {
+        if (pressed && pressed.pointerId === event.pointerId
+            && Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 5) cancel();
+    }
+    function up(event) {
+        if (event.button !== 1) return;
+        event.preventDefault();
+        if (!pressed || pressed.pointerId !== event.pointerId) return;
+        const action = pressed; cancel();
+        if (isAllowed(action.id) && Math.hypot(event.clientX - action.x, event.clientY - action.y) <= 5) onStop(action.id);
+    }
+    const listeners = { pointerdown: down, pointermove: move, pointerup: up,
+        pointercancel: cancel, lostpointercapture: cancel, mousedown: preventDefault, auxclick: preventDefault };
+    for (const [type, listener] of Object.entries(listeners)) element.addEventListener(type, listener);
+    return Object.freeze({ cancel, close() { cancel(); for (const [type, listener] of Object.entries(listeners)) element.removeEventListener?.(type, listener); } });
+}

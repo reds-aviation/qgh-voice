@@ -1,10 +1,10 @@
-# QGH Voice web and iPhone deployment
+# ATS SIM BOX Version 1 web and iPhone deployment
 
 ## Purpose
 
-The web edition makes QGH Voice available from a browser on iPhone, iPad, Android, Windows, macOS, and Linux. It packages the canonical simulator engine and is designed to work offline after the first successful load.
+ATS SIM BOX Version 1 is available from a browser on iPhone, iPad, Android, Windows, macOS, and Linux. It packages the canonical simulator engine and is designed to work offline after the first successful load.
 
-It is a Progressive Web App (PWA), not an App Store package. The current simulator does not use a backend, cloud account, analytics, location, or device files. Voice control requests microphone permission only when the user activates it and uses the self-hosted Vosk offline engine; it remains unavailable rather than using a cloud fallback. On first voice use, the user selects **SET UP OFFLINE VOICE** while online to cache the model (about 40 MB). Apart from that same-origin model request, QGH makes no network request for audio, recognised speech, or exercise data. Its service worker stores the application shell and the user-requested voice model for offline use; no personal data or exercise state is retained after a reload.
+It is a Progressive Web App (PWA), not an App Store package. Individual QGH uses the local simulator. Instructor-led Online rooms use the configured network service; This device/offline uses the same PC, browser profile and site address. Voice control requests microphone permission only when the user activates it and uses the self-hosted Vosk offline engine; it remains unavailable rather than using a cloud fallback. On first voice use, the user selects **SET UP OFFLINE VOICE** while online to cache the model (about 40 MB). Individual QGH has no cloud audio or recognition fallback. Online rooms exchange their documented instructor/student session messages. Its service worker stores the application shell and the user-requested voice model for offline use; instructor-led exercises also retain their documented local recovery, saved scenarios and map data. Logout discards the current tab’s recovery while retaining saved exercise libraries.
 
 The hosted PWA is the supported iPhone and iPad route for this release.
 
@@ -52,7 +52,7 @@ The repository includes a GitHub Actions deployment workflow. In the repository'
 
 `https://reds-aviation.github.io/qgh-voice/`
 
-Wait for the **Deploy QGH PWA to GitHub Pages** workflow to complete, then run the checks in the next section before sharing the URL.
+Wait for the **Deploy ATS SIM BOX to GitHub Pages** workflow to complete, then run the checks in the next section before sharing the URL.
 
 Before relying on the public deployment, protect `main` in **Settings** → **Branches**: require pull requests, require the **Validate QGH source / validate** and **Android Gradle Wrapper Integrity / Validate Gradle wrapper** checks to pass, require branches to be up to date, and restrict bypass permissions. In **Settings** → **Environments** → **github-pages**, restrict deployments to the protected `main` branch. The workflow itself also refuses to deploy a manually selected non-`main` branch.
 
@@ -99,13 +99,13 @@ On the iPhone or iPad:
 3. Choose **Add to Home Screen**.
 4. Enable **Open as Web App** when Safari offers it.
 5. Tap **Add**.
-6. Launch **QGH Simulator** from the Home Screen.
+6. Launch **ATS SIM BOX** from the Home Screen.
 
 Apple controls this installation flow. A website cannot silently install itself or bypass Safari's confirmation. The PWA will work offline after its initial successful load, subject to the device's normal browser-storage policies.
 
 ## Android and desktop browser installation
 
-On Chrome, Edge, and many Android browsers, use the entry-page **Install QGH on this device** button when the browser offers an install prompt. If the browser does not offer it, use its menu and choose **Install app** or **Add to Home screen**.
+On Chrome, Edge, and many Android browsers, use the entry-page **Install ATS SIM BOX on this device** button when the browser offers an install prompt. If the browser does not offer it, use its menu and choose **Install app** or **Add to Home screen**.
 
 The browser-installed PWA is separate from the signed Android APK and Windows application. It is ideal for quick access; the native packages remain available where local installation is preferred.
 

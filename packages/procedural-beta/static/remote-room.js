@@ -1,5 +1,10 @@
 // The instructor's existing worker remains the sole simulation authority.
 // Supabase relays only the student projection and checked student commands.
+import './meeting-room.js';
+const normalizeMeetUrl = value => {
+  try { return globalThis.ATCSuiteMeeting.normalizeMeetUrl(value); }
+  catch (error) { throw Object.assign(error, { status: 400 }); }
+};
 const ok = body => ({ status: 200, body });
 const errorResult = error => ({ status: error.status || 503, body: { error: error.message || 'Online session unavailable.' } });
 const staleView = state => state && ({ ...state, available: false, running: false, radio: { phase: 'idle' }, df: null });
@@ -10,6 +15,8 @@ export function createRemoteRoom({ service, local, session, now = Date.now }) {
   const receipts = new Map();
   let sharedMap = '';
   const host = session.role === 'instructor';
+  let meetingUrl = host ? normalizeMeetUrl(session.meetingUrl || '') : '';
+  let meetingExerciseId;
   const call = (action, payload = {}) => service.call(action, cloud.id, { ...payload, ...(host ? { hostKey: cloud.hostKey } : {}) });
   const unwrap = result => {
     if (result.status !== 200) throw Object.assign(new Error(result.body?.error || 'Exercise unavailable.'), { status: result.status });
@@ -31,8 +38,14 @@ export function createRemoteRoom({ service, local, session, now = Date.now }) {
     syncJob = (async () => {
       let result;
       if (host) {
-        const projection = unwrap(await local('cloud-view'));
+        const projection = { ...unwrap(await local('cloud-view')) };
         if (projection.role !== 'student' || ['aircraft', 'events', 'alerts'].some(key => key in projection)) throw new Error('Refusing to share an instructor view.');
+        if (meetingExerciseId && projection.exerciseId !== meetingExerciseId) {
+          meetingUrl = ''; session.meetingUrl = '';
+        }
+        meetingExerciseId = projection.exerciseId;
+        // A meeting link is session coordination; flight truth stays in the worker.
+        projection.meetingUrl = meetingUrl;
         await shareMap(projection);
         const sent = [...receipts].map(([id, result]) => ({ id, result }));
         result = await call('exchange', { state: projection, sequence: ++sequence, receipts: sent });
@@ -70,12 +83,20 @@ export function createRemoteRoom({ service, local, session, now = Date.now }) {
           if (!host && body.action === 'ready') await sync();
         }
         if (!room) await sync();
-        return ok(room);
+        return ok({ ...room, meetingUrl: host ? meetingUrl : room?.status === 'ready' ? state?.meetingUrl || '' : '' });
+      }
+      if (path === 'meeting') {
+        if (!host || method !== 'POST') return { status: 403, body: { error: 'Instructor control required.' } };
+        meetingUrl = normalizeMeetUrl(body?.meetingUrl);
+        session.meetingUrl = meetingUrl;
+        try { await sync(); } catch { /* Keep the link and retry through the existing room exchange. */ }
+        return ok({ meetingUrl, shared: !lastError });
       }
       if (path === 'state') {
         if (host) {
           const result = await local(path);
           if (now() - syncedAt > 6000) result.body = staleView(result.body);
+          result.body = { ...result.body, meetingUrl };
           return result;
         }
         if (!state) throw new Error('Waiting for the instructor’s exercise picture.');
