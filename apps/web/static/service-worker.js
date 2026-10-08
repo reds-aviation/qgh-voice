@@ -23,6 +23,8 @@ const APP_SHELL = [
   './training-centre.css',
   './rt-catalogue.js',
   './training-videos.json',
+  './tutorial-player.js',
+  './tutorial-video.json',
   './rt-reference.md',
   './single.html',
   './simulator-core.js',

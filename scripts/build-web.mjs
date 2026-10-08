@@ -2,6 +2,9 @@ import { access, copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/pr
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const tutorialPlayer = require('../packages/qgh-engine/tutorial-player.js');
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const engineRoot = resolve(repositoryRoot, 'packages', 'qgh-engine');
@@ -20,6 +23,8 @@ const engineFiles = [
   'training-centre.css',
   'rt-catalogue.js',
   'training-videos.json',
+  'tutorial-player.js',
+  'tutorial-video.json',
   'rt-reference.md',
   'single.html',
   'simulator-core.js',
@@ -141,10 +146,13 @@ function addPwaMarkup(pageName, source, version) {
   html = html.replace(/((?:src|href)="[a-zA-Z0-9_./-]+\.(?:js|css))"/g, `$1?v=${version}"`);
 
   if (!html.includes("worker-src 'self'")) {
+    const framePolicy = pageName === 'training-centre.html'
+      ? 'frame-src https://www.youtube-nocookie.com'
+      : "frame-src 'none'";
     html = assertReplaced(
       html,
-      "frame-src 'none'",
-      "frame-src 'none'; worker-src 'self'",
+      framePolicy,
+      `${framePolicy}; worker-src 'self'`,
       pageName
     );
   }
@@ -170,6 +178,7 @@ function addPwaMarkup(pageName, source, version) {
       : `  <script defer src="web-environment.js?v=${version}"></script>\n  <script defer src="pwa-register.js?v=${version}"></script>\n`;
     html = assertReplaced(html, '</body>', `${scripts}</body>`, pageName);
   }
+  if (pageName === 'training-centre.html') html = html.replace('</head>', `  <script defer src="tutorial-player.js?v=${version}"></script>\n</head>`);
 
   // Older deployed workers normalize any lone ?v= query to their old cache.
   // A second release key keeps new HTML and its scripts coherent even before
@@ -250,6 +259,11 @@ async function build() {
     filesToCopy.push(asset.path);
   }
   const training = JSON.parse(await readFile(resolve(engineRoot, 'training-videos.json'), 'utf8'));
+  const tutorial = JSON.parse(await readFile(resolve(engineRoot, 'tutorial-video.json'), 'utf8'));
+  if (tutorial.version !== version || !['pending','ready'].includes(tutorial.status)) throw new Error('Tutorial configuration version/status is invalid.');
+  if (tutorial.status === 'ready' && !tutorialPlayer.configuration(tutorial, version)) {
+    throw new Error('Published tutorial needs its real YouTube ID, duration and measured chapter starts.');
+  }
   if (!Array.isArray(training.videos)) throw new Error('Training video manifest must contain a videos array.');
   for (const clip of training.videos) {
     if (clip.version !== version || !Number.isSafeInteger(clip.bytes) || clip.bytes < 1 || clip.bytes > 192 * 1048576) throw new Error('Training clip version/size is invalid.');

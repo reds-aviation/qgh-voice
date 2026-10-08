@@ -9,6 +9,17 @@ import {parseHTML} from 'linkedom';
 const require=createRequire(import.meta.url), {matchGuideQuestion}=require('./static/suite-guide-chat.js');
 const source=n=>readFileSync(new URL('./static/'+n,import.meta.url),'utf8');
 
+test('tutorial help distinguishes online playback, pending publication and complete offline guidance',()=>{
+  for(const topic of ['suite','qgh-individual','qgh-instructor','procedural','sra']){
+    for(const question of ['Where is the full tutorial?','How do I jump to a video chapter?','Does the YouTube tutorial work offline?']){
+      const answer=matchGuideQuestion(question,topic);assert.equal(answer.intent,'youtube-tutorial',question);
+      assert.match(answer.text,/after it is published/);assert.match(answer.text,/cannot be saved by Make available offline/);
+      assert.match(answer.text,/Stop video/);assert.match(answer.links[0].href,/#tutorial/);
+    }
+  }
+  assert.match(renderCommonGuide(),/training-centre\.html#demonstrations/);
+});
+
 test('Gyani: connection, extended screens, common controls, paraphrases and unsupported questions',()=>{
   const cases=[
     ['Which connection mode should I select?','connections'],['Can I use a different PC?','connections'],

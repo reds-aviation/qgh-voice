@@ -97,7 +97,7 @@ export async function buildProceduralBeta(outputRoot) {
     if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}guide-search.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
     await writeFile(path,html);
   }
-  for (const page of ['single.html','tactical.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
+  for (const page of ['single.html','tactical.html','training-centre.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
     const prefix = page.startsWith('procedural-beta/') ? '' : page.includes('/') ? '../procedural-beta/' : 'procedural-beta/';
     const path = resolve(outputRoot,page);
     const html = await readFile(path,'utf8');

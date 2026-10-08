@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 82468,
-      "sha256": "ed692b06626e1b75167d4f2783e118c30ae336f6ab3c60484030aebf4553f946"
+      "bytes": 84257,
+      "sha256": "ec9b249d65ea722de5ee478a311fc567e1dc898c7221cc6c4fd05f38f77288fb"
     },
     {
       "path": "static/gyani-fox.png",
@@ -254,8 +254,8 @@
     },
     {
       "path": "static/suite-tour.js",
-      "bytes": 7678,
-      "sha256": "89e8f88cbafbbe0eb91f7c760704947718d3ec6640f15ea7ec73ecf99fdefd1a"
+      "bytes": 7909,
+      "sha256": "e7f7af26b9f47e96e978eb52b3744662550a8eb494ddf712a6250f87285613f4"
     },
     {
       "path": "static/suite-tour.css",

@@ -21,6 +21,17 @@
   ],
   "entries": [
     {
+      "id": "youtube-tutorial",
+      "title": "Watch the narrated ATS SIM BOX tutorial",
+      "topics": ["suite", "qgh-individual", "qgh-instructor", "procedural", "sra"],
+      "controls": ["suiteTutorialLaunch", "suiteTutorialChapter", "suiteTutorialStop"],
+      "anchor": "tutorial",
+      "priority": true,
+      "match": "\\b(?:tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
+      "text": "Home → Tutorial, or Training Centre → Demonstrations, opens the course after it is published. Load tutorial, then press Play in the YouTube player; there is no autoplay. Jump to chapter selects a measured start, then press Play. Use the player's captions and full-screen controls, or Watch on YouTube. Stop video, leaving the page or starting a local clip unloads the player. YouTube needs internet and cannot be saved by Make available offline; the complete written guide and individually saved local clips remain available. If publication is pending or the video cannot load, use those written instructions. The course distinguishes recorded actions from source-described controls and does not claim an unrecorded Meet/audio or speech-recognition check.",
+      "questions": ["Where is the full tutorial?", "Can I watch the tutorial inside the web app?", "How do I jump to a video chapter?", "Does the YouTube tutorial work offline?"]
+    },
+    {
       "id": "lfa-image-alignment",
       "title": "Align an uploaded LFA layout",
       "topics": [
@@ -1100,6 +1111,9 @@
     }
   ],
   "tours": [
+    {"pages": ["training-centre"], "selector": "#suiteTutorialLaunch", "title": "Load the online tutorial", "entry": "youtube-tutorial"},
+    {"pages": ["training-centre"], "selector": "#suiteTutorialChapter", "title": "Choose a chapter", "entry": "youtube-tutorial"},
+    {"pages": ["training-centre"], "selector": "#suiteTutorialStop", "title": "Stop the video", "entry": "youtube-tutorial"},
     {
       "pages": [
         "instructor-entry"

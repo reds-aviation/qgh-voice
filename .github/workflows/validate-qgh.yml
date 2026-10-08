@@ -22,6 +22,8 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Install simulator browser test dependencies
+        run: npm ci --prefix packages/procedural-beta --ignore-scripts --no-audit --no-fund
       - name: Validate simulator and web package
         run: node --test packages/qgh-engine/test/*.test.js apps/web/test/*.test.mjs
       - name: Validate instructor-led suite

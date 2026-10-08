@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const path = location.pathname;
-  const page = document.getElementById('entryJoinForm') ? 'instructor-entry' : /procedural-beta|procedural\.html/.test(path) ? 'procedural' : /instructor\.html/.test(path) ? 'instructor' : /student\.html/.test(path) ? 'student' : /single\.html/.test(path) ? 'single' : /tactical\.html/.test(path) ? 'tactical' : '';
+  const page = document.getElementById('entryJoinForm') ? 'instructor-entry' : /procedural-beta|procedural\.html/.test(path) ? 'procedural' : /instructor\.html/.test(path) ? 'instructor' : /student\.html/.test(path) ? 'student' : /single\.html/.test(path) ? 'single' : /tactical\.html/.test(path) ? 'tactical' : /training-centre\.html/.test(path) ? 'training-centre' : '';
   if (!page) return;
   const mount = () => {
     if (document.getElementById('suite-tour-open')) return;
@@ -70,7 +70,9 @@
       // reconnect, or delayed workspace reveal must never reopen it.
       if(live||alreadyStarted()){exerciseStarted=true;if(!firstUseHandled)rememberFirstUse();}
       if(!live&&!startHint.hidden)dismissHint();
-      if(button.hidden!==live)button.hidden=live;button.disabled=live;
+      const tutorialPending=page==='training-centre'&&!visible(document.getElementById('suiteTutorial'));
+      const unavailable=live||tutorialPending;
+      if(button.hidden!==unavailable)button.hidden=unavailable;button.disabled=unavailable;
       if(!panel.hidden&&(live||(tourMode==='first'&&!workspaceReady())))finish(false);
       if(!live&&!exerciseStarted&&!firstUseHandled&&workspaceReady()){
         try{firstUseHandled=localStorage.getItem(firstUseKey)==='1';}catch{}

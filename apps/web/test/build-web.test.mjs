@@ -68,6 +68,8 @@ test('web build creates an allowlisted PWA package', () => {
     'training-centre.css',
     'rt-catalogue.js',
     'training-videos.json',
+    'tutorial-player.js',
+    'tutorial-video.json',
     'rt-reference.md',
     'radio-session.js',
     'radio-workspace.js',
@@ -160,6 +162,11 @@ test('web build creates an allowlisted PWA package', () => {
   const environment = readFileSync(resolve(outputRoot, 'web-environment.js'), 'utf8');
   const distribution = readFileSync(resolve(outputRoot, 'web-distribution.js'), 'utf8');
   const headers = readFileSync(resolve(outputRoot, '_headers'), 'utf8');
+  const centre = readFileSync(resolve(outputRoot, 'training-centre.html'), 'utf8');
+  assert.match(centre,/src="tutorial-player\.js\?v=[^"]+"/);
+  assert.match(centre,/frame-src https:\/\/www\.youtube-nocookie\.com/);
+  assert.match(centre,/id="suiteTutorial"[^>]*hidden/);
+  assert.deepEqual(JSON.parse(readFileSync(resolve(outputRoot,'tutorial-video.json'),'utf8')),JSON.parse(readFileSync(resolve(repositoryRoot,'packages/qgh-engine/tutorial-video.json'),'utf8')),'built tutorial configuration preserves the supplied identity and measured chapters');
   const instructorEntry = readFileSync(resolve(outputRoot, 'instructor-led', 'index.html'), 'utf8');
   const instructorWorker = readFileSync(resolve(outputRoot, 'instructor-led', 'service-worker.js'), 'utf8');
   const { version } = JSON.parse(readFileSync(resolve(outputRoot, 'app-version.json'), 'utf8'));

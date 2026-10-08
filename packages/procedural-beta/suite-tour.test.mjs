@@ -6,6 +6,20 @@ import {domHarness} from './testing/dom-harness.mjs';
 
 const source=readFileSync(new URL('./static/suite-tour.js',import.meta.url),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('Training Centre tour stays hidden while publication is pending and never starts media',async()=>{
+  const h=domHarness(readFileSync(new URL('../qgh-engine/training-centre.html',import.meta.url),'utf8'),'/qgh-voice/training-centre.html');
+  h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};
+  h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=844;
+  vm.runInContext(readFileSync(new URL('./static/guide-knowledge.js',import.meta.url),'utf8'),h.context);
+  vm.runInContext(source,h.context);
+  const button=h.document.getElementById('suite-tour-open');assert.equal(button.hidden,true);
+  h.document.getElementById('suiteTutorial').hidden=false;
+  h.document.getElementById('suiteTutorialChapterLabel').hidden=false;await tick();
+  assert.equal(button.hidden,false);button.click();
+  assert.equal(h.document.getElementById('suite-tour').hidden,false);assert.match(h.document.getElementById('suite-tour').textContent,/YouTube needs internet/);
+  assert.equal(h.document.querySelector('iframe'),null,'tour highlights controls without loading YouTube');
+});
 test('instructor entry offers three manual header steps without admission or navigation',()=>{
   const h=domHarness('<html><body><header><nav class="suite-header-left"></nav></header><select id="exerciseConnection"></select><a id="openInstructorSetup" href="instructor.html">Instructor setup</a><form id="entryJoinForm"><input id="entryJoinPin"></form></body></html>','/qgh-voice/instructor-led/index.html');
   h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};

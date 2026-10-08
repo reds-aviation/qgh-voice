@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "status": "ready",
+  "youtubeId": "X9pBGBZlh84",
+  "title": "ATS SIM BOX · Version 1 narrated tutorial",
+  "durationSeconds": 1661.4,
+  "chapterCount": 18,
+  "chapters": [
+    {
+      "id": "00-start-here",
+      "title": "Start here",
+      "startSeconds": 0
+    },
+    {
+      "id": "01-home-and-connection",
+      "title": "Choose an exercise and connection",
+      "startSeconds": 88
+    },
+    {
+      "id": "02-single-normal",
+      "title": "Single QGH · Normal",
+      "startSeconds": 166
+    },
+    {
+      "id": "03-single-us-compass",
+      "title": "Single QGH · U/S Compass",
+      "startSeconds": 328
+    },
+    {
+      "id": "03b-individual-voice",
+      "title": "Individual voice · setup, PTT and feedback",
+      "startSeconds": 412
+    },
+    {
+      "id": "04-tactical",
+      "title": "Tactical QGH · multiple aircraft and formation",
+      "startSeconds": 500
+    },
+    {
+      "id": "05-qgh-prepare",
+      "title": "Instructor QGH · prepare the exercise",
+      "startSeconds": 588
+    },
+    {
+      "id": "06-paired-admission",
+      "title": "Instructor and student · join, admit and Ready",
+      "startSeconds": 667
+    },
+    {
+      "id": "07-google-meet",
+      "title": "Google Meet · talk throughout the exercise",
+      "startSeconds": 759
+    },
+    {
+      "id": "08-qgh-controls",
+      "title": "QGH instructor · aircraft controls and bearings",
+      "startSeconds": 845
+    },
+    {
+      "id": "09-sre-vectoring",
+      "title": "SRE and vectoring · sampled radar observations",
+      "startSeconds": 945
+    },
+    {
+      "id": "10-sra",
+      "title": "SRA · approach guidance and review",
+      "startSeconds": 1030
+    },
+    {
+      "id": "11-procedural-prepare",
+      "title": "Procedural · three preparation steps",
+      "startSeconds": 1116
+    },
+    {
+      "id": "12-custom-airspace",
+      "title": "Custom airspace · ARP, draw, close and save",
+      "startSeconds": 1206
+    },
+    {
+      "id": "13-save-and-load",
+      "title": "Saved exercises · save, load and files",
+      "startSeconds": 1302
+    },
+    {
+      "id": "14-procedural-run-and-student",
+      "title": "Procedural · run, reports and student plotting",
+      "startSeconds": 1391
+    },
+    {
+      "id": "15-review-and-finish",
+      "title": "Review, screen-share debrief, Home and Logout",
+      "startSeconds": 1484
+    },
+    {
+      "id": "16-phone-and-recovery",
+      "title": "Phone controls, help and recovery",
+      "startSeconds": 1574
+    }
+  ]
+}

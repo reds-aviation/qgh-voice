@@ -9,6 +9,7 @@ const sections = [
   ['connection','Offline or online',['connections','extended-screens']],
   ['session','Create, join and recover',['session','session-isolation','local-pin-recovery','online-recovery']],
   ['voice','Voice and screen sharing',['meeting-room','meeting-debrief']],
+  ['tutorial','Narrated tutorial',['youtube-tutorial']],
   ['individual','Single and Tactical QGH',['individual-start','qgh-turn','individual-voice']],
   ['instructor','Instructor QGH + SRA',['instructor-start']],
   ['procedural','Procedural control',['procedural-start']],
@@ -36,7 +37,9 @@ function renderCommonGuideSource(version) {
 }
 
 export function renderCommonGuide(version = knowledge.revision) {
-  return renderCommonGuideSource(version).replaceAll('training-centre.html#catalogue','training-centre.html#calls');
+  return renderCommonGuideSource(version).replaceAll('training-centre.html#catalogue','training-centre.html#calls')
+    .replace('<a href="procedural-beta/">Procedural</a>', '<a href="procedural-beta/">Procedural</a><a href="training-centre.html#demonstrations">Tutorial</a>')
+    .replace('<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2>', '<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2><p><a href="training-centre.html#demonstrations">Open the tutorial player in Training Centre</a></p>');
 }
 
 function legacyGuide(prefix, anchor) {
@@ -46,7 +49,7 @@ function legacyGuide(prefix, anchor) {
 
 export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   if (version !== knowledge.revision) throw new Error('Guide knowledge revision must match the Procedural release');
-  const paths={procedural:'packages/procedural-beta/static/procedural.html',single:'packages/qgh-engine/single.html',tactical:'packages/qgh-engine/tactical.html','instructor-entry':'packages/atc-suite/index.html',instructor:'packages/atc-suite/instructor.html',student:'packages/atc-suite/student.html'};
+  const paths={procedural:'packages/procedural-beta/static/procedural.html',single:'packages/qgh-engine/single.html',tactical:'packages/qgh-engine/tactical.html','instructor-entry':'packages/atc-suite/index.html',instructor:'packages/atc-suite/instructor.html',student:'packages/atc-suite/student.html','training-centre':'packages/qgh-engine/training-centre.html'};
   const sources={};
   for(const [page,path] of Object.entries(paths))sources[page]=await readFile(resolve(sourceRoot,path),'utf8');
   const workspaceShell=await readFile(resolve(sourceRoot,'packages/procedural-beta/static/workspace-shell.js'),'utf8');

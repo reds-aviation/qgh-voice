@@ -43,3 +43,15 @@ test('Netlify Individual Practice, offline voice assets and root worker remain s
   }
   assert.doesNotMatch(headers,/^\s+!\s+/m,'Use documented nonoverlapping Netlify paths rather than unsupported header-unset directives');
 });
+
+test('only Training Centre can embed the tutorial under every applicable response and meta policy',()=>{
+  const allowed='https://www.youtube-nocookie.com';
+  const centre=readFileSync(new URL('../../../packages/qgh-engine/training-centre.html',import.meta.url),'utf8');
+  const meta=centre.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+  const list=policies('/training-centre.html');assert.equal(list.length,1,'no generic deny-frame policy intersects');
+  assert.deepEqual(list[0].get('frame-src'),[allowed]);assert.match(meta,/frame-src https:\/\/www\.youtube-nocookie\.com/);
+  assert.deepEqual(list[0].get('connect-src'),["'self'"],'no parent external API or speech access');
+  for(const path of ['/','/index.html','/qgh.html','/single.html','/tactical.html','/user-guide.html','/instructor-led/instructor.html','/instructor-led/student.html','/procedural-beta/procedural.html']){
+    assert.ok(policies(path).length>0,path);for(const policy of policies(path))assert.deepEqual(policy.get('frame-src'),["'none'"],path);
+  }
+});
