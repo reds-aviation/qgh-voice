@@ -370,6 +370,11 @@ body.desk-open .pin-card { background: #252f37; color: var(--radar-text); border
 body.setup-open { height: auto; min-height: 100dvh; overflow: auto; }
 body.setup-open #main { height: auto; }
 .setup-panel { max-width: 1640px; margin: 0 auto; padding: 38px clamp(16px, 3vw, 48px) 28px; }
+#setup > details { max-width: 1544px; margin: 0 clamp(16px, 3vw, 48px) 20px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); padding: 16px; }
+#setup > details > summary { cursor: pointer; font-weight: 600; font-size: 16px; }
+#setup > details > form { margin-top: 16px; }
+#setup .scenario-library { margin-top: 18px; color: var(--ink); }
+#setup .scenario-library .hint, #setup .scenario-library .library-status { color: var(--muted); }
 .section-title > span { font-size: 11px; font-weight: 600; letter-spacing: .16em; color: var(--teal); }
 .section-title h1 { margin: 12px 0; font-size: clamp(30px, 3vw, 43px); font-weight: 400; letter-spacing: -.04em; }
 .section-title p { font-size: 15px; line-height: 1.6; color: var(--muted); }
@@ -432,6 +437,7 @@ body.setup-open #main { height: auto; }
 .roster-editor--cards .roster-cell:first-child { position: static; border-right: 0; box-shadow: none; padding-left: 12px; }
 .roster-editor--cards .roster-cell:last-child { justify-content: initial; }
 .roster-editor--cards .roster-cell input { width: 100%; }
+.roster-editor--cards .roster-row.roster-row--head { display: none; }
 .setup-actions {
   position: sticky; bottom: 0; display: flex; gap: 12px; padding: 18px 0 12px;
   background: #f3f1e8f5; border-top: 1px solid transparent; z-index: 5;

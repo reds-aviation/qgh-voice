@@ -14,7 +14,7 @@ const sections = [
   ['instructor','Instructor QGH + SRA',['instructor-start']],
   ['procedural','Procedural control',['procedural-start']],
   ['traffic','Build and reuse traffic',['aircraft-limits','roster-mobile','saved-exercises']],
-  ['airspace','Custom LFA, routes and maps',['public-lfa-samples','custom-polygons','arp-upload','lfa-image-alignment']],
+  ['airspace','Published and custom airspace',['public-lfa-samples','custom-polygons','saved-airspaces','arp-upload','lfa-image-alignment']],
   ['scope','Scope and screen space',['instructor-instrument-shelf','scope-tools','sweep','mobile-workspace','student-estimates']],
   ['aircraft','Aircraft controls',['suite-turn','turn','instructor-turn','stop-turn','orbit','speed-level','instructor-speed-level']],
   ['pilot','Pilot transmissions and D/F',['transmit','instructor-transmit']],
@@ -56,9 +56,10 @@ export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   for(const page of ['procedural','instructor','student'])sources[page]+=workspaceShell;
   const plotting=await readFile(resolve(sourceRoot,'packages/procedural-beta/static/student-plotting.js'),'utf8');
   sources.procedural+=plotting;sources.student+=plotting;
-  for(const filename of ['procedural.js','airspace-preparation.js','scenario-library.js','chart-workshop.js'])sources.procedural+=await readFile(resolve(sourceRoot,'packages/procedural-beta/static',filename),'utf8');
+  for(const filename of ['procedural.js','traffic-setup.js','airspace-preparation.js','airspace-library.js','scenario-library.js','chart-workshop.js'])sources.procedural+=await readFile(resolve(sourceRoot,'packages/procedural-beta/static',filename),'utf8');
   const hasControl=(source,id)=>{
     const text=source||'';
+    if (/function button\(text, id, action\)/.test(text) && new RegExp(`\\bbutton\\(\\s*['"][^'"]*['"]\\s*,\\s*['"]${id}['"]`).test(text)) return true;
     const adapterIds=[...text.matchAll(/\.id\s*=\s*root\.id\s*===\s*['"]activeWorkspace['"]\s*\?\s*['"]([^'"]+)['"]\s*:\s*['"]([^'"]+)['"]/g)];
     return text.includes(`id="${id}"`)||adapterIds.some(match=>match[1]===id||match[2]===id)||new RegExp(`\\.id\\s*=\\s*['"]${id}['"]`).test(text)||(/\.id\s*=\s*id\b/.test(text)&&(new RegExp(`\\[\\s*[a-zA-Z_$][\\w$]*\\s*,\\s*['"]${id}['"]\\s*\\]`).test(text)||(/const step\s*=\s*\(id,\s*label\)/.test(text)&&new RegExp(`\\bstep\\(\\s*['"]${id}['"]`).test(text))));
   };

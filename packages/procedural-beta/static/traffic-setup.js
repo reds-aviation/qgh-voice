@@ -28,7 +28,14 @@ function numberInput(name, min, max, value) {
 export function createTrafficSetup(host) {
     const panel = element('section', 'setup-panel');
     const heading = element('div', 'section-title');
-    heading.append(element('h3', '', 'Starting traffic'), element('p', '', 'Choose the aircraft count. Expand Initial traffic to set exact starting positions and performance.'));
+    heading.append(element('h2', '', 'Set up starting traffic'), element('p', '', 'Set your aircraft here first. Airspace can be loaded or edited separately; your traffic entries stay available.'));
+    const returnExercise = element('button', 'secondary', 'Return to exercise →');
+    returnExercise.id = 'traffic-return-exercise';
+    returnExercise.type = 'button';
+    returnExercise.hidden = true;
+    const returnStatus = element('p', 'hint');
+    returnStatus.hidden = true;
+    heading.append(returnExercise, returnStatus);
     const form = element('form', 'setup-form');
     form.noValidate = true;
     const settings = element('div', 'setup-settings');
@@ -50,21 +57,19 @@ export function createTrafficSetup(host) {
         option.value = value;
         mode.append(option);
     }
+    addSetting('Exercise family', mode);
     const count = numberInput('aircraftCount', 1, 20, 1);
     count.step = '1';
     addSetting('Aircraft count · 1–20', count);
-    const runway = numberInput('runwayHeadingDeg', 0, 360, 90);
-    const qnh = numberInput('qnhHpa', 870, 1085, 1013);
-    addSetting('Runway heading °T', runway);
-    addSetting('QNH hPa', qnh);
     const airspaceRow = element('div', 'setup-airspace');
     const airspaceLabel = element('p', 'setup-airspace-label');
     airspaceLabel.setAttribute('aria-live', 'polite');
-    const airspaceButton = element('button', 'secondary', 'Configure airspace');
+    const airspaceButton = element('button', 'secondary', 'Prepare airspace');
     airspaceButton.type = 'button';
     airspaceRow.append(airspaceLabel, airspaceButton);
     const roster = element('details', 'roster-editor optional-traffic');
-    roster.append(element('summary', 'roster-editor-head', 'Initial traffic · optional'));
+    roster.append(element('summary', 'roster-editor-head', 'Initial aircraft · positions and performance'));
+    roster.open = true;
     const navigator = element('label', 'roster-navigator', 'Jump to aircraft');
     const jump = element('select'); jump.setAttribute('aria-label', 'Jump to aircraft in roster'); navigator.append(jump); roster.append(navigator);
     jump.onchange = () => {
@@ -106,8 +111,6 @@ export function createTrafficSetup(host) {
     const rows = [];
     let visibleCount = 1;
     let initialized = false;
-    let runwayEdited = false;
-    let qnhEdited = false;
     let isOpen = false;
     let pending = false;
     let epoch = 0;
@@ -153,9 +156,15 @@ export function createTrafficSetup(host) {
         compass.type = 'checkbox';
         addCell('compassUnserviceable', 'Compass unserviceable', compass);
         body.append(row);
-        return { element: row, inputs };
+        return { element: row, inputs, navigation: {} };
     }
     function syncControls() {
+        const canReturn = !!host.returnToExercise && !!host.canReturn?.();
+        returnExercise.hidden = returnStatus.hidden = !canReturn;
+        returnExercise.disabled = pending;
+        returnStatus.textContent = host.view()?.terminated
+            ? 'Return to Review. Traffic changes stay as a draft until you create another exercise.'
+            : 'Your current exercise is paused. Return to its scope; traffic changes stay as a draft.';
         roster.classList.toggle('roster-editor--cards', visibleCount <= 2 || phone.matches);
         while (rows.length < visibleCount)
             rows.push(addRow(rows.length));
@@ -212,8 +221,8 @@ export function createTrafficSetup(host) {
         if (!['area', 'approach', 'aerodrome'].includes(mode.value))
             fail(mode, 'Choose an exercise family.');
         const environment = {
-            runwayHeadingDeg: readNumber(runway, 'Runway heading', 0, 360),
-            qnhHpa: readNumber(qnh, 'QNH', 870, 1085),
+            runwayHeadingDeg: host.view()?.environment.runwayHeadingDeg ?? 90,
+            qnhHpa: host.view()?.environment.qnhHpa ?? 1013.25,
         };
         const currentEnvironment = host.view()?.environment || {};
         const callsigns = new Set();
@@ -239,6 +248,7 @@ export function createTrafficSetup(host) {
                 id: `ac${index + 1}`, callsign,
                 type: readText(row.inputs.type, `${prefix} type`, 24),
                 ...values,
+                ...row.navigation,
                 compassUnserviceable: row.inputs.compassUnserviceable.checked,
             };
         });
@@ -260,10 +270,6 @@ export function createTrafficSetup(host) {
             mode.value = ['area', 'approach', 'aerodrome'].includes(view?.mode) ? view.mode : 'area';
             initialized = true;
         }
-        if (!runwayEdited)
-            runway.value = String(environment.runwayHeadingDeg ?? 90);
-        if (!qnhEdited)
-            qnh.value = String(environment.qnhHpa ?? 1013);
         airspaceLabel.textContent = `Airspace: ${environment.aerodromeName || 'Custom airspace'}`;
         error.textContent = '';
         error.hidden = true;
@@ -272,8 +278,6 @@ export function createTrafficSetup(host) {
     }
     count.addEventListener('input', updateCount);
     count.addEventListener('change', updateCount);
-    runway.addEventListener('input', () => { runwayEdited = true; });
-    qnh.addEventListener('input', () => { qnhEdited = true; });
     form.addEventListener('focusin', event => {
         if (!phone.matches || !(event.target instanceof HTMLInputElement)) return;
         const current = event.target;
@@ -289,6 +293,11 @@ export function createTrafficSetup(host) {
     });
     airspaceButton.addEventListener('click', () => { close(); host.airspace(); });
     cancel.addEventListener('click', () => { close(); host.cancel(); });
+    returnExercise.addEventListener('click', () => {
+        if (pending || !host.canReturn?.()) return;
+        close();
+        host.returnToExercise?.();
+    });
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (pending || !isOpen)
@@ -317,14 +326,14 @@ export function createTrafficSetup(host) {
     });
     function resetFromScenario(scenario) {
         if (!scenario) return;
-        epoch++; dirty = false; initialized = true; runwayEdited = false; qnhEdited = false;
+        epoch++; dirty = false; initialized = true;
         title.value = scenario.title || 'Procedural training session'; mode.value = scenario.mode || 'area';
         const aircraft = scenario.aircraft || [];
         rows.length = 0; body.replaceChildren();
         visibleCount = Math.max(1, aircraft.length); count.value = String(visibleCount); syncControls();
         const env = scenario.environment || {};
-        runway.value = String(env.runwayHeadingDeg ?? 90); qnh.value = String(env.qnhHpa ?? 1013);
         aircraft.forEach((item,index) => {
+            rows[index].navigation = Object.fromEntries(['routeId', 'wakeCategory'].filter(key => item[key]).map(key => [key, item[key]]));
             const target = rows[index].inputs, east = item.xNm - (env.stationXNm || 0), north = item.yNm - (env.stationYNm || 0);
             target.callsign.value = item.callsign; target.type.value = item.type || 'TRAINER';
             target.qteDeg.value = String((Math.atan2(east,north) * 180 / Math.PI + 360) % 360); target.rangeNm.value = String(Math.hypot(east,north));

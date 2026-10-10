@@ -9,7 +9,9 @@ const gesturesModule = await import('data:text/javascript;base64,' + Buffer.from
 
 function consoleHarness() {
   const h = domHarness(source('procedural.html'));
-  const jobs = new Map(), sketchEvents = []; let nextJob = 0, sketching = false, chartContext;
+  const jobs = new Map(), sketchEvents = [], archiveCalls = [];
+  const archiveTemplate = { name: 'Original training exercise', bundle: { scenario: { elapsed: 0, aircraft: [{ id: 'a1', callsign: '101', xNm: -20, yNm: 10 }], areas: [] } } };
+  let nextJob = 0, sketching = false, chartContext;
   Object.assign(h.context, {
     createAircraftGestures: options => gesturesModule.createAircraftGestures({...options,
       schedule: fn => { jobs.set(++nextJob, fn); return nextJob; }, cancel: id => jobs.delete(id)}),
@@ -17,29 +19,35 @@ function consoleHarness() {
     bindMiddleMouseStop: gesturesModule.bindMiddleMouseStop,
     createRadarSweep: () => ({update(){}}), recordTrail(){}, trailDots: () => [], trailSpacing: () => 1,
     createTrafficReview: () => ({record(){},open(){},close(){},clear(){}}),
-    createTrafficSetup: () => ({open(){},close(){}}),
     createStudentPlotting: () => ({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
-    createMapWorkshop: () => ({}), alignmentBriefing: () => '',
-    createChartWorkshop: options => { chartContext = options; return {isSketching:()=>sketching,cancelSketch:()=>{sketching=false;},onPointer:()=>{sketchEvents.push('down');return true;},onPointerMove:()=>{sketchEvents.push('move');return true;},onPointerUp:()=>{if(!sketching)return false;sketchEvents.push('up');return true;}}; }, drawAreas(){}, routeWindowOpen: () => true,
+    createMapWorkshop: () => ({render(){}}), alignmentBriefing: () => '',
+    createExerciseSetupArchive: () => ({ capture: async () => { archiveCalls.push('capture'); }, downloadBundle: async () => { archiveCalls.push('download'); return archiveTemplate; } }),
+    createChartWorkshop: options => { chartContext = options; return {render(){},isSketching:()=>sketching,cancelSketch:()=>{sketching=false;},onPointer:()=>{sketchEvents.push('down');return true;},onPointerMove:()=>{sketchEvents.push('move');return true;},onPointerUp:()=>{if(!sketching)return false;sketchEvents.push('up');return true;}}; }, drawAreas(){}, routeWindowOpen: () => true,
     visibleSegment: () => true, reserveLabel: () => null, fitNavigation(){}, approachReference: () => [], resolveRouteFixIds: () => [],
   });
   vm.runInContext(source('workspace-shell.js'), h.context);
   vm.runInContext(source('meeting-room.js'), h.context);
+  vm.runInContext('(function(){' + source('traffic-setup.js').replace(/^export /gm, '') + ';globalThis.createTrafficSetup=createTrafficSetup;})();', h.context);
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm, '') + `
     globalThis.commands = []; command = async (...args) => commands.push(args);
+    globalThis.downloads = []; download = (name, data) => downloads.push({name, data});
+    globalThis.downloadRequests = []; request = async path => { downloadRequests.push(path); return {scenario:{elapsed:120,events:[{text:'Attempt record'}]}}; };
     globalThis.prepare = (role, running = false) => {
-      session = {role}; stage = 'desk';
+      session = {role,token:'active-session-token',csrf:'active-csrf'}; stage = 'desk';
       const a = {id:'a1',callsign:'101',type:'TRAINER',status:'airborne',mode:'heading',headingDeg:90,speedKt:240,altitudeFt:10000,targetAltitudeFt:10000,xNm:0,yNm:0};
-      view = {exerciseId:'review-test',available:true,running,environment:{rangeNm:60,stationName:'NAV0'},roster:[a],aircraft:[a],routes:[],fixes:[],areas:[],elapsed:0};
+      view = {exerciseId:'review-test',available:true,running,environment:{rangeNm:60,stationName:'NAV0',map:{}},roster:[a],aircraft:[a],routes:[],fixes:[],areas:[],elapsed:0};
       choose(a.id); setStage('desk');
     };
     globalThis.cancelScope = resetScopePointer;
     globalThis.changeStage = setStage;
     globalThis.clearSelection = () => { selected = ''; };
     globalThis.setEnded = ended => { view.terminated = ended; };
+    globalThis.setElapsed = elapsed => { view.elapsed = elapsed; };
+    globalThis.setStartingTrafficRequired = required => { session.startingTrafficRequired = required; };
     globalThis.addSecondAircraft = () => { const a = {...view.aircraft[0],id:'a2',callsign:'102',xNm:20}; view.aircraft.push(a);view.roster.push(a); };
     globalThis.aircraftPoint = id => { const a=view.aircraft.find(a=>a.id===id),g=geometry();return {x:g.cx+a.xNm*g.scale,y:g.cy-a.yNm*g.scale}; };
   `, h.context);
+  for (const form of h.document.querySelectorAll('form')) form.reset = () => {};
   const canvas = h.document.getElementById('scope');
   let capture = null;
   canvas.setPointerCapture = id => { capture = id; };
@@ -50,8 +58,50 @@ function consoleHarness() {
     Object.assign(e, {isPrimary:true,pointerId:id,pointerType,button,clientX:x,clientY:y,timeStamp:time});
     canvas.dispatchEvent(e); return e;
   }
-  return {...h, canvas, jobs, emit, sketchEvents, startSketch() {sketching=true;chartContext.scope.openScope();}, flush() {const tasks = [...jobs.values()]; jobs.clear(); for (const fn of tasks) fn();}};
+  return {...h, canvas, jobs, emit, sketchEvents, archiveCalls, archiveTemplate, startSketch() {sketching=true;chartContext.scope.openScope();}, flush() {const tasks = [...jobs.values()]; jobs.clear(); for (const fn of tasks) fn();}};
 }
+
+test('Back to traffic setup returns to the paused desk or ended Review without replacing the attempt', async () => {
+  const h = consoleHarness(); h.context.prepare('instructor'); h.context.setElapsed(120);
+  const next = () => new Promise(resolve => setImmediate(resolve));
+  h.context.setStartingTrafficRequired(true);
+  await h.context.showTrafficSetup();
+  assert.equal(h.document.getElementById('traffic-return-exercise').hidden, true);
+  h.document.querySelector('#prepare-traffic .setup-actions button[type="button"]').click();
+  h.context.setStartingTrafficRequired(false);
+  h.context.changeStage('desk');
+  await h.context.showTrafficSetup();
+  assert.equal(h.document.getElementById('traffic-return-exercise').hidden, false);
+  const speed = h.document.querySelector('#prepare-traffic [data-field="speedKt"]');
+  speed.value = '600'; speed.dispatchEvent(new h.Event('input', {bubbles:true}));
+  h.document.getElementById('traffic-return-exercise').click(); await next();
+  assert.equal(h.document.getElementById('desk').hidden, false);
+  assert.equal(h.document.getElementById('setup').hidden, true);
+  assert.equal(h.document.getElementById('clock').textContent, '00:02:00');
+  assert.equal(h.document.getElementById('clock-state').textContent, 'PAUSED');
+  assert.equal(h.context.commands.length, 0);
+  await h.context.showTrafficSetup();
+  assert.equal(speed.value, '600');
+  h.context.setEnded(true);
+  h.document.getElementById('traffic-return-exercise').click(); await next();
+  assert.equal(h.document.getElementById('tab-debrief').hidden, false);
+  assert.equal(h.document.getElementById('clock-state').textContent, 'ENDED');
+  assert.equal(h.context.commands.length, 0, 'returning does not reopen an ended exercise');
+});
+
+test('Review setup button downloads the original archive while progress button exports the current attempt', async () => {
+  const h = consoleHarness(); h.context.prepare('instructor'); h.context.setElapsed(120); h.context.setEnded(true);
+  h.document.getElementById('review-download-setup').click(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(h.archiveCalls, ['download']); assert.equal(h.context.downloadRequests.length, 0, 'Setup download must not export the progressed aircraft state');
+  assert.equal(h.context.downloads.length, 1); assert.equal(h.context.downloads[0].name, 'Original-training-exercise-setup.json');
+  assert.equal(h.context.downloads[0].data, h.archiveTemplate); assert.equal(h.context.downloads[0].data.bundle.scenario.elapsed, 0);
+  assert.doesNotMatch(JSON.stringify(h.context.downloads[0].data), /active-session-token|active-csrf|Attempt record/);
+  assert.equal(h.document.querySelector('.ats-confirm-dialog'), null, 'A local setup download needs no external publishing approval');
+  h.document.getElementById('review-download-progress').click(); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual([...h.context.downloadRequests], ['/api/procedural/export']); assert.equal(h.context.downloads.length, 2);
+  assert.equal(h.context.downloads[1].name, 'ats-simbox-exercise-progress.json'); assert.equal(h.context.downloads[1].data.scenario.elapsed, 120);
+  assert.equal(h.context.downloads[1].data.scenario.events[0].text, 'Attempt record'); assert.deepEqual(h.archiveCalls, ['download']);
+});
 
 test('Procedural boots with the real shared workspace helper and keeps capture-loss after a completed click distinct from cancellation', () => {
   const h = consoleHarness(); h.context.prepare('instructor');

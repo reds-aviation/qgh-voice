@@ -92,12 +92,15 @@ test('invalid flight values cannot be saved or imported as a reusable exercise',
   assert.equal(h.stored().length,0); assert.equal(h.node('turnRate').value,'3'); assert.match(h.node('presetStatus').textContent,/Not imported.*turn/i);
 });
 
-test('primary Save current setup creates or updates one record, and Load restores exact starting fields without opening a room', async () => {
+test('collapsed Saved exercises uses Save, Load, Import and Download while preserving exact starting traffic', async () => {
   const h = await harness();
-  const management = h.document.querySelector('.preset-management');
+  const library = h.node('qghSavedExercises'), management = h.document.querySelector('.preset-management');
+  assert.equal(library.hasAttribute('open'), false);
   assert.equal(management.hasAttribute('open'), false);
-  for (const id of ['savedExercise', 'loadExercisePreset', 'savedExerciseName', 'saveExercisePreset']) assert.equal(h.node(id).closest('details'), null);
-  for (const id of ['saveExercisePresetAs', 'duplicateExercisePreset', 'renameExercisePreset', 'exportExercisePreset', 'removeExercisePreset', 'importExercisePreset']) assert.equal(h.node(id).closest('details'), management);
+  for (const id of ['savedExercise', 'loadExercisePreset', 'savedExerciseName', 'saveExercisePreset', 'exportExercisePreset', 'importExercisePreset']) assert.equal(h.node(id).closest('details'), library);
+  for (const id of ['renameExercisePreset', 'removeExercisePreset']) assert.equal(h.node(id).closest('details'), management);
+  assert.equal(h.node('saveExercisePresetAs'), null); assert.equal(h.node('duplicateExercisePreset'), null);
+  assert.equal(h.node('saveExercisePreset').textContent, 'Save'); assert.equal(h.node('exportExercisePreset').textContent, 'Download');
   h.node('savedExerciseName').value = 'QGH briefing'; h.node('initialHeading').value = '127'; h.node('initialSpeed').value = '250';
   h.saveCurrentSetup(); assert.equal(h.stored().length, 1);
   const id = h.stored()[0].id;

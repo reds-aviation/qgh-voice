@@ -18,6 +18,7 @@ function consoleHarness(useHelper=true) {
     createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({open(){},close(){}}),
     createStudentPlotting:()=>({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
     createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,
+    createExerciseSetupArchive:()=>({capture:async()=>{},downloadBundle:async()=>({})}),
     visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
   });
   if(useHelper)h.context.ATCScopeVisuals={...Visuals,overlayObstacles:()=>[],

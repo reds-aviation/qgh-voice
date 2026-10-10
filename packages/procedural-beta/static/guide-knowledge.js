@@ -6,7 +6,7 @@
     {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Choose connection → Instructor setup → prepare airspace and traffic → create → Session → Admit → Ready → online Meet/audio check → Run → Terminate → Review."
+      "text": "Choose connection → Set up starting traffic → prepare airspace if needed → Back to traffic setup → Create exercise → Session → Admit → Ready → online Meet/audio check → Run → Terminate → Review."
     },
     {
       "title": "QGH & SRA · Single QGH",
@@ -23,13 +23,28 @@
     {
       "id": "youtube-tutorial",
       "title": "Watch the narrated ATS SIM BOX tutorial",
-      "topics": ["suite", "qgh-individual", "qgh-instructor", "procedural", "sra"],
-      "controls": ["suiteTutorialLaunch", "suiteTutorialChapter", "suiteTutorialStop"],
+      "topics": [
+        "suite",
+        "qgh-individual",
+        "qgh-instructor",
+        "procedural",
+        "sra"
+      ],
+      "controls": [
+        "suiteTutorialLaunch",
+        "suiteTutorialChapter",
+        "suiteTutorialStop"
+      ],
       "anchor": "tutorial",
       "priority": true,
       "match": "\\b(?:tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
       "text": "Home → Tutorial, or Training Centre → Demonstrations, opens the course after it is published. Load tutorial, then press Play in the YouTube player; there is no autoplay. Jump to chapter selects a measured start, then press Play. Use the player's captions and full-screen controls, or Watch on YouTube. Stop video, leaving the page or starting a local clip unloads the player. YouTube needs internet and cannot be saved by Make available offline; the complete written guide and individually saved local clips remain available. If publication is pending or the video cannot load, use those written instructions. The course distinguishes recorded actions from source-described controls and does not claim an unrecorded Meet/audio or speech-recognition check.",
-      "questions": ["Where is the full tutorial?", "Can I watch the tutorial inside the web app?", "How do I jump to a video chapter?", "Does the YouTube tutorial work offline?"]
+      "questions": [
+        "Where is the full tutorial?",
+        "Can I watch the tutorial inside the web app?",
+        "How do I jump to a video chapter?",
+        "Does the YouTube tutorial work offline?"
+      ]
     },
     {
       "id": "lfa-image-alignment",
@@ -44,7 +59,7 @@
       ],
       "anchor": "airspace",
       "priority": true,
-      "match": "\\b(?:align|calibrat|embed|upload.*(?:image|map|layout)|reference point|point c)\\w*\\b",
+      "match": "\\b(?:align|calibrat|embed|upload.*(?:image|map|layout)|reference point|point c\\b)\\w*\\b",
       "text": "After saving ARP, choose a flat PNG/JPEG up to 5 MB, 4096 pixels per side and 16 megapixels. Enter source, edition and layout notes. Mark A at ARP and B/C at known points, enter coordinates and spread them across the chart. Check alignment → Apply and share. C checks scale and orientation. Aligning an image does not create editable polygons; enter or draw boundaries separately.",
       "questions": [
         "How do I align my LFA image?",
@@ -54,45 +69,122 @@
     },
     {
       "id": "arp-upload",
-      "title": "Enter or upload ARP coordinates",
+      "title": "Place an ARP dot or enter geographic coordinates",
       "topics": [
         "procedural"
       ],
       "controls": [
         "arp-file",
         "arp-template",
-        "chart-form"
+        "chart-form",
+        "custom-arp-form",
+        "drawn-arp-preview",
+        "drawn-arp-scope"
       ],
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:arp|aerodrome reference point|upload coordinates|origin coordinates)\\b",
-      "text": "Edit airspace → set the Aerodrome Reference Point in WGS-84 latitude/longitude (decimal degrees or DMS), or upload the ARP CSV/JSON template. Save the origin before adding geographic polygons or aligning an image. Changing ARP keeps existing local positions; it does not reproject them. Check and rebuild geometry against the new origin.",
+      "text": "Prepare airspace → Draw on chart → Place ARP on preview or Place ARP on radar scope, then click or tap where the ARP dot belongs. Drawing does not ask for latitude or longitude. This dot centres range rings and provides the D/F station in local NM; it does not assign real-world geographic coordinates. Replacing an existing ARP asks for confirmation, clears the geographic ARP reference and unsaved route / area points, and keeps saved traffic and chart points in place. Enter coordinates is a separate method: Save the Aerodrome Reference Point (ARP) in WGS-84 latitude/longitude, using decimal degrees or DMS, before entering geographic routes or areas. Saving a geographic ARP after a mouse-placed dot replaces that local reference and aligns the ARP / D/F station at local 0, 0 after confirmation. Saved traffic and chart geometry keep their existing local positions. Advanced tools also accepts the ARP CSV/JSON template. Image alignment requires a geographic ARP. Changing ARP keeps existing local positions; it does not reproject them. Check and rebuild geometry against the new origin.",
       "questions": [
         "How do I upload ARP coordinates?",
         "Can I type latitude and longitude?",
-        "Where is the ARP template?"
+        "Where is the ARP template?",
+        "Can I place the ARP with my mouse without coordinates?",
+        "What happens when I save geographic ARP coordinates after placing a dot?"
+      ]
+    },
+    {
+      "id": "saved-airspaces",
+      "title": "Save reusable airspace without traffic",
+      "topics": [
+        "suite",
+        "procedural"
+      ],
+      "anchor": "airspace",
+      "priority": true,
+      "match": "\\b(?:saved airspaces?|airspace library|(?:save|load|reuse|export|import|delete|offline|reusable)(?: (?:the|a|an|my|this|current|only|saved))? airspaces?|chart without traffic|airspace storage)\\b",
+      "text": "Prepare airspace → Save or load → Setup type: Airspace only (chart). Only that library is shown; choose Complete exercise (aircraft + chart) for a full setup instead. Airspace name → Save airspace stores only chart settings, routes, reporting fixes, areas, visibility selections and an optional image. It can be saved at any paused exercise time after chart entries are applied; traffic drafts do not need to be created first. It excludes aircraft, progress, controller records, PINs and tokens. Selecting an existing record then Save airspace asks before replacing it; clear the selection to save a new named record. Load saved airspace → Load confirms replacement of the chart only. The exercise stays paused, and aircraft, targets, elapsed time, PIN and controller records are kept. If aircraft reference a route, fix, hold or armed instruction that the chart would change, Load is rejected; retain that navigation unchanged before trying again. Reopen an ended exercise before Load. Files contains Download file, Import airspace file and Download unsaved airspace when a storage save failed. Remove saved airspace is a separate collapsed group with Delete selected. Import stores an asset; explicit Load applies it. Up to 50 airspaces fit in a device library and portable JSON files must be under 20 MB including their image. A failed storage write does not count as saved and leaves the existing list unchanged; Download unsaved airspace preserves the failed snapshot. Export JSON backups for sharing. Device libraries stay in the same website origin and browser profile; GitHub Pages and Netlify do not automatically share them. Complete offline guidance and cached chart assets work without a meeting service; Online room and Meet still need internet.",
+      "questions": [
+        "How do I save airspace without traffic?",
+        "Can I load saved airspace without changing aircraft?",
+        "Where is the airspace library?",
+        "Can I export airspace to another browser?",
+        "Can I save airspace after running an exercise?",
+        "What happens when airspace storage is full?"
+      ],
+      "controls": [
+        "prepare-airspace-library",
+        "prepare-save-load",
+        "prepare-save-kind",
+        "airspace-remove",
+        "airspace-library",
+        "airspace-name",
+        "airspace-select",
+        "airspace-save",
+        "airspace-load",
+        "airspace-files",
+        "airspace-export",
+        "airspace-import",
+        "airspace-delete",
+        "airspace-backup",
+        "airspace-library-status"
+      ]
+    },
+    {
+      "id": "route-chart-details",
+      "title": "Read route levels and directional chart marks",
+      "topics": [
+        "suite",
+        "procedural"
+      ],
+      "anchor": "airspace",
+      "priority": true,
+      "match": "\\b(?:route (?:arrows?|levels?|limits?|direction)|odd(?: and)? even|odd levels?|even levels?|unidirectional|bidirectional|one way route|reporting point coordinates|route coordinate labels|published arrow)\\b",
+      "text": "The route scope shows ordered reporting fixes, route names, level labels and chart direction marks when labels fit. After drawing at least two route points, Finish route brings the route details into view and focuses ATS route name. Name the route and its reporting points, choose Unidirectional · first → last or Bidirectional · both directions, enter lower / upper route bounds in ft MSL and optional level text, then Save route. Unidirectional follows your drawn point order; Bidirectional shows arrows in both directions along the same route. Finish route alone does not save. Published routes preserve exact per-leg source level text and labelled Odd / Even arrows from the dated AIP table: the table’s downward mark follows the listed point order and its upward mark points back. Those are source level-direction annotations, not an unconditional one-way clearance. Where a source direction is absent, no direction is invented. Labels may be omitted at dense zoom; Chart briefing retains the full route references and per-leg text. Route point coordinates use retained WGS-84 values when available, otherwise local east / north NM. Numeric route bounds are ft MSL; published FL/altitude text is not converted into a pressure-referenced clearance or live activation. Hiding a route changes chart visibility, not its availability or an aircraft instruction.",
+      "questions": [
+        "How do route arrows work?",
+        "What do Odd and Even arrows mean?",
+        "Why do route levels vary by leg?",
+        "Where are reporting point coordinates?",
+        "Does a published arrow make the route one way?",
+        "How do I choose a unidirectional route?",
+        "Can I make a drawn route bidirectional?"
+      ],
+      "controls": [
+        "custom-route-form",
+        "custom-route-name",
+        "custom-route-direction",
+        "custom-route-list",
+        "route-list",
+        "shared-routes",
+        "tab-airspace"
       ]
     },
     {
       "id": "public-lfa-samples",
-      "title": "Public LFA samples and real ATS routes",
+      "title": "Published airspace: routes and LFA / P / R / D areas",
       "topics": [
         "suite",
         "procedural"
       ],
       "controls": [
+        "traffic-setup",
         "aerodrome-select",
-        "aerodrome-layout-svg"
+        "aerodrome-layout-svg",
+        "aerodrome-selection",
+        "prepare-published"
       ],
       "anchor": "airspace",
       "priority": true,
-      "match": "\\b(?:lfa|ats route|airspace|aerodrome|public chart|real route|sample map)\\b",
-      "text": "Edit airspace lets you choose a published base or enter a custom ARP and polygon coordinates. Preview a base, then select only the ATS routes and areas needed for the exercise. The instructor selection is reflected on the student picture. Public AIP samples carry source/edition information and are dated training snapshots, not live NOTAM activation. Multiple LFA, prohibited, restricted and danger polygons can be entered.",
+      "match": "\\b(?:lfa|ats route|airspace|aerodrome|public chart|real route|sample map|prohibited|danger area|restricted area|catalogue|unchecking)\\b",
+      "text": "Prepare airspace → Published airspace → choose Hindan, Pune, Jodhpur, Chandigarh, Gwalior, Agra or Bareilly. Load aerodrome airspace brings every available route, reporting fix and area from that base’s bundled snapshot. The route and area checkboxes start checked; unchecking hides chart items on both instructor and student scopes without deleting them or changing clearances. Declutter can restore hidden items later. P means prohibited, R restricted and D danger; LFA and CTR have separate boundary types. Chart briefing retains sources, level labels and omitted geometry notes. The bundled AIP AMDT 08/2026 snapshot is effective 3 September 2026, retrieved 27 September 2026. It includes parsed routes intersecting the 250 NM base region and retained nearby areas, and is not a complete operational chart or live NOTAM / activation service. SID/STARs, conventional J/V routes outside the source selection, ambiguous source points and unverified boundaries are omitted. Do not invent the missing geometry. Loading chart data keeps current traffic and elapsed time; referenced aircraft navigation must remain unchanged.",
       "questions": [
         "Where are sample LFAs?",
         "Are these real ATS routes?",
-        "How do I draw an LFA polygon?",
-        "Can I select only one ATS route?"
+        "Can I hide only one ATS route?",
+        "Where are prohibited and danger areas?",
+        "Does unchecking a route delete it?",
+        "Is the published airspace catalogue complete?"
       ]
     },
     {
@@ -545,17 +637,45 @@
     },
     {
       "id": "roster-mobile",
-      "title": "Edit aircraft on a phone",
+      "title": "Starting traffic first, airspace separately",
       "topics": [
         "procedural"
       ],
       "controls": [
-        "traffic-setup"
+        "setup",
+        "prepare-traffic",
+        "traffic-setup",
+        "prepare-traffic-next",
+        "prepare-save-load",
+        "prepare-airspace-library"
       ],
       "anchor": "traffic",
       "match": "\\b(?:callsigns?|scroll|roster|keyboard|phone|mobile|aircraft count|add aircraft|generate traffic)\\b",
-      "text": "Prepare exercise opens one panel with three sections: 1 Choose or edit airspace, 2 Set traffic & create exercise, and 3 Save or load an exercise. Choose Published airspace or Custom airspace, then Continue to traffic. Set 1–20 aircraft; expand Initial traffic for independent callsign, position, heading, level, speed and performance. Phone cards scroll vertically; Jump to aircraft selects a callsign. Create exercise applies the visible roster and opens the workspace paused. Save the prepared starting setup before Run. Switching sections keeps entries; apply or discard unsaved airspace entries before creating traffic.",
+      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form: exercise family, title and 1–20 aircraft with their own callsign, position, heading, level, speed, turn / vertical rates, spawn time and compass condition. Phone cards scroll vertically; Jump to aircraft finds a callsign. Prepare airspace offers Published airspace, Draw on chart or Enter coordinates. Setup type in Save or load selects Airspace only (chart) or Complete exercise (aircraft + chart) and shows one library at a time; Advanced tools contains optional settings and sample traffic. Back to traffic setup retains your entries. Create exercise applies the roster and opens the workspace paused; save or discard chart drafts first. For an existing exercise, Return to exercise keeps progress and leaves roster edits unapplied.",
       "questions": []
+    },
+    {
+      "id": "traffic-return-exercise",
+      "title": "Return from traffic setup to the same exercise",
+      "topics": [
+        "procedural"
+      ],
+      "anchor": "traffic",
+      "match": "\\b(?:return to (?:the )?exercise|back to (?:the )?scope|return from traffic|leave traffic setup|traffic setup.*progress)\\b",
+      "text": "When you reopen traffic setup for an already created exercise, Return to exercise restores its scope without creating a replacement. The same aircraft, applied airspace, elapsed time, PIN and exercise records are kept. Opening traffic setup pauses a running exercise; Return to exercise leaves it paused, so select Run when ready. If the exercise has ended, Return opens Review and does not reopen the exercise automatically. Roster edits remain draft entries and Return does not apply them. Use Create exercise and confirm replacement to apply those traffic changes; this creates a replacement exercise with a new PIN. A fresh room requires Create exercise, Load of a saved full starting exercise, a restored current progress file or loaded Sample traffic before it can Run.",
+      "questions": [
+        "How do I return to the exercise from traffic setup?",
+        "Can I go back to the scope without creating traffic again?",
+        "Will Return to exercise lose my progress?",
+        "Does Return to exercise apply my traffic edits?"
+      ],
+      "controls": [
+        "setup",
+        "prepare-traffic",
+        "prepare-traffic-next",
+        "traffic-return-exercise"
+      ],
+      "priority": true
     },
     {
       "id": "run-pause",
@@ -566,13 +686,16 @@
       "controls": [
         "resume",
         "pause",
-        "step"
+        "step",
+        "setup",
+        "prepare-traffic",
+        "open-start-setup"
       ],
       "anchor": "exercise",
       "match": "\\b(?:run|pause|resume|start|nothing moves|not moving|stopped)\\b",
-      "text": "Run starts or resumes the same exercise after any admitted controller is Ready. Pause freezes traffic, clock and radar sweep. +1 min advances one minute. Status, clock and exercise actions stay together at the top. Options minimises when Start/Run begins; reopen it when needed. Terminate finishes the exercise for review; Reopen restores it paused. A Google Meet call remains separate from the exercise clock.",
+      "text": "For a fresh instructor room, first use Set up starting traffic → Create exercise, Load a saved full starting exercise, restore a current progress file or load Sample traffic. Successful progress restore or sample loading makes that exercise available to Run without creating its traffic again. Preparing airspace alone does not apply the roster. Startup steps returns to traffic setup when this is missing. Run starts or resumes the same exercise after any admitted controller is Ready. Pause freezes traffic, clock and radar sweep. +1 min advances one minute. Status, clock and exercise actions stay together at the top. Options minimises when Start/Run begins; reopen it when needed. Terminate finishes the exercise for review; Reopen restores it paused. A Google Meet call remains separate from the exercise clock.",
       "questions": [],
-      "intro": "Admit the controller and wait for Ready, then Run. Pause freezes the clock and traffic. Exercise options minimise at Run; the red Terminate button finishes the attempt."
+      "intro": "Create exercise or Load a full starting exercise first. Admit the controller and wait for Ready, then Run. Pause freezes clock and traffic. The red Terminate button finishes the attempt."
     },
     {
       "id": "session-isolation",
@@ -660,19 +783,26 @@
       "controls": [
         "traffic-review",
         "reviewSuiteHome",
-        "review-suite-home"
+        "review-suite-home",
+        "review-download-setup",
+        "review-download-progress",
+        "template-import",
+        "template-load"
       ],
       "anchor": "review",
       "priority": true,
-      "match": "\\b(?:replay|review|debrief|timeline|separation cue|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot))\\b|\\b(?:home.*(?:review|terminat|ended)|(?:review|terminat).*home|return to (?:the )?ats (?:simulator )?suite home)",
-      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side · altitude and 3D schematic views at the same replay time. Choose Aircraft to highlight one track and filter its events; select a timeline marker or a Commands & events item to seek to that recorded time. Cues show measured spacing against the configured threshold, the sampled cue interval and duration, plus the supplied source, applicability, evidence and instructor assessment. Red marks a configured threshold warning; amber asks for instructor assessment, and a satisfied measurement stays neutral. These are configured training cues, not a complete Doc 4444 decision; no cue at a sample does not establish safe separation. The instructor checks authorised minima and prerequisites. The 3D view exaggerates altitude, and replay never alters the completed exercise. After terminating an Instructor QGH/SRE/SRA or Procedural exercise, ATS suite Home in the review screen returns to the ATS Simulator Suite home page. Use Restart for another attempt or Replay to inspect the recording; Home is a separate exit from review.",
+      "match": "\\b(?:replay|review|debrief|timeline|separation cue|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot)|download.*(?:exercise setup|current progress)|starting setup (?:unavailable|missing))\\b|\\b(?:home.*(?:review|terminat|ended)|(?:review|terminat).*home|return to (?:the )?ats (?:simulator )?suite home)",
+      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side · altitude and 3D schematic views at the same replay time. Choose Aircraft to highlight one track and filter its events; select a timeline marker or a Commands & events item to seek to that recorded time. Cues show measured spacing against the configured threshold, the sampled cue interval and duration, plus the supplied source, applicability, evidence and instructor assessment. Red marks a configured threshold warning; amber asks for instructor assessment, and a satisfied measurement stays neutral. These are configured training cues, not a complete Doc 4444 decision; no cue at a sample does not establish safe separation. The instructor checks authorised minima and prerequisites. The 3D view exaggerates altitude, and replay never alters the completed exercise. In Procedural Review, use Download exercise setup before Logout or Home to keep the initial aircraft positions and complete starting airspace, including any map image, as a reusable JSON file. The simulator captures this setup before the first Run or +1 min; the file resets time, events, reports and radio for a new exercise and contains no PIN or room tokens. Later movement and termination do not replace these starting positions. To reuse it, open Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart) → Import exercise file, then select the record and Load. Import stores the file; Load opens the starting exercise paused. Download current progress is separate: it keeps the current attempt and records rather than resetting to its start. Older underway exercises without a captured starting setup cannot reconstruct it; use Download current progress instead. After terminating an Instructor QGH/SRE/SRA or Procedural exercise, ATS suite Home in the review screen returns to the ATS Simulator Suite home page. Use Restart for another attempt or Replay to inspect the recording; Home is a separate exit from review.",
       "questions": [
         "The replay buttons cover my track",
         "How do I watch my flight again?",
         "How do I seek to a command in review?",
         "What do the separation cues mean?",
         "Where is Home after termination?",
-        "How do I return to ATS Simulator Suite home from review?"
+        "How do I return to ATS Simulator Suite home from review?",
+        "How do I download exercise setup after termination?",
+        "How do I download current progress?",
+        "Starting setup unavailable: what can I download?"
       ]
     },
     {
@@ -781,15 +911,29 @@
         "procedural"
       ],
       "anchor": "procedural",
-      "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next)\\b",
-      "text": "Choose Exercise connection above the entry cards, then Open instructor setup. Prepare exercise uses one panel: choose/edit airspace, set traffic, then save/load. Published and Custom airspace share section 1; Continue to traffic opens section 2. Choose title/count and expand Initial traffic for exact starting aircraft. Create exercise opens the workspace paused. Section 3 has Load saved exercise and Save current setup; management and file actions are closed until needed. On desktop the scope fills the working area, with the aircraft quick controls in the left floating Aircraft & radio box and homing/readbacks below; Controls hides or restores that box. Session, Aircraft controls and Review open overlay drawers from the right tool rail. Phone controls retain their arrangement below the plot. Session admits the controller; Ready opens the controller display and meeting link. For online training, both join Meet and check audio, then the instructor confirms this before Run. Startup steps opens the checklist and shows what remains. Options expands secondary display controls and collapses when Run begins. Save the starting setup before Run to reuse it later. Creating the session stays on the instructor desk. The controller joins from the paired entry page by entering the PIN and requesting admission. For an online exercise, use Session → Google Meet · exercise voice to share a Google Meet room.",
+      "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sample traffic)\\b",
+      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form. Set family, title, aircraft count and individual starting details. Prepare airspace offers three methods: Published airspace, Draw on chart or Enter coordinates. Setup type in Save or load selects Airspace only (chart) or Complete exercise (aircraft + chart); only the selected library is shown. Advanced tools holds optional settings and sample traffic. Back to traffic setup keeps the roster; Create exercise applies it and opens a paused workspace. Return to exercise restores an existing paused scope or ended Review without applying roster drafts. A fresh room can Run after Create exercise, Load of a full starting exercise, current progress Restore or Sample traffic load. Session → Admit → controller Ready → online Meet/audio check → Run. Startup steps shows remaining requirements. Save the full starting exercise before Run; reusable airspace alone can be saved while paused. Prepare airspace → Advanced tools → Sample traffic loads a complete sample exercise after replacement confirmation. It is available to Run without creating its traffic again. Aircraft controls → Additional traffic tools adds traffic to the current exercise.",
       "questions": [
         "How do I start?",
         "Where is the aircraft roster?",
-        "How do I set up Procedural?"
+        "How do I set up Procedural?",
+        "Why can I not Run before creating traffic?",
+        "Why does opening setup show only traffic?",
+        "Where is optional sample traffic?",
+        "Can I Run optional sample traffic without creating its roster again?"
       ],
       "priority": false,
-      "controls": []
+      "controls": [
+        "instructor-login",
+        "setup",
+        "prepare-traffic",
+        "traffic-setup",
+        "prepare-save-load",
+        "prepare-exercise-library",
+        "prepare-sample-traffic",
+        "preset-form",
+        "prepare-advanced"
+      ]
     },
     {
       "id": "instructor-start",
@@ -801,14 +945,45 @@
       ],
       "anchor": "instructor",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sre|vectoring)\\b",
-      "text": "Choose Exercise connection above the entry cards, then Open instructor setup and choose QGH, SRE/vectoring or SRA. QGH is the cloud-breaking procedure with Normal or U/S Compass. New QGH sessions allow up to 2 aircraft; SRE/vectoring and SRA allow up to 24. Prepare traffic and pressure/approach references, create the session, admit the controller and wait for Ready. For online training, both join the shared Meet and check audio; the instructor confirms this before Start. Startup steps beside Start opens the checklist and names what is missing. On desktop the scope fills the working area, with quick turns and Transmit in the left floating Aircraft & radio box, followed by homing and red pilot captions. Controls hides or restores the box; More controls opens target heading, speed and level in Aircraft controls. Session, Aircraft controls and Review use right-side overlay drawers without resizing the scope. Phone controls stay below the plot. Options expands secondary display controls and collapses at Start. Creating the session stays on the instructor desk. The controller joins from the paired entry page; Session → Open controller entry is optional and never joins automatically. For an online exercise, use Session → Google Meet · exercise voice to share a Google Meet room.",
+      "text": "Open Instructor setup → Set up starting traffic. Choose QGH, SRE/vectoring or SRA, then set the aircraft; new QGH sessions allow up to 2 aircraft, SRE/SRA up to 24. Aircraft performance folds away optional turn and vertical rates. Prepare airspace & radar is collapsed below traffic for runway, final approach, radar and local training boundary settings. Saved exercises folds Save, Load, Import exercise file and Download together; Rename or remove holds occasional management actions. Create session starts the exercise; if an attempt already exists, confirm its replacement or Cancel to keep it. Session → Admit → controller Ready → online Meet/audio check → Start. Startup steps names missing requirements. Traffic setup pauses and retains the current attempt; Return to exercise restores its desk or ended Review without applying setup edits. More controls opens heading, speed and level controls; the floating Aircraft & radio box and right tool rail remain in the workspace.",
       "questions": [
         "How do I start SRA?",
         "How do I start instructor QGH?",
         "How do I practise vectoring?"
       ],
       "priority": false,
-      "controls": []
+      "controls": [
+        "setupPanel",
+        "scenarioForm",
+        "setupEnvironment",
+        "qghSavedExercises",
+        "newScenario",
+        "returnToExercise",
+        "createSession"
+      ]
+    },
+    {
+      "id": "instructor-traffic-return",
+      "title": "Return from QGH/SRE/SRA traffic setup without replacing the attempt",
+      "topics": [
+        "qgh-instructor",
+        "sra"
+      ],
+      "anchor": "instructor",
+      "match": "\\b(?:return to (?:the )?exercise|back to (?:the )?scope|return from traffic|traffic setup|leave traffic setup)\\b",
+      "text": "Session → Traffic setup opens the starting form while keeping the current exercise. A running exercise pauses. Return to exercise → restores its desk with the same aircraft, exercise time, PIN, controller admission and records; an ended attempt returns to Review. Setup edits stay as drafts and are not applied by Return. Use Start/Resume when ready to continue a paused exercise. Create session applies the displayed setup as a new exercise after replacement confirmation; Cancel or failed online creation keeps the existing attempt. The Review Restart action deliberately prepares a fresh attempt.",
+      "questions": [
+        "How do I return to my QGH exercise from traffic setup?",
+        "Does QGH Traffic setup replace the current exercise?",
+        "Will Return to exercise keep the same PIN?"
+      ],
+      "controls": [
+        "setupPanel",
+        "newScenario",
+        "returnToExercise",
+        "createSession"
+      ],
+      "priority": true
     },
     {
       "id": "individual-start",
@@ -934,7 +1109,7 @@
       ],
       "anchor": "scope",
       "match": "\\b(?:pan|zoom|range rings|ring spacing|scope controls|scope layers|local picture|bearing range ruler|ruler|options dropdown|top controls|controls button|hide controls|show controls|control strip|hud|aircraft labels|selected labels|labels off|aircraft glyph|leader lines)\\b",
-      "text": "Drag blank scope to pan. Range or Ctrl + scroll changes the total displayed range; Centre/Home returns to the origin. Options opens secondary display controls and Start/Run collapses them. Under Options, use Ring spacing and Labels beside Range in the scope display settings. Ring spacing chooses a fixed 5 NM or 10 NM interval repeated throughout that total range. The outer range is marked even when it is not an exact multiple of the interval. At a dense scale, fewer distance labels are printed while the rings remain. Instructor aircraft use a common small glyph. Aircraft labels offers Selected (default), All or Off; Off hides text labels, not aircraft glyphs. Selected-aircraft information is placed away from aircraft and connected by leader lines. Controls hides or restores the left floating Aircraft & radio box containing aircraft controls, homing and readbacks; More controls opens the Aircraft controls drawer. Right-side drawers overlay the desktop scope without resizing it; Close or Escape restores focus to the opening control. The phone arrangement is preserved with sideways scroll tracks for long rows. Display settings affect this position only, and do not change aircraft motion or the controller's information.",
+      "text": "Drag blank scope to pan. Range or Ctrl + scroll changes the total displayed range; Centre/Home returns to the origin. Options opens secondary display controls and Start/Run collapses them. Under Options, use Ring spacing and Labels beside Range in the scope display settings. Ring spacing chooses a fixed 5 NM or 10 NM interval repeated throughout that total range. The outer range is marked even when it is not an exact multiple of the interval. At a dense scale, fewer distance labels are printed while the rings remain. Instructor aircraft use a common small glyph. Aircraft labels offers Selected (default), All or Off; Off hides text labels, not aircraft glyphs. Selected-aircraft information is placed away from aircraft and connected by leader lines. Controls hides or restores the left floating Aircraft & radio box containing aircraft controls, homing and readbacks; More controls opens the Aircraft controls drawer. Right-side drawers overlay the desktop scope without resizing it; Close or Escape restores focus to the opening control. The phone arrangement is preserved with sideways scroll tracks for long rows. Ring spacing and aircraft-label settings affect this position only. The instructor’s route / area visibility choices are shared with the controller. Display changes do not change aircraft motion or clearances.",
       "questions": [
         "How do I pan the scope?",
         "How do I minimise the top controls?",
@@ -955,14 +1130,14 @@
     },
     {
       "id": "custom-polygons",
-      "title": "Save the ARP, then draw and apply a boundary",
+      "title": "Draw or enter airspace boundaries and ATS routes",
       "topics": [
         "suite",
         "procedural"
       ],
       "anchor": "airspace",
-      "match": "\\b(?:polygon|draw|drawing|boundary|boundaries|point to point|set save arp|custom airspace|custom lfa|coordinates)\\b",
-      "text": "Pause the instructor exercise, then Prepare exercise → 1 Choose or edit airspace → Custom airspace. Save ARP before drawing; unsaved ARP changes must also be saved first. The drawing readiness message shows what is missing and the current point count. Set / save ARP takes you to the ARP fields when drawing is blocked. Add a boundary name, LFA/P/R/D/CTR type and vertical limits. Expand Draw boundary with mouse / touch: click or tap the preview to add points in order, or drag an existing vertex to move it. Draw / edit on radar scope opens the full scope with its drawing toolbar; aircraft turns, transmissions, panning and exercise shortcuts are isolated while drawing. Drag the toolbar’s Move handle to reposition it, or focus Move and use arrows; Shift + arrows makes small moves, and Home or Reset restores its position. At least three valid points are required. Close boundary checks and closes the ring and returns you to the boundary form; then Save boundary applies it to both desks. Closing alone does not save. Cancel drawing exits drawing mode and keeps the unsaved points. Edit loads a saved ring; select or drag a vertex, or use Selected vertex → Delete selected vertex. Enter closes the ring, Delete/Backspace removes the selected vertex and Escape exits full-scope drawing. A crossed ring is rejected. Remove deletes a saved whole area after confirmation. Published airspace and Advanced chart tools & references remain in section 1. Discard unsaved airspace entries restores saved settings after confirmation; Continue to traffic proceeds to section 2 without applying unfinished entries.",
+      "match": "^(?!.*\\b(?:reporting point coordinates|route coordinate labels|route arrows?|route levels?|odd(?: and)? even)\\b).*\\b(?:polygon|draw|drawing|boundary|boundaries|point to point|set save arp|custom airspace|custom lfa|coordinates)\\b",
+      "text": "Pause, then Prepare airspace → Draw on chart. Select Place ARP on preview or Place ARP on radar scope, then click or tap its position. No latitude or longitude is needed for mouse drawing: the ARP dot sets the range-ring centre and D/F station, and routes / areas use local NM. The drawing readiness message explains blockers and shows point count. Add or edit selects Area boundary or ATS route. For an area, name it, choose LFA/P/R/D/CTR and enter lower / upper labels. Click or tap preview points in order, drag a vertex to move it, or use Draw / edit on radar scope. Scope aircraft turns, transmissions, panning and exercise shortcuts are isolated during full-scope drawing and ARP placement. Select a vertex and use Delete selected vertex to remove it. At least three valid area points are required: Close boundary checks the ring and returns to the form, then Save boundary applies it to both desks. Closing alone does not save. Enter coordinates is separate: save the geographic ARP first, then select Latitude, longitude or East NM, north NM and enter one coordinate pair per line; Save boundary validates it. Set / save ARP appears in the coordinate method when that reference needs applying. A mouse-placed ARP does not invent geographic coordinates. Cancel drawing exits the scope editor and keeps completed unsaved points; a cancelled pointer gesture rolls back only that gesture. For an ATS route, draw at least two reporting points in order, then select Finish route. This brings route details into view and focuses ATS route name. Name the route and every reporting point, choose Unidirectional · first → last or Bidirectional · both directions, enter lower / upper route bounds in ft MSL and optional published / instructor level text, then Save route. Unidirectional arrows follow the drawn point order; Bidirectional arrows use both directions along the same geometry. Finish route keeps an unsaved draft; Save route shares the route and its fixes atomically. Coordinate entry uses the same name, direction and level fields before Save route. FL labels remain text and are not converted into numeric limits. Existing routes and areas lists Edit / Remove actions. Changing the feature or starting a New route / boundary confirms discard of unsaved points. Moving an existing ARP confirms that unsaved feature points and its geographic reference will be cleared; saved traffic and chart geometry stay in place. Use the Move handle on the toolbar to drag it, or use arrow keys; Shift + arrows makes small moves and Home or Reset restores its position. Discard unsaved airspace entries appears only when drafts exist and restores saved chart values after confirmation. Back to traffic setup keeps your roster; Create exercise requires chart entries to be applied or discarded.",
       "questions": [
         "How do I draw an LFA polygon?",
         "Can I drag boundary points?",
@@ -975,7 +1150,12 @@
         "Does Close boundary save the polygon?",
         "Does Cancel drawing keep my points?",
         "Why do aircraft controls stop while drawing a boundary?",
-        "How do I move the boundary drawing toolbar?"
+        "How do I move the boundary drawing toolbar?",
+        "How do I draw an ATS route?",
+        "How do I enter named route coordinates?",
+        "What does Finish route do?",
+        "How do I name a route after drawing it?",
+        "Can I draw without entering coordinates?"
       ],
       "controls": [
         "airspace-preparation",
@@ -999,7 +1179,18 @@
         "boundary-drawing-status",
         "boundary-go-arp",
         "boundary-scope-tools",
-        "boundary-scope-close"
+        "boundary-scope-close",
+        "airspace-feature-kind",
+        "custom-route-form",
+        "custom-route-name",
+        "custom-route-direction",
+        "custom-route-save",
+        "custom-route-new",
+        "route-drawing-point-names",
+        "custom-airspace-features",
+        "custom-route-list",
+        "drawn-arp-preview",
+        "drawn-arp-scope"
       ],
       "priority": true
     },
@@ -1013,13 +1204,18 @@
         "procedural"
       ],
       "anchor": "traffic",
-      "match": "^(?!.*\\blog ?(?:out|off)\\b).*(?:\\b(?:template|preset|library|import|export|(?:save|saved|load|reuse) (?:the |a |an |my |this |current |starting |same )?(?:exercise|setup|set up))\\b|^(?!.*\\b(?:boundary|polygon|arp|drawing|draw)\\b).*\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library|(?:duplicate|rename) (?:selected|(?:(?:a|the|my) )?(?:exercise|setup|template|preset)))\\b)",
-      "text": "Prepare the starting setup before Run. Procedural: Prepare exercise → 3 Save or load an exercise. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. Exercise name → Save current setup updates the selected exercise or saves a new one when none is selected; replacement asks for confirmation. Apply unfinished airspace changes and Create exercise before saving. Manage exercises & files contains Save as new, Duplicate selected, Rename selected, Export selected, Remove selected and Import exercise file. Import adds a stored setup; Load applies it. New Procedural saves/imports allow up to 20 aircraft; older device templates retain their traffic. Instructor QGH/SRE/SRA: Load fills the setup; Create session starts a new room. Save current setup updates the chosen exercise or saves a new one when none is selected. Manage / files keeps Save as new and sharing/management actions. Duplicate copies the stored original, Rename changes its name, and Export downloads a JSON backup. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens.",
+      "match": "^(?!.*\\b(?:saved airspaces?|airspace library|save (?:only )?airspace|load (?:saved )?airspace|reuse airspace|export airspace|import airspace)\\b)(?!.*\\blog ?(?:out|off)\\b).*(?:\\b(?:template|preset|library|import(?:ing)?|restore (?:the |a |my )?(?:current )?progress|export|(?:save|saved|load|reuse) (?:the |a |an |my |this |current |starting |same )?(?:exercise|setup|set up))\\b|^(?!.*\\b(?:boundary|polygon|arp|drawing|draw)\\b).*\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library|(?:duplicate|rename) (?:selected|(?:(?:a|the|my) )?(?:exercise|setup|template|preset)))\\b)",
+      "text": "Prepare the starting setup before Run. Procedural: Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart). This shows the full-exercise library; Airspace only (chart) shows the chart-only library instead. The opening setup page contains only starting traffic. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. The four main actions are Save exercise, Load, Import exercise file and Download file. To save a new setup, choose New exercise / choose a saved exercise, enter Exercise name and select Save exercise. Choosing a stored exercise then Save exercise asks before replacing it. Apply unfinished chart changes and create or load the starting exercise before Save exercise. Save the full starting setup before its first Run or +1 minute. After termination, Review → Download exercise setup exports the captured initial aircraft and starting airspace for future use; Import exercise file stores that download, then Load applies it. Older underway exercises without a captured starting setup offer Download current progress instead. Saved airspace in Save or load stores the chart alone and keeps current traffic when loaded. Download file exports the selected saved setup as a portable JSON backup. Rename or remove a saved exercise is a collapsed group containing only Rename selected and Remove selected. Procedural has no separate Save as new or Duplicate action; choose the blank new-exercise option and a new name to save the current setup as a new record. Prepare airspace → Advanced tools → Current progress file (includes records) exports or restores an attempt rather than a reusable starting setup. Restoring this file confirms replacement, retains its elapsed time and records, and opens it paused; it does not require Create exercise again. Normal controller Ready and online audio checks still apply before Run. Import exercise file adds a stored starting setup; Load applies it. New Procedural traffic and template imports allow up to 20 aircraft. Previously stored device exercises and captured starting-setup archives retain 21–24 aircraft for loading, recovery or download. To move an older exercise with more than 20 aircraft to another device, use Download current progress and Restore a saved scenario; a new starting-template import still has the 20-aircraft limit. Instructor QGH/SRE/SRA: expand Saved exercises under the starting traffic form. The main actions are Save, Load, Import exercise file and Download. Load fills starting traffic; Create session opens a new exercise. Save updates the selected exercise after confirmation; choose Choose an exercise and enter a new name to save a new setup. Download exports the selected setup. Rename or remove folds Rename selected and Remove selected away until needed. Traffic setup retains an existing attempt; Return to exercise restores it without applying setup edits. Create session explicitly confirms replacement of the current exercise and PIN. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens.",
       "questions": [
         "How do I reuse an exercise?",
         "Can I test two students on the same setup?",
         "How do I export a saved exercise?",
-        "Can I duplicate or rename a saved exercise?"
+        "Can I rename a saved exercise?",
+        "How do I save the current setup under a new name?",
+        "How do I save a QGH setup under a new name?",
+        "Where can I load a saved exercise?",
+        "Can I Run after importing a current progress file?",
+        "How do I restore current progress?"
       ],
       "controls": [
         "scenario-library",
@@ -1029,11 +1225,23 @@
         "template-load",
         "template-download",
         "template-import",
-        "template-save-as",
-        "template-duplicate",
         "template-rename",
         "prepare-save-load",
-        "template-manage"
+        "prepare-save-kind",
+        "prepare-exercise-library",
+        "prepare-advanced",
+        "template-manage",
+        "import",
+        "export",
+        "qghSavedExercises",
+        "savedExercise",
+        "savedExerciseName",
+        "saveExercisePreset",
+        "loadExercisePreset",
+        "importExercisePreset",
+        "exportExercisePreset",
+        "renameExercisePreset",
+        "removeExercisePreset"
       ],
       "priority": true
     },
@@ -1111,9 +1319,30 @@
     }
   ],
   "tours": [
-    {"pages": ["training-centre"], "selector": "#suiteTutorialLaunch", "title": "Load the online tutorial", "entry": "youtube-tutorial"},
-    {"pages": ["training-centre"], "selector": "#suiteTutorialChapter", "title": "Choose a chapter", "entry": "youtube-tutorial"},
-    {"pages": ["training-centre"], "selector": "#suiteTutorialStop", "title": "Stop the video", "entry": "youtube-tutorial"},
+    {
+      "pages": [
+        "training-centre"
+      ],
+      "selector": "#suiteTutorialLaunch",
+      "title": "Load the online tutorial",
+      "entry": "youtube-tutorial"
+    },
+    {
+      "pages": [
+        "training-centre"
+      ],
+      "selector": "#suiteTutorialChapter",
+      "title": "Choose a chapter",
+      "entry": "youtube-tutorial"
+    },
+    {
+      "pages": [
+        "training-centre"
+      ],
+      "selector": "#suiteTutorialStop",
+      "title": "Stop the video",
+      "entry": "youtube-tutorial"
+    },
     {
       "pages": [
         "instructor-entry"
@@ -1218,7 +1447,7 @@
         "procedural"
       ],
       "selector": "#instructor-login",
-      "title": "Prepare exercise",
+      "title": "Set up starting traffic",
       "entry": "procedural-start"
     },
     {
@@ -1234,8 +1463,8 @@
         "procedural"
       ],
       "selector": "#traffic-setup",
-      "title": "Prepare airspace, traffic and saved exercises",
-      "entry": "roster-mobile"
+      "title": "Prepare airspace separately",
+      "entry": "public-lfa-samples"
     },
     {
       "pages": [
@@ -1273,8 +1502,16 @@
       "pages": [
         "procedural"
       ],
-      "selector": "#chart-form",
-      "title": "Set the ARP",
+      "selector": "#custom-arp-form",
+      "title": "Geographic ARP · save at the local origin",
+      "entry": "arp-upload"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#drawn-arp-preview",
+      "title": "Place the ARP dot with your mouse",
       "entry": "arp-upload"
     },
     {
@@ -1476,7 +1713,7 @@
         "procedural"
       ],
       "selector": "#prepare-airspace",
-      "title": "Save ARP, draw, close and save the boundary",
+      "title": "Draw or enter routes and areas",
       "entry": "custom-polygons"
     },
     {
@@ -1484,7 +1721,23 @@
         "procedural"
       ],
       "selector": "#prepare-save-load",
-      "title": "Save a reusable exercise",
+      "title": "Save or load · chart only or the full starting exercise",
+      "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#prepare-save-kind",
+      "title": "Setup type · show one library at a time",
+      "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#import",
+      "title": "Restore current progress · resume without creating traffic again",
       "entry": "saved-exercises"
     },
     {
@@ -1547,6 +1800,30 @@
       "selector": "#savedExercise",
       "title": "Reuse a starting exercise",
       "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#setupPanel",
+      "title": "Starting traffic with optional preparation folded below",
+      "entry": "instructor-start"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#setupEnvironment",
+      "title": "Prepare airspace & radar when needed",
+      "entry": "instructor-start"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#returnToExercise",
+      "title": "Return to the same QGH/SRE/SRA attempt",
+      "entry": "instructor-traffic-return"
     },
     {
       "pages": [
@@ -1615,6 +1892,22 @@
     },
     {
       "pages": [
+        "procedural"
+      ],
+      "selector": "#review-download-setup",
+      "title": "Download starting aircraft and airspace before leaving",
+      "entry": "review-controls"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#review-download-progress",
+      "title": "Keep this attempt and its records",
+      "entry": "review-controls"
+    },
+    {
+      "pages": [
         "instructor",
         "student",
         "procedural"
@@ -1622,6 +1915,54 @@
       "selector": "#workspaceLogout",
       "title": "Logout with confirmation",
       "entry": "logout-position"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#setup",
+      "title": "Starting traffic roster",
+      "entry": "roster-mobile"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#traffic-return-exercise",
+      "title": "Return to the current scope without replacing traffic",
+      "entry": "traffic-return-exercise"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#prepare-airspace-library",
+      "title": "Saved airspace · chart only",
+      "entry": "saved-airspaces"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#prepare-exercise-library",
+      "title": "Saved exercise · starting aircraft and chart",
+      "entry": "saved-exercises"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#airspace-feature-kind",
+      "title": "Choose area boundary or ATS route",
+      "entry": "custom-polygons"
+    },
+    {
+      "pages": [
+        "procedural"
+      ],
+      "selector": "#custom-route-form",
+      "title": "Finish route · name, direction, levels and Save",
+      "entry": "route-chart-details"
     }
   ],
   "startHint": {

@@ -117,14 +117,16 @@ test('Version 1 entry pages and common guide use ATS SIM BOX branding without be
  assert.equal(document.querySelector('#current-flow').getAttribute('data-guide-revision'),knowledge.revision,'display branding never replaces the release identity used for cache/guide compatibility');
 });
 
-test('drawing help distinguishes saved ARP, staged points, closing and applying a boundary',()=>{
+test('drawing help distinguishes mouse ARP, geographic entry, staged points, closing and applying a boundary',()=>{
   const entry=knowledge.entries.find(item=>item.id==='custom-polygons');
   for(const id of ['boundary-drawing-status','boundary-go-arp','boundary-scope-edit','boundary-scope-tools','custom-boundary-form']) assert.ok(entry.controls.includes(id));
-  assert.match(entry.text,/Save ARP before drawing/);
+  assert.match(entry.text,/Place ARP on preview or Place ARP on radar scope/);
+  assert.match(entry.text,/No latitude or longitude is needed/);
+  assert.match(entry.text,/Enter coordinates is separate: save the geographic ARP first/);
   assert.match(entry.text,/readiness message.*point count/);
   assert.match(entry.text,/Close boundary.*then Save boundary applies/);
   assert.match(entry.text,/Closing alone does not save/);
-  assert.match(entry.text,/Cancel drawing.*keeps the unsaved points/);
+  assert.match(entry.text,/Cancel drawing.*keeps completed unsaved points/);
   assert.match(entry.text,/aircraft turns, transmissions, panning and exercise shortcuts are isolated/);
   assert.match(entry.text,/Move handle.*Home or Reset/);
   for(const question of ['Why is mouse drawing unavailable?','Does Close boundary save the polygon?','Does Cancel drawing keep my points?','How do I move the boundary drawing toolbar?']) {
@@ -195,6 +197,7 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
 
 test('procedural console boots after feedback removal; mouse/touch controls preserve roles',async()=>{
   const h=domHarness(source('procedural.html'));
+  h.context.createExerciseSetupArchive=()=>({capture:async()=>{},downloadBundle:async()=>({})});
   const timers=new Map();let timerId=0;
   Object.assign(h.context,{createAircraftGestures:opts=>createAircraftGestures({...opts,schedule:fn=>{timers.set(++timerId,fn);return timerId;},cancel:id=>timers.delete(id)}),nearestAircraft,bindMiddleMouseStop,
     createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],trailSpacing:()=>1,createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({close(){},open(){}}),

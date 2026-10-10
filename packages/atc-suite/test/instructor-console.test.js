@@ -30,11 +30,11 @@ function harness(mode = 'qgh', sessionAdapter = Session, displayAdapter = Displa
   const document = { body: { classList: { add() {}, remove() {} } }, getElementById: node, querySelectorAll: () => [], createElement: () => node(`created-${nodes.size}`) };
   let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, updateAll, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
+    '\n globalThis.fixture = {state, updateAll, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, openTrafficSetup, returnToExercise, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
   const context = { document, structuredClone, sessionStorage: store(), localStorage: store(),
     ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: sessionAdapter, ATCSuiteDisplay: displayAdapter, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     ATCSuiteWorkspace: {bindShell(options) {shellOptions = options;}},
-    setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); }, performance: { now: () => now }, Date, console };
+    setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); }, performance: { now: () => now }, confirm:()=>true, Date, console };
   vm.runInNewContext(code, context);
   const state = context.fixture.state;
   state.simulation = Core.setLifecycle(Core.createState({ exerciseFamily: mode, runwayOrientationDeg: 230, finalTrackDeg: 230,
@@ -233,6 +233,46 @@ test('Start declutters every optional instructor panel and retry retains the ini
   h.retryScenario();
   assert.equal(h.node('callsign').value, '764'); assert.equal(h.node('initialHeading').value, '123');
   assert.equal(h.state.simulation, null); assert.equal(h.node('setupPanel').hidden, false);
+});
+
+test('Traffic setup pauses and returns to the same exercise without replacing aircraft, time or PIN', () => {
+  const h=harness(), entered=[], paused=[];
+  h.state.simulation=Core.advance(h.state.simulation,60);h.state.running=true;
+  h.state.session.pause=time=>{paused.push(time);return true;};
+  const session=h.state.session, initial=structuredClone(h.state.simulation), review=h.state.review;
+  h.context.ATCSuiteWorkspace={enter:element=>entered.push(element.id)};
+  h.node('callsign').value='Draft callsign';h.openTrafficSetup();
+  assert.deepEqual(paused,[60]);assert.equal(h.state.running,false);
+  assert.equal(h.state.simulation.lifecycle,'paused');assert.equal(h.state.session,session);assert.equal(h.state.review,review);
+  assert.deepEqual(h.state.simulation.aircraftList,initial.aircraftList);assert.equal(h.state.simulation.simulationSeconds,60);
+  assert.equal(h.node('setupPanel').hidden,false);assert.equal(h.node('returnToExercise').hidden,false);
+  h.returnToExercise();
+  assert.equal(h.node('activeWorkspace').hidden,false);assert.equal(h.node('setupPanel').hidden,true);
+  assert.equal(h.state.session.pin,'123456');assert.equal(h.node('callsign').value,'Draft callsign');
+  assert.deepEqual(entered,['setupPanel','activeWorkspace']);
+});
+
+test('Create cancellation and a failed online replacement keep the current attempt available to Return', async () => {
+  const h=harness();h.state.running=false;h.state.simulation=Core.setLifecycle(h.state.simulation,'paused');
+  const previous=h.state.session, simulation=h.state.simulation, initial=h.state.initialScenario;
+  h.node('scenarioForm').reportValidity=()=>true;h.node('scenarioForm').querySelector=()=>null;
+  h.context.confirm=()=>false;await h.createSession({preventDefault(){}});
+  assert.equal(h.state.session,previous);assert.equal(h.state.simulation,simulation);
+  h.context.confirm=()=>true;h.node('exerciseConnection').value='online';
+  h.setScenarioInput({exerciseFamily:'qgh',qghProcedure:'normal',callsign:'101',approachAircraft:'AC1',runwayOrientationDeg:230,finalTrackDeg:230,
+    aircraft:[{aircraftId:'AC1',callsign:'101',initialQteDeg:30,initialRangeNm:20,initialHeadingDeg:210,altitudeFt:10000,speedKt:240,rateDegPerSecond:3}]});
+  h.context.ATCSuiteCloud={prepareHost:async()=>{throw new Error('Room unavailable');}};
+  await h.createSession({preventDefault(){}});
+  assert.equal(h.state.session,previous);assert.equal(h.state.simulation,simulation);assert.equal(h.state.initialScenario,initial);
+  assert.equal(h.state.creating,false);assert.match(h.node('setupPreview').textContent,/Room unavailable/);
+  h.returnToExercise();assert.equal(h.node('activeWorkspace').hidden,false);
+});
+
+test('Return from traffic setup restores an ended exercise review instead of reopening movement', () => {
+  const h=harness();h.state.simulation=Core.setLifecycle(h.state.simulation,'review');
+  h.openTrafficSetup();h.returnToExercise();
+  assert.equal(h.node('reviewScreen').hidden,false);assert.equal(h.node('activeWorkspace').hidden,true);
+  assert.equal(h.state.simulation.lifecycle,'review');assert.equal(h.state.running,false);
 });
 
 test('Start moves the view from setup into the active scope through the common workspace adapter', () => {

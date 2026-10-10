@@ -40,10 +40,22 @@ export function mergePublishedNavigation(scenario, published, origin) {
         for (const id of route.fixIds)
             fixIDs.add(id);
     const retainedFixes = (scenario.fixes || []).filter((f) => !f.id.startsWith('aip-') || fixIDs.has(f.id));
-    const fixesByName = new Map(published.fixes.map(f => [f.name, f.id]));
-    const fixes = new Map(published.fixes.map(f => [f.id, { id: f.id, name: f.name, ...project(f, origin) }]));
-    for (const fix of retainedFixes)
-        fixes.set(fix.id, fix);
+    const fixes = new Map(retainedFixes.map(f => [f.id, f]));
+    const fixesByName = new Map();
+    for (const publishedFix of published.fixes) {
+        const fix = { id: publishedFix.id, name: publishedFix.name, ...project(publishedFix, origin) };
+        const retained = fixes.get(fix.id);
+        if (retained && (retained.name !== fix.name || Math.hypot(retained.xNm - fix.xNm, retained.yNm - fix.yNm) > 1e-8)) {
+            // A previous ARP can leave referenced AIP geometry in local space.
+            // Keep that navigation intact and give this chart's point its own
+            // identity rather than attaching new geographic text to old NM.
+            const prefix = fix.id.slice(0, 54); let suffix = 1;
+            while (fixes.has(`${prefix}-chart-${suffix}`)) suffix++;
+            fix.id = `${prefix}-chart-${suffix}`;
+        }
+        if (!fixes.has(fix.id)) fixes.set(fix.id, fix);
+        fixesByName.set(publishedFix.name, fix.id);
+    }
     const routes = new Map(published.routes.map(r => {
         const fixIds = r.fixNames.map(name => {
             const id = fixesByName.get(name);
@@ -53,8 +65,12 @@ export function mergePublishedNavigation(scenario, published, origin) {
         });
         // Published FL/altitude labels are retained as written, never silently
         // converted into an operational clearance or pressure-reference rule.
-        return [r.id, { id: r.id, name: r.name, kind: r.kind, fixIds, active: true,
+        const metadata = Object.fromEntries(['designator', 'publishedLimitsHeading', 'publishedSegments', 'limitsVaryBySegment', 'trackDistance', 'lateralLimits', 'oddLevels', 'evenLevels', 'notes'].filter(key => r[key] !== undefined).map(key => [key, structuredClone(r[key])]));
+        const pointsByName = new Map(published.fixes.map(f => [f.name, f]));
+        return [r.id, { ...metadata, id: r.id, name: r.name, kind: r.kind, fixIds, active: true,
                 availableFrom: 0, availableUntil: 0, minAltitudeFt: -1500, maxAltitudeFt: 60000,
+                coordinateOrigin: { latitude: origin.latitude, longitude: origin.longitude },
+                geoPoints: r.fixNames.map(name => ({ latitude: pointsByName.get(name).latitude, longitude: pointsByName.get(name).longitude })),
                 levelLimits: r.levelLimits, source: r.source, reference: r.reference, effectiveInfo: r.effectiveInfo }];
     }));
     for (const route of retainedRoutes)

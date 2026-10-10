@@ -131,7 +131,7 @@
     try {
       Core.createState(scenarioInput()); const name = presetName(); uniquePresetName(name);
       persistPreset({ id: crypto.randomUUID(), name, version: 1, setup: captureSetup() }, { add: true });
-      byId('presetStatus').textContent = 'New starting setup saved on this browser. Export selected to share or back it up.';
+      byId('presetStatus').textContent = 'Starting setup saved on this browser. Download to share it or keep a backup.';
     } catch (error) { byId('presetStatus').textContent = `Not saved: ${error.message}`; }
   }
 
@@ -323,6 +323,37 @@
     else for (const id of focusPanelIds) byId(id).open = false;
   }
 
+  function openTrafficSetup() {
+    if (state.loggingOut || state.creating) return;
+    if (state.running) suspendExercise('Exercise paused while starting traffic is open.');
+    state.reviewPlaying = false;
+    const current = !!state.simulation && !!state.session;
+    byId('returnToExercise').hidden = !current;
+    byId('trafficReturnStatus').hidden = !current;
+    byId('trafficReturnStatus').textContent = current
+      ? 'Your current exercise is kept. Return to exercise to continue; changes here apply only when you create a new session.' : '';
+    byId('setupPanel').hidden = false;
+    byId('activeWorkspace').hidden = true;
+    byId('reviewScreen').hidden = true;
+    document.body.classList.remove('exercise-console');
+    byId('consoleNavigation').open = true;
+    checkpoint();
+    enterWorkspace(byId('setupPanel'));
+    byId('returnToExercise').focus?.({ preventScroll: true });
+  }
+
+  function returnToExercise() {
+    if (state.loggingOut || state.creating || !state.simulation || !state.session) return;
+    const review = state.simulation.lifecycle === 'review';
+    byId('setupPanel').hidden = true;
+    byId('activeWorkspace').hidden = review;
+    byId('reviewScreen').hidden = !review;
+    document.body.classList.add('exercise-console');
+    updateAll(); renderMeeting();
+    if (review) renderReview();
+    enterWorkspace(byId(review ? 'reviewScreen' : 'activeWorkspace'));
+  }
+
   function retryScenario() {
     ++attemptGeneration; state.creating = false;
     const submit = byId('scenarioForm').querySelector?.('[type="submit"]');
@@ -334,6 +365,7 @@
     state.review = null; state.reviewPlaying = false; state.scopePan = { x: 0, y: 0 };
     try { sessionStorage.removeItem(RECOVERY_KEY); } catch (_) {}
     byId('setupPanel').hidden = false; byId('activeWorkspace').hidden = true; byId('reviewScreen').hidden = true;
+    byId('returnToExercise').hidden = true; byId('trafficReturnStatus').hidden = true;
     document.body.classList.remove('exercise-console'); byId('consoleNavigation').open = true;
     byId('setupPreview').textContent = 'Same configured traffic · create a new session to repeat from the start.';
     byId('setupPanel').scrollIntoView?.({ block: 'start' });
@@ -525,8 +557,12 @@
     byId('sraDescentProfileField').hidden = mode !== 'sra';
     syncRoster();
     for (const row of byId('aircraftRoster').children) {
-      const radarReturn = [...row.querySelectorAll('input, select')][2];
+      const controls = [...row.querySelectorAll('input, select')], radarReturn = controls[2];
       if (!radarReturn) continue;
+      for (const control of [controls[1], radarReturn]) {
+        const label = control.closest?.('label');
+        if (label) label.hidden = !radarMode;
+      }
       radarReturn.disabled = !radarMode;
       radarReturn.setAttribute('aria-disabled', String(!radarMode));
     }
@@ -816,13 +852,16 @@
   async function createSession(event) {
     event.preventDefault();
     if (state.loggingOut || state.creating || !byId('scenarioForm').reportValidity()) return;
+    if (state.session && !confirm('Create a new exercise with this starting traffic? This replaces the current exercise and its PIN. Return to exercise to keep the current attempt.')) return;
+    const previousGeneration = attemptGeneration, previousSession = state.session;
     const generation = ++attemptGeneration;
-    let cloud = null;
+    let cloud = null, committed = false;
     state.creating = true;
     const submit = byId('scenarioForm').querySelector('[type="submit"]');
     if (submit) submit.disabled = true;
     try {
-      const input = scenarioInput(); state.initialScenario = structuredClone(input);
+      const input = scenarioInput();
+      const simulation = Core.setLifecycle(Core.createState(input), 'ready'), sensor = createSensor(input);
       const online = byId('exerciseConnection')?.value === 'online';
       cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
         if (generation !== attemptGeneration) return;
@@ -835,19 +874,18 @@
         if (state.simulation) updateAll();
       }) : null;
       if (generation !== attemptGeneration) { cloud?.transport?.close(); return; }
-      state.cloudTransport = cloud?.transport || null;
-      state.meetingUrl = '';
-      resetTrainingTimeRate(input.exerciseFamily);
-      state.simulation = Core.setLifecycle(Core.createState(input), 'ready');
-      state.sensor = createSensor(input);
-      state.review = Sensors.createReviewTimeline();
-      state.review.recordTruth(truthForReview());
-      state.session = Session.createInstructorSession({
+      const nextSession = Session.createInstructorSession({
         publicMetadata: publicMetadata(input), storage: online ? undefined : localStorage,
         ...(cloud || {}),
         transportFactory: channelName => Session.createLocalSessionTransport({ channelName }),
         onEvent: onSessionEvent
       });
+      finishTransmission(); state.session?.close(); state.cloudTransport?.close();
+      state.cloudTransport = cloud?.transport || null; state.meetingUrl = '';
+      state.initialScenario = structuredClone(input); state.simulation = simulation; state.sensor = sensor;
+      state.review = Sensors.createReviewTimeline(); state.review.recordTruth(truthForReview());
+      state.session = nextSession; committed = true;
+      resetTrainingTimeRate(input.exerciseFamily);
       state.pendingClient = null; state.radioAudio = false;
       state.running = false; state.accumulator = 0; state.previousFrame = null; state.previousTick = null; state.runtimeError = null;
       byId('studentStatus').textContent = 'WAITING TO JOIN';
@@ -857,6 +895,7 @@
       byId('sessionPin').textContent = state.session.pin.replace(/(\d{3})(\d{3})/, '$1 $2');
       byId('sessionConnectionLabel').textContent = online ? 'Online · internet on both devices' : 'Offline · same PC and browser profile · Extend displays';
       byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = false;
+      byId('returnToExercise').hidden = true; byId('trafficReturnStatus').hidden = true;
       document.body.classList.add('exercise-console');
       byId('modeKicker').textContent = modeLabel(input.exerciseFamily);
       byId('scopeLabel').textContent = input.exerciseFamily === 'qgh' ? 'CONTINUOUS TRUTH · D/F PREVIEW' : 'CONTINUOUS TRUTH · SENSOR PREVIEW';
@@ -872,10 +911,15 @@
         ? 'ONLINE ROOM · Open the shared entry page on the other device, select Online room and request admission with this PIN.'
         : 'SESSION READY · Share this PIN. Join from Controller position on the shared entry page; Open controller entry is optional.');
     } catch (error) {
-      if (generation === attemptGeneration) { state.cloudTransport?.close(); state.cloudTransport = null; byId('setupPreview').textContent = error.message; }
+      if (generation === attemptGeneration) {
+        cloud?.transport?.close();
+        if (!committed && state.session === previousSession) attemptGeneration = previousGeneration;
+        else { state.cloudTransport?.close(); state.cloudTransport = null; }
+        byId('setupPreview').textContent = error.message;
+      }
       else cloud?.transport?.close();
     }
-    finally { if (generation === attemptGeneration) { state.creating = false; if (submit) submit.disabled = false; } }
+    finally { if (generation === attemptGeneration || !committed && attemptGeneration === previousGeneration && state.session === previousSession) { state.creating = false; if (submit) submit.disabled = false; } }
   }
 
   function truthForSensor(simulation = state.simulation) {
@@ -1740,7 +1784,7 @@
 
   function handleShortcut(event) {
     if (event.defaultPrevented || event.repeat || event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey
-      || isShortcutInteractionTarget(event.target) || byId('trainingGuide')?.open || !state.simulation || state.simulation.lifecycle === 'review') return;
+      || isShortcutInteractionTarget(event.target) || byId('trainingGuide')?.open || byId('activeWorkspace').hidden || !state.simulation || state.simulation.lifecycle === 'review') return;
     const plan = shortcutActionForKey(String(event.key || '').toLowerCase());
     if (!plan) return;
     event.preventDefault();
@@ -1760,8 +1804,6 @@
 
   family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
   byId('saveExercisePreset').addEventListener('click', saveCurrentSetup);
-  byId('saveExercisePresetAs').addEventListener('click', savePresetAsNew);
-  byId('duplicateExercisePreset').addEventListener('click', duplicatePreset);
   byId('renameExercisePreset').addEventListener('click', renamePreset);
   byId('removeExercisePreset').addEventListener('click', removePreset);
   byId('savedExercise').addEventListener('change', () => {
@@ -1848,7 +1890,9 @@
     if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewTime = 0;
     state.reviewPlaying = !state.reviewPlaying; drawReview(state.review.snapshot());
   });
-  byId('newScenario').addEventListener('click', retryScenario); byId('restartExercise').addEventListener('click', retryScenario);
+  byId('newScenario').addEventListener('click', openTrafficSetup);
+  byId('returnToExercise').addEventListener('click', returnToExercise);
+  byId('restartExercise').addEventListener('click', retryScenario);
   document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
   window.addEventListener('pagehide', () => { if (state.loggingOut) return; saveSetup(); checkpoint(); state.session?.detach?.(); });
   state.heartbeatTimer = setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);

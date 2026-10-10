@@ -14,7 +14,7 @@ const otherUrl = 'https://meet.google.com/xyz-abcd-efg';
 
 function instructorHarness(online = false, sessionAdapter = Session) {
   const h = domHarness(readFileSync(new URL('../instructor.html', import.meta.url), 'utf8'), '/instructor.html', 1280);
-  Object.assign(h.context, {structuredClone, ATCSuiteCore: Core, ATCSuiteSensors: Sensors,
+  Object.assign(h.context, {structuredClone, confirm:()=>true, ATCSuiteCore: Core, ATCSuiteSensors: Sensors,
     ATCSuiteSession: sessionAdapter, ATCSuiteCommandReference: CommandReference, ATCSuiteMeeting: Meeting});
   let source = readFileSync(new URL('../suite-instructor.js', import.meta.url), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'"))

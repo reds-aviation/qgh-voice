@@ -7,9 +7,11 @@ const source = name => readFileSync(new URL('./static/' + name, import.meta.url)
 const uri = text => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
 const geometryURI = uri(source('chart-geometry.js'));
 const geometry = await import(geometryURI);
+const routeChartURI = uri(source('route-chart.js').replace("'./chart-geometry.js'", JSON.stringify(geometryURI)).replace("'./scope-navigation.js'", JSON.stringify(uri(source('scope-navigation.js')))));
+const routeChart = await import(routeChartURI);
 const airspaceURI = uri(source('airspace-preparation.js').replace("'./chart-geometry.js'", JSON.stringify(geometryURI)));
 const airspace = await import(airspaceURI);
-const librarySource = source('scenario-library.js').replace("'./airspace-preparation.js'", JSON.stringify(airspaceURI)).replace("'./chart-geometry.js'", JSON.stringify(geometryURI));
+const librarySource = source('scenario-library.js').replace("'./airspace-preparation.js'", JSON.stringify(airspaceURI)).replace("'./chart-geometry.js'", JSON.stringify(geometryURI)).replace("'./route-chart.js'", JSON.stringify(routeChartURI));
 const library = await import(uri(librarySource));
 const origin = { latitude: 26, longitude: 73 };
 const square = [{ xNm: -10, yNm: -10 }, { xNm: 10, yNm: -10 }, { xNm: 10, yNm: 10 }, { xNm: -10, yNm: 10 }];
@@ -67,29 +69,40 @@ test('custom editor shares validated polygon geometry and keeps sketch changes s
     form.dispatchEvent(new h.Event('submit')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(commands.length, 1); assert.equal(commands[0][0], 'area-upsert'); assert.equal(commands[0][1].geoPoints.length, 4); assert.equal(commands[0][2], undefined); assert.equal(commands[0][3], 'ex1');
 });
-test('aerodrome form imports only explicitly checked records and their source geometry', async () => {
+test('published airspace defaults all features visible and unchecked routes/areas hide without replacing traffic or geometry', async () => {
     const h = domHarness(source('procedural.html'));
     const bases = JSON.parse(source('india-airspace.json')), enroute = JSON.parse(source('india-aip-enroute.json'));
     const base = bases[0], extra = enroute.aerodromes[base.id];
     const merge = await import(uri(source('aip-navigation.js').replace("'./chart-geometry.js'", JSON.stringify(geometryURI))));
-    const scenario = { version: 1, exerciseId: 'chart-ex', revision: 2, environment: { map: {}, dfHoldSeconds: 10 }, routes: [], fixes: [], aircraft: [] };
+    const scenario = { version: 1, exerciseId: 'chart-ex', revision: 2, environment: { map: {}, dfHoldSeconds: 10 }, routes: [], fixes: [], aircraft: [{ id: 'traffic-1', callsign: '101', xNm: -10, yNm: 5 }], elapsed: 120, calls: [{ text: 'Retain calls' }] };
     const state = { role: 'instructor', exerciseId: 'chart-ex', environment: scenario.environment, running: false, terminated: false };
     const commands = [];
-    Object.assign(h.context, geometry, merge, { parseARP() {}, alignmentBriefing: (s, a) => s + a, confirm: () => true, host: { view: () => state, generation: () => 1, command: async (...args) => commands.push(args), request: async () => ({ version: 1, scenario: JSON.parse(JSON.stringify(scenario)) }), changed() {}, message() {} }, fetch: async path => ({ ok: true, json: async () => path === 'india-airspace.json' ? bases : enroute }) });
-    for (const name of ['airspace-preparation.js', 'scenario-library.js', 'airspace-preview.js', 'chart-workshop.js']) vm.runInContext(source(name).replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), h.context);
+    Object.assign(h.context, geometry, routeChart, merge, { parseARP() {}, alignmentBriefing: (s, a) => s + a, confirm: () => true, host: { view: () => state, generation: () => 1, command: async (...args) => commands.push(args), request: async () => ({ version: 1, scenario: JSON.parse(JSON.stringify(scenario)) }), changed() {}, message() {} }, fetch: async path => ({ ok: true, json: async () => path === 'india-airspace.json' ? bases : enroute }) });
+    for (const name of ['airspace-preparation.js', 'scenario-library.js', 'airspace-library.js', 'airspace-preview.js', 'chart-workshop.js']) {
+        const text = source(name), exports = [...text.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+([A-Za-z_$][\w$]*)/g)].map(match => match[1]);
+        vm.runInContext(`(() => { ${text.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '')}; Object.assign(globalThis,{${exports.join(',')}}); })()`, h.context);
+    }
     vm.runInContext('globalThis.workshop=createChartWorkshop(host);', h.context);
     await new Promise(resolve => setImmediate(resolve));
     const selector = h.document.getElementById('aerodrome-select'); selector.value = base.id; selector.dispatchEvent(new h.Event('change'));
     const pick = h.document.getElementById('aerodrome-selection');
-    assert.equal(pick.querySelectorAll('input:checked').length, 0);
-    const route = pick.querySelector('input[data-route-id]'), area = pick.querySelector('input[data-area-id]'); route.checked = true; area.checked = true;
-    route.setAttribute('checked', ''); area.setAttribute('checked', ''); // linkedom models :checked from the attribute.
+    const checkboxes = [...pick.querySelectorAll('input')]; assert.ok(checkboxes.length > 2); assert.ok(checkboxes.every(checkbox => checkbox.checked), 'Every available feature starts visible');
+    for (const checkbox of checkboxes) checkbox.setAttribute('checked', ''); // linkedom models :checked from the attribute.
+    const route = pick.querySelector('input[data-route-id]'), area = pick.querySelector('input[data-area-id]'); route.checked = false; area.checked = false;
+    route.removeAttribute('checked'); area.removeAttribute('checked');
     h.document.getElementById('aerodrome-form').dispatchEvent(new h.Event('submit')); await new Promise(resolve => setImmediate(resolve));
-    assert.equal(commands.length, 1); assert.equal(commands[0][0], 'import');
-    const imported = commands[0][1].scenario;
-    assert.equal(imported.routes.length, 1); assert.equal(imported.routes[0].id, route.dataset.routeId); assert.equal(imported.areas.length, 1); assert.equal(imported.areas[0].id, area.dataset.areaId);
-    assert.deepEqual(JSON.parse(JSON.stringify(imported.areas[0].coordinateOrigin)), base.origin); assert.equal(imported.areas[0].geoPoints.length, imported.areas[0].points.length);
-    assert.deepEqual(imported.fixes.map(f => f.name).sort(), [...new Set(extra.routes.find(r => r.id === route.dataset.routeId).fixNames)].sort());
+    assert.equal(commands.length, 1); assert.equal(commands[0][0], 'airspace-replace');
+    const imported = JSON.parse(JSON.stringify(commands[0][1]));
+    assert.equal(imported.routes.length, extra.routes.length);
+    const visibleRoute = imported.routes.find(record => record.id === route.dataset.routeId), visibleArea = imported.areas.find(record => record.id === area.dataset.areaId);
+    assert.ok(visibleRoute && visibleArea);
+    assert.deepEqual(imported.scopeDisplay.hiddenRouteIds, [route.dataset.routeId]);
+    assert.deepEqual(imported.scopeDisplay.hiddenAreaIds, [area.dataset.areaId]);
+    assert.equal(imported.routes.filter(record => !imported.scopeDisplay.hiddenRouteIds.includes(record.id)).length, extra.routes.length - 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(visibleArea.coordinateOrigin)), base.origin); assert.equal(visibleArea.geoPoints.length, visibleArea.points.length);
+    assert.deepEqual(visibleRoute.fixIds.map(id => imported.fixes.find(fix => fix.id === id).name), extra.routes.find(record => record.id === route.dataset.routeId).fixNames);
+    for (const key of ['aircraft', 'elapsed', 'calls', 'radio', 'strips']) assert.equal(Object.hasOwn(imported, key), false, 'Published airspace command cannot replace traffic or progress');
+    assert.equal(imported.expectedRevision, 2);
 });
 test('scope and preview drag existing vertices through NM transforms; deletion and multiple P/LFA boundaries stay staged', async () => {
     const h = domHarness('<html><body><div id="scope-wrap"><canvas id="scope"></canvas></div><section id="tab-build"></section></body></html>');
@@ -105,9 +118,9 @@ test('scope and preview drag existing vertices through NM transforms; deletion a
     assert.equal(h.context.editor.onPointer(event(-10, -10)), true); assert.equal(captured, 7);
     assert.equal(h.context.editor.onPointerMove(event(-12, -8)), true); assert.equal(h.context.editor.onPointerUp(event(-12, -8)), true); assert.equal(captured, null);
     const form = h.document.getElementById('custom-boundary-form'), points = form.elements.namedItem('points');
-    let parsed = airspace.parseBoundary(points.value, 'geographic', origin); assert.ok(Math.abs(parsed.points[0].xNm + 12) < 1e-5); assert.ok(Math.abs(parsed.points[0].yNm + 8) < 1e-5); assert.equal(parsed.points.length, 4);
+    let parsed = airspace.parseBoundary(points.value, 'local', origin); assert.ok(Math.abs(parsed.points[0].xNm + 12) < 1e-5); assert.ok(Math.abs(parsed.points[0].yNm + 8) < 1e-5); assert.equal(parsed.points.length, 4);
     const selector = h.document.getElementById('boundary-vertex-select'); selector.value = '1'; selector.dispatchEvent(new h.Event('change')); h.document.getElementById('boundary-scope-delete').click();
-    assert.equal(airspace.parseBoundary(points.value, 'geographic', origin).points.length, 3); assert.equal(commands.length, 0, 'editing never publishes until Save');
+    assert.equal(airspace.parseBoundary(points.value, 'local', origin).points.length, 3); assert.equal(commands.length, 0, 'editing never publishes until Save');
     h.context.editor.cancelSketch(); assert.equal(h.context.editor.isSketching(), false);
     const mode = form.elements.namedItem('mode'); mode.value = 'local'; mode.dispatchEvent(new h.Event('change'));
     const preview = h.document.getElementById('boundary-sketch-canvas'); preview.getBoundingClientRect = () => ({ left: 0, top: 0, width: 720, height: 380 });
@@ -131,23 +144,29 @@ test('new templates cap at 20, preserve selections, and reject invalid imported 
     const missing = structuredClone(valid); missing.scenario.scopeDisplay.hiddenRouteIds = ['missing']; assert.throws(() => library.prepareExerciseTemplate(missing, 'Invalid'), /selections/);
     const mismatch = structuredClone(valid); mismatch.scenario.areas[0].coordinateOrigin = origin; mismatch.scenario.areas[0].geoPoints = square.map(p => airspace.localToGeographic({ ...p, xNm: p.xNm + 1 }, origin)); assert.throws(() => library.prepareExerciseTemplate(mismatch, 'Invalid'), /match/);
 });
-test('template Save as new, Duplicate, Rename, Load and quota/invalid-import paths keep exact starting setup', async () => {
+test('simple exercise Save, Rename, Load and quota/invalid-import paths keep exact starting setup', async () => {
     const h = domHarness('<html><body><section id="tab-build"></section></body></html>'); const exported = bundle();
     exported.scenario.areas = [{ id: 'p1', name: 'P example', kind: 'prohibited', points: square }]; exported.scenario.scopeDisplay.hiddenAreaIds = ['p1'];
     const state = { role: 'instructor', exerciseId: 'live', running: false, elapsed: 0, revision: 4 }; const commands = [];
-    Object.assign(h.context, { validateBoundary: airspace.validateBoundary, project: geometry.project, confirm: () => true, host: { view: () => state, generation: () => 1, request: async () => structuredClone(exported), command: async (...args) => commands.push(args), changed() {}, message() {} } });
+    Object.assign(h.context, routeChart, { validateBoundary: airspace.validateBoundary, project: geometry.project, confirm: () => true, host: { view: () => state, generation: () => 1, request: async () => structuredClone(exported), command: async (...args) => commands.push(args), changed() {}, message() {} } });
     vm.runInContext(source('scenario-library.js').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '') + ';globalThis.library=createScenarioLibrary(host);', h.context);
     const name = h.document.getElementById('template-name'), select = h.document.getElementById('template-select'), status = h.document.getElementById('scenario-library-status'), read = () => JSON.parse(h.context.localStorage.getItem('ats-simbox-exercise-templates-v1'));
     const click = async id => { h.document.getElementById(id).click(); await new Promise(resolve => setImmediate(resolve)); };
-    name.value = 'Assessment'; await click('template-save-as'); assert.equal(read().length, 1); const originalID = select.value;
-    await click('template-duplicate'); assert.equal(read().length, 2); assert.notEqual(select.value, originalID); assert.equal(read()[1].name, 'Assessment copy'); assert.deepEqual(read()[1].bundle.scenario.scopeDisplay.hiddenAreaIds, ['p1']);
+    assert.equal(h.document.getElementById('template-save-as'), null);
+    assert.equal(h.document.getElementById('template-duplicate'), null);
+    const manage = h.document.getElementById('template-manage');
+    assert.equal(manage.contains(h.document.getElementById('template-import')), false);
+    assert.equal(manage.contains(h.document.getElementById('template-download')), false);
+    assert.equal(manage.querySelectorAll('button').length, 2, 'occasional management has only Rename and Remove');
+    name.value = 'Assessment'; await click('template-save'); assert.equal(read().length, 1); const originalID = select.value;
+    select.value = ''; name.value = 'Assessment copy'; await click('template-save'); assert.equal(read().length, 2); assert.notEqual(select.value, originalID); assert.equal(read()[1].name, 'Assessment copy'); assert.deepEqual(read()[1].bundle.scenario.scopeDisplay.hiddenAreaIds, ['p1']);
     name.value = 'Renamed'; await click('template-rename'); const selectedID = select.value; assert.equal(read()[1].id, selectedID); assert.equal(read()[1].name, 'Renamed'); assert.equal(read()[1].bundle.scenario.aircraft[0].xNm, -10);
     await click('template-load'); assert.equal(commands.at(-1)[0], 'import'); assert.deepEqual(commands.at(-1)[1].scenario.scopeDisplay.hiddenAreaIds, ['p1']); assert.equal(commands.at(-1)[1].expectedRevision, 4);
-    name.value = 'Assessment'; await click('template-save-as'); assert.match(status.textContent, /different name/); assert.equal(read().length, 2);
+    select.value = ''; name.value = 'Assessment'; await click('template-save'); assert.match(status.textContent, /already used/); assert.equal(read().length, 2);
     const file = h.document.getElementById('template-import'); file.files = [{ size: 5, text: async () => '{bad' }]; file.dispatchEvent(new h.Event('change')); await new Promise(resolve => setImmediate(resolve)); assert.equal(read().length, 2); assert.doesNotMatch(status.textContent, /Imported/);
     const originalSet = h.context.localStorage.setItem; h.context.localStorage.setItem = () => { throw new Error('quota'); };
-    name.value = 'Failed rename'; await click('template-rename'); assert.equal(read()[1].name, 'Renamed'); assert.doesNotMatch(status.textContent, /renamed/);
-    name.value = 'Temporary copy'; await click('template-duplicate'); assert.match(status.textContent, /page only/); assert.doesNotMatch(status.textContent, /saved/); assert.equal(read().length, 2);
+    select.value = selectedID; name.value = 'Failed rename'; await click('template-rename'); assert.equal(read()[1].name, 'Renamed'); assert.doesNotMatch(status.textContent, /renamed/);
+    select.value = ''; name.value = 'Temporary copy'; await click('template-save'); assert.match(status.textContent, /page only/); assert.doesNotMatch(status.textContent, /saved/); assert.equal(read().length, 2);
     h.context.localStorage.setItem = originalSet;
 });
 
@@ -183,37 +202,76 @@ function mouseDrawingHarness(withOrigin = true) {
     return { ...h, state, commands, get, preview, form, points, emit, clickPoint, sketchButton, edit, submit, editor: h.context.editor };
 }
 
-test('mouse drawing explains missing/unsaved ARP and running state beside the canvas and directs the instructor to the required field', async () => {
+test('mouse drawing starts by placing the ARP dot without coordinate entry, and still guards unapplied changes and running state', async () => {
     const h = mouseDrawingHarness(false), arpForm = h.get('custom-arp-form');
     const status = h.get('boundary-drawing-status');
     assert.ok(status, 'Drawing readiness must be visible next to the preview');
     assert.equal(status.parentElement === h.preview.parentElement, true);
-    assert.match(status.textContent, /Save.*ARP/i);
+    assert.match(status.textContent, /Place.*ARP/i);
+    assert.equal(arpForm.querySelector('.airspace-preparation-grid').hidden, true);
+    assert.equal(arpForm.elements.namedItem('latitude').required, false);
     assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
     assert.equal(h.get('boundary-scope-edit').disabled, true);
     h.clickPoint(-10, -10); assert.equal(h.points.value, ''); assert.equal(h.commands.length, 0);
-    h.get('boundary-go-arp').click(); assert.equal(h.document.activeElement === arpForm.elements.namedItem('latitude'), true);
-    h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
-    await h.submit('custom-arp-form');
+    h.get('drawn-arp-preview').click(); h.clickPoint(5, 6); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.state.environment.drawnARP, true); assert.equal(h.state.environment.chartOrigin, null);
+    assert.ok(Math.abs(h.state.environment.stationXNm - 5) < 1e-8); assert.ok(Math.abs(h.state.environment.stationYNm - 6) < 1e-8);
     assert.equal(h.preview.getAttribute('aria-disabled'), 'false');
     assert.equal(h.get('boundary-scope-edit').disabled, false);
     h.clickPoint(-10, -10);
     const selectedDraft = h.points.value;
     const deleteControls = [h.get('boundary-vertex-delete'), h.get('boundary-scope-delete')];
     for (const control of deleteControls) assert.equal(control.disabled, false, 'A selected vertex can be deleted when drawing is ready');
-    h.edit(arpForm.elements.namedItem('reference'), 'Unapplied chart reference');
-    assert.match(status.textContent, /save|apply/i); assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
+    h.edit(arpForm.elements.namedItem('aerodromeName'), 'Unapplied chart name');
+    assert.match(status.textContent, /apply/i); assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
     assert.equal(h.get('boundary-scope-edit').disabled, true);
     for (const control of deleteControls) assert.equal(control.disabled, true, 'Unsaved ARP changes block deleting the selected vertex');
-    await h.submit('custom-arp-form');
+    h.editor.setMethod('coordinates'); h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
+    h.context.confirm = () => true; await h.submit('custom-arp-form');
+    h.clickPoint(-10, -10);
     for (const control of deleteControls) assert.equal(control.disabled, false, 'Saving the same ARP enables selected-vertex deletion again');
     h.state.running = true; h.editor.render();
     assert.match(status.textContent, /pause/i); assert.equal(h.preview.getAttribute('aria-disabled'), 'true');
     for (const control of deleteControls) assert.equal(control.disabled, true, 'A running exercise blocks deleting the selected vertex');
-    h.clickPoint(10, 10); assert.equal(h.points.value, selectedDraft);
+    const pausedDraft = h.points.value; h.clickPoint(10, 10); assert.equal(h.points.value, pausedDraft);
     h.state.running = false; h.editor.render();
     assert.equal(h.preview.getAttribute('aria-disabled'), 'false'); assert.match(status.textContent, /click|draw/i);
     for (const control of deleteControls) assert.equal(control.disabled, false, 'Pausing enables selected-vertex deletion again');
+});
+
+test('saving geographic ARP after mouse placement puts the station at its projected origin and preserves saved geometry', async () => {
+    const h = mouseDrawingHarness(false), arpForm = h.get('custom-arp-form');
+    h.get('drawn-arp-preview').click(); h.clickPoint(7.5, -4.25);
+    await new Promise(resolve => setImmediate(resolve));
+    const aircraft = [{ id: 'a1', callsign: '101', xNm: 12, yNm: -6 }];
+    const areas = [{ id: 'p1', name: 'Saved area', kind: 'prohibited', points: square }];
+    const routes = [{ id: 'r1', fixIds: ['f1', 'f2'], coordinateOrigin: origin, geoPoints: [{ ...origin }, airspace.localToGeographic({ xNm: 10, yNm: 0 }, origin)] }];
+    const fixes = [{ id: 'f1', name: 'A', xNm: 0, yNm: 0 }, { id: 'f2', name: 'B', xNm: 10, yNm: 0 }];
+    Object.assign(h.state, { aircraft, areas, routes, fixes });
+    h.editor.setMethod('coordinates'); h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
+    h.context.confirm = () => true; await h.submit('custom-arp-form');
+    const environment = h.state.environment, projectedARP = geometry.project(origin, environment.chartOrigin);
+    assert.equal(environment.drawnARP, false); assert.deepEqual(environment.chartOrigin, origin);
+    assert.equal(environment.stationName, 'ARP');
+    assert.equal(environment.stationXNm, projectedARP.xNm, 'Station must coincide with the coordinate ARP at local zero');
+    assert.equal(environment.stationYNm, projectedARP.yNm, 'Station must coincide with the coordinate ARP at local zero');
+    for (const [key, value] of Object.entries({ aircraft, areas, routes, fixes })) assert.equal(h.state[key], value, `Saving ARP preserves ${key}`);
+    assert.equal(h.commands.at(-1).name, 'environment');
+    for (const key of ['aircraft', 'areas', 'routes', 'fixes']) assert.equal(Object.hasOwn(h.commands.at(-1).payload, key), false);
+});
+
+test('cancelling geographic ARP relocation preserves an existing mouse ARP even without an unsaved feature draft', async () => {
+    const h = mouseDrawingHarness(false), arpForm = h.get('custom-arp-form');
+    h.get('drawn-arp-preview').click(); h.clickPoint(7.5, -4.25);
+    await new Promise(resolve => setImmediate(resolve));
+    const before = JSON.parse(JSON.stringify(h.state.environment)), prompts = [];
+    h.editor.setMethod('coordinates'); h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
+    h.context.confirm = prompt => { prompts.push(prompt); return false; };
+    await h.submit('custom-arp-form');
+    assert.equal(prompts.length, 1, 'Changing a drawn ARP requires relocation confirmation');
+    assert.match(prompts[0], /ARP.*traffic.*chart points.*local positions/i);
+    assert.equal(h.commands.length, 1, 'Cancel must not update the environment');
+    assert.deepEqual(h.state.environment, before);
 });
 
 test('a new empty mouse draft at scaled CSS size closes and saves named airspace with exact type, limits and coordinate metadata', async () => {
@@ -244,6 +302,50 @@ test('a new empty mouse draft at scaled CSS size closes and saves named airspace
     assert.equal(h.editor.hasDraft(), false);
 });
 
+test('a fresh mouse chart places its ARP then saves area and bidirectional ATS route without geographic coordinates', async () => {
+    const h = mouseDrawingHarness(false), originalTraffic = [{ id: 'a1', callsign: '101', xNm: -20, yNm: 10 }];
+    h.state.aircraft = originalTraffic; h.get('drawn-arp-preview').click(); h.clickPoint(4, -7);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.commands.length, 1); assert.equal(h.commands[0].name, 'environment');
+    assert.equal(h.commands[0].payload.drawnARP, true); assert.equal(h.commands[0].payload.chartOrigin, null);
+    assert.equal(h.commands[0].payload.stationName, 'ARP'); assert.equal(h.state.aircraft, originalTraffic);
+    for (const key of ['latitude', 'longitude']) assert.equal(h.get('custom-arp-form').elements.namedItem(key).value, '');
+    h.clickPoint(-10, -10); h.clickPoint(10, -10); h.clickPoint(0, 10); h.sketchButton('Close boundary').click();
+    h.form.elements.namedItem('name').value = 'Mouse danger area'; h.form.elements.namedItem('kind').value = 'danger';
+    await h.submit('custom-boundary-form');
+    const area = h.commands.at(-1).payload; assert.equal(h.commands.at(-1).name, 'area-upsert');
+    assert.equal(area.kind, 'danger'); assert.deepEqual(area.points, [{ xNm: -10, yNm: -10 }, { xNm: 10, yNm: -10 }, { xNm: 0, yNm: 10 }]);
+    for (const key of ['coordinateOrigin', 'geoPoints']) assert.equal(Object.hasOwn(area, key), false, 'Mouse chart must not invent geographic coordinates');
+    const feature = h.get('airspace-feature-kind'); feature.value = 'route'; feature.dispatchEvent(new h.Event('change'));
+    h.clickPoint(-20, 5); h.clickPoint(20, 5); h.sketchButton('Finish route').click();
+    const routeForm = h.get('custom-route-form'); routeForm.elements.namedItem('name').value = 'TRAINING R1'; routeForm.elements.namedItem('chartDirection').value = 'both';
+    routeForm.elements.namedItem('minAltitudeFt').value = '5000'; routeForm.elements.namedItem('maxAltitudeFt').value = '15000';
+    await h.submit('custom-route-form');
+    const route = h.commands.at(-1).payload; assert.equal(h.commands.at(-1).name, 'route-geometry-upsert');
+    assert.equal(route.chartDirection, 'both'); assert.equal(route.minAltitudeFt, 5000); assert.equal(route.maxAltitudeFt, 15000);
+    for (const key of ['coordinateOrigin', 'geoPoints']) assert.equal(Object.hasOwn(route, key), false);
+    route.fixes.forEach((point, index) => { assert.ok(Math.abs(point.xNm - [-20, 20][index]) < 1e-8); assert.ok(Math.abs(point.yNm - 5) < 1e-8); });
+    h.editor.render(); assert.equal(h.get('boundary-scope-edit').disabled, false, 'Placed ARP readiness survives rendering');
+    assert.equal(h.state.aircraft, originalTraffic); assert.equal(h.editor.hasDraft(), false);
+});
+
+test('radar scope ARP placement uses the shared screen transform, and cancelling relocation retains drafts and published coordinates', async () => {
+    const h = mouseDrawingHarness(false);
+    h.context.host.scope.screenToPoint = event => [event.clientX, event.clientY];
+    h.get('drawn-arp-scope').click(); assert.equal(h.editor.isSketching(), true);
+    assert.equal(h.get('boundary-scope-tools').querySelector('strong').textContent, 'PLACE ARP');
+    assert.equal(h.get('boundary-scope-close').hidden, true);
+    h.editor.onPointer({ clientX: 14, clientY: -6, isPrimary: true, button: 0, pointerType: 'mouse', preventDefault() {} });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.state.environment.stationXNm, 14); assert.equal(h.state.environment.stationYNm, -6); assert.equal(h.editor.isSketching(), false);
+    h.state.environment = { ...h.state.environment, drawnARP: false, chartOrigin: origin };
+    h.editor.render(); h.clickPoint(-10, -10); const draft = h.points.value;
+    h.context.confirm = () => false; h.get('drawn-arp-preview').click(); h.clickPoint(10, 8);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.commands.length, 1); assert.equal(h.points.value, draft); assert.equal(h.state.environment.chartOrigin, origin);
+    h.editor.cancelSketch(); assert.equal(h.get('boundary-scope-tools').hidden, true);
+});
+
 test('pointer cancellation rolls back a new mouse point and an in-progress vertex drag without changing saved airspace', () => {
     const h = mouseDrawingHarness(); h.clickPoint(-10, -10);
     const initial = h.points.value;
@@ -254,4 +356,92 @@ test('pointer cancellation rolls back a new mouse point and an in-progress verte
     h.emit('pointerdown', -10, -10); h.emit('pointermove', -20, -8); h.emit('pointercancel', -20, -8);
     assert.equal(h.points.value, triangle, 'Cancelled vertex drag restores the coordinates before the gesture');
     assert.equal(h.commands.length, 0); assert.equal(h.state.areas.length, 0);
+});
+
+test('named manual route coordinates preserve WGS84 geometry and reject missing ARP, invalid points and duplicate names', () => {
+    const text = 'ENTRY, 261500N, 0730300E\nEXIT, 261800N, 0731200E';
+    const parsed = airspace.parseRoutePoints(text, 'geographic', origin);
+    assert.deepEqual(parsed.fixes.map(point => point.name), ['ENTRY', 'EXIT']);
+    assert.deepEqual(parsed.coordinateOrigin, origin); assert.equal(parsed.geoPoints.length, 2);
+    parsed.fixes.forEach((fix, index) => assert.deepEqual({ xNm: fix.xNm, yNm: fix.yNm }, geometry.project(parsed.geoPoints[index], origin)));
+    const local = airspace.parseRoutePoints('A, -10, 5\nB, 8, 12', 'local', origin);
+    assert.deepEqual(local.fixes[0], { name: 'A', xNm: -10, yNm: 5 });
+    assert.throws(() => airspace.parseRoutePoints(text, 'geographic', null), /ARP/);
+    for (const invalid of ['A, 0, 0', 'A, 0, 0\nA, 1, 1', 'A,NaN,0\nB,1,1', 'A,0,0\nB,3000,0', 'A,0,0\nB,0,0', 'A,0\nB,1,1']) assert.throws(() => airspace.parseRoutePoints(invalid, 'local', origin));
+});
+
+test('drawing an open ATS route stages named points then submits one atomic command with direction and route limits', async () => {
+    const h = mouseDrawingHarness(), feature = h.get('airspace-feature-kind');
+    feature.value = 'route'; feature.dispatchEvent(new h.Event('change'));
+    const form = h.get('custom-route-form'), read = name => form.elements.namedItem(name);
+    assert.equal(read('chartDirection').getAttribute('aria-label'), 'Route direction');
+    assert.equal(feature.getAttribute('aria-label'), 'Add or edit');
+    h.editor.setMethod('draw');
+    h.clickPoint(-10, -10); h.clickPoint(10, 5);
+    assert.equal(h.commands.length, 0); assert.equal(h.sketchButton('Finish route').disabled, false);
+    h.sketchButton('Finish route').click();
+    assert.equal(h.document.activeElement, read('name'), 'Finish route brings the user to the name and direction fields');
+    assert.match(form.textContent, /Unidirectional.*Bidirectional/s);
+    assert.match(h.get('custom-airspace-status').textContent, /name.*Unidirectional.*Bidirectional.*Save route/i);
+    assert.match(h.get('boundary-drawing-status').textContent, /finished|save route/i);
+    assert.equal(h.get('route-drawing-point-names').querySelectorAll('input').length, 2);
+    read('name').value = 'Training route'; read('chartDirection').value = 'both';
+    read('minAltitudeFt').value = '5000'; read('maxAltitudeFt').value = '15000'; read('levelLimits').value = 'FL 100–FL 200 · chart reference';
+    await h.submit('custom-route-form');
+    assert.equal(h.commands.length, 1, 'No separate fix-upsert operations can leave partial geometry');
+    const command = h.commands[0]; assert.equal(command.name, 'route-geometry-upsert');
+    assert.equal(command.payload.chartDirection, 'both'); assert.equal(command.payload.minAltitudeFt, 5000); assert.equal(command.payload.maxAltitudeFt, 15000);
+    assert.equal(command.payload.levelLimits, 'FL 100–FL 200 · chart reference'); assert.equal(command.payload.fixes.length, 2);
+    assert.equal(command.payload.kind, 'ats'); assert.equal(command.payload.active, true);
+    assert.ok(command.payload.fixes.every(fix => !fix.id), 'New drawing does not silently reuse existing names/identities');
+    command.payload.fixes.forEach((fix, index) => assert.ok(Math.hypot(fix.xNm - [-10, 10][index], fix.yNm - [-10, 5][index]) < 1e-8));
+    assert.deepEqual(command.payload.coordinateOrigin, origin); assert.equal(command.payload.geoPoints.length, 2);
+    assert.equal(h.editor.hasDraft(), false);
+});
+
+test('manual route errors are visible without ARP or valid limits, and switching methods preserves staged geometry', async () => {
+    const h = mouseDrawingHarness(false), feature = h.get('airspace-feature-kind');
+    feature.value = 'route'; feature.dispatchEvent(new h.Event('change')); h.editor.setMethod('coordinates');
+    const form = h.get('custom-route-form'), read = name => form.elements.namedItem(name);
+    read('name').value = 'Manual route'; read('mode').value = 'local'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5';
+    await h.submit('custom-route-form'); assert.equal(h.commands.length, 0); assert.match(h.get('custom-airspace-status').textContent, /ARP/);
+    const arp = h.get('custom-arp-form'); h.edit(arp.elements.namedItem('latitude'), 26); h.edit(arp.elements.namedItem('longitude'), 73);
+    h.context.confirm = () => true; await h.submit('custom-arp-form');
+    read('name').value = 'Manual route'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5'; read('points').dispatchEvent(new h.Event('input'));
+    const draft = read('points').value; h.editor.setMethod('draw'); h.editor.setMethod('coordinates'); assert.equal(read('points').value, draft);
+    read('minAltitudeFt').value = '15000'; read('maxAltitudeFt').value = '5000'; await h.submit('custom-route-form');
+    assert.equal(h.commands.filter(command => command.name === 'route-geometry-upsert').length, 0); assert.match(h.get('custom-airspace-status').textContent, /upper limit/);
+    assert.equal(read('points').value, draft, 'An invalid save keeps the entered route for repair');
+    read('maxAltitudeFt').value = '20000'; await h.submit('custom-route-form');
+    assert.equal(h.commands.filter(command => command.name === 'route-geometry-upsert').length, 1);
+    assert.deepEqual(h.commands.at(-1).payload.fixes.map(point => point.name), ['ENTRY', 'EXIT']);
+});
+
+test('editing a route keeps exact point identities, full-precision geometry, conditional window and closed state', async () => {
+    const h = mouseDrawingHarness();
+    h.state.fixes = [{ id: 'f-a', name: 'ENTRY', xNm: 12.123456789, yNm: 0.987654321 }, { id: 'f-b', name: 'EXIT', xNm: 22.111222333, yNm: 15.456789123 }];
+    h.state.routes = [{ id: 'r1', name: 'Existing', kind: 'conditional', chartDirection: 'forward', active: false, fixIds: ['f-a', 'f-b'], availableFrom: 30, availableUntil: 300, minAltitudeFt: 5000, maxAltitudeFt: 20000, levelLimits: 'Chart label' }];
+    h.editor.render(); const existing = h.get('custom-airspace-features');
+    assert.equal(existing.hasAttribute('open'), false, 'Route records stay collapsed so the editor is not flooded'); assert.match(existing.querySelector('summary').textContent, /· 1$/);
+    existing.open = true; h.get('custom-route-list').querySelector('button').click();
+    const form = h.get('custom-route-form'); form.elements.namedItem('levelLimits').value = 'Updated label';
+    await h.submit('custom-route-form');
+    const payload = h.commands.at(-1).payload; assert.equal(payload.id, 'r1'); assert.equal(payload.kind, 'conditional'); assert.equal(payload.active, false);
+    assert.equal(payload.availableFrom, 30); assert.equal(payload.availableUntil, 300);
+    assert.deepEqual(payload.fixes, h.state.fixes, 'Untouched generated coordinate text must not nudge assigned navigation');
+    assert.equal(payload.levelLimits, 'Updated label');
+    h.get('custom-route-new').click(); assert.equal(form.dataset.editId, undefined); assert.equal(form.dataset.routeKind, undefined);
+});
+
+test('editing a geographically sourced route after mouse ARP placement retains its independent coordinate reference', async () => {
+    const h = mouseDrawingHarness(false); h.state.environment.drawnARP = true;
+    h.state.fixes = [{ id: 'f-a', name: 'ENTRY', xNm: -10, yNm: 5 }, { id: 'f-b', name: 'EXIT', xNm: 10, yNm: 15 }];
+    h.state.routes = [{ id: 'sourced-r1', name: 'Sourced route', kind: 'ats', active: true, chartDirection: 'both', minAltitudeFt: 5000, maxAltitudeFt: 20000, fixIds: ['f-a', 'f-b'], coordinateOrigin: origin, geoPoints: h.state.fixes.map(point => airspace.localToGeographic(point, origin)) }];
+    h.editor.render(); h.get('custom-route-list').querySelector('button').click();
+    h.get('custom-route-form').elements.namedItem('levelLimits').value = 'Instructor annotation'; await h.submit('custom-route-form');
+    const route = h.commands.at(-1).payload;
+    assert.equal(h.commands.at(-1).name, 'route-geometry-upsert'); assert.equal(route.id, 'sourced-r1');
+    assert.deepEqual(route.coordinateOrigin, origin); assert.equal(route.geoPoints.length, 2);
+    route.geoPoints.forEach((point, index) => { const projected = geometry.project(point, origin); assert.ok(Math.hypot(projected.xNm - h.state.fixes[index].xNm, projected.yNm - h.state.fixes[index].yNm) < 1e-8); });
+    assert.equal(h.state.environment.chartOrigin, undefined, 'Mouse dot must not become a geographic ARP');
 });

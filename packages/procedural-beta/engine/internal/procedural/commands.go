@@ -369,6 +369,10 @@ func apply(s *State, c Command, role string) (effect, error) {
 		return a, nil
 	}
 	switch c.Type {
+	case "route-geometry-upsert":
+		return efx, upsertRouteGeometry(s, c.Payload)
+	case "airspace-replace":
+		return efx, replaceAirspace(s, c.Payload)
 	case "scenario-setup":
 		incoming, e := setupScenario(s, c)
 		if e != nil {

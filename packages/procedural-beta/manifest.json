@@ -4,13 +4,13 @@
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 43953,
-      "sha256": "58f130c23ff60e08353100e68ae0b0319dede7c114e73289ad54faac2172cab2"
+      "bytes": 44266,
+      "sha256": "8dbc56da1a278224608d48e33e682720d02ccf816613833c48ce51a49813e8e8"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 126565,
-      "sha256": "dff7194892aaf42879b705f7f33be971ecbc790d5a093f698be9aaae906b1342"
+      "bytes": 130078,
+      "sha256": "043353a3c666d5a25310edfad9f5e3ba61f2e66cbd84b6ef65f716b2405cdfab"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 71722,
-      "sha256": "32abef8378ad4fe06125777d175734e9023e4da3915b4897a100675f8241fc5a"
+      "bytes": 72256,
+      "sha256": "fe0f1d40defb1bda7690f2138f48ad3d2c65518bdce9ce914d9d8c11b6134b69"
     },
     {
       "path": "static/scope-history.js",
@@ -34,8 +34,8 @@
     },
     {
       "path": "static/chart-workshop.js",
-      "bytes": 37684,
-      "sha256": "1c51252ed96f534917c50925c268db93867921a3c6c3c4d5386bffaadde4f78e"
+      "bytes": 41235,
+      "sha256": "9f1d882cdb5e8d15c08a5ab947475fa52a2aee208a34ee5f6807ded502f7942d"
     },
     {
       "path": "static/chart-geometry.js",
@@ -44,13 +44,13 @@
     },
     {
       "path": "static/aip-navigation.js",
-      "bytes": 3568,
-      "sha256": "746f5705023df01bf570715a3a95005d9bb4744abe11f6006f0b44e23c7d8525"
+      "bytes": 4884,
+      "sha256": "b27c3c984f43483149fa52c089e6997e542cc9d3b878e5cc11bdba3c47ac2c5d"
     },
     {
       "path": "static/traffic-setup.js",
-      "bytes": 16545,
-      "sha256": "aca9cde271ff9d5f37ec02e6c9aa0a782013b9b82bcbc844bb53b639b287a2dd"
+      "bytes": 17086,
+      "sha256": "eda05f200dfa1c80c0a71e18efa4c83019a95a1934f6face250e9dbb01ab2b44"
     },
     {
       "path": "static/india-airspace.json",
@@ -89,8 +89,8 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 15066,
-      "sha256": "681e89d512d9ee5c8fbc0366eba5fe587c5293013cb68878a30ff93b471f1978"
+      "bytes": 15169,
+      "sha256": "5dedc7312e6e6ad75fca071b58cd031184a1e842232e06a96b2f06e4acdbaf5f"
     },
     {
       "path": "static/suite-guide-chat.css",
@@ -129,8 +129,8 @@
     },
     {
       "path": "static/procedural-engine.wasm",
-      "bytes": 6254959,
-      "sha256": "3bbcc14711a70bbdd7be3c502e9e2ae97450de48483c73abd170b3b846c344e8"
+      "bytes": 6336121,
+      "sha256": "3852dc669f25ab3f26c50ba71ac4e4bd7f294b6124b18f70f33c190c8b1480e7"
     },
     {
       "path": "static/wasm_exec.js",
@@ -159,8 +159,8 @@
     },
     {
       "path": "engine/internal/procedural/commands.go",
-      "bytes": 27790,
-      "sha256": "e3518073f1876159fdcb5be12c2d66835072f72bc4d28c479a3b51fc5ecee544"
+      "bytes": 27939,
+      "sha256": "ee6bc0b55ce241a28e03e39067bd13caae7f18f47da6c8ddf1ff22c97cd7916c"
     },
     {
       "path": "engine/internal/procedural/host.go",
@@ -184,13 +184,13 @@
     },
     {
       "path": "engine/internal/procedural/types.go",
-      "bytes": 13951,
-      "sha256": "51642ec43c29a44a566f8e8525b1cd69e7a2d6f1d0c1f722e3566b2759856693"
+      "bytes": 16200,
+      "sha256": "f0399446d9b1c3a53c78069ef8453c73ef4a3c7bf26a6c3260910118a0040b19"
     },
     {
       "path": "engine/internal/procedural/validation.go",
-      "bytes": 20813,
-      "sha256": "e52cdc35852ed10b3cfad63bd9ef9b0006dda689288f969ab7aa942f3663bc12"
+      "bytes": 20970,
+      "sha256": "c3bb2656da26e7b1b2d5a6dd690bdbace373b1d4488cb1e2d1ad94ee935eb7ff"
     },
     {
       "path": "engine/cmd/browser/main.go",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 84257,
-      "sha256": "ec9b249d65ea722de5ee478a311fc567e1dc898c7221cc6c4fd05f38f77288fb"
+      "bytes": 104840,
+      "sha256": "d63468845293af4cdd1e895d13084550b3dd631622b67f1370874d807c5285fc"
     },
     {
       "path": "static/gyani-fox.png",
@@ -255,7 +255,7 @@
     {
       "path": "static/suite-tour.js",
       "bytes": 7909,
-      "sha256": "e7f7af26b9f47e96e978eb52b3744662550a8eb494ddf712a6250f87285613f4"
+      "sha256": "c3553119deebfb28061cc0b756c942360285423f6868670565fb462516c987cf"
     },
     {
       "path": "static/suite-tour.css",
@@ -279,18 +279,18 @@
     },
     {
       "path": "static/airspace-preparation.js",
-      "bytes": 29566,
-      "sha256": "2eeb789390cca56fc12e9f21e03bc6a3f2142aa59892c5c63cb54bf88b19d450"
+      "bytes": 55357,
+      "sha256": "8181702ddf75183c2f2c56ee9a8078530a8d7e305d549edebe56f2a2eccd340f"
     },
     {
       "path": "static/airspace-preparation.css",
-      "bytes": 4191,
-      "sha256": "1df0d80b01351c0c382fead9cd4935ac0539635afdfffde16d2633a9c2b77b8b"
+      "bytes": 7664,
+      "sha256": "feb384a80aeea6dc96701ad27ebbeb234e930977b3351cc470653aba4dcbb6be"
     },
     {
       "path": "static/scenario-library.js",
-      "bytes": 21391,
-      "sha256": "6d9d8dc910e3f96014eb2260b9d54609e6b4efbfcd9bf09a59cc220fb57ee667"
+      "bytes": 20273,
+      "sha256": "286df9f6d40ae09b0437e71610eb4724333ffeb5d2edbf914a891a6a1a70efc2"
     },
     {
       "path": "static/scenario-library.css",
@@ -319,8 +319,8 @@
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 52830,
-      "sha256": "be1e957c3da399868107acad54e2291bf2219210177a5cb96302c8c683e461b1"
+      "bytes": 53870,
+      "sha256": "f653ef00173e942f71a60a5fc71c80e1d258d5a037902706743ae5e35366220e"
     },
     {
       "path": "static/meeting-room.js",
@@ -336,6 +336,31 @@
       "path": "static/suite-entry.css",
       "bytes": 10297,
       "sha256": "400bb0a3ce8d6136032500912af8c83c3233dd6c2f4639074314b622df62ae0a"
+    },
+    {
+      "path": "static/route-chart.js",
+      "bytes": 8361,
+      "sha256": "911225c220ee5cb6f18a1d54ff4e3711099d89a0bc6e0cd7e9e9e60fef744e13"
+    },
+    {
+      "path": "static/airspace-library.js",
+      "bytes": 20858,
+      "sha256": "8b74e2fea5d70075dcdd379915c11e3b70cfd8d371b597f19cb4faa643fb74ec"
+    },
+    {
+      "path": "engine/internal/procedural/route_chart.go",
+      "bytes": 8940,
+      "sha256": "ff46d5aa6629fb44ea750b97608d50e3e4eeebd346a40e82fbad366a19a47c0b"
+    },
+    {
+      "path": "engine/internal/procedural/route_chart_test.go",
+      "bytes": 11349,
+      "sha256": "747a80c231c6b9e191dcaa563d78c2c2e19f7dd0867040556cc3320a6a921745"
+    },
+    {
+      "path": "static/exercise-setup-archive.js",
+      "bytes": 4677,
+      "sha256": "3f878c0ee8f3efac99c1fa72fb45e11ba1f61f4224d150c1caa584bd86171696"
     }
   ]
 }

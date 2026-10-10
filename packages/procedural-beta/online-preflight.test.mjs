@@ -108,9 +108,10 @@ function proceduralHarness(online = false, role = 'instructor') {
     ATCSuiteWorkspace: {bindShell(){},enter(){},createFocusMode:()=>({setExpanded(){},setPhase(){}})},
     createAircraftGestures: gestures.createAircraftGestures, nearestAircraft: gestures.nearestAircraft, bindMiddleMouseStop: gestures.bindMiddleMouseStop,
     createRadarSweep:()=>({update(){}}),recordTrail(){},trailDots:()=>[],trailSpacing:()=>1,
-    createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({open(){},close(){}}),
+    createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({open(){},close(){},resetFromScenario(){}}),
     createStudentPlotting:()=>({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
     createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({}),drawAreas(){},routeWindowOpen:()=>true,
+    createExerciseSetupArchive:()=>({capture:async()=>{},downloadBundle:async()=>({})}),
     visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],
     onlineFixture:online, roleFixture:role,
   });
@@ -122,6 +123,13 @@ function proceduralHarness(online = false, role = 'instructor') {
     room=roleFixture==='instructor'?{pin:'123456',students:onlineFixture?[{id:'controller',status:'ready'}]:[],meetingUrl:''}:{status:'admitted',meetingUrl:''};
     view={exerciseId:'preflight-test',available:true,running:false,terminated:false,elapsed:0,environment:{rangeNm:60},roster:[],aircraft:[],routes:[],fixes:[],areas:[]};
     globalThis.fixture={startExercise,advanceMinute,renderClockControls,
+      lifecycleProbe({approve=true,fail=false}={}){
+        render=()=>renderClockControls();confirm=()=>approve;
+        command=async(type,payload)=>{commands.push({type,payload});if(fail)throw new Error('Replacement refused');if(type==='import')view={...view,...payload.scenario};if(type==='preset')view={...view,exerciseId:'sample-traffic',elapsed:0};if(type==='clock'&&payload.action==='resume')view.running=true;};
+        request=async(path)=>({version:1,scenario:JSON.parse(JSON.stringify(view))});
+      },
+      state:()=>({startingTrafficRequired:session.startingTrafficRequired,exerciseId:view.exerciseId,elapsed:view.elapsed}),
+      setStartingTrafficRequired(value){session.startingTrafficRequired=value;renderClockControls();},
       setLink(url){room.meetingUrl=url;session.meetingUrl=url;renderMeeting();renderClockControls();},
       setRunning(value){view.running=value;renderClockControls();},
       setConnection(value){exerciseConnectionAvailable=value;renderMeeting();renderClockControls();}
@@ -131,6 +139,42 @@ function proceduralHarness(online = false, role = 'instructor') {
   const acknowledge = () => {const input=h.document.querySelector('.ats-meeting-audio-check');input.checked=true;input.dispatchEvent(new h.Event('change'));};
   return {...h, ...h.context.fixture, get, acknowledge};
 }
+
+test('fresh Procedural traffic drafts block Run and step, while applied starting traffic enables the existing offline startup', async () => {
+  const h = proceduralHarness(); h.setStartingTrafficRequired(true);
+  assert.equal(h.get('resume').disabled, true); assert.equal(h.get('step').disabled, true);
+  assert.match(h.get('start-setup-status').textContent, /Create your starting traffic/);
+  await assert.rejects(h.startExercise(), /starting traffic/);
+  await assert.rejects(h.advanceMinute(), /starting traffic/);
+  assert.equal(h.context.commands.length, 0, 'a draft roster cannot accidentally run the default traffic');
+  assert.equal(h.document.getElementById('setup').hidden, false, 'blocked startup returns to the traffic form');
+  h.setStartingTrafficRequired(false); await h.startExercise();
+  assert.deepEqual(JSON.parse(JSON.stringify(h.context.commands)), [{type:'clock',payload:{action:'resume'}}]);
+});
+
+test('restoring progress into a fresh instructor room clears the starting-traffic gate and enables continuing the saved exercise', async () => {
+  const h=proceduralHarness();h.setStartingTrafficRequired(true);h.lifecycleProbe();
+  const input=h.get('import');input.files=[{size:100,text:async()=>JSON.stringify({version:1,scenario:{exerciseId:'saved-progress',elapsed:75}})}];
+  input.dispatchEvent(new h.Event('change'));await flush();await flush();
+  assert.equal(h.state().startingTrafficRequired,false);
+  assert.equal(h.state().elapsed,75);
+  assert.equal(h.get('resume').disabled,false);
+  assert.equal(JSON.parse(h.context.sessionStorage.getItem('qgh-procedural-browser-session-v1')).startingTrafficRequired,false);
+  await h.startExercise();assert.equal(h.context.commands.at(-1).payload.action,'resume');
+});
+
+test('loading optional sample traffic completes fresh-room traffic setup, while cancelled or failed replacements leave its gate intact', async () => {
+  for (const action of ['preset','import']) for (const result of ['success','cancel','fail']) {
+    const h=proceduralHarness();h.setStartingTrafficRequired(true);h.lifecycleProbe({approve:result!=='cancel',fail:result==='fail'});
+    if(action==='preset')h.get('preset-form').dispatchEvent(new h.Event('submit',{cancelable:true}));
+    else {const input=h.get('import');input.files=[{size:100,text:async()=>JSON.stringify({version:1,scenario:{exerciseId:'restored-start',elapsed:0}})}];input.dispatchEvent(new h.Event('change'));}
+    await flush();await flush();
+    assert.equal(h.state().startingTrafficRequired,result!=='success',`${action} ${result}`);
+    assert.equal(h.get('resume').disabled,result!=='success',`${action} ${result} Run availability`);
+    if(result==='success')assert.equal(JSON.parse(h.context.sessionStorage.getItem('qgh-procedural-browser-session-v1')).startingTrafficRequired,false);
+    else assert.equal(h.context.sessionStorage.getItem('qgh-procedural-browser-session-v1'),null,'unsuccessful replacement must not persist completed traffic');
+  }
+});
 
 test('Procedural actual adapter preserves offline Run and gates online Run/manual step while Pause stays available', async () => {
   const offline = proceduralHarness(); assert.equal(offline.get('resume').disabled, false);

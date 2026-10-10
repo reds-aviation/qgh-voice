@@ -56,6 +56,16 @@ test('command bar accepts only its deterministic documented grammar', () => {
   assert.equal(h.parseKeyboardCommand('L 360').headingDeg, 360, 'range is rejected by execution validation, not coerced');
 });
 
+test('exercise shortcuts cannot resume or command the hidden desk while Traffic setup is open', () => {
+  const h=harness({lifecycle:'paused'}), before=h.state.simulation;
+  h.node('activeWorkspace').hidden=true;
+  for (const key of [' ', 'a', 'd', 'g', 't']) {
+    let prevented=false;
+    h.handleShortcut({key,target:{tagName:'DIV',closest:()=>null},preventDefault(){prevented=true;}});
+    assert.equal(prevented,false);assert.equal(h.state.simulation,before);
+  }
+});
+
 test('every generated guide alias is understood by the actual command parser', () => {
   const h = harness(), reference = require('../suite-command-reference.js');
   for (const row of reference.commands) for (const alias of row.aliases) {

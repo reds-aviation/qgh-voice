@@ -128,6 +128,17 @@ test('instructor and procedural onboarding cannot reappear after their first Run
   }
 });
 
+test('Procedural introduction opens at the zero-time clock and skips progressed recovery',()=>{
+  for(const [clockText,shown] of [['00:00:00',true],['00:00:01',false]]) {
+    const h=domHarness(`<html><body><header></header><section id="desk"><b id="clock-state">PAUSED</b><canvas id="introScope"></canvas><time id="clock">${clockText}</time></section></body></html>`,'/qgh-voice/procedural-beta/procedural.html');
+    h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=800;
+    h.context.ATCGuideKnowledge={revision:'zero-time-regression',firstUse:[{pages:['procedural'],selector:'#introScope',title:'Before Run',text:'Prepare starting traffic.'}]};
+    vm.runInContext(source,h.context);
+    assert.equal(h.document.getElementById('suite-tour').hidden,!shown);
+    assert.equal(h.document.getElementById('clock').textContent,clockText);
+  }
+});
+
 test('automatic introduction closes when recovery returns its workspace to entry without changing the clock',async()=>{
   for(const [page,path,workspace] of [
     ['procedural','/qgh-voice/procedural-beta/procedural.html','desk'],

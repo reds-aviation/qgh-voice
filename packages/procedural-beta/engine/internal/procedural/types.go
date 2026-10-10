@@ -30,6 +30,7 @@ type MapCalibration struct {
 type Environment struct {
 	RangeNm                      float64        `json:"rangeNm"`
 	ChartOrigin                  *ChartOrigin   `json:"chartOrigin,omitempty"`
+	DrawnARP                     bool           `json:"drawnARP"`
 	StationName                  string         `json:"stationName"`
 	StationType                  string         `json:"stationType"`
 	StationXNm                   float64        `json:"stationXNm"`
@@ -81,6 +82,39 @@ type Route struct {
 	Reference      string   `json:"reference,omitempty"`
 	LevelLimits    string   `json:"levelLimits,omitempty"`
 	EffectiveInfo  string   `json:"effectiveInfo,omitempty"`
+	// Chart annotations do not change the ordered aircraft navigation fixes.
+	ChartDirection         string                  `json:"chartDirection,omitempty"`
+	CoordinateOrigin       *ChartOrigin            `json:"coordinateOrigin,omitempty"`
+	GeoPoints              []ChartOrigin           `json:"geoPoints,omitempty"`
+	Designator             string                  `json:"designator,omitempty"`
+	PublishedLimitsHeading string                  `json:"publishedLimitsHeading,omitempty"`
+	PublishedSegments      []PublishedRouteSegment `json:"publishedSegments,omitempty"`
+	LimitsVaryBySegment    bool                    `json:"limitsVaryBySegment,omitempty"`
+	TrackDistance          string                  `json:"trackDistance,omitempty"`
+	LateralLimits          string                  `json:"lateralLimits,omitempty"`
+	OddLevels              string                  `json:"oddLevels,omitempty"`
+	EvenLevels             string                  `json:"evenLevels,omitempty"`
+	Notes                  string                  `json:"notes,omitempty"`
+}
+
+// Original per-leg AIP text is retained without interpreting FL labels or
+// odd/even table marks as an aircraft clearance or unconditional one-way route.
+type PublishedRouteSegment struct {
+	SourceSequence           int    `json:"sourceSequence"`
+	From                     string `json:"from"`
+	To                       string `json:"to"`
+	FromPublishedCoordinates string `json:"fromPublishedCoordinates,omitempty"`
+	ToPublishedCoordinates   string `json:"toPublishedCoordinates,omitempty"`
+	LevelLimits              string `json:"levelLimits,omitempty"`
+	PublishedLimitsHeading   string `json:"publishedLimitsHeading,omitempty"`
+	TrackDistance            string `json:"trackDistance,omitempty"`
+	LateralLimits            string `json:"lateralLimits,omitempty"`
+	OddLevels                string `json:"oddLevels,omitempty"`
+	EvenLevels               string `json:"evenLevels,omitempty"`
+	Source                   string `json:"source,omitempty"`
+	Reference                string `json:"reference,omitempty"`
+	EffectiveInfo            string `json:"effectiveInfo,omitempty"`
+	SHA256                   string `json:"sha256,omitempty"`
 }
 type Point struct {
 	XNm float64 `json:"xNm"`

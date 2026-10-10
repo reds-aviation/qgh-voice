@@ -66,7 +66,7 @@ body.instructor-page.exercise-console .equipment-note{display:none}
 body.instructor-page.exercise-console #activeWorkspace{height:100dvh;display:block;padding:0;margin:0}
 body.instructor-page.exercise-console .instructor-main{height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:var(--ats-header-height) minmax(0,1fr);min-width:0;padding:0}
 body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{display:flex;align-items:center;min-height:var(--ats-header-height);height:auto;padding:8px 16px;gap:8px;margin:0;border:0;border-bottom:1px solid var(--ats-border);background:var(--ats-panel)}
-body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{min-width:0;flex:1}
+body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){min-width:0;flex:1}
 body.instructor-page.exercise-console .workspace-head .eyebrow,body.instructor-desk.desk-open .exercisebar .eyebrow{color:var(--ats-muted);font-size:12px;letter-spacing:.04em}
 body.instructor-page.exercise-console .workspace-head h1{display:none}
 body.instructor-desk.desk-open .exercisebar h1{font-size:15px;line-height:1.3;margin:4px 0 0;max-width:34vw;text-overflow:ellipsis}
@@ -326,11 +326,21 @@ body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var
  body.instructor-page.exercise-console .ats-instrument-box.ats-overlay-collapsed .instrument-shelf,
  body.instructor-desk.desk-open .ats-instrument-box.ats-overlay-collapsed #instructor-control-shelf{display:none}
 }
-@media(min-width:701px) and (max-width:900px){
- :root{--ats-header-height:88px}
+@media(min-width:701px) and (max-width:1100px){
+ :root{--ats-header-height:96px}
  body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{flex-wrap:wrap}
  body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;justify-content:flex-end}
- body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{flex:1 1 150px}
+ body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){flex:1 1 150px}
+ /* Startup details stay in their button's panel; the compact working bar has
+    two explicit rows so its lifecycle controls cannot spill onto the range bar. */
+ body.instructor-desk.desk-open .exercisebar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:minmax(36px,1fr) 36px;gap:6px 8px}
+ body.instructor-desk.desk-open #start-setup-status{display:none}
+ body.instructor-desk.desk-open #open-start-setup{grid-column:1;grid-row:1}
+ body.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){grid-column:2;grid-row:1}
+ body.instructor-desk.desk-open .clockblock{grid-column:3;grid-row:1;justify-self:end}
+ body.instructor-desk.desk-open #workspace-options-toggle{grid-column:1;grid-row:2}
+ body.instructor-desk.desk-open #incoming-calls-open{grid-column:2;grid-row:2;justify-self:start}
+ body.instructor-desk.desk-open #clock-controls{grid-column:3;grid-row:2;justify-self:end;order:initial;min-width:0}
 }
 @media(min-width:701px) and (max-width:1240px){
  body.instructor-desk.desk-open #desk .scope-toolbar>span{display:none}
@@ -354,7 +364,7 @@ body.instructor-page.exercise-console button:disabled,body.instructor-desk.desk-
  body.instructor-page.exercise-console #activeWorkspace,body.instructor-desk.desk-open #main,body.instructor-desk.desk-open.drawer-open #main{height:auto;min-height:100dvh}
  body.instructor-page.exercise-console .instructor-main{height:auto;grid-template-rows:auto auto}
  body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{min-height:120px;flex-wrap:wrap;gap:8px;padding:8px}
- body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:first-child{flex:1 1 130px}
+ body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){flex:1 1 130px}
  body.instructor-desk.desk-open .exercisebar h1{max-width:52vw;font-size:14px}
  body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;justify-content:flex-end}
  body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:20px}

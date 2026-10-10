@@ -37,7 +37,7 @@
     const running=()=>document.body.classList.contains('exercise-running') || ['exerciseState','studentExerciseState'].some(id=>phase(id)==='RUNNING') || visible(document.querySelector('#console.active, #tConsole.active'));
     const alreadyStarted=()=>['exerciseState','studentExerciseState'].some(id=>/^(?:PAUSED|ENDED|TERMINATED|REVIEW|PICTURE FROZEN)/.test(phase(id)))
       || visible(document.getElementById('studentEnded')) || phase('clock-state')==='ENDED'
-      || (phase('clock-state')==='PAUSED' && !!document.getElementById('clock')?.textContent && document.getElementById('clock').textContent.trim()!=='10:00:00');
+      || (phase('clock-state')==='PAUSED' && !!document.getElementById('clock')?.textContent && document.getElementById('clock').textContent.trim()!=='00:00:00');
     const workspaceReady=()=>page==='procedural'?visible(document.getElementById('desk')):page==='instructor'?visible(document.getElementById('activeWorkspace')):page==='student'?visible(document.getElementById('readyPanel')):page==='single'?visible(document.querySelector('#setup.active')):visible(document.querySelector('#tSetup.active'));
     const rememberFirstUse=()=>{firstUseHandled=true;try{localStorage.setItem(firstUseKey,'1');}catch{}};
     function clearTarget(){target?.classList.remove('suite-tour-target');target=null;}

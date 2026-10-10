@@ -20,6 +20,7 @@ function adapterHarness(role = 'instructor') {
     createTrafficReview:()=>({record(){},open(){},close(){},clear(){}}),createTrafficSetup:()=>({open(){},close(){}}),
     createStudentPlotting:()=>({mount(){},setEnabled(){},draw(){},onPointerDown(){},onPointerMove(){},onPointerUp(){},onPointerCancel(){}}),
     createMapWorkshop:()=>({}),alignmentBriefing:()=>'',createChartWorkshop:()=>({discardDraft(){}}),drawAreas(){},routeWindowOpen:()=>true,
+    createExerciseSetupArchive:()=>({capture:async()=>{},downloadBundle:async()=>({})}),
     visibleSegment:()=>true,reserveLabel:()=>null,fitNavigation(){},approachReference:()=>[],resolveRouteFixIds:()=>[],roleFixture:role,
   });
   vm.runInContext(source('workspace-shell.js'),h.context);

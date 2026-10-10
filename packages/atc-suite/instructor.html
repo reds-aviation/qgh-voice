@@ -33,16 +33,7 @@
     </details>
 
     <section class="setup-panel" id="setupPanel">
-      <div class="section-title"><span>QGH + SRA &amp; VECTORING</span><h1>Build the exercise</h1><p>Choose a mode, set traffic and create a session.</p></div>
-      <section class="ats-saved-exercises" aria-labelledby="savedExercisesTitle"><h2 id="savedExercisesTitle">Saved exercises</h2>
-        <div class="scenario-library">
-          <label>Load saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><button id="loadExercisePreset" type="button">Load</button>
-          <label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePreset" type="button">Save current setup</button>
-          <p class="preset-help">Load fills the setup below; Create session starts a new room. Save current setup updates the chosen exercise, or saves a new one when none is selected.</p>
-          <details class="preset-management"><summary>Manage / files</summary><div class="preset-management-actions"><button id="saveExercisePresetAs" type="button">Save as new</button><button id="duplicateExercisePreset" type="button">Duplicate selected</button><button id="renameExercisePreset" type="button">Rename selected</button><button id="exportExercisePreset" type="button">Export selected</button><button id="removeExercisePreset" type="button">Remove selected</button><label class="preset-import">Import exercise file<input id="importExercisePreset" type="file" accept="application/json,.json"></label></div></details>
-          <output id="presetStatus" aria-live="polite"></output><output id="recoveryStatus" aria-live="polite"></output>
-        </div>
-      </section>
+      <div class="section-title"><span>QGH + SRA &amp; VECTORING</span><h1>Set up starting traffic</h1><p>Choose the exercise and set your aircraft. Prepare airspace and saved exercises are below.</p><button id="returnToExercise" type="button" hidden>Return to exercise →</button><p id="trafficReturnStatus" role="status" hidden></p></div>
       <form id="scenarioForm" class="setup-form">
         <label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label>
         <p id="connectionHelp" class="connection-help">Offline: same PC and browser profile. Recommended: two monitors in Extend mode, with a separate student window. Online: different PCs with internet on both.</p>
@@ -52,6 +43,28 @@
         </select></label>
         <label id="procedureField">QGH PROCEDURE<select id="procedureType" name="procedure"><option value="normal">NORMAL QGH</option><option value="us-compass">U/S COMPASS QGH</option></select></label>
         <label><span id="aircraftCountLabel">AIRCRAFT COUNT · 1–2</span><input id="aircraftCount" name="aircraftCount" type="number" min="1" max="2" value="1" inputmode="numeric"></label>
+        <div class="roster-editor">
+          <div class="roster-editor-head"><div><span>STARTING AIRCRAFT</span><b>POSITIONS AND PERFORMANCE</b></div><small>Set callsign, type, position, heading, altitude and speed. Aircraft performance is optional.</small></div>
+          <div class="roster-table" role="list" aria-label="Initial aircraft truth inputs">
+            <div id="aircraftRoster" class="roster-body">
+              <div class="roster-row" data-aircraft-index="0" role="listitem">
+                <label>CALLSIGN<input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign"></label>
+                <label>SQUAWK<input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code"></label>
+                <label>RADAR RETURN<select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select></label>
+                <label>AIRCRAFT TYPE<select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select></label>
+                <label>QTE · °<input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE"></label>
+                <label>RANGE · NM<input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range"></label>
+                <label>HEADING · °M<input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading"></label>
+                <label>ALTITUDE · FT<input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude"></label>
+                <label>SPEED · KT<input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed"></label>
+                <details class="roster-performance"><summary>Aircraft performance</summary><div class="roster-performance-controls"><label>TURN · °/S<input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn"></label><label>VERTICAL · FT/MIN<input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute"></label></div></details>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="setup-preview" aria-live="polite"><span>START</span><b id="setupPreview">QTE 065 · 25 NM · HDG 225</b></div>
+        <button class="primary-action" id="createSession" type="submit">CREATE SESSION</button>
+        <details class="setup-environment" id="setupEnvironment"><summary>Prepare airspace &amp; radar</summary><p>Set runway and approach references here. Radar and local training boundary options appear for SRA or vectoring.</p><div class="setup-environment-grid">
         <label>RUNWAY ORIENTATION · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
         <label>FINAL APPROACH TRACK · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
         <label id="scanPresetField" hidden>RADAR SCAN<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 SIM SEC</option></select></label>
@@ -65,29 +78,19 @@
         <label class="setup-check" id="localLfaField" hidden><input id="localLfaEnabled" type="checkbox"><span>LOCAL TRAINING LFA BOUNDARY</span></label>
         <label id="localLfaRadiusField" hidden>LOCAL LFA RADIUS · NM<input id="localLfaRadius" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
         <label class="setup-check" id="sraDescentProfileField" hidden><input id="sraDescentProfile" type="checkbox" checked><span>SRA 3° DESCENT TRAINING GUIDE</span></label>
-        <div class="roster-editor">
-          <div class="roster-editor-head"><div><span>AIRCRAFT ROSTER</span><b>INITIAL TRUTH INPUT</b></div><small>Aircraft start with distinct bearings, ranges and headings, 1,000 ft vertical separation, and automatic four-digit octal squawks. Radar returns default to the selected environment and remain editable per aircraft.</small></div>
-          <div class="roster-table" role="list" aria-label="Initial aircraft truth inputs">
-            <div id="aircraftRoster" class="roster-body">
-              <div class="roster-row" data-aircraft-index="0" role="listitem">
-                <label>CALLSIGN<input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign"></label>
-                <label>SQUAWK<input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code"></label>
-                <label>RADAR RETURN<select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select></label>
-                <label>AIRCRAFT TYPE<select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select></label>
-                <label>QTE · °<input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE"></label>
-                <label>RANGE · NM<input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range"></label>
-                <label>HEADING · °M<input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading"></label>
-                <label>ALTITUDE · FT<input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude"></label>
-                <label>SPEED · KT<input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed"></label>
-                <label>TURN · °/S<input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn"></label>
-                <label>VERTICAL · FT/MIN<input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute"></label>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="setup-preview" aria-live="polite"><span>START</span><b id="setupPreview">QTE 065 · 25 NM · HDG 225</b></div>
-        <button class="primary-action" id="createSession" type="submit">CREATE SESSION</button>
+        </div></details>
       </form>
+      <details class="ats-saved-exercises" id="qghSavedExercises"><summary>Saved exercises</summary>
+        <div class="scenario-library">
+          <label>Load saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><button id="loadExercisePreset" type="button">Load</button>
+          <label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePreset" type="button">Save</button>
+          <label class="preset-import">Import exercise file<input id="importExercisePreset" type="file" accept="application/json,.json"></label><button id="exportExercisePreset" type="button">Download</button>
+          <p class="preset-help">Load fills starting traffic; Create session opens a new exercise. Save updates the selected exercise. Choose “Choose an exercise” and enter a name to save a new setup.</p>
+          <details class="preset-management"><summary>Rename or remove</summary><div class="preset-management-actions"><button id="renameExercisePreset" type="button">Rename selected</button><button id="removeExercisePreset" type="button">Remove selected</button></div></details>
+          <output id="presetStatus" aria-live="polite"></output>
+        </div>
+      </details>
+      <output id="recoveryStatus" aria-live="polite"></output>
     </section>
 
     <section class="active-workspace" id="activeWorkspace" tabindex="-1" hidden>
@@ -95,7 +98,7 @@
         <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">COPY PIN</button><button id="openStudentDisplay" type="button">OPEN CONTROLLER ENTRY</button><button id="moveStudentDisplay" class="primary display-move-action" type="button">MOVE TO SECOND DISPLAY</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">Share the PIN on the paired entry page. Open a separate controller window only when needed.</output></div>
         <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Enter this PIN in the dedicated Student Display, then request admission.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>REJECT</button><button id="admitStudent" type="button" class="primary" hidden>ADMIT</button></div><button id="releaseStudent" type="button" title="Pause the exercise and release the current student seat for a replacement window">RELEASE STUDENT SEAT</button></div>
         <nav class="phase-list" aria-label="Exercise progress"><b class="active" data-phase="ready">1 · READY</b><b data-phase="running">2 · RUNNING</b><b data-phase="review">3 · REVIEW</b></nav>
-        <button id="newScenario" type="button">← NEW SCENARIO</button>
+        <button id="newScenario" type="button">Traffic setup</button>
       </aside></details>
 
       <section class="instructor-main">

@@ -92,6 +92,9 @@ func validateEnvironment(e Environment) error {
 	if e.ChartOrigin != nil && (!between(e.ChartOrigin.Latitude, -85, 85) || !between(e.ChartOrigin.Longitude, -180, 180)) {
 		return errors.New("chart origin must be latitude ±85 and longitude ±180 degrees")
 	}
+	if e.DrawnARP && e.ChartOrigin != nil {
+		return errors.New("a mouse-drawn ARP uses local NM geometry, not geographic coordinates")
+	}
 	if strings.TrimSpace(e.StationName) == "" || !short(e.StationName, 40) || (e.StationType != "df" && e.StationType != "vor") || !between(e.StationXNm, -2000, 2000) || !between(e.StationYNm, -2000, 2000) || !short(e.StationFrequency, 20) || !short(e.AerodromeName, 100) || !short(e.ChartReference, 240) || !short(e.EffectiveInfo, 240) || !short(e.Briefing, 2000) {
 		return errors.New("invalid station or aerodrome chart metadata")
 	}
@@ -140,7 +143,7 @@ func validateRoute(s *State, r Route) error {
 			return errors.New("route cannot contain consecutive identical fixes")
 		}
 	}
-	return nil
+	return validateRouteChart(s, r)
 }
 func validateClearance(s *State, a *Aircraft, c Clearance, execution bool) error {
 	// Stored armed instructions remain valid records after a condition changes.
