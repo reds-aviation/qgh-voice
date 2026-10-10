@@ -55,6 +55,20 @@ test('online checklist explains Ready opens the display/link before audio confir
   assert.equal(checklist.update({online: true, admitted: true, ready: true, meetingUrl: firstUrl, voiceReady: true}).allowed, true);
 });
 
+test('local solo guidance never marks admission or Ready complete and cannot relax online or QGH startup', () => {
+  const {document} = parseHTML('<main></main>');
+  const checklist = Meeting.createStartupChecklist({container: document.querySelector('main')});
+  const solo = checklist.update({online: false, localSolo: true, admitted: true, ready: true});
+  assert.equal(solo.allowed, true);
+  assert.match(checklist.element.textContent, /without a controller.*Run/);
+  assert.match(checklist.element.textContent, /To work with a controller.*Admit.*Ready/);
+  assert.doesNotMatch(checklist.element.textContent, /Done/);
+  assert.equal(checklist.update({online: false, admitted: false, ready: false}).allowed, false);
+  assert.doesNotMatch(checklist.element.textContent, /without a controller/);
+  assert.equal(checklist.update({online: true, localSolo: true, meetingUrl:firstUrl, voiceReady:true, admitted:false, ready:false}).allowed, false);
+  assert.doesNotMatch(checklist.element.textContent, /without a controller/);
+});
+
 test('audio acknowledgement belongs to the current canonical room/link and resets after reconnect or offline transition', () => {
   const h = panelHarness(); h.update({meetingUrl: ''});
   assert.equal(h.audio.disabled, true); h.checkAudio(); assert.equal(h.panel.isVoiceReady(), false);
@@ -178,6 +192,8 @@ test('loading optional sample traffic completes fresh-room traffic setup, while 
 
 test('Procedural actual adapter preserves offline Run and gates online Run/manual step while Pause stays available', async () => {
   const offline = proceduralHarness(); assert.equal(offline.get('resume').disabled, false);
+  assert.match(offline.document.querySelector('.ats-startup-checklist').textContent, /without a controller.*Run/);
+  assert.doesNotMatch(offline.document.querySelector('.ats-startup-checklist').textContent, /Done/);
   await offline.startExercise(); assert.equal(offline.context.commands.length, 1);
   assert.equal(offline.context.commands[0].payload.action, 'resume');
   const h = proceduralHarness(true); assert.equal(h.get('resume').disabled, true);

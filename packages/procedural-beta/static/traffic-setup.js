@@ -252,7 +252,7 @@ export function createTrafficSetup(host) {
                 compassUnserviceable: row.inputs.compassUnserviceable.checked,
             };
         });
-        return { title: sessionTitle, mode: mode.value, aircraft, environment: { ...environment, dfHoldSeconds: 10, ...(currentEnvironment.magneticVariationKnown === false && currentEnvironment.trainingMagneticVariationDeg == null ? { trainingMagneticVariationDeg: 0 } : {}) } };
+        return { title: sessionTitle, mode: mode.value, aircraft, environment: { ...environment, dfHoldSeconds: currentEnvironment.dfHoldSeconds ?? 10, ...(currentEnvironment.magneticVariationKnown === false && currentEnvironment.trainingMagneticVariationDeg == null ? { trainingMagneticVariationDeg: 0 } : {}) } };
     }
     function close() {
         epoch++;

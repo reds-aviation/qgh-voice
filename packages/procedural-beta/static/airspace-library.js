@@ -191,6 +191,7 @@ export function createAirspaceLibrary(host) {
         await host.command('airspace-replace', { expectedRevision: saved.revision, environment: template.environment,
             fixes: template.fixes, routes: template.routes, areas: template.areas, scopeDisplay: template.scopeDisplay }, undefined, saved.exerciseId);
         if (saved.generation !== host.generation() || saved.exerciseId !== state()?.exerciseId || state()?.role !== 'instructor') return;
+        host.loaded?.();
         host.changed?.(); status.textContent = `${template.name} loaded. Aircraft, exercise time and controller records are kept.`;
     }));
     const exported = button('Download file', 'airspace-export', () => void perform(async () => download(selected())));

@@ -233,6 +233,7 @@ test('Start declutters every optional instructor panel and retry retains the ini
   h.retryScenario();
   assert.equal(h.node('callsign').value, '764'); assert.equal(h.node('initialHeading').value, '123');
   assert.equal(h.state.simulation, null); assert.equal(h.node('setupPanel').hidden, false);
+  assert.equal(h.shellOptions.hasAttempt(),false,'Restart returns to fresh setup without Logout');
 });
 
 test('Traffic setup pauses and returns to the same exercise without replacing aircraft, time or PIN', () => {
@@ -246,6 +247,7 @@ test('Traffic setup pauses and returns to the same exercise without replacing ai
   assert.equal(h.state.simulation.lifecycle,'paused');assert.equal(h.state.session,session);assert.equal(h.state.review,review);
   assert.deepEqual(h.state.simulation.aircraftList,initial.aircraftList);assert.equal(h.state.simulation.simulationSeconds,60);
   assert.equal(h.node('setupPanel').hidden,false);assert.equal(h.node('returnToExercise').hidden,false);
+  assert.equal(h.shellOptions.hasAttempt(),true,'Logout remains available while editing a retained attempt');
   h.returnToExercise();
   assert.equal(h.node('activeWorkspace').hidden,false);assert.equal(h.node('setupPanel').hidden,true);
   assert.equal(h.state.session.pin,'123456');assert.equal(h.node('callsign').value,'Draft callsign');
@@ -266,6 +268,41 @@ test('Create cancellation and a failed online replacement keep the current attem
   assert.equal(h.state.session,previous);assert.equal(h.state.simulation,simulation);assert.equal(h.state.initialScenario,initial);
   assert.equal(h.state.creating,false);assert.match(h.node('setupPreview').textContent,/Room unavailable/);
   h.returnToExercise();assert.equal(h.node('activeWorkspace').hidden,false);
+});
+
+test('a failed replacement leaves the retained SRA student approach references intact', async () => {
+  const h=harness('sra');h.state.running=false;h.state.simulation=Core.setLifecycle(h.state.simulation,'paused');
+  h.state.sra=Sensors.createSraReferences({runwayHeadingDeg:230,terminationRangeNm:.5});
+  const references=h.state.sra,sensor=h.state.sensor;
+  h.node('scenarioForm').reportValidity=()=>true;h.node('scenarioForm').querySelector=()=>null;
+  h.node('exerciseConnection').value='online';
+  h.setScenarioInput({exerciseFamily:'surveillance',callsign:'201',approachAircraft:'AC1',runwayOrientationDeg:150,finalTrackDeg:150,
+    aircraft:[{aircraftId:'AC1',callsign:'201',initialQteDeg:30,initialRangeNm:20,initialHeadingDeg:210,altitudeFt:10000,speedKt:240,rateDegPerSecond:3}]});
+  h.context.ATCSuiteCloud={prepareHost:async()=>{throw new Error('Room unavailable');}};
+  await h.createSession({preventDefault(){}});
+  assert.match(h.node('setupPreview').textContent,/Room unavailable/);
+  assert.equal(h.state.sensor,sensor);
+  assert.equal(h.state.sra,references,'failed candidate preparation must not erase the current SRA reference geometry');
+});
+
+test('replacing an exercise from Traffic setup clears the previous sensor picture and event history', async () => {
+  const hub=Session.createFakeTransportHub(),h=harness('qgh',{...Session,
+    createInstructorSession:options=>Session.createInstructorSession({...options,publicMetadata:JSON.parse(JSON.stringify(options.publicMetadata))}),
+    createLocalSessionTransport:({channelName})=>hub.createTransport(channelName)});
+  h.state.latestObservation={status:'held',bearingDeg:230,callsign:'OLD'};h.state.lastRecordedObservation='old';
+  const oldEvent={textContent:'Old room command'};
+  h.state.lastRenderedEvent=4;h.node('eventLog').children=[oldEvent];
+  h.setScenarioInput({exerciseFamily:'sra',callsign:'201',approachAircraft:'AC1',runwayOrientationDeg:150,finalTrackDeg:150,
+    aircraft:[{aircraftId:'AC1',callsign:'201',initialQteDeg:30,initialRangeNm:20,initialHeadingDeg:210,altitudeFt:10000,speedKt:240,rateDegPerSecond:3}]});
+  h.node('exerciseConnection').value='local';h.node('scenarioForm').reportValidity=()=>true;h.node('scenarioForm').querySelector=()=>null;
+  await h.createSession({preventDefault(){}});
+  assert.equal(h.state.simulation.scenario.exerciseFamily,'sra',h.node('setupPreview').textContent);
+  assert.equal(h.state.latestObservation,null);assert.equal(h.state.lastRecordedObservation,null);
+  assert.equal(h.node('eventLog').children.includes(oldEvent),false,'new room history cannot include the old room commands');
+  assert.equal(h.node('eventLog').children.length,h.state.simulation.events.length);
+  assert.equal(h.state.lastRenderedEvent,h.state.simulation.events.length);
+  assert.equal(h.state.sra.runwayHeadingDeg,150);
+  h.state.session.close();
 });
 
 test('Return from traffic setup restores an ended exercise review instead of reopening movement', () => {
@@ -428,7 +465,8 @@ test('instructor Logout terminates the admitted session, stops local work and re
  h.state.clickTimer=h.context.setTimeout(()=>assert.fail('pending scope click survived logout'));
  h.state.cloudTransport={async sync(){assert.equal(student.snapshot().reason,'instructor-logout');closed.push('sync');},close(){closed.push('close');}};
  h.context.sessionStorage.setItem('atc-suite.instructor-attempt.v1','progress');h.context.sessionStorage.setItem('atc-suite-host-auth','identity');h.context.sessionStorage.setItem('atc-suite.saved-exercises.v1','saved-library');
- assert.equal(h.shellOptions.onLogout,h.logout);await h.shellOptions.onLogout();
+ assert.equal(h.shellOptions.onLogout,h.logout);assert.equal(h.shellOptions.hasAttempt(),true);await h.shellOptions.onLogout();
+ assert.equal(h.shellOptions.hasAttempt(),false);
  assert.equal(student.snapshot().state,'terminated');assert.equal(student.snapshot().reason,'instructor-logout');assert.deepEqual(closed,['sync','close']);
  assert.deepEqual(cancelled,[21,22,23]);assert.equal(h.state.running,false);assert.equal(h.state.reviewPlaying,false);assert.equal(h.state.session,null);assert.equal(h.state.simulation,null);h.flush();h.checkpoint();
  assert.equal(h.context.sessionStorage.getItem('atc-suite.instructor-attempt.v1'),null);assert.equal(h.context.sessionStorage.getItem('atc-suite-host-auth'),null);assert.equal(h.context.sessionStorage.getItem('atc-suite.saved-exercises.v1'),'saved-library');student.close();

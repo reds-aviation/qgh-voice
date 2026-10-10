@@ -75,6 +75,48 @@ test('Logout cleanup failure keeps the current page and exposes an accessible re
  assert.equal(navigations.length,0);assert.equal(button.disabled,false);
 });
 
+test('Logout is absent before an attempt and remains available in its setup and review views',async()=>{
+ const h=domHarness('<html><body><main id="studentWorkspace" hidden></main><section id="review" hidden></section></body></html>');
+ // Linkedom currently delivers subtree attribute records only with childList;
+ // browsers correctly support attributes + subtree without that extra option.
+ const Observer=h.context.MutationObserver;
+ h.context.MutationObserver=class extends Observer{observe(target,options){super.observe(target,options.subtree&&options.attributes?{...options,childList:true}:options);}};
+ vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
+ const root=h.document.getElementById('studentWorkspace');let hasAttempt=false;
+ h.context.ATCSuiteWorkspace.bindShell({root,onLogout(){},hasAttempt:()=>hasAttempt});
+ const slot=h.document.querySelector('.ats-logout-slot');
+ assert.equal(slot.hidden,true);assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
+ hasAttempt=true;root.hidden=false;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(slot.hidden,false);assert.equal(h.document.body.classList.contains('ats-has-logout'),true);
+ root.hidden=true;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(slot.hidden,false,'opening traffic setup must retain Logout while its attempt exists');
+ h.document.getElementById('review').hidden=false;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(slot.hidden,false,'completed attempts retain Logout before leaving review');
+ hasAttempt=false;h.document.getElementById('review').hidden=true;await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(slot.hidden,true);assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
+ h.document.getElementById('workspaceLogout').click();
+ assert.equal(h.document.querySelector('dialog'),null,'a hidden entry control cannot open a discard confirmation');
+});
+
+test('QGH setup uses a static navigation header and restores it after moving the exercise drawer',async()=>{
+ const h=domHarness(readFileSync(new URL('../atc-suite/instructor.html',import.meta.url),'utf8'),'/instructor-led/instructor.html',1280);
+ h.window.matchMedia=query=>({matches:query.includes('min-width'),addEventListener(){}});
+ vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
+ const get=id=>h.document.getElementById(id),root=get('activeWorkspace'),navigation=get('consoleNavigation');
+ h.context.ATCSuiteWorkspace.bindShell({root,scope:get('instructorScope'),shelf:get('instructorControlShelf'),actions:get('instructorRunActions')});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(navigation.open,true);assert.equal(navigation.querySelector('summary').hidden,true);
+ assert.ok(navigation.querySelector('.ats-overlay-move').closest('[hidden]'),'Move and Reset belong only to the exercise drawer');
+ root.hidden=false;h.document.body.classList.add('exercise-console');await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(navigation.querySelector('summary').hidden,false);
+ get('instructorTools').querySelector('[aria-controls="consoleNavigation"]').click();
+ const move=navigation.querySelector('.ats-overlay-move'),event=new h.Event('keydown',{bubbles:true,cancelable:true});event.key='ArrowRight';move.dispatchEvent(event);
+ assert.equal(navigation.style.position,'fixed');
+ root.hidden=true;h.document.body.classList.remove('exercise-console');await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(navigation.open,true);assert.equal(navigation.querySelector('summary').hidden,true);
+ assert.equal(navigation.style.position,undefined);assert.equal(navigation.classList.contains('ats-overlay-positioned'),false);
+});
+
 test('a phone confirmation keeps Tab inside the modal instead of the underlying drawer',async()=>{
  const h=domHarness('<html><body><main id="desk"><div class="exercisebar"></div><div id="instructor-control-shelf"></div><nav id="edge-actions"></nav></main><aside id="work-panel"><button id="drawer-close">Close</button><input></aside></body></html>');
  vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
@@ -237,7 +279,7 @@ test('modal Move/Reset never chooses an answer, and Escape leaves the underlying
 test('drawer, clock, help and guided-tour panels use dedicated move handles while their controls remain the same nodes',async()=>{
  const h=await floatingHarness();
  for(const id of ['sessionDrawer','aircraftControlDrawer','eventDrawer','consoleNavigation'])assert.ok(h.get(id).querySelector('.ats-overlay-move'));
- assert.ok(h.document.querySelector('.ats-clock-popover .ats-overlay-move'));assert.equal(h.get('trainingTimeRate').value,'5');
+ assert.ok(h.document.querySelector('.ats-clock-popover .ats-overlay-move'));assert.equal(h.get('trainingTimeRate').value,'1');
  for(const [id,tag]of [['suite-guide-chat-panel','header'],['suite-tour','h2'],['boundary-scope-tools','strong']]){
    const panel=h.document.createElement('section');panel.id=id;panel.append(h.document.createElement(tag));h.document.body.append(panel);
  }

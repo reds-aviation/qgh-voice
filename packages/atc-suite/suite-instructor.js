@@ -16,7 +16,7 @@
   const family = byId('exerciseFamily');
   const procedure = byId('procedureType');
   const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
-  const DEFAULT_TRAINING_TIME_RATE = 5;
+  const DEFAULT_TRAINING_TIME_RATE = 1;
   const state = {
     simulation: null, session: null, sensor: null, review: null, sra: null, cloudTransport: null, creating: false,
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
@@ -25,7 +25,7 @@
     inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false, clickTimer: null,
     studentWindow: null, studentWindowSessionId: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false,
     scopePan: { x: 0, y: 0 }, scopeDrag: null, lastRightClick: null, suppressClickUntil: 0,
-    initialScenario: null, restoreMessage: '', lastCheckpoint: 0, meetingUrl: '', loggingOut: false,
+    initialScenario: null, initialSetup: null, restoreMessage: '', lastCheckpoint: 0, meetingUrl: '', loggingOut: false,
     heartbeatTimer: null, runtimeTimer: null, animationFrame: null
   };
   let attemptGeneration = 0;
@@ -37,7 +37,8 @@
   const focusPanelIds = ['consoleNavigation', 'sessionDrawer', 'clockSettings', 'scopeSettings', 'aircraftControlDrawer', 'eventDrawer'];
   const focusMode = globalThis.ATCSuiteWorkspace?.createFocusMode?.({ root: byId('activeWorkspace'), panels: focusPanelIds.map(byId) });
   globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('activeWorkspace'), scope: byId('instructorScope'),
-    shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions'), onLogout: logout });
+    shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions'), onLogout: logout,
+    hasAttempt: () => Boolean(state.session && state.simulation) });
   const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({
     container: byId('sessionDrawer')?.querySelector('.session-rail'), role: 'instructor',
     onReadinessChange: () => { if (state.simulation) updateAll(); },
@@ -190,10 +191,57 @@
   function exportPreset() {
     try {
       const item = selectedPreset();
-      const content = JSON.stringify({ format: 'ats-simbox-instructor-exercise', version: 1, name: item.name, setup: item.setup }, null, 2);
-      const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
-      const link = document.createElement('a'); link.href = url; link.download = 'ats-simbox-exercise.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadSetup(item.setup, item.name);
     } catch (error) { byId('presetStatus').textContent = error.message; }
+  }
+
+  function downloadSetup(setup, name) {
+    const content = JSON.stringify({ format: 'ats-simbox-instructor-exercise', version: 1, name, setup }, null, 2);
+    const url = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'ats-simbox-exercise.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function originalSetup() {
+    if (Array.isArray(state.initialSetup) && state.initialSetup.length) return structuredClone(state.initialSetup);
+    // Older recovery records contain the validated initial scenario, but no
+    // separate form snapshot. Rebuild from that scenario, never from edits to
+    // the next exercise or from aircraft positions at termination.
+    const input = state.initialScenario;
+    if (!Array.isArray(input?.aircraft) || !input.aircraft.length) return null;
+    const environment = input.radarEnvironment || {};
+    const fields = {
+      exerciseConnection: state.cloudTransport ? 'online' : 'local', exerciseFamily: input.exerciseFamily,
+      procedureType: input.qghProcedure === 'us' ? 'us-compass' : 'normal', aircraftCount: input.aircraft.length,
+      runwayOrientation: input.runwayOrientationDeg, finalTrack: input.finalTrackDeg,
+      radarProfile: input.surveillanceProfile || 'primary', scanPreset: 15,
+      approachAircraft: input.approachAircraft || 'AC1', parRefresh: input.parRefreshHz || 1, parTransferGate: input.parTransferGateNm || 10,
+      extendedCentrelineNm: environment.extendedCentrelineNm ?? 20, centrelineTickNm: environment.centrelineTickNm ?? 2,
+      localLfaRadius: environment.lfaBoundary?.[0]?.rangeNm ?? 20
+    };
+    const setup = Object.entries(fields).map(([id, value]) => ({id, value: String(value)}));
+    for (const [id, checked] of Object.entries({extendedCentreline: environment.extendedCentreline === true,
+      localLfaEnabled: !!environment.lfaBoundary?.length, sraDescentProfile: environment.sraDescentProfile === true})) {
+      setup.push({id, value:'on', checked});
+    }
+    input.aircraft.forEach((aircraft, index) => {
+      const values = {callsign: aircraft.callsign, squawk: aircraft.transponderCode || aircraft.surveillance?.squawk || automaticSquawkFor(index),
+        radarReturn: aircraft.surveillance?.modeS ? 'mode-s' : aircraft.surveillance?.secondary ? 'mode-a' : 'primary',
+        aircraftType: aircraft.aircraftType || 'fighter', initialBearing: aircraft.initialQteDeg, initialRange: aircraft.initialRangeNm,
+        initialHeading: aircraft.initialHeadingDeg, initialAltitude: aircraft.altitudeFt, initialSpeed: aircraft.speedKt,
+        turnRate: aircraft.rateDegPerSecond, verticalRate: aircraft.verticalRateFpm || 1000};
+      for (const [field, value] of Object.entries(values)) setup.push({id: index ? `${field}-${index + 1}` : field, value: String(value),
+        ...(field === 'radarReturn' ? {radarAuto:'false'} : {})});
+    });
+    return setup;
+  }
+
+  function downloadReviewSetup() {
+    try {
+      const setup = originalSetup();
+      if (!setup) throw new Error('The original starting setup is unavailable in this recovered exercise.');
+      downloadSetup(setup, `${modeLabel(state.initialScenario?.exerciseFamily || state.simulation.scenario.exerciseFamily)} starting setup`);
+      byId('reviewSetupStatus').textContent = 'Starting aircraft and airspace downloaded. Import this file in Saved exercises to use it again.';
+    } catch (error) { byId('reviewSetupStatus').textContent = error.message; }
   }
 
   async function importPreset(event) {
@@ -261,7 +309,7 @@
       const simulation = structuredClone(state.simulation);
       for (const id of Object.keys(simulation.truthTrails)) simulation.truthTrails[id] = simulation.truthTrails[id].filter((item, index, rows) => index === rows.length - 1 || index === 0 || Math.floor(item.timestamp) !== Math.floor(rows[index - 1].timestamp));
       sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), setup: captureSetup(),
-        simulation, initialScenario: state.initialScenario, review,
+        simulation, initialScenario: state.initialScenario, initialSetup: state.initialSetup, review,
         protocol: state.session?.recoverySnapshot?.(), cloud: state.cloudTransport?.recoverySnapshot?.(),
         trainingTimeRate: state.trainingTimeRate, meetingUrl: state.meetingUrl }));
       state.lastCheckpoint = performance.now();
@@ -290,8 +338,10 @@
       // must never replace the current room, PIN or simulation after the await.
       if (generation !== attemptGeneration) { cloud?.transport?.close(); return; }
       state.initialScenario = saved.initialScenario;
+      state.initialSetup = saved.initialSetup || null;
       state.simulation = simulation; state.running = false;
       state.sensor = createSensor({ ...simulation.scenario, startSeconds: simulation.simulationSeconds });
+      state.sra = createSraReferences(simulation.scenario);
       state.review = Sensors.createReviewTimeline();
       for (const entry of saved.review?.truth || []) state.review.recordTruth(entry);
       for (const entry of saved.review?.observations || []) state.review.recordObservation(entry.sensor, entry);
@@ -355,6 +405,8 @@
   }
 
   function retryScenario() {
+    const setup = originalSetup();
+    if (setup) restoreSetup(setup);
     ++attemptGeneration; state.creating = false;
     const submit = byId('scenarioForm').querySelector?.('[type="submit"]');
     if (submit) submit.disabled = false;
@@ -783,9 +835,12 @@
       startSeconds: Number(input.startSeconds ?? 0), touchdown: { x: 0, y: 0, altitudeFt: 0 },
       glidepathDeg: 3, maxRangeNm: 20, history: 3
     });
-    state.sra = input.exerciseFamily === 'sra' ? Sensors.createSraReferences({ runwayHeadingDeg: input.finalTrackDeg, terminationRangeNm: .5 }) : null;
     return Sensors.createSurveillanceSensor({ rpm: 15, startSeconds: input.startSeconds || 0,
       profile: input.surveillanceProfile, sra: input.exerciseFamily === 'sra', history: 5, maxRangeNm: 100 });
+  }
+
+  function createSraReferences(input) {
+    return input.exerciseFamily === 'sra' ? Sensors.createSraReferences({ runwayHeadingDeg: input.finalTrackDeg, terminationRangeNm: .5 }) : null;
   }
 
   function configureActiveControls() {
@@ -860,8 +915,8 @@
     const submit = byId('scenarioForm').querySelector('[type="submit"]');
     if (submit) submit.disabled = true;
     try {
-      const input = scenarioInput();
-      const simulation = Core.setLifecycle(Core.createState(input), 'ready'), sensor = createSensor(input);
+      const input = scenarioInput(), initialSetup = captureSetup();
+      const simulation = Core.setLifecycle(Core.createState(input), 'ready'), sensor = createSensor(input), sra = createSraReferences(input);
       const online = byId('exerciseConnection')?.value === 'online';
       cloud = online ? await globalThis.ATCSuiteCloud.prepareHost(Session, status => {
         if (generation !== attemptGeneration) return;
@@ -882,7 +937,10 @@
       });
       finishTransmission(); state.session?.close(); state.cloudTransport?.close();
       state.cloudTransport = cloud?.transport || null; state.meetingUrl = '';
-      state.initialScenario = structuredClone(input); state.simulation = simulation; state.sensor = sensor;
+      state.initialScenario = structuredClone(input); state.initialSetup = initialSetup;
+      state.simulation = simulation; state.sensor = sensor; state.sra = sra;
+      state.latestObservation = null; state.lastRecordedObservation = null; state.lastRenderedEvent = 0;
+      byId('eventLog').replaceChildren();
       state.review = Sensors.createReviewTimeline(); state.review.recordTruth(truthForReview());
       state.session = nextSession; committed = true;
       resetTrainingTimeRate(input.exerciseFamily);
@@ -1802,7 +1860,7 @@
     saveSetup();
   }
 
-  family.addEventListener('change', () => { resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
+  family.addEventListener('change', () => { if (!state.simulation) resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
   byId('saveExercisePreset').addEventListener('click', saveCurrentSetup);
   byId('renameExercisePreset').addEventListener('click', renamePreset);
   byId('removeExercisePreset').addEventListener('click', removePreset);
@@ -1893,6 +1951,7 @@
   byId('newScenario').addEventListener('click', openTrafficSetup);
   byId('returnToExercise').addEventListener('click', returnToExercise);
   byId('restartExercise').addEventListener('click', retryScenario);
+  byId('downloadReviewSetup').addEventListener('click', downloadReviewSetup);
   document.querySelectorAll('[data-review-layer]').forEach(control => control.addEventListener('change', () => drawReview(state.review.snapshot())));
   window.addEventListener('pagehide', () => { if (state.loggingOut) return; saveSetup(); checkpoint(); state.session?.detach?.(); });
   state.heartbeatTimer = setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);

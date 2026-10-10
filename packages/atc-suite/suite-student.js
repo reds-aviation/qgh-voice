@@ -49,7 +49,8 @@
     ['groundSpeed', 'radarLabelSpeed'], ['heading', 'radarLabelHeading'], ['bearingRange', 'radarLabelBearingRange']
   ];
   globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('studentWorkspace'), scope: byId('radarScope'),
-    shelf: byId('student-estimate-panel'), actions: byId('studentWorkspace')?.querySelector?.('.student-head'), onLogout: logout });
+    shelf: byId('student-estimate-panel'), actions: byId('studentWorkspace')?.querySelector?.('.student-head'), onLogout: logout,
+    hasAttempt: () => Boolean(state.session && state.session.snapshot().state !== 'rejected') });
   byId('studentEstimateScope').classList?.add?.('ats-scope-surface');
   const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: byId('readyPanel'), role: 'student' });
   meetingPanel?.addShortcut(byId('studentWorkspace')?.querySelector('.student-head'));

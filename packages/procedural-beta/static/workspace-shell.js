@@ -7,12 +7,12 @@
     const target = options.focusTarget;
     if (target) { if (!target.hasAttribute?.('tabindex')) target.setAttribute?.('tabindex','-1'); target.focus?.({preventScroll:true}); }
   }
-  function bindShell({root,scope,shelf,actions,onLogout}) {
+  function bindShell({root,scope,shelf,actions,onLogout,hasAttempt}) {
     root?.classList.add('ats-workspace-shell');
     scope?.classList.add('ats-scope-surface');
     shelf?.classList.add('ats-aircraft-shelf');
     actions?.classList.add('ats-workspace-actions');
-    if (typeof onLogout === 'function') bindLogout({root,onLogout});
+    if (typeof onLogout === 'function') bindLogout({root,onLogout,hasAttempt});
     if (root?.ownerDocument?.createElement && root.id === 'activeWorkspace') installInstructorConsole({root,scope,shelf,actions});
     if (root?.ownerDocument?.createElement && root.id === 'desk') installProceduralConsole(root);
     // Procedural moves its existing fleet into the toolbar later in the same
@@ -325,7 +325,13 @@
     for(const drawer of drawers)drawer.open=false;
     function syncStage(){
       const exercising=doc.body.classList.contains('exercise-console');
-      if(!exercising){active=null;byId('consoleNavigation').open=true;}
+      const navigation=byId('consoleNavigation'),summary=navigation?.querySelector('summary');
+      if(summary&&summary.hidden===exercising)summary.hidden=!exercising;
+      if(!exercising){
+        active=null;navigation.open=true;
+        // The entry header is part of the page, not a floating exercise panel.
+        if(navigation.classList.contains('ats-overlay-positioned'))movableOverlays.get(navigation)?.reset();
+      }
       else if(byId('activeWorkspace').hidden){for(const drawer of drawers)drawer.open=false;active=null;}
       else if(active!==byId('consoleNavigation'))byId('consoleNavigation').open=false;
       const skip=doc.querySelector('.ats-skip');if(skip)skip.href=exercising?(byId('reviewScreen')?.hidden?'#activeWorkspace':'#reviewScreen'):'#setupPanel';
@@ -367,18 +373,30 @@
     return {setExpanded,enterRun(){setExpanded(false);},setPhase(next){if(next==='running' && phase!=='running' && phase!=='paused')setExpanded(false);phase=next;},isExpanded:()=>expanded};
   }
   const logoutBindings=new WeakMap();
-  function bindLogout({root,onLogout,homeHref='../index.html'}) {
+  function bindLogout({root,onLogout,homeHref='../index.html',hasAttempt=()=>true}) {
     const doc=root?.ownerDocument || document;
     if(typeof onLogout!=='function'||!doc?.createElement)return null;
     const existing=logoutBindings.get(doc);
-    if(existing){existing.onLogout=onLogout;existing.homeHref=homeHref;return existing.button;}
+    if(existing){existing.onLogout=onLogout;existing.homeHref=homeHref;existing.hasAttempt=hasAttempt;existing.sync();return existing.button;}
     const slot=doc.createElement('div');slot.className='ats-logout-slot';
     const button=doc.createElement('button');button.type='button';button.id='workspaceLogout';button.className='ats-logout-button';button.textContent='Logout';
     const status=doc.createElement('p');status.className='ats-logout-status';status.hidden=true;status.setAttribute('role','alert');
-    slot.append(button,status);doc.body.append(slot);doc.body.classList.add('ats-has-logout');
-    const binding={button,onLogout,homeHref,busy:false};logoutBindings.set(doc,binding);
+    slot.append(button,status);doc.body.append(slot);
+    const binding={button,onLogout,homeHref,hasAttempt,busy:false,sync};logoutBindings.set(doc,binding);
+    function sync(){
+      const visible=Boolean(binding.hasAttempt());
+      if(slot.hidden===visible)slot.hidden=!visible;
+      if(doc.body.classList.contains('ats-has-logout')!==visible)doc.body.classList.toggle('ats-has-logout',visible);
+    }
+    // Adapters retain their attempt while setup, workspace and review visibility
+    // changes. Screen visibility alone must never decide whether progress exists.
+    if(typeof MutationObserver==='function'){
+      new MutationObserver(sync).observe(doc.body,{attributes:true,attributeFilter:['hidden'],subtree:true});
+      new MutationObserver(sync).observe(doc.body,{attributes:true,attributeFilter:['class']});
+    }
+    sync();
     button.addEventListener('click',async()=>{
-      if(binding.busy)return;
+      if(binding.busy||!binding.hasAttempt())return;
       binding.busy=true;button.disabled=true;status.hidden=true;
       try{
         if(!await confirmAction('Log out and return to ATS suite Home? Current exercise progress will be lost.',{confirmLabel:'Log out',title:'Log out'}))return;

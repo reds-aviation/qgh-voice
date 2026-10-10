@@ -150,8 +150,8 @@ body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[h
 body.instructor-page.exercise-console .instrument-shelf:has(.instructor-homing[hidden]) .instructor-pilot-channel{grid-column:2}
 body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback>div{display:flex;flex-wrap:wrap;gap:8px;min-height:0}
 body.instructor-desk.desk-open #instructor-control-shelf #radio-state{font-size:11px;padding:2px 4px}
-body.instructor-page.exercise-console :is(#quickTurnLeft,#quickTurnRight,#quickStopTurn,#quickHeadingLeft,#quickHeadingRight),body.instructor-desk.desk-open :is(#quick-left,#quick-right,#quick-stop,#quick-heading-left,#quick-heading-right){background:var(--ats-turn);color:var(--ats-turn-ink);border-color:#b9a36b}
-body.instructor-page.exercise-console #terminateExercise,body.instructor-desk.desk-open #terminate-quick{background:var(--ats-danger);color:var(--ats-danger-ink);border-color:#ee91a0}
+body.instructor-page.exercise-console :is(#quickTurnLeft,#quickTurnRight,#quickStopTurn,#quickHeadingLeft,#quickHeadingRight):not(:disabled),body.instructor-desk.desk-open :is(#quick-left,#quick-right,#quick-stop,#quick-heading-left,#quick-heading-right):not(:disabled){background:var(--ats-turn);color:var(--ats-turn-ink);border-color:#b9a36b}
+body.instructor-page.exercise-console #terminateExercise:not(:disabled),body.instructor-desk.desk-open #terminate-quick:not(:disabled){background:var(--ats-danger);color:var(--ats-danger-ink);border-color:#ee91a0}
 
 /* Procedural uses the same regions; chart tools extend its rail. */
 body.instructor-desk.desk-open .topbar{display:none}
@@ -353,6 +353,8 @@ body.instructor-page.exercise-console .keyboard-command-bar :is(label,.keyboard-
 body.instructor-page.exercise-console .keyboard-command-bar :is(p,output){color:var(--ats-muted)}
 body.instructor-page.exercise-console .keyboard-command-bar output[data-state="rejected"]{color:#ffbdc5}
 body.instructor-page.exercise-console .keyboard-command-bar output[data-state="accepted"]{color:#b2e3ec}
+body.instructor-page.exercise-console .command-grid label{font-size:13px;line-height:1.4;letter-spacing:.02em}
+body.instructor-page.exercise-console .keyboard-command-bar :is(label,.keyboard-shortcuts summary,output){font-size:12px;line-height:1.5;letter-spacing:.02em}
 body.instructor-page.exercise-console .keyboard-shortcuts :is(kbd,code){background:var(--ats-panel-raised);color:var(--ats-text);border-color:var(--ats-border)}
 body.instructor-page.exercise-console .command-grid input.executed{background:var(--ats-turn);color:var(--ats-turn-ink)}
 body.instructor-page.exercise-console button:disabled,body.instructor-desk.desk-open button:disabled{opacity:1;color:#a9b8c0;background:#1b2732;border-color:#405360}

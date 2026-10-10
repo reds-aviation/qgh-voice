@@ -147,3 +147,24 @@ body[data-suite-surface] :is(h1,h2,h3,h4,p,summary,label){overflow-wrap:break-wo
 body[data-suite-surface] :is(.entry-option-copy,.role-card>div,.session-connection,.setup-panel,.section-title,.card-head){min-width:0}
 body[data-suite-surface] :is(.entry-option-copy small,.role-card p,.capability-note,.flow-footer){white-space:normal}
 body[data-suite-surface] button{max-width:100%;white-space:normal}
+
+/* Opening forms use readable labels and values without changing scope typography. */
+body[data-suite-surface="host-setup"] #setupPanel label,
+body[data-suite-surface="single"] #setup label,
+body[data-suite-surface="tactical"] #tSetup label{font-size:14px;line-height:1.45;letter-spacing:.02em;color:#365373}
+body[data-suite-surface="host-setup"] #setupPanel :is(input,select,textarea),
+body[data-suite-surface="single"] #setup :is(input,select,textarea),
+body[data-suite-surface="tactical"] #tSetup :is(input,select,textarea){font-size:16px;line-height:1.45;background:#fff;color:#071d3d;border-color:#7893aa}
+body[data-suite-surface="host-setup"] #setupPanel :is(input,textarea)::placeholder{color:#526f93;opacity:1}
+body[data-suite-surface="host-setup"] #setupPanel :is(button,summary),
+body[data-suite-surface="single"] #setup button,
+body[data-suite-surface="tactical"] #tSetup button{font-size:14px;line-height:1.45;letter-spacing:.02em}
+body[data-suite-surface="host-setup"] #setupPanel .primary-action{font-size:16px;background:#006b89;color:#fff}
+body[data-suite-surface="host-setup"] #setupPanel .primary-action:hover:not(:disabled){background:#00556d;color:#fff}
+body[data-suite-surface="host-setup"] #setupPanel button:disabled{background:#edf1f5;color:#526378;border-color:#a3b3c2;opacity:1}
+body[data-suite-surface="host-setup"] #setupPanel :focus-visible,
+body[data-suite-surface="single"] #setup :focus-visible,
+body[data-suite-surface="tactical"] #tSetup :focus-visible{outline:3px solid #006b89;outline-offset:3px}
+
+body[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])) .suite-return-link{display:inline-flex;align-items:center;min-height:40px;font-size:14px;letter-spacing:.03em;color:#006b89}
+@media(max-width:600px){body[data-suite-surface="host-setup"] #setupPanel>.section-title{background-image:linear-gradient(90deg,#fafaf8f5,#fafaf8e8 60%,#fafaf84d),url('qgh-cloudbreak.png')}}

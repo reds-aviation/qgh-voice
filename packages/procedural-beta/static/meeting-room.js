@@ -37,6 +37,9 @@
         [options.ready && !options.disconnected, 'Controller presses Ready to open the display and meeting link.'],
         [options.voiceReady, 'Both Join Meet, check you can hear each other, and confirm below.'],
         [result.allowed, 'Start begins aircraft movement. Keep Meet open throughout training.']
+      ] : options.localSolo === true ? [
+        [false, 'You can run this local Procedural exercise without a controller. Select Run when ready.'],
+        [false, 'To work with a controller, share the PIN on this PC, Admit the controller, then ask them to press Ready before Run.']
       ] : [[options.admitted, 'Share the PIN on this PC and Admit the controller.'],[options.ready && !options.disconnected, 'Controller presses Ready; then Start begins aircraft movement.']];
       list.replaceChildren(...steps.map(([done,text]) => {const item = doc.createElement('li'); item.textContent = `${done ? 'Done · ' : ''}${text}`; return item;}));
       return result;

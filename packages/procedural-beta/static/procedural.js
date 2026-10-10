@@ -66,8 +66,19 @@ const startupChecklist = globalThis.ATCSuiteMeeting?.createStartupChecklist({con
 function startupOptions() {
     const admitted = (room?.students || []).filter(student => ['admitted','ready'].includes(student.status));
     return {online:!!session?.cloud,connected:exerciseConnectionAvailable && view?.available !== false,
+        localSolo:!session?.cloud && admitted.length === 0,
         meetingUrl:room?.meetingUrl ?? session?.meetingUrl ?? '',voiceReady:meetingPanel?.isVoiceReady?.() === true,
         admitted:session?.cloud ? admitted.length > 0 : true,ready:admitted.every(student => student.status === 'ready')};
+}
+function startingTrafficPending() { return session?.role === 'instructor' && session.startingTrafficRequired === true; }
+function syncPreparationControls() {
+    const preparing = startingTrafficPending();
+    $('instructor-control-shelf').hidden = preparing;
+    const floating = $('proceduralFloatingControls'), toggle = $('scope-controls-toggle');
+    // The shared shell owns desktop/phone placement and its hidden attribute.
+    // Suppress the whole box during fresh chart preparation without changing it.
+    if (floating) floating.style.display = preparing ? 'none' : '';
+    if (toggle) toggle.hidden = preparing || session?.role !== 'instructor';
 }
 function startupStatus() {
     if (session?.role === 'instructor' && session.startingTrafficRequired)
@@ -751,7 +762,8 @@ function aircraftName(id) { return view?.roster.find(a => a.id === id)?.callsign
 function renderFleet() {
     if (!view)
         return;
-    changeList('fleet', [view.roster, selected], () => view.roster.map(a => { const b = make('button', undefined, a.id === selected ? 'selected' : ''); b.setAttribute('aria-pressed', String(a.id === selected)); b.append(make('b', a.callsign), make('small', `${a.type} · ${a.status}`)); b.onclick = () => choose(a.id); return b; }));
+    const roster = startingTrafficPending() ? [] : view.roster;
+    changeList('fleet', [roster, selected], () => roster.map(a => { const b = make('button', undefined, a.id === selected ? 'selected' : ''); b.setAttribute('aria-pressed', String(a.id === selected)); b.append(make('b', a.callsign), make('small', `${a.type} · ${a.status}`)); b.onclick = () => choose(a.id); return b; }));
 }
 function options(selector, rows) {
     const signature = JSON.stringify(rows);
@@ -774,13 +786,14 @@ function options(selector, rows) {
 function renderSelection() {
     if (!view)
         return;
-    const row = view.roster.find(a => a.id === selected);
+    syncPreparationControls();
+    const row = startingTrafficPending() ? null : view.roster.find(a => a.id === selected);
     text('strip-callsign', row?.callsign || 'Select aircraft');
     text('scope-selected', row?.callsign || 'Select aircraft');
     text('scope-station-name', `${view.environment.stationName || 'NAV0'} · ${(view.environment.stationType || 'df').toUpperCase()}`);
     text('pilot-callsign', row ? `${row.callsign} · pilot` : 'Aircraft controls');
     text('strip-route', row ? `${row.type} · ${view.routes.find(r => r.id === row.routeId)?.name || 'Direct / heading assigned'}` : '');
-    const a = view.aircraft?.find(a => a.id === selected);
+    const a = startingTrafficPending() ? null : view.aircraft?.find(a => a.id === selected);
     $('aircraft-quick-controls').hidden = session?.role !== 'instructor' || !a || a.status === 'scheduled';
     text('quick-aircraft-info', a ? `${a.callsign} · ${pad(a.headingDeg)}°T · ${Math.round(a.altitudeFt)} FT · ${Math.round(a.speedKt)} KT` : '');
     $('aircraft-quick-controls').querySelectorAll('button').forEach(b => b.disabled = !a || !!view.terminated || commandBusy);
@@ -843,7 +856,9 @@ function syncAssignmentTargets() {
 function render() {
     if (!view)
         return;
-    const v = view;
+    // The server's initial sample supplies chart settings, but is not the
+    // instructor's starting traffic until Create or Load finishes successfully.
+    const preparing = startingTrafficPending(), v = preparing ? { ...view, roster: [], aircraft: [] } : view;
     if (sessionStorage.getItem('reds-procedural-draft-exercise') !== v.exerciseId) {
         drafts.clear();
         sessionStorage.removeItem('reds-procedural-drafts');
@@ -874,16 +889,20 @@ function render() {
     v.roster = v.roster || [];
     v.routes = v.routes || [];
     v.fixes = v.fixes || [];
-    text('exercise-title', v.title);
+    text('exercise-title', preparing ? 'Prepare airspace' : v.title);
+    if (session?.role === 'instructor') {
+        text('scope-title', preparing ? 'PREPARE AIRSPACE · CREATE STARTING TRAFFIC WHEN READY' : 'INSTRUCTOR TRUTH · CONTINUOUS TRAFFIC');
+        text('scope-caption', preparing ? 'Prepare the chart, then return to traffic setup and select Create exercise.' : 'Click: transmit · double left/right: turn · middle: stop · drag: pan · Ctrl + scroll: zoom');
+    }
     text('clock', clock(v.elapsed));
     text('clock-state', v.terminated ? 'ENDED' : v.running ? 'RUNNING' : 'PAUSED');
     $('clock-state').classList.toggle('live', v.running);
     document.body.classList.toggle('exercise-running', v.running);
     if (v.running && focusExerciseId !== v.exerciseId) { setWorkspaceOptions(false); focusExerciseId = v.exerciseId; }
-    if (session?.role === 'instructor') trafficReview.record(v);
+    if (session?.role === 'instructor' && !preparing) trafficReview.record(v);
     text('mode-label', 'PROCEDURAL STUDIO');
     renderApproachReference();
-    text('fleet-count', `${v.roster.length} / 20`);
+    text('fleet-count', preparing ? 'Traffic setup required' : `${v.roster.length} / 20`);
     renderClockControls();
     const nextChart = JSON.stringify([v.environment.aerodromeName, v.environment.chartOrigin]);
     if (nextChart !== chartIdentity) {
@@ -986,7 +1005,7 @@ function render() {
     draw();
 }
 function currentDF() {
-    if (!view?.df)
+    if (!view?.df || startingTrafficPending())
         return null;
     const age = performance.now() - receivedAt;
     return age > view.df.remainingMs ? null : view.df;
@@ -994,7 +1013,7 @@ function currentDF() {
 function renderRadio() {
     if (!view)
         return;
-    const r = view.radio || {};
+    const r = startingTrafficPending() ? {} : view.radio || {};
     const valid = (performance.now() - receivedAt) < (Number(r.remainingMs) || 0);
     const phase = valid ? r.phase : 'idle';
     text('radio-state', (phase || 'idle').toUpperCase());
@@ -1091,6 +1110,7 @@ const studentPlotting = createStudentPlotting({ canvas, screenToPoint: position,
 studentPlotting.mount(studentPlotPanel); studentPlotting.setEnabled(false);
 $('scope-wrap').append(studentPlotPanel);
 globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls'),onLogout:logoutToHome});
+Promise.resolve().then(syncPreparationControls);
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 function draw() {
     sweep.update();
@@ -1250,7 +1270,7 @@ function draw() {
     ctx.arc(stationX, stationY, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillText(stationLabel, stationX + 8, stationY - 8);
-    if (session?.role === 'instructor') {
+    if (session?.role === 'instructor' && !startingTrafficPending()) {
         const labels = [];
         const symbols = [];
         for (const a of view.aircraft || []) {
@@ -1558,7 +1578,7 @@ function resetScopePointer() {
     hideAircraftHover();
 }
 function hitAircraft(e) {
-    return session?.role === 'instructor' && !display.ruler
+    return session?.role === 'instructor' && !startingTrafficPending() && !display.ruler
         ? nearestAircraft(view?.aircraft, position(e), geometry().scale, e.pointerType === 'touch' ? 30 : 24) : null;
 }
 function hideAircraftHover() { $('aircraft-hover').hidden = true; }
@@ -1571,17 +1591,17 @@ function openBoundaryScope() {
     canvas.focus({ preventScroll: true }); canvas.style.cursor = 'crosshair';
 }
 async function immediateTurn(action, id = selected) {
-    if (session?.role !== 'instructor' || !id || view?.terminated) return;
+    if (session?.role !== 'instructor' || startingTrafficPending() || !id || view?.terminated) return;
     gestures.reset();
     return command('clearance', { action }, id);
 }
 async function transmitAircraft(id = selected) {
-    if (session?.role !== 'instructor' || stage !== 'desk' || !id || id !== selected || view?.terminated || !view?.aircraft?.some(a => a.id === id && a.status !== 'scheduled')) return;
+    if (session?.role !== 'instructor' || startingTrafficPending() || stage !== 'desk' || !id || id !== selected || view?.terminated || !view?.aircraft?.some(a => a.id === id && a.status !== 'scheduled')) return;
     return command('transmit', { mode: 'df', durationSeconds: 8 }, id);
 }
 async function quickHeadingTurn(direction) {
     const a = view?.aircraft?.find(a => a.id === selected), input = $('quick-heading');
-    if (session?.role !== 'instructor' || !a || a.compassUnserviceable || view?.terminated) return;
+    if (session?.role !== 'instructor' || startingTrafficPending() || !a || a.compassUnserviceable || view?.terminated) return;
     if (!input.value.trim() || !Number.isInteger(Number(input.value)) || Number(input.value) < 0 || Number(input.value) > 360) {
         input.reportValidity(); message('Enter a whole heading from 000 to 360, then choose Turn left or Turn right.', true); return;
     }
@@ -1591,7 +1611,7 @@ async function quickHeadingTurn(direction) {
 canvas.addEventListener('contextmenu', e => { if (session?.role === 'instructor') e.preventDefault(); });
 canvas.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
 const middleMouseStop = bindMiddleMouseStop(canvas, {
-    isAllowed: id => session?.role === 'instructor' && stage === 'desk' && !!view && !view.terminated && !chartWorkshop.isSketching?.()
+    isAllowed: id => session?.role === 'instructor' && !startingTrafficPending() && stage === 'desk' && !!view && !view.terminated && !chartWorkshop.isSketching?.()
         && (!id || view.aircraft?.some(aircraft => aircraft.id === id && aircraft.status !== 'scheduled')),
     getTargetId: e => hitAircraft(e)?.id || selected,
     onReset() { gestures.reset(); pointer = null; hideAircraftHover(); },
@@ -1618,7 +1638,7 @@ canvas.addEventListener('pointermove', e => {
         const tooltip = $('aircraft-hover'); tooltip.hidden = !a;
         canvas.style.cursor = a ? 'pointer' : 'grab';
         if (a) {
-            tooltip.textContent = `${a.callsign} · ${a.type}\n${pad(a.headingDeg)}°T · ${Math.round(a.altitudeFt)} FT MSL · ${Math.round(a.speedKt)} KT\n${a.mode} · ${a.status}`;
+            tooltip.textContent = `${a.callsign} · ${a.type}\n${pad(a.headingDeg)} H · ${Math.round(a.altitudeFt)} FT MSL · ${Math.round(a.speedKt)} KT\n${a.mode} · ${a.status}`;
             const bounds = canvas.getBoundingClientRect();
             tooltip.style.left = `${Math.max(4, Math.min(e.clientX - bounds.left + 14, bounds.width - tooltip.offsetWidth - 6))}px`;
             tooltip.style.top = `${Math.max(4, Math.min(e.clientY - bounds.top + 16, bounds.height - tooltip.offsetHeight - 6))}px`;
@@ -1777,6 +1797,7 @@ function arrangeControls() {
         else
             home.after(control);
     }
+    syncPreparationControls();
     draw();
 }
 compactControls.addEventListener('change', arrangeControls);
@@ -2101,7 +2122,7 @@ document.addEventListener('keydown', e => {
     }
     if (e.target.closest('button,summary,a,[role=tab],[role=button]'))
         return;
-    if (session.role !== 'instructor' || e.ctrlKey || e.metaKey || e.altKey)
+    if (session.role !== 'instructor' || startingTrafficPending() || e.ctrlKey || e.metaKey || e.altKey)
         return;
     if (e.code === 'Space') {
         e.preventDefault();

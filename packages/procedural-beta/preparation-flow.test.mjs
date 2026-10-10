@@ -347,6 +347,18 @@ test('loaded traffic reconstructs bearing and range about the station and preser
     assert.equal(h.traffic.hasDraft(), false);
 });
 
+test('creating starting traffic keeps the configured D/F hold instead of resetting bearing settings', async () => {
+    const h = await preparationHarness();
+    for (const seconds of [2, 27, 30, undefined]) {
+        h.state().environment.dfHoldSeconds = seconds;
+        h.traffic.open();
+        const form = h.get('prepare-traffic').querySelector('form');
+        form.dispatchEvent(new h.Event('submit', { cancelable: true })); await flush();
+        assert.equal(h.submissions.at(-1)?.environment.dfHoldSeconds, seconds ?? 10,
+            'Create exercise preserves the selected D/F hold; only an unset value uses the default');
+    }
+});
+
 test('Save preserves selected identity when renamed and refuses edited traffic or advanced chart drafts', async () => {
     const h = await preparationHarness(); h.get('template-name').value = 'Exercise one';
     await h.click('template-save'); const id = h.get('template-select').value;

@@ -89,6 +89,40 @@ test('Back to traffic setup returns to the paused desk or ended Review without r
   assert.equal(h.context.commands.length, 0, 'returning does not reopen an ended exercise');
 });
 
+test('fresh airspace preparation hides provisional traffic and cannot issue pilot controls before Create', async () => {
+  const h = consoleHarness(); h.context.prepare('instructor'); h.context.addSecondAircraft();
+  await new Promise(resolve => setImmediate(resolve)); // shared shell mounts its floating box after the console.
+  const drawn = []; h.canvas.getContext('2d').fillText = text => drawn.push(String(text));
+  h.context.setStartingTrafficRequired(true); h.context.render();
+  assert.equal(h.document.querySelectorAll('#fleet button').length, 0, 'Default sample roster is not configured starting traffic');
+  assert.equal(h.document.getElementById('aircraft-quick-controls').hidden, true);
+  assert.equal(h.document.getElementById('instructor-control-shelf').hidden, true);
+  assert.equal(h.document.getElementById('proceduralFloatingControls').style.display, 'none');
+  assert.equal(h.document.getElementById('scope-controls-toggle').hidden, true);
+  assert.equal(h.document.getElementById('quick-left').disabled, true);
+  assert.equal(h.document.getElementById('truth-readout').textContent, '');
+  assert.equal(drawn.some(text => text === '101' || text === '102'), false, 'Preparation chart must not draw sample blips');
+  h.emit('pointerdown', {time:10}); h.emit('pointerup', {time:20}); h.flush();
+  h.emit('pointerdown', {button:1,time:30}); h.emit('pointerup', {button:1,time:40});
+  for (const key of ['t','a','d','x','h','p']) {
+    const event = new h.Event('keydown', {bubbles:true,cancelable:true}); Object.assign(event,{key,code:`Key${key.toUpperCase()}`}); h.canvas.dispatchEvent(event);
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.context.commands.length, 0, 'Hidden sample traffic is not controllable by mouse or keyboard');
+  h.context.setStartingTrafficRequired(false); drawn.length = 0; h.context.render();
+  assert.equal(h.document.querySelectorAll('#fleet button').length, 2, 'Created or loaded traffic renders without altering the engine roster');
+  assert.equal(h.document.getElementById('aircraft-quick-controls').hidden, false);
+  assert.equal(h.document.getElementById('instructor-control-shelf').hidden, false);
+  assert.notEqual(h.document.getElementById('proceduralFloatingControls').style.display, 'none');
+  assert.equal(h.document.getElementById('scope-controls-toggle').hidden, false);
+  assert.ok(drawn.includes('101'));
+  await h.context.showTrafficSetup();
+  assert.equal(h.document.getElementById('traffic-return-exercise').hidden, false, 'Revisiting an actual exercise keeps Return available');
+  h.context.prepare('student'); h.context.render();
+  assert.equal(h.document.getElementById('scope-controls-toggle').hidden, true, 'Student does not receive an instructor controls toggle');
+  assert.equal(h.document.getElementById('instrument-dock').closest('#instructor-control-shelf'), null, 'Student instruments stay in their normal location');
+});
+
 test('Review setup button downloads the original archive while progress button exports the current attempt', async () => {
   const h = consoleHarness(); h.context.prepare('instructor'); h.context.setElapsed(120); h.context.setEnded(true);
   h.document.getElementById('review-download-setup').click(); await new Promise(resolve => setImmediate(resolve));

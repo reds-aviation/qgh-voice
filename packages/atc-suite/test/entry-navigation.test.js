@@ -150,11 +150,22 @@ test('student Logout closes live transports, stops timers and removes this tab s
  const refreshed=student('',Object.fromEntries(h.values));assert.equal(refreshed.redirects.length,1);assert.equal(refreshed.requests.length,0,'logging out cannot silently rejoin through a saved seat');
 });
 
+test('controller Logout follows admission attempts and hides again after an invalid PIN is rejected',()=>{
+ let phase='waiting';
+ const h=student('?connection=local&pin=654321&join=1',{},
+ {ATCSuiteSession:{createStudentSession(){return {requestJoin:()=>true,snapshot:()=>({state:phase})};}}});
+ assert.equal(h.shellOptions.hasAttempt(),true);
+ for(const state of ['admitted','ready','running','paused','disconnected','terminated']){
+   phase=state;assert.equal(h.shellOptions.hasAttempt(),true,state);
+ }
+ phase='rejected';assert.equal(h.shellOptions.hasAttempt(),false);
+});
+
 test('student Logout invalidates a pending online join and closes its late transport without requesting admission',async()=>{
  let finish,closed=0;const requested=[];
  const h=student('?connection=online&pin=654321&join=1',{},
  {ATCSuiteCloud:{prepareStudent:()=>new Promise(resolve=>{finish=resolve;})},ATCSuiteSession:{createStudentSession(options){requested.push(options);return {requestJoin:()=>true};}}});
- assert.equal(typeof finish,'function');h.shellOptions.onLogout();
+ assert.equal(typeof finish,'function');assert.equal(h.shellOptions.hasAttempt(),false);h.shellOptions.onLogout();
  finish({transport:{close(){closed++;},start(){assert.fail('late logged-out transport started');}}});await new Promise(resolve=>setImmediate(resolve));
  assert.equal(closed,1);assert.equal(requested.length,0);assert.equal(h.values.has('reds.atc-suite.last-pin'),false);
 });

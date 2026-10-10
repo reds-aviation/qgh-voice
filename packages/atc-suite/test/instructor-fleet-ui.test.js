@@ -238,6 +238,7 @@ test('selection preserves transmitting source and frames do not replace typed sp
 
 test('runtime advances without animation frames and pauses explicitly after browser suspension', () => {
   const h = harness();
+  h.setTrainingTimeRate(5);
   h.state.simulation = Core.setLifecycle(h.state.simulation, 'running'); h.state.running = true;
   h.state.previousTick = 0; h.wall(1500); h.runtimeTick();
   assert.equal(h.state.simulation.simulationSeconds, 7.5, '1.5 seconds at 5x must not be clamped to 1');
@@ -249,15 +250,14 @@ test('runtime advances without animation frames and pauses explicitly after brow
   assert.match(h.node('commandStatus').textContent, /SUSPENDED/);
 });
 
-test('radar defaults to real-time while QGH retains 5x and optional instructor acceleration remains available', () => {
+test('every exercise defaults to real-time while explicit instructor acceleration remains available', () => {
   const h = harness();
-  assert.equal(h.resetTrainingTimeRate('qgh'), 5);
-  for (const mode of ['surveillance','sra','par']) {
+  for (const mode of ['qgh','surveillance','sra','par']) {
     assert.equal(h.resetTrainingTimeRate(mode), 1);
     assert.equal(h.setTrainingTimeRate(5), 5);
     assert.equal(h.setTrainingTimeRate(10), 10);
   }
-  assert.equal(h.resetTrainingTimeRate('qgh'), 5);
+  assert.equal(h.resetTrainingTimeRate('qgh'), 1);
 });
 
 test('DF follows current pilot playback then holds for two wall seconds at every flight speed', () => {
@@ -319,16 +319,17 @@ test('advance minute is inert before start and after termination', () => {
   assert.equal(h.state.simulation, review);
 });
 
-test('training time rate defaults to 5× while 1× preserves wall-clock flight stepping', () => {
+test('default clock rate advances a 240-knot aircraft four nautical miles in one real minute', () => {
   const h = harness();
   const initial = h.state.simulation;
   h.state.simulation = Core.setLifecycle(initial, 'running');
   h.state.running = true;
-  assert.equal(h.state.trainingTimeRate, 5);
-  assert.equal(h.setTrainingTimeRate(1), 1);
-  assert.equal(h.advanceWallElapsed(.5), .5);
-  assert.equal(h.state.simulation.simulationSeconds, .5);
-  const expected = Core.advance(Core.setLifecycle(initial, 'running'), .5);
+  assert.equal(h.state.trainingTimeRate, 1);
+  assert.equal(h.advanceWallElapsed(60), 60);
+  assert.equal(h.state.simulation.simulationSeconds, 60);
+  const a=initial.aircraftList[0],b=h.state.simulation.aircraftList[0];
+  assert.ok(Math.abs(Math.hypot(b.position.xNm-a.position.xNm,b.position.yNm-a.position.yNm)-4)<1e-9);
+  const expected = Core.advance(Core.setLifecycle(initial, 'running'), 60);
   assert.deepEqual(h.state.simulation.aircraftList.map(aircraft => ({ position: aircraft.position, headingDeg: aircraft.headingDeg })),
     expected.aircraftList.map(aircraft => ({ position: aircraft.position, headingDeg: aircraft.headingDeg })));
 });

@@ -116,6 +116,12 @@ test('Procedural high-range one-minute vector is a physical ground velocity vect
 test('Procedural H notation applies only to the scope aircraft tag, preserving true heading fields and non-scope telemetry',()=>{
   const h=consoleHarness();h.context.prepare('instructor');h.context.updateAircraft('a1',{headingDeg:30,targetHeadingDeg:30});h.context.refreshTargets();h.context.paint();
   assert.ok(Array.from(h.tags.at(-1)[0].lines).includes('030 H HEADING'));
+  const g=h.context.metrics(),event=new h.Event('pointermove',{bubbles:true});
+  Object.assign(event,{pointerType:'mouse',clientX:g.cx+2*g.scale,clientY:g.cy-3*g.scale});
+  h.node('scope').dispatchEvent(event);
+  assert.equal(h.node('aircraft-hover').hidden,false);
+  assert.match(h.node('aircraft-hover').textContent,/030 H/);
+  assert.doesNotMatch(h.node('aircraft-hover').textContent,/030°T/);
   assert.match(h.node('quick-aircraft-info').textContent,/030°T/);assert.match(h.node('truth-readout').textContent,/HDG 030°T/);
   assert.match(h.node('scope-heading-form').querySelector('label:nth-child(2)').textContent,/Target heading °T/);
 });

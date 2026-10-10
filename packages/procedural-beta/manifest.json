@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "go": "1.27.1",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": "static/procedural.js",
-      "bytes": 130078,
-      "sha256": "043353a3c666d5a25310edfad9f5e3ba61f2e66cbd84b6ef65f716b2405cdfab"
+      "bytes": 132031,
+      "sha256": "9fee0eddc594fbfe5128fecefff6079fd4772abeae9b6c2867879cfc22a942a4"
     },
     {
       "path": "static/procedural.css",
@@ -49,8 +49,8 @@
     },
     {
       "path": "static/traffic-setup.js",
-      "bytes": 17086,
-      "sha256": "eda05f200dfa1c80c0a71e18efa4c83019a95a1934f6face250e9dbb01ab2b44"
+      "bytes": 17122,
+      "sha256": "f5e6fa422f9b07ef4f294283dcc73064ce29bca7b570e59c01c3934856cc1e57"
     },
     {
       "path": "static/india-airspace.json",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 104840,
-      "sha256": "58b457a956040c201d664796d66bd3499cc9729276fdd84c4bec0550c26e2b12"
+      "bytes": 108720,
+      "sha256": "e4f2ee62552955d82e9c3545e065e6412d3b3ef034b408113bda3b471802da84"
     },
     {
       "path": "static/gyani-fox.png",
@@ -279,8 +279,8 @@
     },
     {
       "path": "static/airspace-preparation.js",
-      "bytes": 55357,
-      "sha256": "8181702ddf75183c2f2c56ee9a8078530a8d7e305d549edebe56f2a2eccd340f"
+      "bytes": 55479,
+      "sha256": "09ccd226b82415155ffafba38aafd49812252bb52ef0539086a99dd9c35bbd1d"
     },
     {
       "path": "static/airspace-preparation.css",
@@ -289,8 +289,8 @@
     },
     {
       "path": "static/scenario-library.js",
-      "bytes": 20273,
-      "sha256": "286df9f6d40ae09b0437e71610eb4724333ffeb5d2edbf914a891a6a1a70efc2"
+      "bytes": 20558,
+      "sha256": "c6cc5cfb70b8b18ad452327efc25117e0d51fdc18c5bf2856b7107acdc14d674"
     },
     {
       "path": "static/scenario-library.css",
@@ -314,18 +314,18 @@
     },
     {
       "path": "static/workspace-shell.js",
-      "bytes": 31802,
-      "sha256": "adbdbd0937070814ad89e2e6bebf27b2e21f6f8946e9139ea4010e3ac73e5777"
+      "bytes": 32932,
+      "sha256": "b91cb6e2ce0ed06b0d4f0202a382a92db19b7bf581f7c5a8b5e5d37776aec123"
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 53870,
-      "sha256": "f653ef00173e942f71a60a5fc71c80e1d258d5a037902706743ae5e35366220e"
+      "bytes": 54200,
+      "sha256": "0103fd2a93dda52a6da3ba49498e0ac5294c1198613d721c288ea59f619cac53"
     },
     {
       "path": "static/meeting-room.js",
-      "bytes": 11338,
-      "sha256": "ea350e8aac85553f946168a6b2974b26cf9e8d553afdbb569c253dec04b8a57c"
+      "bytes": 11622,
+      "sha256": "55579b7413f4ccbab7e18e402160dd9bb3de6d35459c21ec767a8d260d10acf3"
     },
     {
       "path": "static/scope-visuals.js",
@@ -344,8 +344,8 @@
     },
     {
       "path": "static/airspace-library.js",
-      "bytes": 20858,
-      "sha256": "8b74e2fea5d70075dcdd379915c11e3b70cfd8d371b597f19cb4faa643fb74ec"
+      "bytes": 20883,
+      "sha256": "b3ca2fae2fd3533dd3f270b754ad9f4f4663c12bd0cc5c3ca0f379bd0481e971"
     },
     {
       "path": "engine/internal/procedural/route_chart.go",

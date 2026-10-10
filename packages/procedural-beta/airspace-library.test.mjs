@@ -231,6 +231,17 @@ test('Load cancellation and stale confirmation retain unsaved chart entries and 
     assert.equal(h.commands.length, 0); assert.equal(h.changed(), 0); assert.match(h.status(), /changed/);
 });
 
+test('successful airspace load clears confirmed chart drafts and failed loads keep them', async () => {
+    const stored = prepared(), h = harness({ stored: [stored] }); h.get('airspace-select').value = stored.id;
+    let loaded = 0;
+    h.context.host.loaded = () => { loaded++; h.draft(false); };
+    h.draft(true); h.commandHandler(async () => { throw new Error('Chart load rejected'); });
+    await h.click('airspace-load'); assert.equal(loaded, 0); assert.equal(h.context.host.hasDraft(), true);
+    h.commandHandler(undefined);
+    await h.click('airspace-load'); assert.equal(loaded, 1); assert.equal(h.context.host.hasDraft(), false);
+    h.name('Loaded chart'); await h.click('airspace-save'); assert.match(h.status(), /Airspace saved/);
+});
+
 test('missing navigation dependency errors remain visible and leave the current chart untouched', async () => {
     const stored = prepared(), h = harness({ stored: [stored] }), original = copy(h.state); h.get('airspace-select').value = stored.id;
     h.commandHandler(async () => { throw new Error('Keep referenced route route-one and fix east unchanged before loading airspace.'); });

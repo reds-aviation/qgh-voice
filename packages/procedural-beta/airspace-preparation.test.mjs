@@ -170,6 +170,28 @@ test('simple exercise Save, Rename, Load and quota/invalid-import paths keep exa
     h.context.localStorage.setItem = originalSet;
 });
 
+test('saved exercises in another window or unreadable device storage are not overwritten by Save', async () => {
+    const storageKey = 'ats-simbox-exercise-templates-v1';
+    for (const unreadable of [false, true]) {
+        const h = domHarness('<html><body><section id="tab-build"></section></body></html>');
+        const original = library.prepareExerciseTemplate(bundle(), 'Existing exercise', 'original');
+        h.context.localStorage.setItem(storageKey, unreadable ? '{unreadable' : JSON.stringify([original]));
+        const state = { role: 'instructor', exerciseId: 'live', running: false, elapsed: 0, revision: 4 };
+        Object.assign(h.context, routeChart, { validateBoundary: airspace.validateBoundary, project: geometry.project, confirm: () => true,
+            host: { view: () => state, generation: () => 1, request: async () => bundle(), message() {} } });
+        vm.runInContext(source('scenario-library.js').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '') + ';createScenarioLibrary(host);', h.context);
+        if (!unreadable) {
+            const other = library.prepareExerciseTemplate(bundle(), 'Other window exercise', 'other');
+            h.context.localStorage.setItem(storageKey, JSON.stringify([original, other]));
+        }
+        const before = h.context.localStorage.getItem(storageKey);
+        h.document.getElementById('template-name').value = 'New exercise';
+        h.document.getElementById('template-save').click(); await new Promise(resolve => setImmediate(resolve));
+        assert.equal(h.context.localStorage.getItem(storageKey), before, unreadable ? 'Keep unreadable records for recovery' : 'Keep exercises saved from another window');
+        assert.match(h.document.getElementById('scenario-library-status').textContent, unreadable ? /could not be read/ : /another window/);
+    }
+});
+
 function mouseDrawingHarness(withOrigin = true) {
     const h = domHarness('<html><body><div id="scope-wrap"><canvas id="scope"></canvas></div><section id="tab-build"></section></body></html>');
     const state = { role: 'instructor', exerciseId: 'mouse-drawing', running: false,
@@ -201,6 +223,20 @@ function mouseDrawingHarness(withOrigin = true) {
     const submit = async id => { get(id).dispatchEvent(new h.Event('submit', { cancelable: true })); await new Promise(resolve => setImmediate(resolve)); };
     return { ...h, state, commands, get, preview, form, points, emit, clickPoint, sketchButton, edit, submit, editor: h.context.editor };
 }
+
+test('renaming or reshaping an inactive area keeps its activation state', async () => {
+    const h = mouseDrawingHarness();
+    h.state.areas = [{ id: 'inactive-danger', name: 'Inactive danger area', kind: 'danger', active: false,
+        floorLabel: 'GND', ceilingLabel: 'FL100', points: square }]; h.editor.render();
+    h.get('custom-boundary-list').querySelector('button').click();
+    h.edit(h.form.elements.namedItem('name'), 'Renamed danger area');
+    await h.submit('custom-boundary-form');
+    assert.equal(h.commands.length, 1); assert.equal(h.commands[0].payload.id, 'inactive-danger');
+    assert.equal(h.commands[0].payload.active, false, 'Changing geometry or its name must not activate an area');
+    h.edit(h.form.elements.namedItem('name'), 'New area');
+    h.edit(h.points, '0,0\n8,0\n0,8'); await h.submit('custom-boundary-form');
+    assert.equal(h.commands[1].payload.active, true, 'New boundaries retain their default active state');
+});
 
 test('mouse drawing starts by placing the ARP dot without coordinate entry, and still guards unapplied changes and running state', async () => {
     const h = mouseDrawingHarness(false), arpForm = h.get('custom-arp-form');
