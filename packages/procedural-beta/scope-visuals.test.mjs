@@ -67,6 +67,24 @@ test('Procedural console boots and paints instructor/student views when the shar
   h.context.prepare('student');h.context.paint();assert.equal(h.context.commands.length,0);
 });
 
+test('Procedural fallback runway and approach geometry matches the shared renderer at moved and geographic ARPs',()=>{
+  const h=consoleHarness(false);
+  for(const environment of [
+    {runwayHeadingDeg:90,runwayLengthNm:3/1.852,runwayOffsetNm:.15,drawnARP:true,stationXNm:7.5,stationYNm:-4.25},
+    {runwayHeadingDeg:230,runwayLengthNm:1.5,runwayOffsetNm:0,chartOrigin:{latitude:26,longitude:73},stationXNm:8,stationYNm:5},
+    {runwayHeadingDeg:0,runwayCenterXNm:0,runwayCenterYNm:2.25},
+  ]) {
+    const actual=h.context.scopeRunwayGeometry(environment),expected=Visuals.runwayGeometry(environment);
+    for(const key of ['arp','centre','threshold','farThreshold']) assert.deepEqual(JSON.parse(JSON.stringify(actual[key])),expected[key]);
+    for(const distance of [0,.5,5,10]) assert.deepEqual(JSON.parse(JSON.stringify(h.context.scopeApproachPoint(environment,distance))),Visuals.approachPoint(environment,distance));
+  }
+  h.context.prepare('instructor');h.context.runwayFixture={runwayHeadingDeg:90,runwayLengthNm:3/1.852,runwayOffsetNm:.15};h.drawCalls.length=0;
+  vm.runInContext('Object.assign(view.environment,runwayFixture);display.runway=true;draw();',h.context);
+  const g=h.context.metrics(),r=Visuals.runwayGeometry({...h.context.runwayFixture,stationXNm:20,stationYNm:15});
+  assert.ok(h.drawCalls.some((call,i)=>call[0]==='moveTo'&&Math.abs(call[1]-(g.cx+r.threshold.xNm*g.scale))<1e-9&&Math.abs(call[2]-(g.cy-r.threshold.yNm*g.scale))<1e-9
+    &&h.drawCalls[i+1]?.[0]==='lineTo'&&Math.abs(h.drawCalls[i+1][1]-(g.cx+r.farThreshold.xNm*g.scale))<1e-9&&Math.abs(h.drawCalls[i+1][2]-(g.cy-r.farThreshold.yNm*g.scale))<1e-9));
+});
+
 test('Procedural targets initialize from selected aircraft, preserve edited drafts on polling and restore drafts per aircraft',()=>{
   const h=consoleHarness();h.context.prepare('instructor');
   const input=(form,name='value')=>h.node(form).querySelector(`[name="${name}"]`);

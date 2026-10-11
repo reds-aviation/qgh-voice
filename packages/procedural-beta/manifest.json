@@ -1,16 +1,16 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "go": "1.27.1",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 44266,
-      "sha256": "8dbc56da1a278224608d48e33e682720d02ccf816613833c48ce51a49813e8e8"
+      "bytes": 44281,
+      "sha256": "74c679b016b095680154e774774ba15a57f6c3cdec1cacb61932539b64eb9fc9"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 132031,
-      "sha256": "9fee0eddc594fbfe5128fecefff6079fd4772abeae9b6c2867879cfc22a942a4"
+      "bytes": 133030,
+      "sha256": "2f1e489153e56475b03b9b0ef66d20b9fb50962d95e682215e4cdba1cf21089a"
     },
     {
       "path": "static/procedural.css",
@@ -30,12 +30,12 @@
     {
       "path": "static/scope-navigation.js",
       "bytes": 2558,
-      "sha256": "6860243189a9ae03be6079fff74bb58ef981c8e08f7eca12b3d9bd0e43ba80ae"
+      "sha256": "d74125d4736676b3e13287f31d1c786f5095df83fa4cd679f3cbd73af9db6c4c"
     },
     {
       "path": "static/chart-workshop.js",
-      "bytes": 41235,
-      "sha256": "9f1d882cdb5e8d15c08a5ab947475fa52a2aee208a34ee5f6807ded502f7942d"
+      "bytes": 41670,
+      "sha256": "5b9c2c47562fec3e5705af6e94fc64e67fd274070322471c6251db8268953dcb"
     },
     {
       "path": "static/chart-geometry.js",
@@ -69,8 +69,8 @@
     },
     {
       "path": "static/procedural-guide.html",
-      "bytes": 34800,
-      "sha256": "ac38cb3663b20443a5988a204fe662c677522d34d299e44a8efdb7674c7d9967"
+      "bytes": 36038,
+      "sha256": "cdb35d3f6f95b8bbe3723b36bae482775bf8f18c3d2767ebb7f3d7cfebb376da"
     },
     {
       "path": "static/style.css",
@@ -129,8 +129,8 @@
     },
     {
       "path": "static/procedural-engine.wasm",
-      "bytes": 6336121,
-      "sha256": "3852dc669f25ab3f26c50ba71ac4e4bd7f294b6124b18f70f33c190c8b1480e7"
+      "bytes": 6339594,
+      "sha256": "206f99cf60c8e456a5107636a26470aef6620706c5ba3b6fe2646cd48544a073"
     },
     {
       "path": "static/wasm_exec.js",
@@ -169,13 +169,13 @@
     },
     {
       "path": "engine/internal/procedural/motion.go",
-      "bytes": 19393,
-      "sha256": "1ebf9bb2a2b97c13df12a07a02d586b0862c316a01e89429d5666d9501c8ebc3"
+      "bytes": 19786,
+      "sha256": "64375b4d2e59779ab3b7d9dfbba169609a1cf65208ce361cfbd40acb38cdf878"
     },
     {
       "path": "engine/internal/procedural/presets.go",
-      "bytes": 6703,
-      "sha256": "d9b5102bd64e1a4bae6be1c5d7e574dfd855c30211329b754511cea7097b983a"
+      "bytes": 6920,
+      "sha256": "7221cb6079770edb88289b97642852ea9533a9858aa2e9eab89642a0d5099c7c"
     },
     {
       "path": "engine/internal/procedural/setup.go",
@@ -184,13 +184,13 @@
     },
     {
       "path": "engine/internal/procedural/types.go",
-      "bytes": 16200,
-      "sha256": "f0399446d9b1c3a53c78069ef8453c73ef4a3c7bf26a6c3260910118a0040b19"
+      "bytes": 16429,
+      "sha256": "6b83cccec0112e45b35b108509f03b15ea3fc11f1a31245829e6a9429e742f57"
     },
     {
       "path": "engine/internal/procedural/validation.go",
-      "bytes": 20970,
-      "sha256": "c3bb2656da26e7b1b2d5a6dd690bdbace373b1d4488cb1e2d1ad94ee935eb7ff"
+      "bytes": 21284,
+      "sha256": "97a7d6efd866b57b7b9e31dd2eb67de73d2024835fd84a84ca61f0b142b5adb1"
     },
     {
       "path": "engine/cmd/browser/main.go",
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 108720,
-      "sha256": "e4f2ee62552955d82e9c3545e065e6412d3b3ef034b408113bda3b471802da84"
+      "bytes": 108982,
+      "sha256": "fa491795ece29d24e73d9718789aa588639f921fe98c10e3e4bb4adc476c455c"
     },
     {
       "path": "static/gyani-fox.png",
@@ -279,13 +279,13 @@
     },
     {
       "path": "static/airspace-preparation.js",
-      "bytes": 55479,
-      "sha256": "09ccd226b82415155ffafba38aafd49812252bb52ef0539086a99dd9c35bbd1d"
+      "bytes": 60048,
+      "sha256": "9906fb5bcced4c9491429e0dc2e5ea73f91ae15203f0ff6727cbc028e4a52b70"
     },
     {
       "path": "static/airspace-preparation.css",
-      "bytes": 7664,
-      "sha256": "feb384a80aeea6dc96701ad27ebbeb234e930977b3351cc470653aba4dcbb6be"
+      "bytes": 8452,
+      "sha256": "181566f7754415ed91f50ff99688b102cf5d45fabfad959abeff88618fc77b1d"
     },
     {
       "path": "static/scenario-library.js",
@@ -314,13 +314,13 @@
     },
     {
       "path": "static/workspace-shell.js",
-      "bytes": 32932,
-      "sha256": "b91cb6e2ce0ed06b0d4f0202a382a92db19b7bf581f7c5a8b5e5d37776aec123"
+      "bytes": 36300,
+      "sha256": "5b821a11847641c332dbf2d08b6615aff3042f28ca9991f97d9c6aaf7d315968"
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 54200,
-      "sha256": "0103fd2a93dda52a6da3ba49498e0ac5294c1198613d721c288ea59f619cac53"
+      "bytes": 56194,
+      "sha256": "9294f8536f68bdc41efbc05a6406c26280d1bbfd2672fc0b35910f23fdde4d83"
     },
     {
       "path": "static/meeting-room.js",
@@ -329,8 +329,8 @@
     },
     {
       "path": "static/scope-visuals.js",
-      "bytes": 12173,
-      "sha256": "9f342e6c85e2cfa6b45cf8e0730a7042eccf726afd2c0cbd539cbbe985c0e569"
+      "bytes": 14782,
+      "sha256": "09bedb0345af550eaeee9f76d22c7cea1f136499191b96a5ca5041368edfa68e"
     },
     {
       "path": "static/suite-entry.css",
@@ -339,18 +339,18 @@
     },
     {
       "path": "static/route-chart.js",
-      "bytes": 8361,
-      "sha256": "911225c220ee5cb6f18a1d54ff4e3711099d89a0bc6e0cd7e9e9e60fef744e13"
+      "bytes": 8877,
+      "sha256": "dcfed71148c31957ac619d082726255e087a467dbeae99f3e7a090af29406575"
     },
     {
       "path": "static/airspace-library.js",
-      "bytes": 20883,
-      "sha256": "b3ca2fae2fd3533dd3f270b754ad9f4f4663c12bd0cc5c3ca0f379bd0481e971"
+      "bytes": 21622,
+      "sha256": "704ed123b70be520ed3bad20d9ec7aaa971a3ac24429f3a9558d6f6ec6c800ab"
     },
     {
       "path": "engine/internal/procedural/route_chart.go",
-      "bytes": 8940,
-      "sha256": "ff46d5aa6629fb44ea750b97608d50e3e4eeebd346a40e82fbad366a19a47c0b"
+      "bytes": 9014,
+      "sha256": "c617cb0242e412ec9d88c2f5b59f4f84e106dd40c4929ae802ab8836b2a3b614"
     },
     {
       "path": "engine/internal/procedural/route_chart_test.go",

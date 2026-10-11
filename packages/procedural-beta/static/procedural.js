@@ -1112,6 +1112,20 @@ $('scope-wrap').append(studentPlotPanel);
 globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls'),onLogout:logoutToHome});
 Promise.resolve().then(syncPreparationControls);
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
+// Keep the scope usable if its optional shared drawing helper is unavailable.
+// This fallback follows the same east/north NM contract as the engine/helper.
+function scopeRunwayGeometry(env) {
+    if (globalThis.ATCScopeVisuals?.runwayGeometry) return globalThis.ATCScopeVisuals.runwayGeometry(env);
+    const heading = (env.runwayHeadingDeg ?? 0) * Math.PI / 180, ux = Math.sin(heading), uy = Math.cos(heading);
+    const lengthNm = env.runwayLengthNm ?? 3 / 1.852, offset = env.runwayOffsetNm ?? .15;
+    const arp = env.chartOrigin && !env.drawnARP ? { xNm: 0, yNm: 0 } : { xNm: env.stationXNm || 0, yNm: env.stationYNm || 0 };
+    const centre = Number.isFinite(env.runwayCenterXNm) && Number.isFinite(env.runwayCenterYNm) ? { xNm: env.runwayCenterXNm, yNm: env.runwayCenterYNm } : { xNm: arp.xNm + uy * offset, yNm: arp.yNm - ux * offset };
+    return { arp, centre, ux, uy, lengthNm, threshold: { xNm: centre.xNm - ux * lengthNm / 2, yNm: centre.yNm - uy * lengthNm / 2 }, farThreshold: { xNm: centre.xNm + ux * lengthNm / 2, yNm: centre.yNm + uy * lengthNm / 2 } };
+}
+function scopeApproachPoint(env, nm) {
+    const runway = scopeRunwayGeometry(env);
+    return { xNm: runway.threshold.xNm - runway.ux * nm, yNm: runway.threshold.yNm - runway.uy * nm };
+}
 function draw() {
     sweep.update();
     $('approach-marks').setAttribute('aria-pressed', String(display.approach));
@@ -1132,6 +1146,7 @@ function draw() {
     const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
     const env = view.environment;
     const [stationX, stationY] = p(env.stationXNm || 0, env.stationYNm || 0);
+    const airfield = scopeRunwayGeometry(env);
     if (showMap && mapImage) {
         const m = env.map, w = m.widthNm * g.scale, h = w * mapImage.naturalHeight / mapImage.naturalWidth;
         ctx.save();
@@ -1177,22 +1192,24 @@ function draw() {
     }
     if (display.areas)
         drawAreas(ctx, (view.areas || []).filter(a => !hiddenAreas.has(a.id)), p, display.areaLabels ? (range > 100 ? 'name' : 'full') : false);
-    const stationLabel = (env.stationName || 'NAV0').split(' ')[0];
+    const stationName = (env.stationName || 'ARP').split(' ')[0];
+    const atARP = Math.hypot(airfield.arp.xNm - (env.stationXNm || 0), airfield.arp.yNm - (env.stationYNm || 0)) <= .001;
+    const stationLabel = atARP && stationName !== 'ARP' ? `ARP / ${stationName}` : stationName;
     const navigationLabels = [{ x: stationX + 5, y: stationY - 22, width: ctx.measureText(stationLabel).width + 8, height: 18 }];
     if (display.routes) {
-        const labelledRoutes = new Set();
         const fixesById = new Map(view.fixes.map(f => [f.id, f]));
         const routeFixIds = new Set(view.routes.flatMap(r => r.fixIds));
         const shownFixes = new Set();
         const coordinateLabels = new Map();
         const label = (text, x, y, color) => {
-            const box = reserveLabel({ x, y }, ctx.measureText(text).width, g.width, g.height, navigationLabels);
+            const lines = String(text).split("\n");
+            const box = reserveLabel({ x, y }, Math.max(...lines.map(line => ctx.measureText(line).width)), g.width, g.height, navigationLabels, lines.length * 14 + 2);
             if (!box)
                 return false;
             ctx.fillStyle = '#111416';
             ctx.fillRect(box.x, box.y, box.width, box.height);
             ctx.fillStyle = color;
-            ctx.fillText(text, box.x + 4, box.y + 12);
+            lines.forEach((line, i) => ctx.fillText(line, box.x + 4, box.y + 12 + i * 14));
             return true;
         };
         for (const route of view.routes) {
@@ -1207,28 +1224,11 @@ function draw() {
             fixes.forEach(f => shownFixes.add(f.id));
             drawRouteChart(ctx, route, view.fixes, p, {
                 width: g.width, height: g.height, label,
-                showLabels: display.routeLabels && Boolean(route.chartDirection || route.levelLimits || route.publishedSegments?.length),
+                showLabels: display.routeLabels,
                 color: open ? '#a5c4ac' : '#8e9691'
             });
             if (route.coordinateOrigin)
                 for (const [id, text] of routePointLabels(route, view.fixes)) coordinateLabels.set(id, text);
-            if (display.routeLabels && fixes.length > 1) {
-                const name = route.id.startsWith('aip-') ? route.name.split(' ')[0] : route.name;
-                if (!labelledRoutes.has(name)) {
-                    const segments = fixes.slice(1).map((f, i) => {
-                        const [ax, ay] = p(fixes[i].xNm, fixes[i].yNm), [bx, by] = p(f.xNm, f.yNm);
-                        return visibleSegment({ x: ax, y: ay }, { x: bx, y: by }, g.width, g.height);
-                    }).filter((s) => !!s).sort((a, b) => Math.hypot(b[1].x - b[0].x, b[1].y - b[0].y) - Math.hypot(a[1].x - a[0].x, a[1].y - a[0].y));
-                    for (const segment of segments) {
-                        if (Math.hypot(segment[1].x - segment[0].x, segment[1].y - segment[0].y) < 42)
-                            continue;
-                        if (label(name, (segment[0].x + segment[1].x) / 2, (segment[0].y + segment[1].y) / 2, open ? '#a5c4ac' : '#8e9691')) {
-                            labelledRoutes.add(name);
-                            break;
-                        }
-                    }
-                }
-            }
             ctx.restore();
         }
         for (const f of view.fixes) {
@@ -1251,20 +1251,24 @@ function draw() {
         }
     }
     if (display.runway) {
-        const rad = env.runwayHeadingDeg * Math.PI / 180, dx = Math.sin(rad) * env.runwayLengthNm / 2, dy = Math.cos(rad) * env.runwayLengthNm / 2;
-        const [a, b] = p(-dx, -dy), [c, d] = p(dx, dy);
-        ctx.strokeStyle = '#ddc88f';
-        ctx.lineWidth = 4;
-        line(a, b, c, d);
-        ctx.lineWidth = 1;
-        ctx.save();
-        ctx.setLineDash([4, 5]);
-        const [e, f] = p(-Math.sin(rad) * 12, -Math.cos(rad) * 12);
-        line(a, b, e, f);
-        ctx.restore();
+        const runway = airfield;
+        if (globalThis.ATCScopeVisuals?.drawRunwayStrip) globalThis.ATCScopeVisuals.drawRunwayStrip(ctx, env, p, g.scale);
+        else {
+            ctx.save(); ctx.setLineDash([]); ctx.lineCap = 'butt'; ctx.strokeStyle = '#91979c'; ctx.lineWidth = Math.max(5, 45 / 1852 * g.scale);
+            line(...p(runway.threshold.xNm, runway.threshold.yNm), ...p(runway.farThreshold.xNm, runway.farThreshold.yNm));
+            ctx.strokeStyle = '#e5e8ea'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+            line(...p(runway.threshold.xNm, runway.threshold.yNm), ...p(runway.farThreshold.xNm, runway.farThreshold.yNm)); ctx.restore();
+        }
+        ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = '#829098'; ctx.setLineDash([4, 5]);
+        const first = p(runway.threshold.xNm, runway.threshold.yNm), end = scopeApproachPoint(env, 12);
+        line(...first, ...p(end.xNm, end.yNm)); ctx.restore();
     }
     if (display.approach)
         drawApproachReference(p, g.scale, navigationLabels);
+    if (Math.hypot(airfield.arp.xNm - (env.stationXNm || 0), airfield.arp.yNm - (env.stationYNm || 0)) > .001) {
+        const [x, y] = p(airfield.arp.xNm, airfield.arp.yNm);
+        ctx.fillStyle = '#bce0b9'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillText('ARP', x + 8, y - 8);
+    }
     ctx.fillStyle = '#bce0b9';
     ctx.beginPath();
     ctx.arc(stationX, stationY, 3, 0, Math.PI * 2);
@@ -1346,8 +1350,7 @@ function draw() {
 function approachPoints() {
     if (!view)
         return [];
-    const heading = view.environment.runwayHeadingDeg * Math.PI / 180, halfRunway = view.environment.runwayLengthNm / 2;
-    return Array.from({ length: 16 }, (_, i) => i <= 10 ? i / 2 : i - 5).map(nm => ({ nm, xNm: -Math.sin(heading) * (halfRunway + nm), yNm: -Math.cos(heading) * (halfRunway + nm) }));
+    return Array.from({ length: 16 }, (_, i) => i <= 10 ? i / 2 : i - 5).map(nm => ({ nm, ...scopeApproachPoint(view.environment, nm) }));
 }
 function drawApproachReference(p, scale, occupied) {
     if (!view)

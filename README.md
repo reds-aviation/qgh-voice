@@ -2,7 +2,7 @@
 
 ATC training with individual QGH, instructor-led QGH/SRE/SRA, and Procedural exercises.
 
-The public product is **ATS SIM BOX · Version 1**, release `1.0.0`. [Open GitHub Pages](https://reds-aviation.github.io/qgh-voice/); the Netlify deployment packages the same suite. Windows and Android packages are built and distributed separately; publishing the web suite does not update installed native apps.
+The public product is **ATS SIM BOX · Version 1**, release `1.0.3`. [Open GitHub Pages](https://reds-aviation.github.io/qgh-voice/); [Netlify](https://voice-qgh-reds.netlify.app/) packages the same suite. Windows and Android packages are built and distributed separately; publishing the web suite does not update installed native apps.
 
 See [USER_GUIDE.md](USER_GUIDE.md) for installation, exercise, replay, tactical, and voice-control guidance.
 

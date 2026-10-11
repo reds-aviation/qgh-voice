@@ -1,0 +1,231 @@
+/* IAF-inspired presentation for entry, preparation, help and review.
+   Live, READY and paused operational workspaces keep their existing palette.
+   The --iaf-* names are deliberately separate from radar/instrument tokens. */
+body[data-suite-surface]{
+  --iaf-sky:#eef4f8;--iaf-card:#fff;--iaf-ink:#132d46;--iaf-muted:#425b70;
+  --iaf-blue:#2c5777;--iaf-blue-dark:#203f58;--iaf-header:#365e7b;
+  --iaf-line:#b2c6d7;--iaf-soft:#e6eff6;--iaf-saffron:#ff9933;--iaf-green:#138808;
+}
+
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]),
+body[data-suite-surface="single"]:has(#setup.active),
+body[data-suite-surface="tactical"]:has(#tSetup.active),
+body[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),
+body[data-suite-surface="procedural"].procedural-entry-page:not(.desk-open){
+  --entry-bg:var(--iaf-sky);--entry-paper:var(--iaf-sky);--entry-card:var(--iaf-card);
+  --entry-ink:var(--iaf-ink);--entry-muted:var(--iaf-muted);--entry-line:var(--iaf-line);
+  --entry-accent:var(--iaf-blue);--entry-accent-dark:var(--iaf-blue-dark);
+  --bg:var(--iaf-sky);--paper:var(--iaf-card);--paper-strong:var(--iaf-card);--card:var(--iaf-card);
+  --ink:var(--iaf-ink);--text:var(--iaf-ink);--panel:var(--iaf-card);--muted:var(--iaf-muted);
+  --line:var(--iaf-line);--line-strong:#93aec3;--border:var(--iaf-line);
+  --teal:var(--iaf-blue);--teal-dark:var(--iaf-blue-dark);--teal-soft:var(--iaf-soft);
+  --accent:var(--iaf-blue);--accent-dark:var(--iaf-blue-dark);--tint:var(--iaf-soft);
+  --t-paper:var(--iaf-sky);--t-card:var(--iaf-card);--t-ink:var(--iaf-ink);--t-muted:var(--iaf-muted);
+  --t-line:var(--iaf-line);--t-accent:var(--iaf-blue);--t-accent-dark:var(--iaf-blue-dark);
+  background:var(--iaf-sky);color:var(--iaf-ink);color-scheme:light;
+}
+
+/* Shared headers are themed only while a non-operational screen is visible. */
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]) :is(.entry-header,.site-header,.common-header),
+body[data-suite-surface="single"]:has(:is(#setup,#analysis).active) .app-header,
+body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header,
+body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header,
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header,
+body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header{
+  --ink:#fff;--muted:#d5e6f3;--entry-ink:#fff;--entry-muted:#d5e6f3;
+  --teal:#e6f2fc;--teal-dark:#e6f2fc;--entry-accent:#e6f2fc;
+  min-height:88px;height:auto;padding:17px 20px 17px 82px;gap:18px;
+  background:var(--iaf-header) url('iaf-roundel.png') 20px center/42px 42px no-repeat;
+  color:#fff;border-radius:0;border-bottom:4px solid;
+  border-image:linear-gradient(to right,var(--iaf-saffron) 0 33.333%,#fff 33.333% 66.666%,var(--iaf-green) 66.666%) 1;
+  flex-wrap:wrap;
+}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]) :is(.entry-header,.site-header,.common-header) :is(a,h1,strong,.product-version,.role-pill,.suite-guide-chat),
+body[data-suite-surface="single"]:has(:is(#setup,#analysis).active) .app-header :is(a,h1,.product-version,.suite-guide-chat),
+body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header :is(a,h1,.product-version,.suite-guide-chat),
+body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header :is(a,strong,.product-version,.role-pill,.suite-guide-chat),
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header :is(a,strong,.suite-guide-chat),
+body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header :is(.brand,a,strong,.suite-guide-chat){color:#fff}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]) :is(.entry-header,.site-header,.common-header) :is(small,.brand span),
+body[data-suite-surface="single"]:has(:is(#setup,#analysis).active) .app-header .credit,
+body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header .tactical-credit,
+body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header small,
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header small,
+body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header :is(small,#creator-credit,#creator-credit span){color:#d5e6f3}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]) :is(.entry-header,.site-header,.common-header) button,
+body[data-suite-surface="single"]:has(:is(#setup,#analysis).active) .app-header button,
+body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header button,
+body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header button,
+body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header button,
+body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header button{color:#fff;background:transparent;border-color:#90aec4}
+
+/* Existing forms and their labels. Nothing below selects a live control rail. */
+:is(#setup,#tSetup,#setupPanel,#joinPanel,#waitingPanel,#readyPanel,#studentEnded,#entry.suite-entry){
+  --entry-bg:#eef4f8;--entry-ink:#132d46;--entry-muted:#425b70;--entry-accent:#2c5777;--entry-line:#b2c6d7;
+}
+body[data-suite-surface="single"] #setup,
+body[data-suite-surface="tactical"] #tSetup,
+body[data-suite-surface="host-setup"] #setupPanel,
+body[data-suite-surface="join"] :is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded),
+body[data-suite-surface="procedural"]:not(.desk-open) :is(#entry,#setup,#waiting){color:var(--iaf-ink)}
+body[data-suite-surface="single"] #setup :is(.setup-card,input,select,textarea),
+body[data-suite-surface="tactical"] #tSetup :is(.tactical-setup-card,input,select,textarea),
+body[data-suite-surface="host-setup"] #setupPanel :is(input,select,textarea),
+body[data-suite-surface="join"] :is(#joinPanel,#readyPanel) :is(input,select,textarea),
+body[data-suite-surface="procedural"]:not(.desk-open) :is(#entry,#setup,#waiting) :is(input,select,textarea){background:#fff;color:var(--iaf-ink);border-color:var(--iaf-line)}
+body[data-suite-surface="single"] #setup label,
+body[data-suite-surface="tactical"] #tSetup label,
+body[data-suite-surface="host-setup"] #setupPanel label,
+body[data-suite-surface="join"] :is(#joinPanel,#readyPanel) label,
+body[data-suite-surface="procedural"]:not(.desk-open) :is(#entry,#setup,#waiting) label{color:var(--iaf-muted)}
+
+body[data-suite-surface="single"] #setup :is(button.primary,#startExercise),
+body[data-suite-surface="tactical"] #tSetup :is(button.primary,#tStart),
+body[data-suite-surface="host-setup"] #setupPanel .primary-action,
+body[data-suite-surface="join"] :is(#joinPanel,#readyPanel) :is(.primary-action,#joinSession,#studentReady),
+body[data-suite-surface="procedural"]:not(.desk-open) :is(#entry,#setup) :is(.primary,.primary-action,.entry-action){background:var(--iaf-blue);border-color:var(--iaf-blue);color:#fff}
+body[data-suite-surface="single"] #setup :is(button.primary,#startExercise):hover:not(:disabled),
+body[data-suite-surface="tactical"] #tSetup :is(button.primary,#tStart):hover:not(:disabled),
+body[data-suite-surface="host-setup"] #setupPanel .primary-action:hover:not(:disabled),
+body[data-suite-surface="join"] :is(#joinPanel,#readyPanel) :is(.primary-action,#joinSession,#studentReady):hover:not(:disabled),
+body[data-suite-surface="procedural"]:not(.desk-open) :is(#entry,#setup) :is(.primary,.primary-action,.entry-action):hover:not(:disabled){background:var(--iaf-blue-dark);border-color:var(--iaf-blue-dark);color:#fff}
+body[data-suite-surface="host-setup"] #setupPanel button:disabled{background:#edf1f5;color:#526378;border-color:#a3b3c2}
+
+/* Reuse original aviation artwork. The new wash is local to these surfaces. */
+[data-suite-surface="qgh"] .entry-intro,
+[data-suite-surface="instructor"] #entry .entry-copy,
+[data-suite-surface="procedural"]:not(.desk-open) :is(#entry .entry-copy,#setup .section-title),
+[data-suite-surface="single"] #setup .setup-intro,
+[data-suite-surface="tactical"] #tSetup .tactical-setup-intro,
+[data-suite-surface="host-setup"] #setupPanel>.section-title,
+[data-suite-surface="join"] :is(#joinPanel,#waitingPanel,#readyPanel),
+[data-suite-surface="guide"] :is(.common-hero,.guide-hero,.training-hero){background-color:#edf5fc;background-blend-mode:multiply}
+[data-suite-surface="qgh"] :is(.entry-intro>span,.entry-intro p,.entry-option-copy small,.entry-quote,.entry-training-note),
+[data-suite-surface="instructor"] #entry :is(.entry-copy p,.entry-note,.session-connection p,.entry-role p),
+[data-suite-surface="procedural"]:not(.desk-open) #entry :is(.entry-copy p,.entry-note,.session-connection p,.entry-role p,small),
+[data-suite-surface="guide"] :is(.common-eyebrow,.common-hero small,.common-flow a span,.common-footer){color:var(--iaf-muted)}
+[data-suite-surface="qgh"] :is(.entry-intro h2,.entry-option-copy strong),
+[data-suite-surface="instructor"] #entry :is(h1,h2),
+[data-suite-surface="procedural"]:not(.desk-open) #entry :is(h1,h2),
+[data-suite-surface="guide"] :is(h1,h2,h3){color:var(--iaf-ink)}
+[data-suite-surface="qgh"] :is(.entry-program-tab,.entry-option-index,.entry-option-action,.flow-subtitle,.flow-section-label),
+[data-suite-surface="instructor"] #entry :is(.eyebrow,.entry-secondary),
+[data-suite-surface="procedural"]:not(.desk-open) #entry :is(.eyebrow,.entry-secondary),
+[data-suite-surface="guide"] :is(.common-layout a,.common-section details[open] summary,.common-nav>strong){color:var(--iaf-blue)}
+[data-suite-surface="qgh"] :is(.entry-option,.entry-web-distribution),
+[data-suite-surface="instructor"] #entry :is(.entry-role,.session-connection),
+[data-suite-surface="procedural"]:not(.desk-open) #entry :is(.entry-role,.session-connection),
+[data-suite-surface="guide"] :is(.common-hero,.common-flow a,.common-section details,.common-nav){border-color:var(--iaf-line)}
+[data-suite-surface="qgh"] :is(.entry-web-install,.entry-native-downloads a){color:var(--iaf-blue);border-color:var(--iaf-line)}
+[data-suite-surface="qgh"] .entry-option:hover{border-color:var(--iaf-blue)}
+[data-suite-surface="qgh"] .entry-intro .flow-subtitle{color:var(--iaf-blue)}
+[data-suite-surface="qgh"] .entry-intro>span:after{background:linear-gradient(90deg,var(--iaf-saffron) 0 47%,transparent 47% 53%,var(--iaf-green) 53%)}
+[data-suite-surface="guide"] .common-nav{background:#edf4f9}
+
+/* Debrief chrome receives the theme; replay canvases and their plot frames do not. */
+body[data-suite-surface="single"]:has(#analysis.active),
+body[data-suite-surface="tactical"]:has(#tAnalysis.active),
+body[data-suite-surface="host-setup"]:has(#reviewScreen:not([hidden])){background:var(--iaf-sky)}
+[data-suite-surface="single"] #analysis :is(.summary,.debrief,.turn-summary,.log-panel),
+[data-suite-surface="tactical"] #tAnalysis :is(.tactical-summary,.tactical-review-side),
+[data-suite-surface="host-setup"] #reviewScreen .review-summary{--muted:var(--iaf-muted);--teal-dark:var(--iaf-blue);--line:var(--iaf-line);--t-muted:var(--iaf-muted);--t-accent:var(--iaf-blue);background:var(--iaf-card);color:var(--iaf-ink);border-color:var(--iaf-line)}
+[data-suite-surface="single"] #analysis .analysis-head,
+[data-suite-surface="tactical"] #tAnalysis .tactical-analysis-head,
+[data-suite-surface="host-setup"] #reviewScreen>.workspace-head{color:var(--iaf-ink)}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #work-panel:has(#tab-debrief:not([hidden])),
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief{
+  --paper:#fff;--panel:#fff;--ink:#132d46;--text:#132d46;--muted:#425b70;
+  --line:#b2c6d7;--teal:#2c5777;--teal-dark:#203f58;--teal-soft:#e6eff6;
+  background:var(--iaf-card);color:var(--iaf-ink);
+}
+
+/* Help follows the screen; no fallback rule alters exercise-time Gyani. */
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__panel{background:#f5f9fc;color:#132d46;border-color:#b2c6d7}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__header h2{color:#132d46}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat :is(.suite-guide-chat__header p,.suite-guide-chat__speaker,.suite-guide-chat__message .suite-guide-chat__creator,.suite-guide-chat__compose-row small){color:#425b70}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat :is(a,.suite-guide-chat__close,.suite-guide-chat__suggestions button,.suite-guide-chat__composer label){color:#2c5777}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__message{background:#e8f0f6}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__message--user{background:#d8e7f2}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__composer{background:#edf4f9;border-color:#c8d8e6}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__composer textarea{background:#fff;color:#132d46;border-color:#9fb8cd}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__composer textarea::placeholder{color:#425b70}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .suite-guide-chat__composer .suite-guide-chat__send{background:#2c5777;border-color:#2c5777;color:#fff}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active),[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) :focus-visible{outline-color:#a95a00}
+
+@media(max-width:680px){
+  body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"]) :is(.entry-header,.site-header,.common-header),
+  body[data-suite-surface="single"]:has(:is(#setup,#analysis).active) .app-header,
+  body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header,
+  body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header,
+  body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header,
+  body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header{padding:16px 16px 16px 62px;background-position:16px 24px;background-size:32px 32px;gap:12px}
+}
+@media print{body[data-suite-surface="guide"]{background:#fff;color:#132d46}}
+
+/* Retain review warning meanings with readable colours on the light debrief. */
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #work-panel:has(#tab-debrief:not([hidden])) .drawer-head{background:#365e7b;color:#fff}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #work-panel:has(#tab-debrief:not([hidden])) .drawer-head :is(h2,h3,strong,button){color:#fff}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief :is(.record,.traffic-review-events button){background:#eef4f8;color:#132d46;border-color:#b2c6d7}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief .review-cue-warning{color:#9b2438}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief .review-cue-assessment{color:#805500}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief .review-cue-measurement{color:#425b70}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief .traffic-review-markers button{color:#805500}
+[data-suite-surface="instructor"] #entry .entry-action:hover{background:#203f58;color:#fff}
+
+body[data-suite-surface="host-setup"]:has(#reviewScreen:not([hidden])) :is(#reviewSetupStatus,.equipment-note){color:var(--iaf-muted)}
+[data-suite-surface="host-setup"] #reviewScreen>.workspace-head .eyebrow{color:var(--iaf-blue)}
+body[data-suite-surface="procedural"]:has(#terminate.is-terminated) #tab-debrief a{color:var(--iaf-blue)}
+
+/* Before starting traffic is created, theme the preparation drawer alone.
+   The scope and all established-exercise drawers retain their operational theme. */
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])){
+  --paper:#fff;--panel:#fff;--ink:#132d46;--text:#132d46;--muted:#425b70;
+  --line:#b2c6d7;--teal:#2c5777;--teal-dark:#203f58;--accent:#2c5777;
+  --radar-panel:#fff;--radar-chrome:#e6eff6;--radar-text:#132d46;
+  background:#fff;color:#132d46;color-scheme:light;
+}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) .drawer-head{background:#365e7b;color:#fff}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) .drawer-head :is(strong,button){color:#fff;background:transparent}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) :is(button,input,select,textarea){background:#fff;color:#132d46;border-color:#b2c6d7}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) button:hover:not(:disabled){background:#e6eff6;border-color:#2c5777}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) :is(.primary,button[aria-expanded=true]){background:#2c5777;border-color:#2c5777;color:#fff}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) a{color:#2c5777}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) input::placeholder,
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) textarea::placeholder{color:#425b70}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) :is(.record,.airspace-legend){background:#eef4f8;color:#132d46}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) .danger{color:#9b2438;background:#fff1f1;border-color:#cc9aa5}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) .danger:hover:not(:disabled){color:#9b2438;background:#ffe3e6;border-color:#9b2438}
+body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden]) #work-panel:has(#tab-build:not([hidden])) :is(input,textarea)[aria-invalid=true]{border-color:#9b2438}
+
+/* Setup voice preferences match the page; exercise voice controls are untouched. */
+body:is([data-suite-surface="qgh"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active)) .voice-dock{background:#365e7b;border-color:#203f58}
+body:is([data-suite-surface="qgh"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active)) :is(.voice-settings,.voice-confirmation){background:#fff;color:#132d46;border-color:#b2c6d7}
+body:is([data-suite-surface="qgh"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active)) :is(.voice-continuous,.voice-confirmation strong){color:#132d46}
+body:is([data-suite-surface="qgh"],[data-suite-surface="single"]:has(#setup.active),[data-suite-surface="tactical"]:has(#tSetup.active)) .voice-prepare{color:#2c5777!important;border-color:#2c5777!important}
+
+/* Shared header identity and navigation follow the entry/review state gates. */
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:24px;row-gap:8px;
+}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-brand{
+  grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:row;justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px 14px;color:#fff;font:600 20px/1.25 Suite Sans,Arial,sans-serif;letter-spacing:.02em;text-transform:none;
+}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-credit{
+  grid-column:2;grid-row:1 / span 2;justify-self:end;align-self:start;display:grid!important;gap:3px;width:auto;margin:0;order:initial!important;text-align:right;color:#fff;font:400 12px/1.4 Suite Sans,Arial,sans-serif;letter-spacing:0;
+}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-credit :is(strong,span){font:600 12px/1.4 Suite Sans,Arial,sans-serif;color:#fff}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-credit small{font:400 11px/1.4 Suite Sans,Arial,sans-serif;color:#d5e6f3;letter-spacing:0;text-transform:none}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-credit>small:first-child:not(:last-child){display:none}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header>:is(nav,.header-links){grid-column:1;grid-row:2;display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header :is(nav a,nav button,.header-links a,.header-links button,#suite-tour-open,.entry-guide-link,.mode-home-link,.tactical-mode-home,.header-left>a:not(.wordmark),.suite-guide-chat>summary){
+  display:inline-flex;align-items:center;justify-content:center;min-height:36px;margin:0;padding:7px 10px;border:1px solid #bad5e8;border-radius:6px;background:#ffffff0a;color:#fff;text-decoration:none;font:400 13px/1.3 Suite Sans,Arial,sans-serif;letter-spacing:.01em;text-transform:none;white-space:normal;
+}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header :is(.iaf-header-brand h1,.wordmark){margin:0;font:600 20px/1.25 Suite Sans,Arial,sans-serif;letter-spacing:.02em}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header :is(.iaf-header-brand>.product-version,.iaf-header-brand small){font:400 11px/1.4 Suite Sans,Arial,sans-serif;color:#d5e6f3;letter-spacing:.02em}
+body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header :focus-visible{outline:3px solid #ffcf82;outline-offset:3px}
+@media(max-width:680px){
+ body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header{grid-template-columns:minmax(0,1fr);column-gap:0;row-gap:10px}
+ body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header .iaf-header-credit{grid-column:1;grid-row:3;width:100%;justify-self:end}
+ body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite-surface="guide"],[data-suite-surface="single"]:has(:is(#setup,#analysis).active),[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]),[data-suite-surface="procedural"]:not(.desk-open)) .iaf-site-header :is(nav a,nav button,.header-links a,.header-links button,#suite-tour-open,.entry-guide-link,.mode-home-link,.tactical-mode-home,.header-left>a:not(.wordmark),.suite-guide-chat>summary){min-height:44px}
+}

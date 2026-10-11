@@ -384,6 +384,8 @@
     ctx.strokeStyle = '#354954'; ctx.fillStyle = '#8eb0b7'; ctx.font = '12px IBM Plex Mono';
     for (let ring = 1; ring <= 4; ring++) { ctx.beginPath(); ctx.arc(cx, cy, radius * ring / 4, 0, Math.PI * 2); ctx.stroke(); ctx.fillText(`${range * ring / 4} NM`, cx + 7, cy - radius * ring / 4 + 14); }
     ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius); ctx.stroke();
+    globalThis.ATCScopeVisuals?.drawRunwayStrip(ctx, { runwayHeadingDeg: Number(state.metadata?.runwayOrientation) || 0 }, (x, y) => [cx + x * radius / range, cy - y * radius / range], radius / range);
+    ctx.fillStyle = '#b8d1ca'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillText('ARP / D/F', cx + 8, cy - 9);
     const observation = state.observation;
     if (Number.isFinite(observation?.bearingDeg) && ['live', 'held'].includes(observation.status)) {
       const bearing = observation.bearingType === 'qdm' ? (observation.bearingDeg + 180) % 360 : observation.bearingDeg, angle = bearing * Math.PI / 180;
@@ -694,19 +696,31 @@
 
   function drawRunway(context, canvas, environment) {
     const runway = environment.runwayOrientationDeg;
-    const start = radarTransform(canvas, .65, runway), end = radarTransform(canvas, .65, runway + 180);
-    context.strokeStyle = '#d2d9bb'; context.lineWidth = 5; context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.stroke();
-    context.fillStyle = '#c7d1b5'; context.font = '12px IBM Plex Mono'; context.fillText(`RWY ${pad(runway)}°`, canvas.width / 2 + 13, canvas.height / 2 + 21);
+    const scale = Math.min(canvas.width, canvas.height) * .41 / selectedRadarRange();
+    const project = (x, y) => [canvas.width / 2 + state.scopePan.x + x * scale, canvas.height / 2 + state.scopePan.y - y * scale];
+    if (globalThis.ATCScopeVisuals?.drawRunwayStrip) globalThis.ATCScopeVisuals.drawRunwayStrip(context, environment, project, scale);
+    else {
+      const start = radarTransform(canvas, (3 / 1.852) / 2, runway), end = radarTransform(canvas, (3 / 1.852) / 2, runway + 180);
+      context.strokeStyle = '#91979c'; context.lineWidth = 5; context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.stroke();
+    }
+    const [cx, cy] = project(0, 0);
+    context.fillStyle = '#b8d1ca'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+    context.font = '11px IBM Plex Mono'; context.fillText('ARP', cx + 8, cy - 9);
+    context.fillText(`RWY ${pad(runway)}°`, cx + 13, cy + 21);
   }
 
   function drawRadarEnvironment(context, canvas, environment, showExtendedCentreline) {
     const range = selectedRadarRange();
     if (showExtendedCentreline && environment.extendedCentreline && environment.extendedCentrelineNm > 0) {
       const total = Math.min(range, environment.extendedCentrelineNm), runway = environment.runwayOrientationDeg;
+      const strip = globalThis.ATCScopeVisuals?.runwayGeometry(environment);
+      const centre = strip?.centre || { xNm: 0, yNm: 0 };
+      const scale = Math.min(canvas.width, canvas.height) * .41 / selectedRadarRange();
+      const cx = canvas.width / 2 + state.scopePan.x + centre.xNm * scale, cy = canvas.height / 2 + state.scopePan.y - centre.yNm * scale;
       context.strokeStyle = '#8f936d'; context.lineWidth = 1; context.setLineDash([9, 6]);
       for (const direction of [runway, runway + 180]) {
         const point = radarTransform(canvas, total, direction);
-        context.beginPath(); context.moveTo(canvas.width / 2, canvas.height / 2); context.lineTo(point.x, point.y); context.stroke();
+        context.beginPath(); context.moveTo(cx, cy); context.lineTo(point.x + centre.xNm * scale, point.y - centre.yNm * scale); context.stroke();
       }
       context.setLineDash([]); context.fillStyle = '#b6bd91'; context.font = '11px IBM Plex Mono';
       const tick = environment.centrelineTickNm;
@@ -714,6 +728,7 @@
         const theta = direction * Math.PI / 180;
         for (let distance = tick; distance <= total + 1e-9; distance += tick) {
           const point = radarTransform(canvas, distance, direction), dx = Math.cos(theta) * 5, dy = Math.sin(theta) * 5;
+          point.x += centre.xNm * scale; point.y -= centre.yNm * scale;
           context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
           context.fillText(`${Math.round(distance)} NM`, point.x + 7, point.y - 5);
         }
@@ -732,7 +747,10 @@
 
   function drawSraReferences(context, canvas, overlays, radius, environment, showDescentProfile) {
     const bearing = overlays.centrelineDeg ?? ((Number(overlays.runwayOrientationDeg ?? state.metadata.runwayOrientation) + 180) % 360);
-    const angle = bearing * Math.PI / 180, cx = canvas.width / 2 + state.scopePan.x, cy = canvas.height / 2 + state.scopePan.y;
+    const threshold = globalThis.ATCScopeVisuals?.runwayGeometry(environment).threshold || { xNm: 0, yNm: 0 };
+    const scale = radius / selectedRadarRange();
+    const angle = bearing * Math.PI / 180, cx = canvas.width / 2 + state.scopePan.x + threshold.xNm * scale, cy = canvas.height / 2 + state.scopePan.y - threshold.yNm * scale;
+    const fromThreshold = distance => { const point = radarTransform(canvas, distance, bearing); return { x: point.x + threshold.xNm * scale, y: point.y - threshold.yNm * scale }; };
     const totalWidthNm = Number.isFinite(overlays.approachCorridorWidthNm) && overlays.approachCorridorWidthNm >= 0 ? overlays.approachCorridorWidthNm : 2;
     const halfWidthPx = totalWidthNm / 2 / selectedRadarRange() * radius;
     const alongPx = Math.sqrt(Math.max(0, radius * radius - halfWidthPx * halfWidthPx));
@@ -764,7 +782,7 @@
     // filling remaining space with the new half-mile labels.
     marks.sort((a, b) => Number(a % markStep !== 0) - Number(b % markStep !== 0) || a - b);
     for (const distance of marks) {
-      const point = radarTransform(canvas, distance, bearing), dx = Math.cos(angle) * 6, dy = Math.sin(angle) * 6;
+      const point = fromThreshold(distance), dx = Math.cos(angle) * 6, dy = Math.sin(angle) * 6;
       context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
       const height = Math.round((feetPerNm * distance) / 10) * 10;
       const label = showDescentProfile ? `${distance} NM · ${height.toLocaleString()} FT AAL` : `${distance}`;
@@ -777,7 +795,7 @@
       context.fillText(label, labelX, labelY);
     }
     if (Number.isFinite(overlays.terminationRangeNm) && overlays.terminationRangeNm <= selectedRadarRange()) {
-      const point = radarTransform(canvas, overlays.terminationRangeNm, bearing), dx = Math.cos(angle) * 13, dy = Math.sin(angle) * 13;
+      const point = fromThreshold(overlays.terminationRangeNm), dx = Math.cos(angle) * 13, dy = Math.sin(angle) * 13;
       context.strokeStyle = '#edbb7d'; context.lineWidth = 3; context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
       context.fillStyle = '#edbb7d'; context.fillText(`TERMINATION ${overlays.terminationRangeNm} NM`, 26, canvas.height - 28);
     }

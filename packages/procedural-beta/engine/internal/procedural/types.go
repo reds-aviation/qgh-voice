@@ -46,6 +46,9 @@ type Environment struct {
 	DFHoldSeconds                float64        `json:"dfHoldSeconds"`
 	RunwayHeadingDeg             float64        `json:"runwayHeadingDeg"`
 	RunwayLengthNm               float64        `json:"runwayLengthNm"`
+	RunwayOffsetNm               float64        `json:"runwayOffsetNm"`
+	RunwayCenterXNm              *float64       `json:"runwayCenterXNm,omitempty"`
+	RunwayCenterYNm              *float64       `json:"runwayCenterYNm,omitempty"`
 	AerodromeElevationFt         float64        `json:"aerodromeElevationFt"`
 	QNHhPa                       float64        `json:"qnhHpa"`
 	TransitionAltitudeFt         float64        `json:"transitionAltitudeFt"`

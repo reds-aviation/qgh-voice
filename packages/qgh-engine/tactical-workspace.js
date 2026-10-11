@@ -421,18 +421,16 @@
       `QDR ${padHeading(finalRadial)}°M · RADIAL FROM VDF`
     ], '#5b427f');
 
-    context.save();
-    context.translate(cx, cy);
-    context.rotate(radians(Number(cfg.runway) || 0));
-    context.fillStyle = '#17262b';
-    context.fillRect(-5, -36, 10, 72);
-    context.fillStyle = '#fffefa';
-    for (let y = -27; y < 28; y += 12) context.fillRect(-2, y, 4, 6);
-    context.restore();
-    context.fillStyle = '#52646a';
-    context.font = '600 11px IBM Plex Sans, Arial';
-    context.textAlign = 'left';
-    context.fillText(`RWY ${padHeading(Number(cfg.runway) || 0)}°M`, cx + 11, cy - 40);
+    if (window.ATCScopeVisuals?.drawRunwayStrip) {
+      window.ATCScopeVisuals.drawRunwayStrip(context, { runwayHeadingDeg: Number(cfg.runway) || 0 }, (x, y) => [cx + x * scale, cy - y * scale], scale);
+    } else {
+      context.save(); context.translate(cx, cy); context.rotate(radians(Number(cfg.runway) || 0));
+      context.fillStyle = '#91979c'; context.fillRect(-2.5, -scale * (3 / 1.852) / 2, 5, scale * (3 / 1.852)); context.restore();
+    }
+    context.fillStyle = '#52646a'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+    context.font = '600 11px IBM Plex Sans, Arial'; context.textAlign = 'left';
+    context.fillText('ARP / VDF', cx + 8, cy - 10);
+    context.fillText(`RWY ${padHeading(Number(cfg.runway) || 0)}°M`, cx + 11, cy + 22);
 
     const visibleAircraftList = Array.isArray(model.visibleIds)
       ? aircraft.filter(item => model.visibleIds.includes(item.id))

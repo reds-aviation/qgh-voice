@@ -6,6 +6,31 @@ const {readFileSync} = require('node:fs');
 const {join} = require('node:path');
 const Visuals = require('../scope-visuals.js');
 
+test('runway geometry separates ARP, navigation station and threshold without changing the NM scale', () => {
+  for (const runwayHeadingDeg of [0, 90, 230, 359]) {
+    const environment = { runwayHeadingDeg, drawnARP: true, stationXNm: 7.5, stationYNm: -4.25, runwayLengthNm: 3 / 1.852, runwayOffsetNm: .15 };
+    const runway = Visuals.runwayGeometry(environment), final = Visuals.approachPoint(environment, 5);
+    assert.deepEqual(runway.arp, { xNm: 7.5, yNm: -4.25 });
+    assert.ok(Math.abs(Math.hypot(runway.threshold.xNm - runway.farThreshold.xNm, runway.threshold.yNm - runway.farThreshold.yNm) - 3 / 1.852) < 1e-12);
+    assert.ok(Math.abs(Math.hypot(final.xNm - runway.threshold.xNm, final.yNm - runway.threshold.yNm) - 5) < 1e-12);
+    assert.ok(Math.abs((final.xNm - runway.threshold.xNm) * runway.uy - (final.yNm - runway.threshold.yNm) * runway.ux) < 1e-12);
+  }
+  const published = Visuals.runwayGeometry({ chartOrigin: { latitude: 26, longitude: 73 }, stationXNm: 8, stationYNm: 5, runwayHeadingDeg: 90 });
+  assert.deepEqual(published.arp, { xNm: 0, yNm: 0 });
+  assert.ok(Math.abs(published.centre.yNm + .15) < 1e-12);
+  const surveyed = Visuals.runwayGeometry({ runwayHeadingDeg: 90, runwayCenterXNm: 0, runwayCenterYNm: 2.25 });
+  assert.deepEqual(surveyed.centre, { xNm: 0, yNm: 2.25 });
+});
+
+test('runway strip length follows configured distance even when zoomed far out', () => {
+  for (const scale of [1, 10, 100]) {
+    const context = drawingContext(), environment = { runwayHeadingDeg: 90, runwayLengthNm: 3 / 1.852, runwayOffsetNm: .15 };
+    Visuals.drawRunwayStrip(context, environment, (x, y) => [500 + x * scale, 400 - y * scale], scale);
+    const first = context.calls.find(call => call[0] === 'moveTo'), last = context.calls.find(call => call[0] === 'lineTo');
+    assert.ok(Math.abs(Math.hypot(last[1] - first[1], last[2] - first[2]) - scale * 3 / 1.852) < 1e-10);
+  }
+});
+
 function drawingContext() {
   const calls = [];
   return new Proxy({calls, measureText: text => ({width: String(text).length * 7})}, {

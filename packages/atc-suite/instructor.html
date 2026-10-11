@@ -82,10 +82,10 @@
       </form>
       <details class="ats-saved-exercises" id="qghSavedExercises"><summary>Saved exercises</summary>
         <div class="scenario-library">
-          <label>Load saved exercise<select id="savedExercise"><option value="">Choose an exercise</option></select></label><button id="loadExercisePreset" type="button">Load</button>
+          <label>Saved on this device<select id="savedExercise"><option value="">Current setup · new exercise</option></select></label>
           <label>Exercise name<input id="savedExerciseName" maxlength="60" placeholder="e.g. SRA assessment 1"></label><button id="saveExercisePreset" type="button">Save</button>
           <label class="preset-import">Import exercise file<input id="importExercisePreset" type="file" accept="application/json,.json"></label><button id="exportExercisePreset" type="button">Download</button>
-          <p class="preset-help">Load fills starting traffic; Create session opens a new exercise. Save updates the selected exercise. Choose “Choose an exercise” and enter a name to save a new setup.</p>
+          <p class="preset-help">Choose a saved exercise or import a file to fill traffic setup. Create session starts it. Save keeps this setup on the device; choose “Current setup · new exercise” and enter a new name for a separate copy.</p>
           <details class="preset-management"><summary>Rename or remove</summary><div class="preset-management-actions"><button id="renameExercisePreset" type="button">Rename selected</button><button id="removeExercisePreset" type="button">Remove selected</button></div></details>
           <output id="presetStatus" aria-live="polite"></output>
         </div>

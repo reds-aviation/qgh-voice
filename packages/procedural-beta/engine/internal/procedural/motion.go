@@ -16,9 +16,21 @@ func approach(current, target, step float64) float64 {
 	}
 	return math.Max(target, current-step)
 }
+func runwayCentre(e Environment) (float64, float64) {
+	if e.RunwayCenterXNm != nil && e.RunwayCenterYNm != nil {
+		return *e.RunwayCenterXNm, *e.RunwayCenterYNm
+	}
+	x, y := e.StationXNm, e.StationYNm
+	if e.ChartOrigin != nil && !e.DrawnARP {
+		x, y = 0, 0
+	}
+	ux, uy := unit(e.RunwayHeadingDeg)
+	return x + uy*e.RunwayOffsetNm, y - ux*e.RunwayOffsetNm
+}
 func threshold(s *State) (float64, float64) {
 	x, y := unit(s.Environment.RunwayHeadingDeg)
-	return -x * s.Environment.RunwayLengthNm / 2, -y * s.Environment.RunwayLengthNm / 2
+	cx, cy := runwayCentre(s.Environment)
+	return cx - x*s.Environment.RunwayLengthNm/2, cy - y*s.Environment.RunwayLengthNm/2
 }
 func runwayCoordinates(s *State, a *Aircraft) (along, cross float64) {
 	tx, ty := threshold(s)

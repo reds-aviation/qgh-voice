@@ -86,7 +86,7 @@
   }
 
   function refreshPresets(selected = '') {
-    const options = [new Option('Choose an exercise', '')];
+    const options = [new Option('Current setup · new exercise', '')];
     for (const item of presets()) if (typeof item.name === 'string') options.push(new Option(item.name, item.id));
     byId('savedExercise').replaceChildren(...options); byId('savedExercise').value = selected;
   }
@@ -1355,15 +1355,24 @@
       if (distance === maxRange) break;
     }
     context.beginPath(); context.moveTo(cx, 22); context.lineTo(cx, height - 22); context.moveTo(22, cy); context.lineTo(width - 22, cy); context.stroke();
+    const environment = { ...state.simulation?.scenario.radarEnvironment, runwayHeadingDeg: runway };
+    const runwayGeometry = visuals?.runwayGeometry(environment);
+    const threshold = state.simulation?.scenario.exerciseFamily === 'sra' && runwayGeometry ? runwayGeometry.threshold : { xNm: 0, yNm: 0 };
+    const referenceX = cx + threshold.xNm * scale, referenceY = cy - threshold.yNm * scale;
     const finalAngle = finalTrack * Math.PI / 180, length = Math.min(width, height) * .42;
     context.strokeStyle = '#758f82'; context.lineWidth = 1; context.setLineDash([7, 8]);
-    context.beginPath(); context.moveTo(cx - Math.sin(finalAngle) * length, cy + Math.cos(finalAngle) * length);
-    context.lineTo(cx + Math.sin(finalAngle) * length, cy - Math.cos(finalAngle) * length); context.stroke(); context.setLineDash([]);
-    const angle = runway * Math.PI / 180, runwayHalfLength = Math.max(6, scale * .8);
-    context.strokeStyle = '#d5dec8'; context.lineWidth = 6; context.beginPath();
-    context.moveTo(cx - Math.sin(angle) * runwayHalfLength, cy + Math.cos(angle) * runwayHalfLength);
-    context.lineTo(cx + Math.sin(angle) * runwayHalfLength, cy - Math.cos(angle) * runwayHalfLength); context.stroke();
-    context.fillStyle = '#b8d1ca'; context.fillText(`RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
+    context.beginPath(); context.moveTo(referenceX - Math.sin(finalAngle) * length, referenceY + Math.cos(finalAngle) * length);
+    context.lineTo(referenceX + Math.sin(finalAngle) * length, referenceY - Math.cos(finalAngle) * length); context.stroke(); context.setLineDash([]);
+    if (visuals?.drawRunwayStrip) visuals.drawRunwayStrip(context, environment, (x, y) => [cx + x * scale, cy - y * scale], scale);
+    else {
+      const angle = runway * Math.PI / 180, halfLength = scale * (3 / 1.852) / 2;
+      context.strokeStyle = '#91979c'; context.lineWidth = 5; context.beginPath();
+      context.moveTo(cx - Math.sin(angle) * halfLength, cy + Math.cos(angle) * halfLength);
+      context.lineTo(cx + Math.sin(angle) * halfLength, cy - Math.cos(angle) * halfLength); context.stroke();
+    }
+    context.fillStyle = '#b8d1ca'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+    context.font = '11px IBM Plex Mono'; context.fillText('ARP / D/F', cx + 8, cy - 9);
+    context.fillText(`RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
     return { cx, cy, scale, width, height, pixelRatio };
   }
 
@@ -1865,10 +1874,12 @@
   byId('renameExercisePreset').addEventListener('click', renamePreset);
   byId('removeExercisePreset').addEventListener('click', removePreset);
   byId('savedExercise').addEventListener('change', () => {
-    const item = presets().find(entry => entry.id === byId('savedExercise').value);
-    if (item) byId('savedExerciseName').value = item.name;
+    if (byId('savedExercise').value) loadPreset();
+    else {
+      byId('savedExerciseName').value = '';
+      byId('presetStatus').textContent = 'Current traffic setup kept. Enter a new name to save a separate exercise.';
+    }
   });
-  byId('loadExercisePreset').addEventListener('click', loadPreset);
   byId('exportExercisePreset').addEventListener('click', exportPreset);
   byId('importExercisePreset').addEventListener('change', importPreset);
   byId('copyPin').addEventListener('click', () => navigator.clipboard?.writeText(state.session.pin));

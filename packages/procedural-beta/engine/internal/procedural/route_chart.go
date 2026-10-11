@@ -181,7 +181,7 @@ var chartEnvironmentKeys = map[string]bool{
 	"chartOrigin": true, "drawnARP": true, "rangeNm": true, "stationName": true, "stationType": true, "stationXNm": true, "stationYNm": true, "stationFrequency": true,
 	"aerodromeName": true, "chartReference": true, "effectiveInfo": true, "briefing": true,
 	"magneticVariationDeg": true, "magneticVariationKnown": true, "trainingMagneticVariationDeg": true, "map": true,
-	"runwayHeadingDeg": true, "runwayLengthNm": true, "aerodromeElevationFt": true, "thresholdCrossingHeightFt": true,
+	"runwayHeadingDeg": true, "runwayLengthNm": true, "runwayOffsetNm": true, "runwayCenterXNm": true, "runwayCenterYNm": true, "aerodromeElevationFt": true, "thresholdCrossingHeightFt": true,
 }
 
 func replaceAirspace(s *State, raw json.RawMessage) error {

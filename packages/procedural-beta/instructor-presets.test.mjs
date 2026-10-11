@@ -18,7 +18,7 @@ async function harness() {
     URL: {createObjectURL(blob) {blobs.push(blob); return 'blob:test';}, revokeObjectURL(){}},
   });
   let code = suiteSource('suite-instructor.js');
-  code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
+  code = code.slice(0, code.indexOf("  byId('copyPin').addEventListener")) +
     '\n globalThis.api={state,saveCurrentSetup,savePresetAsNew,savePreset,duplicatePreset,renamePreset,removePreset,loadPreset,exportPreset,importPreset,captureSetup,restoreSetup,syncRoster};syncRoster();})();';
   vm.runInContext(code, h.context);
   const node = id => h.document.getElementById(id);
@@ -60,7 +60,7 @@ test('legacy QGH presets exceeding two targets are kept and exportable, but Load
   const legacy={id:'legacy-record',name:'Historical QGH',version:1,setup};
   const stored=JSON.stringify([legacy]); h.context.localStorage.setItem(storageKey,stored);
   h.node('savedExercise').append(new h.context.Option(legacy.name,legacy.id)); h.node('savedExercise').value=legacy.id;
-  const before=h.node('aircraftCount').value; h.loadPreset();
+  const before=h.node('aircraftCount').value; h.node('savedExercise').dispatchEvent(new h.Event('change'));
   assert.equal(h.node('aircraftCount').value,before); assert.match(h.node('presetStatus').textContent,/24.*1–2.*unchanged/);
   assert.equal(h.context.localStorage.getItem(storageKey),stored);
   h.exportPreset(); const exported=JSON.parse(await h.blobs[0].text()); assert.equal(h.value(exported.setup,'aircraftCount'),'24');
@@ -92,12 +92,13 @@ test('invalid flight values cannot be saved or imported as a reusable exercise',
   assert.equal(h.stored().length,0); assert.equal(h.node('turnRate').value,'3'); assert.match(h.node('presetStatus').textContent,/Not imported.*turn/i);
 });
 
-test('collapsed Saved exercises uses Save, Load, Import and Download while preserving exact starting traffic', async () => {
+test('collapsed Saved exercises restores a selected setup directly without a separate Load button', async () => {
   const h = await harness();
   const library = h.node('qghSavedExercises'), management = h.document.querySelector('.preset-management');
   assert.equal(library.hasAttribute('open'), false);
   assert.equal(management.hasAttribute('open'), false);
-  for (const id of ['savedExercise', 'loadExercisePreset', 'savedExerciseName', 'saveExercisePreset', 'exportExercisePreset', 'importExercisePreset']) assert.equal(h.node(id).closest('details'), library);
+  for (const id of ['savedExercise', 'savedExerciseName', 'saveExercisePreset', 'exportExercisePreset', 'importExercisePreset']) assert.equal(h.node(id).closest('details'), library);
+  assert.equal(h.node('loadExercisePreset'), null);
   for (const id of ['renameExercisePreset', 'removeExercisePreset']) assert.equal(h.node(id).closest('details'), management);
   assert.equal(h.node('saveExercisePresetAs'), null); assert.equal(h.node('duplicateExercisePreset'), null);
   assert.equal(h.node('saveExercisePreset').textContent, 'Save'); assert.equal(h.node('exportExercisePreset').textContent, 'Download');
@@ -107,10 +108,13 @@ test('collapsed Saved exercises uses Save, Load, Import and Download while prese
   h.node('initialHeading').value = '88'; h.saveCurrentSetup();
   assert.equal(h.stored().length, 1); assert.equal(h.stored()[0].id, id);
   assert.equal(h.value(h.stored()[0].setup, 'initialHeading'), '88');
-  h.node('initialHeading').value = '300'; h.node('initialSpeed').value = '400'; h.loadPreset();
+  h.node('initialHeading').value = '300'; h.node('initialSpeed').value = '400';
+  h.node('savedExercise').dispatchEvent(new h.Event('change'));
   assert.equal(h.node('initialHeading').value, '88'); assert.equal(h.node('initialSpeed').value, '250');
   assert.match(h.node('presetStatus').textContent, /Create a session when ready/);
   assert.equal(h.state.session, null); assert.equal(h.state.simulation, null);
-  h.node('savedExercise').value = ''; h.node('savedExerciseName').value = 'Another briefing'; h.saveCurrentSetup();
+  h.node('savedExercise').value = ''; h.node('savedExercise').dispatchEvent(new h.Event('change'));
+  assert.equal(h.node('initialHeading').value, '88'); assert.equal(h.node('savedExerciseName').value, '');
+  h.node('savedExerciseName').value = 'Another briefing'; h.saveCurrentSetup();
   assert.equal(h.stored().length, 2); assert.notEqual(h.stored()[1].id, id);
 });

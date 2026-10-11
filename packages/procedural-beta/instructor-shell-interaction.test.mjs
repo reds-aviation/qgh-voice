@@ -50,7 +50,7 @@ test('persistent Logout confirms once, preserves progress on Cancel and waits fo
  vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
  const navigations=[];h.context.location.assign=url=>navigations.push(url);
  let cleanup=0,finish;const root=h.document.getElementById('desk');
- h.context.ATCSuiteWorkspace.bindShell({root,onLogout:()=>{cleanup++;return new Promise(resolve=>{finish=resolve;});}});
+ h.context.ATCSuiteWorkspace.bindShell({root,hasAttempt:()=>true,onLogout:()=>{cleanup++;return new Promise(resolve=>{finish=resolve;});}});
  const button=h.document.getElementById('workspaceLogout');
  assert.equal(button.textContent,'Logout');assert.equal(button.closest('[hidden]'),null,'Logout is outside changing setup/live/review containers');
  button.focus();button.click();button.click();assert.equal(h.document.querySelectorAll('dialog').length,1);
@@ -96,6 +96,27 @@ test('Logout is absent before an attempt and remains available in its setup and 
  assert.equal(slot.hidden,true);assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
  h.document.getElementById('workspaceLogout').click();
  assert.equal(h.document.querySelector('dialog'),null,'a hidden entry control cannot open a discard confirmation');
+});
+
+test('Procedural Logout is hidden on fresh entry and follows preparation, waiting and retained desk state',async()=>{
+ const h=domHarness('<html><body class="procedural-entry-page"><section id="entry"><button id="student-login">Request to join</button></section><main id="desk" hidden></main><section id="waiting" hidden></section><button id="return-desk" hidden>Return to desk</button></body></html>');
+ const Observer=h.context.MutationObserver;
+ h.context.MutationObserver=class extends Observer{observe(target,options){super.observe(target,options.subtree&&options.attributes?{...options,childList:true}:options);}};
+ vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
+ const get=id=>h.document.getElementById(id),root=get('desk'),tick=()=>new Promise(resolve=>setImmediate(resolve));
+ h.context.ATCSuiteWorkspace.bindShell({root,onLogout(){}});
+ const slot=h.document.querySelector('.ats-logout-slot');
+ assert.equal(slot.hidden,true,'untouched entry has no attempt to discard');
+ assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
+ get('workspaceLogout').click();assert.equal(h.document.querySelector('dialog'),null);
+ get('student-login').disabled=true;await tick();assert.equal(slot.hidden,false,'a pending join exposes Logout before a desk exists');
+ get('student-login').disabled=false;await tick();assert.equal(slot.hidden,true,'a completed or failed join without an attempt returns to hidden Logout');
+ h.document.body.classList.add('setup-open');await tick();assert.equal(slot.hidden,false,'starting traffic preparation retains the exit control');
+ h.document.body.classList.remove('setup-open');root.hidden=false;h.document.body.classList.add('desk-open');await tick();assert.equal(slot.hidden,false);
+ h.document.body.classList.add('review-open');await tick();assert.equal(slot.hidden,false,'review retains the exit control');
+ root.hidden=true;h.document.body.classList.remove('desk-open','review-open');get('waiting').hidden=false;await tick();assert.equal(slot.hidden,false,'joined students can leave the waiting room');
+ get('waiting').hidden=true;get('return-desk').hidden=false;await tick();assert.equal(slot.hidden,false,'an existing attempt remains available from its return control');
+ get('return-desk').hidden=true;await tick();assert.equal(slot.hidden,true,'leaving an attempt restores untouched entry');
 });
 
 test('QGH setup uses a static navigation header and restores it after moving the exercise drawer',async()=>{
@@ -256,6 +277,54 @@ test('dragging the dedicated box handle is isolated from flight controls, and po
  // Interacting with a live control does not start an overlay drag.
  pointer(h,h.get('quickHeading'),'pointerdown',20,20);pointer(h,h.get('quickHeading'),'pointermove',200,200);assert.equal(h.box.classList.contains('ats-overlay-positioned'),false);
 });
+
+test('dragging a panel title moves the window and ignores interactive header controls',async()=>{
+ const h=await floatingHarness(),header=h.box.querySelector('header'),title=header.querySelector('strong');
+ pointer(h,title,'pointerdown',10,110);pointer(h,title,'pointermove',60,150);pointer(h,title,'pointerup',60,150);
+ assert.equal(h.box.style.left,'56px');assert.equal(h.box.style.top,'144px');
+ const click=new h.Event('click',{bubbles:true,cancelable:true});title.dispatchEvent(click);assert.equal(click.defaultPrevented,true,'a drag must not activate the header');
+ h.box.querySelector('.ats-overlay-reset').click();
+ for(const tag of ['button','a','input','select','textarea','label']){
+  const control=h.document.createElement(tag);if(tag==='a')control.setAttribute('href','#test');header.append(control);
+  assert.equal(pointer(h,control,'pointerdown',10,110).defaultPrevented,false,`${tag} keeps its native interaction`);
+  pointer(h,control,'pointermove',90,190);pointer(h,control,'pointerup',90,190);
+  assert.equal(h.box.classList.contains('ats-overlay-positioned'),false,`${tag} must not move the panel`);
+ }
+ const editable=h.document.createElement('span');editable.setAttribute('contenteditable','true');header.append(editable);
+ assert.equal(pointer(h,editable,'pointerdown',10,110).defaultPrevented,false);pointer(h,editable,'pointermove',90,190);
+ assert.equal(h.box.classList.contains('ats-overlay-positioned'),false);
+});
+
+test('drawer header dragging preserves close controls and compact icons retain accessible names',async()=>{
+ const h=await floatingHarness(),drawer=h.get('sessionDrawer'),header=drawer.querySelector('summary');
+ h.get('instructorTools').querySelector('[aria-controls="sessionDrawer"]').click();
+ drawer.getBoundingClientRect=()=>({left:parseFloat(drawer.style.left)||700,top:parseFloat(drawer.style.top)||56,width:360,height:600});
+ pointer(h,header,'pointerdown',710,70);pointer(h,header,'pointermove',670,90);pointer(h,header,'pointerup',670,90);
+ assert.equal(drawer.style.left,'660px');assert.equal(drawer.style.top,'76px');
+ const afterDrag=new h.Event('click',{bubbles:true,cancelable:true});header.dispatchEvent(afterDrag);assert.equal(afterDrag.defaultPrevented,true);
+ const close=drawer.querySelector('.ats-drawer-close');assert.equal(close.textContent,'×');assert.ok(close.getAttribute('aria-label'));close.click();assert.equal(drawer.open,false);
+ assert.equal(h.handle.textContent,'⠿');assert.match(h.handle.getAttribute('aria-label'),/arrow keys/);
+ assert.equal(h.box.querySelector('.ats-overlay-reset').textContent,'↺');
+ const collapse=h.box.querySelector('.ats-overlay-collapse');assert.equal(collapse.textContent,'−');assert.match(collapse.getAttribute('aria-label'),/Minimize/);
+ collapse.click();assert.equal(collapse.textContent,'+');assert.match(collapse.getAttribute('aria-label'),/Restore/);
+});
+
+test('Procedural drawer title drags while close and embedded selectors keep their actions',async()=>{
+ const h=domHarness('<html><body class="instructor-desk desk-open"><main id="desk"><div class="exercisebar"></div><div class="scope-panel"><canvas id="scope"></canvas><div id="instructor-control-shelf"></div><nav id="edge-actions"></nav></div></main><aside id="work-panel"><header class="drawer-head"><strong>Prepare airspace</strong><select><option>Custom chart</option></select><button id="drawer-close">Close</button></header><input value="105"></aside></body></html>', '/procedural-beta/procedural.html',1280);
+ h.window.innerHeight=720;h.window.matchMedia=()=>({matches:true,addEventListener(){}});
+ vm.runInContext(readFileSync(new URL('./static/workspace-shell.js',import.meta.url),'utf8'),h.context);
+ const get=id=>h.document.getElementById(id),drawer=get('work-panel');
+ h.context.ATCSuiteWorkspace.bindShell({root:get('desk'),scope:get('scope'),shelf:get('instructor-control-shelf')});await Promise.resolve();
+ drawer.getBoundingClientRect=()=>({left:parseFloat(drawer.style.left)||900,top:parseFloat(drawer.style.top)||64,width:360,height:600});
+ const title=drawer.querySelector('strong'),select=drawer.querySelector('select');
+ pointer(h,title,'pointerdown',920,80);pointer(h,title,'pointermove',820,100);pointer(h,title,'pointerup',820,100);
+ assert.equal(drawer.style.left,'800px');assert.equal(drawer.style.top,'84px');
+ drawer.querySelector('.ats-overlay-reset').click();
+ assert.equal(pointer(h,select,'pointerdown',920,80).defaultPrevented,false);pointer(h,select,'pointermove',820,100);pointer(h,select,'pointerup',820,100);
+ assert.equal(drawer.classList.contains('ats-overlay-positioned'),false);
+ let closed=false;get('drawer-close').addEventListener('click',()=>closed=true);get('drawer-close').click();assert.equal(closed,true);
+ assert.equal(get('drawer-close').textContent,'×');assert.equal(drawer.querySelector('input').getAttribute('value'),'105');
+});
 test('keyboard movement and drag clamp to the viewport after resize, and Reset/Home restore the default corner',async()=>{
  const h=await floatingHarness();
  pointer(h,h.handle,'pointerdown',10,110);pointer(h,h.handle,'pointermove',2010,2110);pointer(h,h.handle,'pointerup',2010,2110);
@@ -274,7 +343,7 @@ test('modal Move/Reset never chooses an answer, and Escape leaves the underlying
  pointer(h,move,'pointerdown',420,220);pointer(h,move,'pointermove',470,250);pointer(h,move,'pointerup',470,250);
  dialog.querySelector('.ats-overlay-reset').click();await Promise.resolve();assert.equal(settled,false);
  const cancel=dialog.querySelector('.ats-confirm-cancel');cancel.focus();key(h,cancel,'Escape');assert.equal(h.get('sessionDrawer').open,true);
- dialog.dispatchEvent(new h.Event('cancel',{cancelable:true}));assert.equal(await choice,false);assert.equal(h.get('sessionDrawer').open,true);
+ dialog.querySelector('.ats-panel-close').click();assert.equal(await choice,false);assert.equal(h.get('sessionDrawer').open,true);
 });
 test('drawer, clock, help and guided-tour panels use dedicated move handles while their controls remain the same nodes',async()=>{
  const h=await floatingHarness();

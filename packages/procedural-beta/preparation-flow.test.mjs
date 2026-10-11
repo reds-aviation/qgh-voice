@@ -113,6 +113,43 @@ test('suggested save name follows a new exercise and preserves typed names or se
     assert.equal(h.get('template-name').value, 'Instructor chosen name', 'selected saved exercise identity controls its name');
 });
 
+test('existing route and area actions remain reachable from Published and Edit opens the chosen custom form', async () => {
+    const h = await preparationHarness();
+    h.state().fixes = [{ id: 'a', name: 'A', xNm: -10, yNm: 0 }, { id: 'b', name: 'B', xNm: 10, yNm: 0 }];
+    h.state().routes = [{ id: 'r1', name: 'A1', kind: 'ats', active: true, chartDirection: 'both', fixIds: ['a','b'], minAltitudeFt: 26000, maxAltitudeFt: 46000 }];
+    h.state().areas = [{ id: 'p1', name: 'P1', kind: 'prohibited', active: true, floorLabel: 'GND', ceilingLabel: 'FL260', points: [{ xNm: -10, yNm: -10 }, { xNm: 10, yNm: -10 }, { xNm: 0, yNm: 10 }] }];
+    h.workshop.render();
+    assert.equal(h.get('prepare-custom').contains(h.get('custom-airspace-features')), false, 'existing records must be reachable independently of the selected method');
+    assert.equal(h.get('prepare-custom').hidden, true);
+    h.get('custom-route-list').querySelector('button').click(); await flush();
+    assert.equal(h.get('prepare-custom').hidden, false); assert.equal(h.get('custom-route-form').hidden, false);
+    assert.equal(h.document.activeElement, h.get('custom-route-name'));
+    h.workshop.discardDraft(); h.document.querySelector('[data-source="published"]').click();
+    h.get('custom-boundary-list').querySelector('button').click(); await flush();
+    assert.equal(h.get('prepare-custom').hidden, false); assert.equal(h.get('custom-boundary-form').hidden, false);
+    assert.equal(h.get('custom-boundary-form').dataset.editId, 'p1');
+    h.workshop.discardDraft();
+    h.get('custom-route-list').querySelector('button:last-child').click(); await flush();
+    assert.equal(h.commands.at(-1).name, 'route-delete'); assert.equal(h.commands.at(-1).payload.id, 'r1');
+    h.get('custom-boundary-list').querySelector('button:last-child').click(); await flush();
+    assert.equal(h.commands.at(-1).name, 'area-delete'); assert.equal(h.commands.at(-1).payload.id, 'p1');
+});
+
+test('visible plus controls start a route or area from Published and retain the current drawing when replacement is cancelled', async () => {
+    const h = await preparationHarness(), records = h.get('custom-airspace-features');
+    assert.equal(records.hidden, false, 'the plus controls are available even before any feature exists');
+    assert.equal(records.contains(h.get('airspace-add-route')), true); assert.equal(records.contains(h.get('airspace-add-area')), true);
+    await h.click('airspace-add-route');
+    assert.equal(h.get('prepare-custom').hidden, false); assert.equal(h.get('custom-route-form').hidden, false);
+    const form = h.get('custom-route-form'); h.edit(form.elements.namedItem('name'), 'A1');
+    h.confirm(false); await h.click('airspace-add-area');
+    assert.equal(form.hidden, false); assert.equal(form.elements.namedItem('name').value, 'A1');
+    h.confirm(true); await h.click('airspace-add-area');
+    assert.equal(form.hidden, true); assert.equal(h.get('custom-boundary-form').hidden, false); assert.equal(form.elements.namedItem('name').value, '');
+    assert.equal(h.workshop.hasDraft(), false); assert.equal(h.commands.length, 0, 'starting a new drawing is staged');
+    assert.match(h.get('custom-arp-form').textContent, /Aerodrome name/); assert.doesNotMatch(h.get('custom-arp-form').textContent, /Aerodrome \/ LFA name/);
+});
+
 test('shared same-screen replacement waits for a choice, preserves Cancel, and rejects a changed exercise before Load', async () => {
     const h = await preparationHarness();
     h.edit(h.get('template-name'), 'Dialog exercise'); await h.click('template-save');
@@ -133,12 +170,12 @@ test('shared same-screen replacement waits for a choice, preserves Cancel, and r
     assert.match(h.get('scenario-library-status').textContent, /exercise changed/i);
 });
 
-test('opening setup contains only starting traffic while saved exercises and samples are inside airspace preparation', async () => {
+test('opening setup contains only starting traffic while airspace, file storage and required chart tools stay directly reachable', async () => {
     const h = await preparationHarness();
     assert.equal(h.get('setup').contains(h.get('prepare-traffic')), true);
     assert.equal(h.get('tab-build').contains(h.get('prepare-traffic')), false);
     assert.equal(h.get('setup').contains(h.get('preset-form')), false);
-    assert.equal(h.get('tab-build').contains(h.get('preset-form')), true);
+    assert.equal(h.get('tab-pilot').contains(h.get('preset-form')), true);
     assert.equal(h.get('setup').contains(h.get('aircraft-form')), false);
     assert.equal(h.get('tab-pilot').contains(h.get('aircraft-form')), true);
     assert.equal(h.get('setup').contains(h.get('prepare-save-load')), false);
@@ -150,18 +187,20 @@ test('opening setup contains only starting traffic while saved exercises and sam
     assert.equal(h.get('prepare-save-load').querySelector(':scope > summary').textContent, 'Save or load');
     assert.match(h.get('prepare-save-load').querySelector(':scope > .hint').textContent, /Airspace: chart only.*Exercise: starting aircraft and chart/);
     assert.equal(h.get('prepare-airspace-library').tagName, 'SECTION', 'chart saving does not require another accordion');
-    assert.equal(Boolean(h.get('prepare-save-load').open), false, 'storage choices stay collapsed until needed');
+    assert.equal(Boolean(h.get('prepare-save-load').open), true, 'chart save and file actions are available in preparation');
     assert.equal(h.get('prepare-save-kind').value, 'airspace');
     assert.equal(h.get('prepare-airspace-library').hidden, false);
     assert.equal(h.get('prepare-exercise-library').hidden, true, 'only the selected library is shown');
-    assert.equal(h.get('prepare-advanced').contains(h.get('preset-form')), true, 'samples are not another primary preparation choice');
-    assert.equal(h.get('prepare-advanced').contains(h.get('import')), true, 'progress files remain available away from starting-setup saving');
+    assert.equal(h.get('prepare-advanced'), null, 'required tools are not behind an Advanced section');
+    assert.equal(h.get('prepare-chart-settings').contains(h.get('environment-form')), true);
+    assert.equal(h.get('prepare-chart-settings').contains(h.get('map-align-form')), true);
+    assert.equal(h.get('tab-debrief').contains(h.get('import')), true, 'progress files are in Review rather than chart-only saving');
     assert.equal(h.get('prepare-custom').querySelector('h2'), null, 'embedded editor does not repeat a competing page heading');
     assert.equal(h.get('prepare-published').contains(h.get('aerodrome-form')), true);
     assert.equal(h.get('prepare-custom').contains(h.get('custom-arp-form')), true);
     assert.equal(h.get('custom-airspace-discard').hidden, true, 'embedded custom editor uses the common airspace discard action');
     assert.equal(h.get('prepare-airspace-discard').hidden, true, 'there is nothing to discard initially');
-    assert.equal(Boolean(h.get('prepare-advanced').open), false);
+    assert.equal(Boolean(h.get('airspace-files').open), true, 'Download and Import are directly available');
     assert.equal(Boolean(h.get('template-manage').open), false);
     h.document.querySelector('[data-source="draw"]').click();
     assert.equal(h.get('prepare-custom').hidden, false);

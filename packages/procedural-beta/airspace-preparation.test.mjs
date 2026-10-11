@@ -93,6 +93,14 @@ test('published airspace defaults all features visible and unchecked routes/area
     h.document.getElementById('aerodrome-form').dispatchEvent(new h.Event('submit')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(commands.length, 1); assert.equal(commands[0][0], 'airspace-replace');
     const imported = JSON.parse(JSON.stringify(commands[0][1]));
+    assert.equal(imported.environment.stationXNm, 0, 'New published loads use ARP for training homing/range');
+    assert.equal(imported.environment.stationYNm, 0);
+    assert.equal(imported.environment.stationName, base.station.name);
+    assert.equal(imported.environment.stationFrequency, base.station.frequency);
+    assert.equal(imported.environment.chartReference, base.source);
+    assert.ok(Math.hypot(...Object.values(geometry.project(base.station, base.origin))) > .01, 'The test station has an actual published offset');
+    assert.ok(imported.environment.briefing.includes(`latitude ${base.station.latitude}, longitude ${base.station.longitude}`));
+    assert.match(imported.environment.briefing, /places the navigation\/DF reference at the ARP for training/);
     assert.equal(imported.routes.length, extra.routes.length);
     const visibleRoute = imported.routes.find(record => record.id === route.dataset.routeId), visibleArea = imported.areas.find(record => record.id === area.dataset.areaId);
     assert.ok(visibleRoute && visibleArea);
@@ -354,8 +362,8 @@ test('a fresh mouse chart places its ARP then saves area and bidirectional ATS r
     for (const key of ['coordinateOrigin', 'geoPoints']) assert.equal(Object.hasOwn(area, key), false, 'Mouse chart must not invent geographic coordinates');
     const feature = h.get('airspace-feature-kind'); feature.value = 'route'; feature.dispatchEvent(new h.Event('change'));
     h.clickPoint(-20, 5); h.clickPoint(20, 5); h.sketchButton('Finish route').click();
-    const routeForm = h.get('custom-route-form'); routeForm.elements.namedItem('name').value = 'TRAINING R1'; routeForm.elements.namedItem('chartDirection').value = 'both';
-    routeForm.elements.namedItem('minAltitudeFt').value = '5000'; routeForm.elements.namedItem('maxAltitudeFt').value = '15000';
+    const routeForm = h.get('custom-route-form'); routeForm.elements.namedItem('name').value = 'T1'; routeForm.elements.namedItem('chartDirection').value = 'both';
+    routeForm.elements.namedItem('minFlightLevel').value = '50'; routeForm.elements.namedItem('maxFlightLevel').value = '150';
     await h.submit('custom-route-form');
     const route = h.commands.at(-1).payload; assert.equal(h.commands.at(-1).name, 'route-geometry-upsert');
     assert.equal(route.chartDirection, 'both'); assert.equal(route.minAltitudeFt, 5000); assert.equal(route.maxAltitudeFt, 15000);
@@ -406,6 +414,84 @@ test('named manual route coordinates preserve WGS84 geometry and reject missing 
     for (const invalid of ['A, 0, 0', 'A, 0, 0\nA, 1, 1', 'A,NaN,0\nB,1,1', 'A,0,0\nB,3000,0', 'A,0,0\nB,0,0', 'A,0\nB,1,1']) assert.throws(() => airspace.parseRoutePoints(invalid, 'local', origin));
 });
 
+test('new ATS designators and flight levels validate compact names and canonical FL labels without rejecting unchanged legacy names', () => {
+    for (const [text, expected] of [['a1','A1'], ['ul999','UL999'], ['AB123C','AB123C'], ['ABCD1','ABCD1'], ['999','999']]) assert.equal(airspace.routeDesignator(text), expected);
+    for (const text of ['A0','A1000','ABCDEFG1','A1 B','A1B2','ABC','000']) assert.throws(() => airspace.routeDesignator(text), /route name/i);
+    assert.equal(airspace.routeDesignator('Existing published route', 'Existing published route'), 'Existing published route');
+    assert.deepEqual(airspace.parseRouteFlightLevels('260','460'), { minAltitudeFt: 26000, maxAltitudeFt: 46000, levelLimits: 'FL260/FL460' });
+    for (const values of [['','460'], ['260',''], ['260.5','460'], ['-1','100'], ['460','260'], ['0','601']]) assert.throws(() => airspace.parseRouteFlightLevels(...values), /flight level/i);
+});
+
+test('direct drawing choices save each area category while ATS routes remain open and the plus action starts another route', async () => {
+    for (const choice of ['local-flying','prohibited','restricted','danger']) {
+        const h = mouseDrawingHarness(), control = h.get('airspace-feature-choices').querySelector(`[data-feature="${choice}"]`);
+        assert.ok(control, `The ${choice} drawing choice is explicit and outside the LFA form`);
+        assert.equal(h.form.contains(control), false); control.click();
+        h.clickPoint(-10, -10); h.clickPoint(10, -10); h.clickPoint(0, 10); h.sketchButton('Close boundary').click();
+        h.form.elements.namedItem('name').value = choice; await h.submit('custom-boundary-form');
+        assert.equal(h.commands.at(-1).name, 'area-upsert'); assert.equal(h.commands.at(-1).payload.kind, choice);
+        h.get('custom-boundary-new').click(); await new Promise(resolve => setImmediate(resolve));
+        assert.equal(h.points.value, ''); assert.equal(h.get('custom-boundary-new').textContent, '+ New area');
+    }
+    const h = mouseDrawingHarness(), ctx = h.preview.getContext('2d'); let closedPaths = 0;
+    ctx.closePath = () => { closedPaths++; };
+    h.get('airspace-feature-choices').querySelector('[data-feature="route"]').click();
+    h.clickPoint(-20, -10); h.clickPoint(0, 15); h.clickPoint(20, -10); h.sketchButton('Finish route').click();
+    assert.equal(closedPaths, 0, 'An ATS route never closes its last point back to its first');
+    const routeForm = h.get('custom-route-form'); routeForm.elements.namedItem('name').value = 'ul123';
+    routeForm.elements.namedItem('minFlightLevel').value = '260'; routeForm.elements.namedItem('maxFlightLevel').value = '460';
+    await h.submit('custom-route-form');
+    const route = h.commands.at(-1).payload; assert.equal(route.name, 'UL123'); assert.equal(route.fixes.length, 3); assert.equal(route.levelLimits, 'FL260/FL460');
+    assert.notDeepEqual(route.fixes[0], route.fixes.at(-1));
+    h.get('custom-route-new').click(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(routeForm.elements.namedItem('name').value, ''); assert.equal(routeForm.elements.namedItem('points').value, '');
+    assert.equal(h.get('custom-route-new').textContent, '+ New route');
+    assert.equal(h.sketchButton('Finish route').disabled, true);
+});
+
+test('existing Remove actions preserve Cancel and report server refusal without deleting chart records', async () => {
+    const h = mouseDrawingHarness();
+    h.state.fixes = [{ id: 'f1', name: 'A', xNm: 0, yNm: 0 }, { id: 'f2', name: 'B', xNm: 10, yNm: 0 }];
+    h.state.routes = [{ id: 'r1', name: 'A1', fixIds: ['f1','f2'], minAltitudeFt: 26000, maxAltitudeFt: 46000, active: true }];
+    h.state.areas = [{ id: 'p1', name: 'P1', kind: 'prohibited', points: square, active: true }];
+    h.editor.render(); h.context.confirm = () => false;
+    for (const list of ['custom-route-list','custom-boundary-list']) { h.get(list).querySelector('button:last-child').click(); await new Promise(resolve => setImmediate(resolve)); }
+    assert.equal(h.commands.length, 0, 'Cancel leaves both chart records untouched');
+    h.context.confirm = () => true; h.context.host.command = async () => { throw new Error('Route is assigned to aircraft; remove its assignment first.'); };
+    h.get('custom-route-list').querySelector('button:last-child').click(); await new Promise(resolve => setImmediate(resolve));
+    assert.match(h.get('custom-airspace-status').textContent, /assigned to aircraft/); assert.equal(h.state.routes.length, 1);
+    assert.equal(h.get('custom-route-list').querySelector('button:last-child').disabled, false);
+});
+
+test('removing the feature being edited clears its draft only after success and keeps unrelated or refused edits', async () => {
+    const h = mouseDrawingHarness(); h.context.confirm = () => true;
+    h.state.fixes = [{ id: 'f1', name: 'A', xNm: 0, yNm: 0 }, { id: 'f2', name: 'B', xNm: 10, yNm: 0 }];
+    h.state.routes = [{ id: 'r1', name: 'A1', fixIds: ['f1','f2'], minAltitudeFt: 26000, maxAltitudeFt: 46000, active: true, chartDirection: 'both' }];
+    h.state.areas = ['p1','p2','p3'].map(id => ({ id, name: id.toUpperCase(), kind: 'prohibited', points: square, active: true }));
+    const original = h.context.host.command; let refuse = false;
+    h.context.host.command = async (name, payload, ...rest) => {
+        if (refuse) throw new Error('The area is still needed by this exercise.');
+        await original(name, payload, ...rest);
+        if (name === 'route-delete') h.state.routes = h.state.routes.filter(route => route.id !== payload.id);
+        if (name === 'area-delete') h.state.areas = h.state.areas.filter(area => area.id !== payload.id);
+    };
+    h.editor.render(); const tick = () => new Promise(resolve => setImmediate(resolve));
+    h.get('custom-route-list').querySelector('button').click(); await tick();
+    assert.equal(h.get('custom-route-form').dataset.editId, 'r1');
+    h.get('custom-route-list').querySelector('button:last-child').click(); await tick();
+    assert.equal(h.state.routes.length, 0); assert.equal(h.get('custom-route-form').dataset.editId, undefined, 'successful Remove cannot leave a draft that recreates the route');
+    assert.equal(h.get('custom-route-form').elements.namedItem('points').value, ''); assert.equal(h.editor.hasDraft(), false);
+    const row = id => [...h.get('custom-boundary-list').children].find(record => record.querySelector('strong').textContent.startsWith(id));
+    row('P1').querySelector('button').click(); await tick(); row('P1').querySelector('button:last-child').click(); await tick();
+    assert.equal(h.form.dataset.editId, undefined); assert.equal(h.points.value, ''); assert.equal(h.editor.hasDraft(), false);
+    row('P2').querySelector('button').click(); await tick(); const draft = h.points.value;
+    row('P3').querySelector('button:last-child').click(); await tick();
+    assert.equal(h.form.dataset.editId, 'p2'); assert.equal(h.points.value, draft, 'removing another area preserves the current edit');
+    refuse = true; row('P2').querySelector('button:last-child').click(); await tick();
+    assert.equal(h.form.dataset.editId, 'p2'); assert.equal(h.points.value, draft, 'server refusal preserves the current edit');
+    assert.match(h.get('custom-airspace-status').textContent, /still needed/); assert.equal(h.state.areas.length, 1);
+});
+
 test('drawing an open ATS route stages named points then submits one atomic command with direction and route limits', async () => {
     const h = mouseDrawingHarness(), feature = h.get('airspace-feature-kind');
     feature.value = 'route'; feature.dispatchEvent(new h.Event('change'));
@@ -421,13 +507,13 @@ test('drawing an open ATS route stages named points then submits one atomic comm
     assert.match(h.get('custom-airspace-status').textContent, /name.*Unidirectional.*Bidirectional.*Save route/i);
     assert.match(h.get('boundary-drawing-status').textContent, /finished|save route/i);
     assert.equal(h.get('route-drawing-point-names').querySelectorAll('input').length, 2);
-    read('name').value = 'Training route'; read('chartDirection').value = 'both';
-    read('minAltitudeFt').value = '5000'; read('maxAltitudeFt').value = '15000'; read('levelLimits').value = 'FL 100–FL 200 · chart reference';
+    read('name').value = 'T2'; read('chartDirection').value = 'both';
+    read('minFlightLevel').value = '260'; read('maxFlightLevel').value = '460';
     await h.submit('custom-route-form');
     assert.equal(h.commands.length, 1, 'No separate fix-upsert operations can leave partial geometry');
     const command = h.commands[0]; assert.equal(command.name, 'route-geometry-upsert');
-    assert.equal(command.payload.chartDirection, 'both'); assert.equal(command.payload.minAltitudeFt, 5000); assert.equal(command.payload.maxAltitudeFt, 15000);
-    assert.equal(command.payload.levelLimits, 'FL 100–FL 200 · chart reference'); assert.equal(command.payload.fixes.length, 2);
+    assert.equal(command.payload.chartDirection, 'both'); assert.equal(command.payload.minAltitudeFt, 26000); assert.equal(command.payload.maxAltitudeFt, 46000);
+    assert.equal(command.payload.levelLimits, 'FL260/FL460'); assert.equal(command.payload.fixes.length, 2);
     assert.equal(command.payload.kind, 'ats'); assert.equal(command.payload.active, true);
     assert.ok(command.payload.fixes.every(fix => !fix.id), 'New drawing does not silently reuse existing names/identities');
     command.payload.fixes.forEach((fix, index) => assert.ok(Math.hypot(fix.xNm - [-10, 10][index], fix.yNm - [-10, 5][index]) < 1e-8));
@@ -439,16 +525,16 @@ test('manual route errors are visible without ARP or valid limits, and switching
     const h = mouseDrawingHarness(false), feature = h.get('airspace-feature-kind');
     feature.value = 'route'; feature.dispatchEvent(new h.Event('change')); h.editor.setMethod('coordinates');
     const form = h.get('custom-route-form'), read = name => form.elements.namedItem(name);
-    read('name').value = 'Manual route'; read('mode').value = 'local'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5';
+    read('name').value = 'M1'; read('mode').value = 'local'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5';
     await h.submit('custom-route-form'); assert.equal(h.commands.length, 0); assert.match(h.get('custom-airspace-status').textContent, /ARP/);
     const arp = h.get('custom-arp-form'); h.edit(arp.elements.namedItem('latitude'), 26); h.edit(arp.elements.namedItem('longitude'), 73);
     h.context.confirm = () => true; await h.submit('custom-arp-form');
-    read('name').value = 'Manual route'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5'; read('points').dispatchEvent(new h.Event('input'));
+    read('name').value = 'M1'; read('points').value = 'ENTRY, -10, 0\nEXIT, 20, 5'; read('points').dispatchEvent(new h.Event('input'));
     const draft = read('points').value; h.editor.setMethod('draw'); h.editor.setMethod('coordinates'); assert.equal(read('points').value, draft);
-    read('minAltitudeFt').value = '15000'; read('maxAltitudeFt').value = '5000'; await h.submit('custom-route-form');
+    read('minFlightLevel').value = '150'; read('maxFlightLevel').value = '50'; await h.submit('custom-route-form');
     assert.equal(h.commands.filter(command => command.name === 'route-geometry-upsert').length, 0); assert.match(h.get('custom-airspace-status').textContent, /upper limit/);
     assert.equal(read('points').value, draft, 'An invalid save keeps the entered route for repair');
-    read('maxAltitudeFt').value = '20000'; await h.submit('custom-route-form');
+    read('maxFlightLevel').value = '200'; await h.submit('custom-route-form');
     assert.equal(h.commands.filter(command => command.name === 'route-geometry-upsert').length, 1);
     assert.deepEqual(h.commands.at(-1).payload.fixes.map(point => point.name), ['ENTRY', 'EXIT']);
 });
@@ -458,8 +544,8 @@ test('editing a route keeps exact point identities, full-precision geometry, con
     h.state.fixes = [{ id: 'f-a', name: 'ENTRY', xNm: 12.123456789, yNm: 0.987654321 }, { id: 'f-b', name: 'EXIT', xNm: 22.111222333, yNm: 15.456789123 }];
     h.state.routes = [{ id: 'r1', name: 'Existing', kind: 'conditional', chartDirection: 'forward', active: false, fixIds: ['f-a', 'f-b'], availableFrom: 30, availableUntil: 300, minAltitudeFt: 5000, maxAltitudeFt: 20000, levelLimits: 'Chart label' }];
     h.editor.render(); const existing = h.get('custom-airspace-features');
-    assert.equal(existing.hasAttribute('open'), false, 'Route records stay collapsed so the editor is not flooded'); assert.match(existing.querySelector('summary').textContent, /· 1$/);
-    existing.open = true; h.get('custom-route-list').querySelector('button').click();
+    assert.equal(existing.tagName, 'SECTION', 'Route edit actions are available directly'); assert.match(existing.querySelector('h3').textContent, /· 1$/);
+    h.get('custom-route-list').querySelector('button').click();
     const form = h.get('custom-route-form'); form.elements.namedItem('levelLimits').value = 'Updated label';
     await h.submit('custom-route-form');
     const payload = h.commands.at(-1).payload; assert.equal(payload.id, 'r1'); assert.equal(payload.kind, 'conditional'); assert.equal(payload.active, false);

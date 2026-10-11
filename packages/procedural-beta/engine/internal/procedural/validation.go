@@ -95,6 +95,9 @@ func validateEnvironment(e Environment) error {
 	if e.DrawnARP && e.ChartOrigin != nil {
 		return errors.New("a mouse-drawn ARP uses local NM geometry, not geographic coordinates")
 	}
+	if (e.RunwayCenterXNm == nil) != (e.RunwayCenterYNm == nil) || !between(e.RunwayOffsetNm, -5, 5) || (e.RunwayCenterXNm != nil && (!between(*e.RunwayCenterXNm, -2000, 2000) || !between(*e.RunwayCenterYNm, -2000, 2000))) {
+		return errors.New("runway centre needs both local NM coordinates within chart bounds")
+	}
 	if strings.TrimSpace(e.StationName) == "" || !short(e.StationName, 40) || (e.StationType != "df" && e.StationType != "vor") || !between(e.StationXNm, -2000, 2000) || !between(e.StationYNm, -2000, 2000) || !short(e.StationFrequency, 20) || !short(e.AerodromeName, 100) || !short(e.ChartReference, 240) || !short(e.EffectiveInfo, 240) || !short(e.Briefing, 2000) {
 		return errors.New("invalid station or aerodrome chart metadata")
 	}

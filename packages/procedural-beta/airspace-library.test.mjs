@@ -92,7 +92,7 @@ test('portable airspace strips all traffic, records, identity and exercise envir
     state.scopeDisplay.aircraft = copy(state.aircraft); state.environment.map.pin = '123456';
     const asset = prepared(state), text = JSON.stringify(asset);
     assert.equal(asset.format, 'ats-simbox-airspace'); assert.equal(asset.version, 1);
-    assert.deepEqual(Object.keys(asset.environment).sort(), library.AIRSPACE_ENVIRONMENT_KEYS.filter(key => key in state.environment).sort());
+    assert.deepEqual(Object.keys(asset.environment).sort(), library.AIRSPACE_ENVIRONMENT_KEYS.filter(key => key in state.environment || ['runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm'].includes(key)).sort());
     for (const field of ['aircraft', 'exerciseId', 'elapsed', 'strips', 'calls', 'reports', 'events', 'criteria', 'radio', 'pin', 'token', 'qnhHpa', 'windSpeedKt', 'transitionLevel', 'dfHoldSeconds']) assert.doesNotMatch(text, new RegExp('"' + field + '"'));
     assert.equal(asset.routes[0].publishedSegments[0].oddLevels, '↑');
     assert.equal(asset.routes[0].publishedSegments[0].evenLevels, '↓');
@@ -108,6 +108,20 @@ test('airspace parser rejects full exercises, invalid polygons, missing referenc
     const origin = scenario(); origin.environment.chartOrigin.latitude = 90; assert.throws(() => prepared(origin), /ARP/);
     assert.throws(() => library.parseAirspaceTemplate(' '.repeat(20 * 1024 * 1024 + 1)), /20 MB/);
     const wrong = scenario(); wrong.routes[0].publishedSegments[0].to = 'WRONG'; assert.throws(() => prepared(wrong), /leg order/);
+});
+
+test('saved runway geometry retains explicit zero centres and clears older chart overrides on load', async () => {
+    const state = scenario(); Object.assign(state.environment, { runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25 });
+    const saved = prepared(state);
+    assert.equal(saved.environment.runwayCenterXNm, 0); assert.equal(saved.environment.runwayCenterYNm, 2.25);
+    const legacy = prepared(scenario());
+    assert.equal(legacy.environment.runwayOffsetNm, 0); assert.equal(legacy.environment.runwayCenterXNm, null); assert.equal(legacy.environment.runwayCenterYNm, null);
+    const invalid = scenario(); invalid.environment.runwayCenterXNm = 0;
+    assert.throws(() => prepared(invalid), /both local NM/);
+    invalid.environment.runwayCenterYNm = 2001;
+    assert.throws(() => prepared(invalid), /runwayCenterYNm/);
+    invalid.environment.runwayCenterYNm = 0; invalid.environment.runwayOffsetNm = 6;
+    assert.throws(() => prepared(invalid), /runwayOffsetNm/);
 });
 
 test('saved route WGS84 geometry must agree with its fix coordinates', () => {

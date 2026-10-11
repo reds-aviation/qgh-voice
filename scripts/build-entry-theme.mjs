@@ -1,10 +1,31 @@
 import {readFile, writeFile, copyFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
+function normalizeHeader(html) {
+  return html.replace(/<header\b[^>]*class="[^\"]*(?:entry-header|app-header|tactical-app-header|site-header|topbar|common-header)[^\"]*"[^>]*>[\s\S]*?<\/header>/, header => {
+    header=header.replace(/(<header\b[^>]*class=")([^\"]+)/,'$1$2 iaf-site-header');
+    header=header.replace(/(<(?:a|div)\b[^>]*class=")([^\"]*(?:entry-brand|tactical-brand|header-left|\bbrand\b)[^\"]*)/, '$1$2 iaf-header-brand');
+    if(!header.includes('iaf-header-brand'))header=header.replace(/(<a\b)/,'$1 class="iaf-header-brand"');
+    const credit=/<div\b([^>]*(?:class="[^\"]*(?:entry-credit|tactical-credit|\bcredit\b|\bcreator\b)[^\"]*"|id="creator-credit")[^>]*)>[\s\S]*?<\/div>/;
+    if(credit.test(header)){
+      header=header.replace(credit, full=>{
+        const normalized=/class="/.test(full)?full.replace(/class="([^\"]*)"/,'class="$1 iaf-header-credit"'):full.replace('<div','<div class="iaf-header-credit"');
+        return normalized.replace(/>[\s\S]*<\/div>$/, '><strong>Flt Lt Balaram Reddy</strong><small>Service No. 38703</small></div>');
+      });
+    }else header=header.replace('</header>','<div class="iaf-header-credit"><strong>Flt Lt Balaram Reddy</strong><small>Service No. 38703</small></div></header>');
+    return header.replace(/SERVICE NO\. 38703/g,'Service No. 38703')
+      .replace(/>TRAINING CENTRE</g,'>Training centre<')
+      .replace(/>CHANGE QGH TYPE</g,'>Change QGH type<')
+      .replace(/>SUITE HOME</g,'>Suite home<')
+      .replace(/>ATC SUITE</g,'>Suite home<')
+      .replace(/>TRAINING GUIDE ↗</g,'>Training guide ↗<');
+  });
+}
+
 // This is a Pages presentation layer. Flight controls and exercise canvases keep
 // their original styles; the selectors follow each existing setup/desk state.
 export async function buildEntryTheme(output, root, version) {
-  for (const asset of ['flow-theme.css', 'qgh-cloudbreak.png']) {
+  for (const asset of ['flow-theme.css', 'iaf-theme.css', 'qgh-cloudbreak.png']) {
     await copyFile(resolve(root, 'packages/site-landing', asset), resolve(output, asset));
   }
   const pages = [
@@ -33,9 +54,9 @@ export async function buildEntryTheme(output, root, version) {
     // Published Pages uses the shared tour; keep legacy engine assets for old recordings/builds.
     if(['qgh','single','tactical'].includes(surface))html=html.replace(/<script[^>]+src="guided-familiarisation\.js[^\"]*"[^>]*><\/script>\s*/g,'').replace(/<link[^>]+href="guided-familiarisation\.css[^\"]*"[^>]*>\s*/g,'');
     html = html.replace('<body', `<body data-suite-surface="${surface}"`)
-      .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}">${entryStyle}</head>`);
+      .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}">${entryStyle}<link rel="stylesheet" href="${prefix}iaf-theme.css?release=${version}"></head>`);
     if (['qgh', 'instructor', 'guide'].includes(surface)) {
-      html = html.replace(/(<meta name="theme-color" content=")[^"]+/, '$1#fafaf8');
+      html = html.replace(/(<meta name="theme-color" content=")[^"]+/, '$1#365e7b');
     }
     if (surface === 'qgh') {
       html = html.replace('<title>QGH Simulator</title>', '<title>ATS SIM BOX · Version 1 · QGH</title>')
@@ -66,6 +87,7 @@ export async function buildEntryTheme(output, root, version) {
     if (['qgh', 'instructor', 'procedural', 'guide'].includes(surface)) {
       html = html.replace('</body>', `<footer class="flow-footer"><span>ATS SIM BOX · Version 1</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
     }
+    html=normalizeHeader(html);
     await writeFile(path, html);
   }
 }

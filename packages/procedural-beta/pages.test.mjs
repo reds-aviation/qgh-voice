@@ -42,6 +42,8 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     const styles=[...document.querySelectorAll('link[rel="stylesheet"]')].map(link=>new URL(link.getAttribute('href'),new URL(page,base)).pathname.split('/').at(-1));
     assert.equal(styles.filter(path=>path==='suite-entry.css').length,1,`${page}: shared entry rules loaded once`);
     assert.ok(styles.indexOf('suite-entry.css')>styles.indexOf('flow-theme.css'),`${page}: shared layout follows generated theme`);
+    assert.equal(styles.filter(path=>path==='iaf-theme.css').length,1,`${page}: IAF palette loaded once`);
+    assert.ok(styles.indexOf('iaf-theme.css')>styles.indexOf('suite-entry.css'),`${page}: IAF palette follows shared entry rules`);
   }
   for (const [page,renderer] of [['single.html','simulator.js'],['tactical.html','tactical-simulator.js'],['instructor-led/instructor.html','suite-display.js'],['procedural-beta/index.html','browser-client.js'],['procedural-beta/procedural.html','browser-client.js']]) {
     const {document}=parseHTML(readFileSync(resolve(dist,page),'utf8'));
@@ -77,10 +79,12 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   const sw=vm.runInContext(readFileSync(resolve(dist,'service-worker.js'),'utf8')+';({APP_SHELL,shellCacheKey})',context);
   assert.equal(new Set(sw.APP_SHELL).size,sw.APP_SHELL.length,'duplicate precache URL');
   for(const path of sw.APP_SHELL) assert.ok(existsSync(resolve(dist,path.endsWith('/')?path+'index.html':path)),`missing precache ${path}`);
-  for (const path of ['scope-visuals.js','procedural-beta/scope-visuals.js','procedural-beta/suite-entry.css']) {
+  for (const path of ['scope-visuals.js','procedural-beta/scope-visuals.js','procedural-beta/suite-entry.css','iaf-theme.css']) {
     assert.ok(sw.APP_SHELL.includes('./'+path),`${path}: available in suite offline shell`);
     assert.equal(sw.shellCacheKey(new Request(new URL(path+'?release='+release,base))).url,new URL(path,base).href,`${path}: current release uses offline asset`);
   }
+  assert.ok(sw.APP_SHELL.includes('./iaf-roundel.png'),'IAF roundel is available in suite offline shell');
+  assert.equal(sw.shellCacheKey(new Request(new URL('iaf-roundel.png',base))).url,new URL('iaf-roundel.png',base).href,'IAF roundel uses its canonical offline asset');
   const worker=new URL('procedural-beta/browser-worker.js?room=12345678-1234-1234-1234-123456789abc',base);
   assert.equal(sw.shellCacheKey(new Request(worker)).url,new URL('procedural-beta/browser-worker.js',base).href);
   assert.ok(sw.shellCacheKey(new Request(new URL('procedural-beta/procedural.html?position=student&connection=online',base))));
@@ -94,7 +98,10 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     const installContext=vm.createContext({URL,Request,Response,console,
       caches:{open:async()=>({addAll:async values=>{requests=values;}})},
       self:{registration:{scope:workerScope},location:{origin:'https://example.test'},addEventListener:(name,fn)=>handlers.set(name,fn)}});
-    vm.runInContext(readFileSync(resolve(dist,file),'utf8'),installContext);
+    const precache=vm.runInContext(readFileSync(resolve(dist,file),'utf8')+';APP_SHELL',installContext);
+    if(file==='instructor-led/service-worker.js') {
+      for(const path of ['../iaf-theme.css','../iaf-roundel.png']) assert.ok(precache.includes(path),`${path}: available in instructor offline shell`);
+    }
     handlers.get('install')({waitUntil:value=>{installation=value;}});await installation;
     assert.ok(requests.length>10);
     assert.ok(requests.every(request=>request.cache==='reload'),`${file} must not precache stale HTTP responses`);

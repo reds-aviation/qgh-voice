@@ -96,7 +96,7 @@ export function createChartWorkshop(context) {
         const summary = document.createElement('summary'); summary.textContent = label; panel.append(summary); steps.set(id, panel); return panel;
     };
     const airspace = document.createElement('section'); airspace.id = 'prepare-airspace';
-    const saved = step('prepare-save-load', 'Save or load');
+    const saved = step('prepare-save-load', 'Save or load'); saved.open = true;
     const savedHint = document.createElement('p'); savedHint.id = 'prepare-save-kind-hint'; savedHint.className = 'hint'; savedHint.textContent = 'Airspace: chart only. Exercise: starting aircraft and chart.';
     const savedKindLabel = document.createElement('label'); savedKindLabel.className = 'prepare-save-kind'; savedKindLabel.textContent = 'Setup type';
     const savedKind = document.createElement('select'); savedKind.id = 'prepare-save-kind'; savedKind.setAttribute('aria-describedby', savedHint.id);
@@ -105,24 +105,24 @@ export function createChartWorkshop(context) {
     const choices = document.createElement('div'); choices.className = 'airspace-preparation-actions';
     const published = document.createElement('div'); published.id = 'prepare-published';
     const custom = document.createElement('div'); custom.id = 'prepare-custom';
-    const advanced = document.createElement('details'); advanced.id = 'prepare-advanced'; advanced.className = 'prepare-step';
-    const advancedTitle = document.createElement('summary'); advancedTitle.textContent = 'Advanced tools'; advanced.append(advancedTitle);
+    const existing = document.createElement('div'); existing.id = 'prepare-existing';
+    const chartSettings = document.createElement('section'); chartSettings.id = 'prepare-chart-settings';
     const publishedDetails = $('aerodrome-form').closest('details');
     // The Published choice already discloses this form; avoid a second accordion.
     published.append($('aerodrome-form')); publishedDetails.remove();
     for (const id of ['map-align-form','chart-form','chart-fixes-form','area-form','environment-form']) {
-        const details = $(id)?.closest('details'); if (details && !advanced.contains(details)) { details.open = false; advanced.append(details); }
+        const details = $(id)?.closest('details'); if (details && !chartSettings.contains(details)) { details.open = false; chartSettings.append(details); }
     }
     const sample = $('preset-form').closest('details'); sample.id = 'prepare-sample-traffic'; sample.open = false; sample.querySelector('summary').textContent = 'Sample traffic';
     const additionalTraffic = document.createElement('details');
     const additionalTrafficTitle = document.createElement('summary'); additionalTrafficTitle.textContent = 'Additional traffic tools'; additionalTraffic.append(additionalTrafficTitle);
     for (const id of ['aircraft-form', 'generate-form', 'remove-aircraft']) additionalTraffic.append($(id));
     $('tab-pilot').append(additionalTraffic);
-    advanced.append(sample);
-    const progress = $('import').closest('details'); progress.open = false; progress.querySelector('summary').textContent = 'Progress file · includes exercise records'; advanced.append(progress);
+    additionalTraffic.append(sample);
+    const progress = $('import').closest('details'); progress.open = false; progress.querySelector('summary').textContent = 'Progress file · includes exercise records'; $('tab-debrief').append(progress);
     for (const heading of container.querySelectorAll(':scope > h2')) heading.textContent = 'Prepare airspace';
     container.querySelector(':scope > .eyebrow').textContent = 'PUBLISHED · DRAW · COORDINATES';
-    const openStep = id => { if (id === 'prepare-traffic-step') { context.openTraffic?.(); return; } for (const [key, panel] of steps) panel.open = key === id; };
+    const openStep = id => { if (id === 'prepare-traffic-step') { context.openTraffic?.(); return; } for (const [key, panel] of steps) panel.open = key === id || key === 'prepare-save-load'; };
     const chooseSource = mode => {
         if (mode === 'published') preparation?.cancelSketch?.();
         published.hidden = mode !== 'published'; custom.hidden = mode === 'published';
@@ -133,12 +133,12 @@ export function createChartWorkshop(context) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.dataset.source = mode;
         button.setAttribute('aria-controls', mode === 'published' ? published.id : custom.id); button.onclick = () => chooseSource(mode); choices.append(button);
     }
-    airspace.append(choices,published,custom);
+    airspace.append(choices,published,custom,existing);
     const footer = document.createElement('div'); footer.className = 'airspace-preparation-actions'; footer.id = 'prepare-airspace-actions';
     const continueButton = document.createElement('button'); continueButton.type = 'button'; continueButton.id = 'prepare-traffic-next'; continueButton.textContent = 'Back to traffic setup'; continueButton.onclick = () => context.openTraffic?.(); footer.append(continueButton);
-    container.append(airspace, saved, advanced, footer);
+    container.append(airspace, saved, chartSettings, footer);
     let syncDiscard = () => {};
-    const preparation = createAirspacePreparation({...context,container:custom,showDiscard:false,showHeading:false,draftChanged:()=>syncDiscard()});
+    const preparation = createAirspacePreparation({...context,container:custom,recordsContainer:existing,showDiscard:false,showHeading:false,draftChanged:()=>syncDiscard(),openEditor:mode=>chooseSource(custom.hidden?'draw':mode)});
     const airspaceLibraryContainer = document.createElement('section'); airspaceLibraryContainer.id = 'prepare-airspace-library';
     const exerciseLibraryContainer = document.createElement('section'); exerciseLibraryContainer.id = 'prepare-exercise-library';
     const chooseSaveKind = kind => { savedKind.value = kind === 'exercise' ? 'exercise' : 'airspace'; airspaceLibraryContainer.hidden = savedKind.value !== 'airspace'; exerciseLibraryContainer.hidden = savedKind.value !== 'exercise'; };
@@ -397,13 +397,14 @@ export function createChartWorkshop(context) {
             throw new Error('The session changed. Select the chart again.');
         if (scenario.exerciseId !== exerciseId)
             throw new Error('The exercise changed while preparing the chart. Select it again.');
-        const station = item.station, offset = station ? project(station, item.origin) : { xNm: 0, yNm: 0 };
+        const station = item.station;
+        const stationReference = station ? `Published station reference: ${station.name}, ${station.frequency || station.type}, latitude ${station.latitude}, longitude ${station.longitude}. Source coordinates are retained in the catalogue; this exercise places the navigation/DF reference at the ARP for training.` : 'The navigation/DF reference is co-located with the ARP for this training exercise.';
         const areas = chosen.areas.map((area, i) => {
             const geoPoints = area.circle ? Array.from({ length: 72 }, (_, j) => destination(area.circle, j * 5, area.circle.radiusNm)) : area.points || [];
             return { id: area.id, name: area.name, kind: area.kind, points: geoPoints.map(p => project(p, item.origin)), coordinateOrigin: item.origin, geoPoints: geoPoints.map(p => ({ latitude: p.latitude, longitude: p.longitude })), floorLabel: area.floorLabel, ceilingLabel: area.ceilingLabel, source: area.source || 'India AIP', reference: area.reference || item.source, effectiveInfo: area.effectiveInfo || item.effectiveInfo, notes: [area.notes, area.activation].filter(Boolean).join('\n'), active: true };
         });
         const navigation = mergePublishedNavigation(scenario, chosen, item.origin);
-        scenario.environment = { ...scenario.environment, chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: offset.xNm, stationYNm: offset.yNm, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `Approximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nSet runway, QNH, wind, transition altitude, frequencies and coordination instructions before starting.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
+        scenario.environment = { ...scenario.environment, chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: 0, stationYNm: 0, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `${stationReference}\nApproximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nSet runway, QNH, wind, transition altitude, frequencies and coordination instructions before starting.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
         scenario.areas = areas;
         scenario.fixes = navigation.fixes;
         scenario.routes = navigation.routes;

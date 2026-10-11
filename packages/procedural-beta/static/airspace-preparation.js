@@ -61,6 +61,18 @@ export function parseRoutePoints(text, mode, origin) {
     });
     return { fixes, ...(origin ? { coordinateOrigin: { ...origin }, geoPoints } : {}) };
 }
+export function routeDesignator(value, existingName = '') {
+    const name = String(value).trim();
+    if (existingName && name === existingName) return name;
+    const normalized = name.toUpperCase(), match = normalized.match(/^[A-Z]*(\d{1,3})[A-Z]*$/);
+    if (normalized.length > 6 || !match || Number(match[1]) < 1 || Number(match[1]) > 999) throw new Error('Route name: use up to 6 letters / numbers with one number from 1–999, e.g. A1 or UL123.');
+    return normalized;
+}
+export function parseRouteFlightLevels(minimum, maximum) {
+    const lower = Number(minimum), upper = Number(maximum);
+    if (!String(minimum).trim() || !String(maximum).trim() || ![lower, upper].every(value => Number.isInteger(value) && value >= 0 && value <= 600) || upper < lower) throw new Error('Flight level limits: use whole numbers from 0–600, with the upper limit at or above the lower limit.');
+    return { minAltitudeFt: lower * 100, maxAltitudeFt: upper * 100, levelLimits: `FL${lower}/FL${upper}` };
+}
 // A selection is explicit; an empty selection loads only the ARP/station.
 export function selectPublishedCatalogue(item, published, routeIds, areaIds) {
     const wantedRoutes = new Set(routeIds), wantedAreas = new Set(areaIds);
@@ -88,13 +100,18 @@ export function createAirspacePreparation(host) {
     const [featureWrap, feature] = input('Add or edit', 'featureKind', '', 'select'); feature.id = 'airspace-feature-kind';
     for (const [value, label] of [['area', 'Area boundary · LFA / P / R / D / control zone'], ['route', 'ATS route · ordered reporting points']]) { const option = element('option', label); option.value = value; feature.append(option); }
     feature.value = 'area';
+    featureWrap.hidden = true;
+    const featureChoices = element('div', '', 'airspace-feature-choices'); featureChoices.id = 'airspace-feature-choices'; featureChoices.setAttribute('aria-label', 'Choose what to draw');
+    for (const [choice, label] of [...kinds, ['route', 'ATS route']]) {
+        const control = button(label, () => void chooseFeature(choice)); control.dataset.feature = choice; control.setAttribute('aria-pressed', String(choice === 'local-flying')); featureChoices.append(control);
+    }
     const arpForm = element('form', '', 'airspace-arp-form'); arpForm.id = 'custom-arp-form';
     const arpFields = {};
     const arpGrid = element('div', '', 'airspace-preparation-grid');
     for (const [label, name, placeholder] of [['ARP latitude', 'latitude', '26.25 or 261500N'], ['ARP longitude', 'longitude', '73.05 or 0730300E']]) {
         const [wrap, e] = input(label, name); e.placeholder = placeholder; e.required = true; arpFields[name] = e; arpGrid.append(wrap);
     }
-    const [nameWrap, arpName] = input('Aerodrome / LFA name', 'aerodromeName'); arpName.maxLength = 100;
+    const [nameWrap, arpName] = input('Aerodrome name', 'aerodromeName'); arpName.maxLength = 100;
     const [refWrap, reference] = input('Chart reference (optional)', 'reference'); reference.maxLength = 240; reference.placeholder = 'Chart, AIP page or instructor exercise';
     const [dateWrap, date] = input('Edition / date (optional)', 'effectiveInfo'); date.maxLength = 240;
     const sourceDetails = element('details'); sourceDetails.append(element('summary', 'Chart source (optional)'), refWrap, dateWrap);
@@ -102,6 +119,7 @@ export function createAirspacePreparation(host) {
     const boundaryForm = element('form', '', 'airspace-boundary-form'); boundaryForm.id = 'custom-boundary-form';
     const [boundaryWrap, boundaryName] = input('Boundary name', 'name'); boundaryName.maxLength = 80; boundaryName.required = true;
     const [kindWrap, kind] = input('Area type', 'kind', '', 'select'); kinds.forEach(([value, label]) => { const o = element('option', label); o.value = value; kind.append(o); });
+    kindWrap.hidden = true;
     const grid = element('div', '', 'airspace-preparation-grid'); grid.append(boundaryWrap, kindWrap);
     const [floorWrap, floor] = input('Lower limit', 'floorLabel', 'GND'); floor.maxLength = 80;
     const [ceilingWrap, ceiling] = input('Upper limit', 'ceilingLabel'); ceiling.maxLength = 80; ceiling.placeholder = 'FL 100'; grid.append(floorWrap, ceilingWrap);
@@ -109,16 +127,17 @@ export function createAirspacePreparation(host) {
     mode.value = 'geographic';
     const [pointsWrap, pointsInput] = input('Boundary points · one pair per line', 'points', '', 'textarea'); pointsInput.rows = 4; pointsInput.placeholder = '261500N, 0730300E\n261800N, 0731200E\n260900N, 0731500E'; pointsInput.required = true;
     const routeForm = element('form', '', 'airspace-route-form'); routeForm.id = 'custom-route-form'; routeForm.hidden = true;
-    const [routeNameWrap, routeName] = input('ATS route name', 'name'); routeName.id = 'custom-route-name'; routeName.maxLength = 64; routeName.required = true;
+    const [routeNameWrap, routeName] = input('ATS route name · up to 6 letters / numbers', 'name'); routeName.id = 'custom-route-name'; routeName.maxLength = 6; routeName.required = true; routeName.placeholder = 'A1 or UL123';
     const [directionWrap, routeDirection] = input('Route direction', 'chartDirection', '', 'select'); routeDirection.id = 'custom-route-direction';
     const chooseDirection = element('option', 'Choose route direction…'); chooseDirection.value = ''; chooseDirection.disabled = true; routeDirection.append(chooseDirection);
     for (const [value, label] of [['forward', 'Unidirectional · first → last'], ['both', 'Bidirectional · both directions']]) { const option = element('option', label); option.value = value; routeDirection.append(option); } routeDirection.value = 'forward';
     const routeGrid = element('div', '', 'airspace-preparation-grid'); routeGrid.append(routeNameWrap, directionWrap);
-    const [minWrap, minAltitude] = input('Lower route limit · ft MSL', 'minAltitudeFt', '0'), [maxWrap, maxAltitude] = input('Upper route limit · ft MSL', 'maxAltitudeFt', '60000');
-    for (const value of [minAltitude, maxAltitude]) { value.type = 'number'; value.min = '-1500'; value.max = '60000'; value.step = '100'; value.required = true; }
+    const [minWrap, minAltitude] = input('Minimum flight level', 'minFlightLevel', '0'), [maxWrap, maxAltitude] = input('Maximum flight level', 'maxFlightLevel', '600');
+    minAltitude.id = 'custom-route-min-fl'; maxAltitude.id = 'custom-route-max-fl';
+    for (const value of [minAltitude, maxAltitude]) { value.type = 'number'; value.min = '0'; value.max = '600'; value.step = '1'; value.required = true; }
     routeGrid.append(minWrap, maxWrap);
-    const [levelsWrap, levelLimits] = input('Published / instructor level limits (optional text)', 'levelLimits'); levelLimits.maxLength = 240; levelLimits.placeholder = 'e.g. FL 100–FL 200 · see chart';
-    const levelHint = element('p', 'Numeric limits are feet above mean sea level. FL / chart labels are retained as text and are not converted into flight limits.', 'hint');
+    const [levelsWrap, levelLimits] = input('Existing chart label', 'levelLimits'); levelLimits.maxLength = 240; levelsWrap.hidden = true;
+    const levelHint = element('p', 'Enter 260 and 460 for FL260/FL460.', 'hint');
     const [routeModeWrap, routeMode] = input('Route point format', 'mode', '', 'select');
     for (const [value, label] of [['geographic', 'Name, latitude, longitude'], ['local', 'Name, east NM, north NM']]) { const option = element('option', label); option.value = value; routeMode.append(option); }
     routeMode.value = 'geographic';
@@ -130,7 +149,7 @@ export function createAirspacePreparation(host) {
     const sketch = element('details', '', 'airspace-sketch'); sketch.id = 'boundary-sketch';
     const sketchSummary = element('summary', 'Draw area on the radar scope or preview'); sketch.append(sketchSummary); sketch.open = true;
     const tools = element('div', '', 'airspace-preparation-actions');
-    let draft = [], routePointNames = [], routeGeneratedText = '', closed = false, active = false, placingARP = false, placementBusy = false, drag = -1, selectedVertex = -1, dragPointer = null, dragCanvas = null, gestureBefore = null, previewDragScale = null, scopeTransform = null, lastExercise = '', dirtyARP = false, editingOrigin = null, drawingError = '', featureKind = 'area', method = 'draw';
+    let draft = [], routePointNames = [], routeGeneratedText = '', closed = false, active = false, placingARP = false, placementBusy = false, drag = -1, selectedVertex = -1, dragPointer = null, dragCanvas = null, gestureBefore = null, previewDragScale = null, scopeTransform = null, lastExercise = '', dirtyARP = false, editingOrigin = null, editingRoute = null, drawingError = '', featureKind = 'area', method = 'draw';
     const canvas = element('canvas'); canvas.id = 'boundary-sketch-canvas'; canvas.width = 720; canvas.height = 380; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Boundary editor. Click to add points. Drag a point to move it. Close boundary when complete.');
     const hint = element('p', 'Click points in order. Select or drag a vertex to edit it. Coordinates stay in NM or latitude / longitude.', 'hint'); const status = element('p', '', 'airspace-preparation-status'); status.id = 'custom-airspace-status'; status.setAttribute('role', 'status');
     const drawingStatus = element('p', '', 'boundary-drawing-status'); drawingStatus.id = 'boundary-drawing-status'; drawingStatus.setAttribute('role', 'status');
@@ -182,21 +201,24 @@ export function createAirspacePreparation(host) {
     sketch.append(hint, drawingStatus, drawingActions, canvas, vertexLabel, tools);
     const hasFeatureDraft = () => !!boundaryName.value.trim() || !!pointsInput.value.trim() || !!routeName.value.trim() || !!routePoints.value.trim();
     const hasDraft = () => dirtyARP || hasFeatureDraft();
-    const clearBoundary = () => { cancelSketch(); editingOrigin = null; boundaryName.value = ''; routeName.value = ''; pointsInput.value = ''; routePoints.value = ''; draft = []; routePointNames = []; selectedVertex = -1; closed = false; delete boundaryForm.dataset.editId; delete boundaryForm.dataset.active; for (const key of ['editId', 'routeKind', 'availableFrom', 'availableUntil', 'active']) delete routeForm.dataset[key]; if (!['forward', 'both'].includes(routeDirection.value)) routeDirection.value = 'forward'; syncPoints(); drawPreview(); };
+    const clearBoundary = () => { cancelSketch(); editingOrigin = null; editingRoute = null; boundaryName.value = ''; routeName.value = ''; routeName.maxLength = 6; minAltitude.value = '0'; maxAltitude.value = '600'; minAltitude.step = maxAltitude.step = '1'; levelLimits.value = ''; levelsWrap.hidden = true; pointsInput.value = ''; routePoints.value = ''; draft = []; routePointNames = []; selectedVertex = -1; closed = false; delete boundaryForm.dataset.editId; delete boundaryForm.dataset.active; for (const key of ['editId', 'routeKind', 'availableFrom', 'availableUntil', 'active']) delete routeForm.dataset[key]; if (!['forward', 'both'].includes(routeDirection.value)) routeDirection.value = 'forward'; syncPoints(); drawPreview(); };
     const discardDraft = () => { dirtyARP = false; clearBoundary(); };
     const discard = button('Discard unsaved airspace entries', async () => { if (hasDraft() && !await ask('Discard unsaved ARP and boundary entries? Saved airspace is kept.', 'Discard entries')) return; discardDraft(); render(); }); discard.id = 'custom-airspace-discard'; discard.hidden = host.showDiscard === false;
-    const saveBoundary = element('button', 'Save boundary'); const newBoundary = button('New boundary', async () => { if ((boundaryName.value.trim() || pointsInput.value.trim()) && !await ask('Discard the unsaved boundary points and start another boundary?', 'Discard boundary')) return; clearBoundary(); render(); });
+    const saveBoundary = element('button', 'Save boundary'); const newBoundary = button('+ New area', () => void startNewFeature('area')); newBoundary.id = 'custom-boundary-new';
     const boundaryActions = element('div', '', 'airspace-preparation-actions'); boundaryActions.append(saveBoundary, newBoundary);
     const list = element('div', '', 'airspace-boundary-list'); list.id = 'custom-boundary-list';
     const routeList = element('div', '', 'airspace-route-list'); routeList.id = 'custom-route-list';
-    const existingFeatures = element('details', '', 'airspace-existing-features'); existingFeatures.id = 'custom-airspace-features';
-    const existingSummary = element('summary', 'Existing routes and areas · 0'), existingRecords = element('div', '', 'airspace-feature-records');
-    existingRecords.append(routeList, list); existingFeatures.append(existingSummary, existingRecords);
-    const newRoute = button('New route', async () => { if (hasFeatureDraft() && !await ask('Discard the unsaved route and start a new route?', 'Discard route')) return; clearBoundary(); render(); }); newRoute.id = 'custom-route-new'; routeActions.append(newRoute);
+    const existingFeatures = element('section', '', 'airspace-existing-features'); existingFeatures.id = 'custom-airspace-features';
+    const existingSummary = element('h3', 'Routes and areas · 0'), existingRecords = element('div', '', 'airspace-feature-records');
+    const existingHeader = element('div', '', 'airspace-preparation-actions');
+    const addRoute = button('+ New route', () => void startNewFeature('route')); addRoute.id = 'airspace-add-route';
+    const addArea = button('+ New area', () => void startNewFeature('area')); addArea.id = 'airspace-add-area';
+    existingHeader.append(existingSummary,addRoute,addArea); existingRecords.append(routeList, list); existingFeatures.append(existingHeader, existingRecords);
+    const newRoute = button('+ New route', () => void startNewFeature('route')); newRoute.id = 'custom-route-new'; routeActions.append(newRoute);
     boundaryForm.append(grid, modeWrap, pointsWrap, boundaryActions);
     boundaryForm.setAttribute('aria-describedby', status.id); routeForm.setAttribute('aria-describedby', status.id);
     const featureForms = element('div', '', 'airspace-feature-forms'); featureForms.append(boundaryForm, routeForm);
-    section.append(arpForm, status, methodHint, featureWrap, featureForms, sketch, discard, existingFeatures); container.prepend(section);
+    section.append(arpForm, status, methodHint, featureWrap, featureChoices, featureForms, sketch, discard); (host.recordsContainer || section).append(existingFeatures); container.prepend(section);
     function setMethod(value) {
         if (!['draw', 'coordinates'].includes(value)) throw new Error('Choose drawing or coordinate entry.');
         if (method !== value) cancelSketch();
@@ -208,6 +230,7 @@ export function createAirspacePreparation(host) {
         sketch.hidden = value !== 'draw'; modeWrap.hidden = value !== 'coordinates'; pointsWrap.hidden = value !== 'coordinates';
         routeModeWrap.hidden = value !== 'coordinates'; routePointsWrap.hidden = value !== 'coordinates'; pointNames.hidden = value !== 'draw';
         boundaryForm.hidden = featureKind !== 'area'; routeForm.hidden = featureKind !== 'route';
+        featureChoices.querySelectorAll('button').forEach(control => control.setAttribute('aria-pressed', String(control.dataset.feature === (featureKind === 'route' ? 'route' : kind.value))));
         sketchSummary.textContent = featureKind === 'route' ? 'Draw ATS route points on the radar scope or preview' : 'Draw area on the radar scope or preview';
         hint.textContent = featureKind === 'route' ? 'Click route points in order. Select or drag a point to edit. Finish route, then enter a route name, choose its direction and Save route.' : 'Click boundary points in order. Select or drag a vertex to edit. Close boundary, then Save boundary.';
         for (const control of closeButtons) control.textContent = featureKind === 'route' ? 'Finish route' : 'Close boundary';
@@ -215,12 +238,20 @@ export function createAirspacePreparation(host) {
         canvas.setAttribute('aria-label', featureKind === 'route' ? 'ATS route editor. Click ordered route points, drag a point to move it, then Finish route.' : 'Boundary editor. Click to add points. Drag a point to move it. Close boundary when complete.');
         updateDrawingStatus();
     }
-    feature.addEventListener('change', async () => {
-        const next = feature.value;
-        if (!['area', 'route'].includes(next) || next === featureKind) return;
-        if (hasFeatureDraft() && !await ask('Discard the unsaved points before switching between a route and an area?', 'Discard points')) { feature.value = featureKind; return; }
-        clearBoundary(); featureKind = next; feature.value = next; setMethod(method); syncPoints();
-    });
+    async function chooseFeature(choice) {
+        const next = choice === 'route' ? 'route' : 'area', areaKind = choice === 'area' ? kind.value : choice;
+        if (next !== 'route' && !kinds.some(([value]) => value === areaKind)) return;
+        if (next === featureKind && (next === 'route' || kind.value === areaKind)) return;
+        if (hasFeatureDraft() && !await ask('Discard unsaved points before choosing another route or area?', 'Discard points')) { feature.value = featureKind; return; }
+        clearBoundary(); featureKind = next; feature.value = next; if (next === 'area') kind.value = areaKind; setMethod(method); syncPoints();
+    }
+    async function startNewFeature(next) {
+        if (hasFeatureDraft() && !await ask(`Discard unsaved points and start a new ${next === 'route' ? 'route' : 'area'}?`, 'Discard points')) return;
+        clearBoundary(); featureKind = next; feature.value = next; setMethod(method); syncPoints(); sketch.open = true; host.openEditor?.(method);
+        const form = next === 'route' ? routeForm : boundaryForm, firstInput = next === 'route' ? routeName : boundaryName;
+        form.scrollIntoView?.({ block: 'start' }); firstInput.focus?.({ preventScroll: true });
+    }
+    feature.addEventListener('change', () => void chooseFeature(feature.value));
     function requireOrigin(pointMode = 'geographic') {
         const origin = host.view()?.environment.chartOrigin || (pointMode === 'local' ? editingOrigin : null);
         if (pointMode === 'geographic' && !origin) throw new Error('Save the ARP first for latitude / longitude.');
@@ -230,6 +261,7 @@ export function createAirspacePreparation(host) {
     function drawingReason() {
         const state = host.view();
         if (!state || state.role !== 'instructor') return 'Open the instructor desk to prepare airspace.';
+        if (state.terminated) return 'Reopen the exercise before drawing or editing airspace.';
         if (state.running) return 'Pause the exercise before drawing or editing airspace.';
         if (method === 'draw' && !state.environment.drawnARP && !state.environment.chartOrigin) return 'Place the ARP dot first: select Place ARP on preview or radar scope, then click its position.';
         if (method === 'coordinates' && !state.environment.chartOrigin) return 'Save the ARP first for coordinate entry.';
@@ -263,6 +295,7 @@ export function createAirspacePreparation(host) {
     function placementBlockReason() {
         const state = host.view();
         if (!state || state.role !== 'instructor') return 'Open the instructor desk to place the ARP.';
+        if (state.terminated) return 'Reopen the exercise before placing the ARP.';
         if (state.running) return 'Pause the exercise before placing the ARP.';
         return '';
     }
@@ -388,14 +421,14 @@ export function createAirspacePreparation(host) {
         if (featureKind !== 'route') throw new Error('Select ATS route before saving a route.');
         const origin = requireOrigin(routeMode.value), geometry = parseRoutePoints(routePoints.value, routeMode.value, origin);
         const reason = drawingReason(); if (reason) throw new Error(reason);
-        if (!routeName.value.trim()) throw new Error('Name the ATS route.');
-        const lower = Number(minAltitude.value), upper = Number(maxAltitude.value);
-        if (!minAltitude.value.trim() || !maxAltitude.value.trim() || ![lower, upper].every(value => Number.isFinite(value) && value >= -1500 && value <= 60000) || upper < lower) throw new Error('Route limits must be feet MSL from −1,500 to 60,000, with the upper limit at or above the lower limit.');
+        const name = routeDesignator(routeName.value, editingRoute?.name);
+        const unchangedLimits = editingRoute && minAltitude.value === String(editingRoute.minAltitudeFt / 100) && maxAltitude.value === String(editingRoute.maxAltitudeFt / 100);
+        const limits = unchangedLimits ? { minAltitudeFt: editingRoute.minAltitudeFt, maxAltitudeFt: editingRoute.maxAltitudeFt, levelLimits: levelLimits.value.trim() } : parseRouteFlightLevels(minAltitude.value, maxAltitude.value);
         if (!['forward', 'both'].includes(routeDirection.value)) throw new Error('Choose unidirectional or bidirectional route direction.');
         const generated = routeGeneratedText && routePoints.value === routeGeneratedText;
         const fixes = geometry.fixes.map((fix, index) => ({ ...fix, ...(generated ? draft[index] : {}), ...(routePointNames[index]?.name === fix.name && routePointNames[index].id ? { id: routePointNames[index].id } : {}) }));
         const geoPoints = origin ? generated ? fixes.map(point => localToGeographic(point, origin)) : geometry.geoPoints : undefined;
-        await host.command('route-geometry-upsert', { ...(routeForm.dataset.editId ? { id: routeForm.dataset.editId } : {}), name: routeName.value.trim(), kind: routeForm.dataset.routeKind || 'ats', active: routeForm.dataset.active !== 'false', availableFrom: Number(routeForm.dataset.availableFrom || 0), availableUntil: Number(routeForm.dataset.availableUntil || 0), minAltitudeFt: lower, maxAltitudeFt: upper, levelLimits: levelLimits.value.trim(), chartDirection: routeDirection.value, fixes, ...(origin ? { coordinateOrigin: geometry.coordinateOrigin, geoPoints } : {}), source: 'Instructor chart', reference: reference.value.trim(), effectiveInfo: date.value.trim() }, undefined, state.exerciseId);
+        await host.command('route-geometry-upsert', { ...(routeForm.dataset.editId ? { id: routeForm.dataset.editId } : {}), name, kind: routeForm.dataset.routeKind || 'ats', active: routeForm.dataset.active !== 'false', availableFrom: Number(routeForm.dataset.availableFrom || 0), availableUntil: Number(routeForm.dataset.availableUntil || 0), ...limits, chartDirection: routeDirection.value, fixes, ...(origin ? { coordinateOrigin: geometry.coordinateOrigin, geoPoints } : {}), source: 'Instructor chart', reference: reference.value.trim(), effectiveInfo: date.value.trim() }, undefined, state.exerciseId);
         clearBoundary(); status.textContent = 'ATS route saved on both desks. The listed point order is retained.'; host.changed?.(); drawPreview();
     }, saveRoute); });
     function render() {
@@ -403,10 +436,47 @@ export function createAirspacePreparation(host) {
         if (state.running) cancelSketch();
         if (lastExercise !== state.exerciseId || state.role !== 'instructor') { lastExercise = state.exerciseId; discardDraft(); }
         if (!dirtyARP) { arpFields.latitude.value = String(state.environment.chartOrigin?.latitude ?? ''); arpFields.longitude.value = String(state.environment.chartOrigin?.longitude ?? ''); arpName.value = state.environment.aerodromeName || ''; reference.value = state.environment.chartReference || ''; date.value = state.environment.effectiveInfo || ''; }
-        existingSummary.textContent = `Existing routes and areas · ${(state.routes || []).length + (state.areas || []).length}`;
-        list.replaceChildren(...(state.areas || []).map(area => { const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${area.name} · ${kinds.find(k => k[0] === area.kind)?.[1] || area.kind}`)); row.append(element('span', `${area.floorLabel || 'GND'} / ${area.ceilingLabel || '—'}`, 'airspace-feature-limits')); row.append(button('Edit area', async () => { if (hasFeatureDraft() && !await ask('Discard unsaved points and edit this area?', 'Edit area')) return; clearBoundary(); featureKind = 'area'; feature.value = 'area'; boundaryForm.dataset.editId = area.id; boundaryForm.dataset.active = String(area.active); editingOrigin = area.coordinateOrigin || null; boundaryName.value = area.name; kind.value = area.kind; floor.value = area.floorLabel; ceiling.value = area.ceilingLabel; draft = area.points.map(p => ({ ...p })); selectedVertex = -1; closed = true; mode.value = state.environment.chartOrigin ? 'geographic' : 'local'; setMethod(method); syncPoints(); sketch.open = true; drawPreview(); }), button('Remove area', () => void perform(async () => { if (await ask(`Remove ${area.name}?`, 'Remove boundary')) { await host.command('area-delete', { id: area.id }, undefined, state.exerciseId); host.changed?.(); } }, row.querySelector('button:last-child')))); return row; }));
-        routeList.replaceChildren(...(state.routes || []).map(route => { const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${route.name} · ${route.chartDirection === 'both' ? 'Bidirectional' : route.chartDirection === 'forward' ? 'Unidirectional' : 'Chart direction not specified'}`)); row.append(element('span', route.levelLimits || `${route.minAltitudeFt}–${route.maxAltitudeFt} ft MSL`, 'airspace-feature-limits')); row.append(button('Edit route', async () => { if (hasFeatureDraft() && !await ask('Discard unsaved points and edit this route?', 'Edit route')) return; clearBoundary(); featureKind = 'route'; feature.value = 'route'; routeForm.dataset.editId = route.id; editingOrigin = route.coordinateOrigin || null; routeForm.dataset.routeKind = route.kind; routeForm.dataset.active = String(route.active); routeForm.dataset.availableFrom = String(route.availableFrom || 0); routeForm.dataset.availableUntil = String(route.availableUntil || 0); routeName.value = route.name; routeDirection.value = route.chartDirection || ''; minAltitude.value = String(route.minAltitudeFt); maxAltitude.value = String(route.maxAltitudeFt); levelLimits.value = route.levelLimits || ''; const fixes = route.fixIds.map(id => state.fixes.find(fix => fix.id === id)); if (fixes.some(fix => !fix)) { showDrawingError(new Error('A route point is unavailable. Reload the airspace before editing.')); return; } draft = fixes.map(fix => ({ xNm: fix.xNm, yNm: fix.yNm })); routePointNames = fixes.map(fix => ({ id: fix.id, name: fix.name })); selectedVertex = -1; closed = true; routeMode.value = state.environment.chartOrigin ? 'geographic' : 'local'; setMethod(method); syncPoints(); sketch.open = true; drawPreview(); }), button('Remove route', () => void perform(async () => { if (await ask(`Remove ${route.name}?`, 'Remove route')) { await host.command('route-delete', { id: route.id }, undefined, state.exerciseId); host.changed?.(); } }, row.querySelector('button:last-child')))); return row; }));
+        const count = (state.routes || []).length + (state.areas || []).length;
+        existingSummary.textContent = `Routes and areas · ${count}`;
+        list.replaceChildren(...(state.areas || []).map(area => {
+            const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${area.name} · ${kinds.find(k => k[0] === area.kind)?.[1] || area.kind}`), element('span', `${area.floorLabel || 'GND'} / ${area.ceilingLabel || '—'}`, 'airspace-feature-limits'));
+            const edit = button('Edit area', () => void perform(async () => {
+                requireEditing(state);
+                if (hasDraft() && !await ask('Discard unsaved entries and edit this area?', 'Edit area')) return;
+                discardDraft(); render(); featureKind = 'area'; feature.value = 'area'; boundaryForm.dataset.editId = area.id; boundaryForm.dataset.active = String(area.active); editingOrigin = area.coordinateOrigin || null;
+                boundaryName.value = area.name; kind.value = area.kind; floor.value = area.floorLabel || 'GND'; ceiling.value = area.ceilingLabel || ''; draft = area.points.map(p => ({ ...p })); selectedVertex = -1; closed = true; mode.value = state.environment.chartOrigin ? 'geographic' : 'local';
+                openEditedForm(boundaryForm, boundaryName);
+            }, edit));
+            const remove = button('Remove area', () => void perform(async () => { requireEditing(state); if (await ask(`Remove ${area.name}?`, 'Remove boundary')) { await host.command('area-delete', { id: area.id }, undefined, state.exerciseId); if (host.view()?.exerciseId === state.exerciseId && boundaryForm.dataset.editId === area.id) clearBoundary(); host.changed?.(); } }, remove));
+            row.append(edit, remove); return row;
+        }));
+        routeList.replaceChildren(...(state.routes || []).map(route => {
+            const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${route.name} · ${route.chartDirection === 'both' ? 'Bidirectional' : route.chartDirection === 'forward' ? 'Unidirectional' : 'Chart direction not specified'}`), element('span', route.levelLimits || `FL${route.minAltitudeFt / 100}/FL${route.maxAltitudeFt / 100}`, 'airspace-feature-limits'));
+            const edit = button('Edit route', () => void perform(async () => {
+                requireEditing(state);
+                const fixes = (route.fixIds || []).map(id => (state.fixes || []).find(fix => fix.id === id));
+                if (fixes.length < 2 || fixes.some(fix => !fix)) throw new Error('A route point is unavailable. Reload the airspace before editing.');
+                if (hasDraft() && !await ask('Discard unsaved entries and edit this route?', 'Edit route')) return;
+                discardDraft(); render(); featureKind = 'route'; feature.value = 'route'; routeForm.dataset.editId = route.id; editingRoute = route; editingOrigin = route.coordinateOrigin || null;
+                routeForm.dataset.routeKind = route.kind; routeForm.dataset.active = String(route.active); routeForm.dataset.availableFrom = String(route.availableFrom || 0); routeForm.dataset.availableUntil = String(route.availableUntil || 0);
+                routeName.maxLength = Math.max(6, route.name.length); routeName.value = route.name; routeDirection.value = route.chartDirection || ''; minAltitude.value = String(route.minAltitudeFt / 100); maxAltitude.value = String(route.maxAltitudeFt / 100); minAltitude.step = maxAltitude.step = 'any'; levelLimits.value = route.levelLimits || ''; levelsWrap.hidden = false;
+                draft = fixes.map(fix => ({ xNm: fix.xNm, yNm: fix.yNm })); routePointNames = fixes.map(fix => ({ id: fix.id, name: fix.name })); selectedVertex = -1; closed = true; routeMode.value = state.environment.chartOrigin ? 'geographic' : 'local';
+                openEditedForm(routeForm, routeName);
+            }, edit));
+            const remove = button('Remove route', () => void perform(async () => { requireEditing(state); if (await ask(`Remove ${route.name}?`, 'Remove route')) { await host.command('route-delete', { id: route.id }, undefined, state.exerciseId); if (host.view()?.exerciseId === state.exerciseId && routeForm.dataset.editId === route.id) clearBoundary(); host.changed?.(); } }, remove));
+            row.append(edit, remove); return row;
+        }));
         drawPreview();
+    }
+    function requireEditing(state) {
+        const current = host.view();
+        if (current?.exerciseId !== state.exerciseId || current?.role !== 'instructor') throw new Error('The exercise changed. Open its airspace again.');
+        if (current.terminated) throw new Error('Reopen the exercise before editing airspace.');
+        if (current.running) throw new Error('Pause the exercise before editing airspace.');
+    }
+    function openEditedForm(form, firstInput) {
+        setMethod(method); syncPoints(); sketch.open = true; host.openEditor?.(method); drawPreview();
+        form.scrollIntoView?.({ block: 'start' }); firstInput.focus?.({ preventScroll: true });
     }
     function scopePoint(e) { const p = host.scope?.screenToPoint?.(e); return Array.isArray(p) ? { xNm: p[0], yNm: p[1] } : { xNm: p?.xNm ?? p?.x, yNm: p?.yNm ?? p?.y }; }
     setMethod(method);

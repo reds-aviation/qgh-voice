@@ -10,6 +10,41 @@
   const overlaps = (a, b, gap = 0) => a.x < b.x + b.width + gap && a.x + a.width + gap > b.x
     && a.y < b.y + b.height + gap && a.y + a.height + gap > b.y;
 
+  // Local chart geometry uses east/north NM. A geographic chart is centred on
+  // its ARP; a mouse-drawn ARP is the configured station point. Explicit runway
+  // centres override the synthetic lateral offset (and may legitimately be 0).
+  function runwayGeometry(environment = {}) {
+    const headingDeg = number(environment.runwayHeadingDeg ?? environment.runwayOrientationDeg, 0);
+    const angle = headingDeg * Math.PI / 180, ux = Math.sin(angle), uy = Math.cos(angle);
+    const lengthNm = number(environment.runwayLengthNm, 3 / 1.852);
+    const offsetNm = number(environment.runwayOffsetNm, .15);
+    const arp = environment.chartOrigin && !environment.drawnARP ? { xNm: 0, yNm: 0 }
+      : { xNm: number(environment.stationXNm, 0), yNm: number(environment.stationYNm, 0) };
+    const explicit = Number.isFinite(environment.runwayCenterXNm) && Number.isFinite(environment.runwayCenterYNm);
+    const centre = explicit ? { xNm: environment.runwayCenterXNm, yNm: environment.runwayCenterYNm }
+      : { xNm: arp.xNm + uy * offsetNm, yNm: arp.yNm - ux * offsetNm };
+    const threshold = { xNm: centre.xNm - ux * lengthNm / 2, yNm: centre.yNm - uy * lengthNm / 2 };
+    const farThreshold = { xNm: centre.xNm + ux * lengthNm / 2, yNm: centre.yNm + uy * lengthNm / 2 };
+    return { headingDeg, lengthNm, arp, centre, threshold, farThreshold, ux, uy };
+  }
+
+  function approachPoint(environment, distanceNm, inboundHeadingDeg) {
+    const runway = runwayGeometry(environment), angle = number(inboundHeadingDeg, runway.headingDeg) * Math.PI / 180;
+    return { xNm: runway.threshold.xNm - Math.sin(angle) * distanceNm, yNm: runway.threshold.yNm - Math.cos(angle) * distanceNm };
+  }
+
+  function drawRunwayStrip(context, environment, project, scale) {
+    const runway = runwayGeometry(environment), first = project(runway.threshold.xNm, runway.threshold.yNm), last = project(runway.farThreshold.xNm, runway.farThreshold.yNm);
+    context.save(); context.setLineDash([]); context.lineCap = 'butt';
+    // Width has a small screen minimum for visibility; length always remains
+    // the configured geographic distance, never a minimum-pixel symbol.
+    context.strokeStyle = '#91979c'; context.lineWidth = Math.max(5, 45 / 1852 * scale);
+    context.beginPath(); context.moveTo(...first); context.lineTo(...last); context.stroke();
+    context.strokeStyle = '#e5e8ea'; context.lineWidth = 1; context.setLineDash([4, 4]);
+    context.beginPath(); context.moveTo(...first); context.lineTo(...last); context.stroke();
+    context.restore(); return runway;
+  }
+
   function canvasMetrics(canvas, pixelRatio = 1) {
     const bounds = canvas.getBoundingClientRect?.();
     const previousRatio = number(canvas.dataset?.scopePixelRatio, 1) || 1;
@@ -189,6 +224,6 @@
     context.restore();
   }
 
-  return Object.freeze({ GLYPH_SIZE, canvasMetrics, rangeRings, drawRangeRings, drawAircraftGlyph,
+  return Object.freeze({ GLYPH_SIZE, runwayGeometry, approachPoint, drawRunwayStrip, canvasMetrics, rangeRings, drawRangeRings, drawAircraftGlyph,
     overlayObstacles, labelMode, minuteVectorNm, aircraftLabels, placeAircraftLabels, drawAircraftLabels, overlaps });
 });

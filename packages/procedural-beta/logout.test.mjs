@@ -27,9 +27,9 @@ function adapterHarness(role = 'instructor') {
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm,'') + `
     session={role:roleFixture,token:'active-token',csrf:'active-csrf',workspace:'procedural',roomId:'room-a',name:'Controller'};
     view={exerciseId:'logout-exercise',available:true,running:true,terminated:false,elapsed:120,environment:{rangeNm:60},roster:[],aircraft:[],routes:[],fixes:[],areas:[]};
-    stage='desk';selected='';
+    setStage('desk');selected='';
     globalThis.fixture={state:()=>({session,view,generation,loginBusy,commandBusy,stage}),command,openSession,
-      setRequest(fn){request=fn;},entry(){session=null;view=null;stage='entry';},
+      setRequest(fn){request=fn;},entry(){session=null;view=null;setStage('entry');},
     };
   `,h.context);
   const store=h.context.sessionStorage, local=h.context.localStorage;
@@ -79,6 +79,20 @@ test('a login completed after Logout cannot reopen the desk or unlock a newer pe
   second.resolve({role:'student',token:'also-obsolete',csrf:'obsolete',workspace:'procedural'});await newer;
   assert.equal(h.state().session,null);assert.equal(h.state().loginBusy,false);
   assert.equal(h.context.sessionStorage.getItem(sessionKey),null);
+});
+
+test('untouched Procedural entry has no Logout and a pending join retains cancellation',async()=>{
+  const h=adapterHarness();h.entry();await flush();
+  const slot=h.document.querySelector('.ats-logout-slot');
+  assert.equal(slot.hidden,true);assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
+  h.logout();assert.equal(h.document.querySelector('.ats-confirm-dialog'),null);
+  const pending=deferred();h.setRequest(()=>pending.promise);
+  const opening=h.openSession('student');assert.equal(h.state().loginBusy,true);
+  h.logout();await h.answer(false);
+  assert.equal(h.state().loginBusy,true,'Cancel preserves the in-flight join');
+  h.logout();await h.answer(true);
+  pending.resolve({role:'student',token:'obsolete',csrf:'obsolete',workspace:'procedural'});await opening;
+  assert.equal(h.state().session,null);assert.equal(slot.hidden,true);
 });
 
 async function transportHarness() {

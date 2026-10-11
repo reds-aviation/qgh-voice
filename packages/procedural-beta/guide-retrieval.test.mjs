@@ -96,7 +96,7 @@ test('Gyani explains current shared controls, saved setups and retired PAR',()=>
     ['How do I draw an LFA polygon?','procedural','custom-polygons',/drag a vertex/],
     ['How do I delete a polygon vertex?','procedural','custom-polygons',/Delete selected vertex/],
     ['Can I rename a saved exercise?','procedural','saved-exercises',/Rename or remove a saved exercise/],
-    ['How do I save a QGH instructor exercise?','qgh-instructor','saved-exercises',/Save updates the selected exercise after confirmation/],
+    ['How do I save a QGH instructor exercise?','qgh-instructor','saved-exercises',/Save updates the selected exercise;/],
     ['How do I send a custom message?','procedural','transmit',/Transmit custom message/],
     ['The trail is not visible','sra','sweep',/15 RPM/],
     ['Where are half-mile marks?','sra','approach-reference',/0\.5 NM/],
@@ -116,7 +116,7 @@ test('preparation help keeps the opening traffic form separate from chart tools 
   for(const question of ['Why does opening setup show only traffic?','Where is optional sample traffic?']){
     const answer=matchGuideQuestion(question,'procedural');assert.equal(answer.intent,'procedural-start',question);
     assert.match(answer.text,/opening setup page contains only the initial traffic form/);
-    assert.match(answer.text,/Prepare airspace → Advanced tools → Sample traffic/);
+    assert.match(answer.text,/Sample traffic is available under Aircraft controls/);
     assert.match(answer.text,/Back to traffic setup/);
     assert.doesNotMatch(answer.text,/below the roster/);
   }
@@ -146,10 +146,12 @@ test('drawn route help explains finish, naming, direction choice and explicit sa
     ['Can I make a drawn route bidirectional?','route-chart-details'],
   ]){
     const answer=matchGuideQuestion(question,'procedural');assert.equal(answer.intent,intent,question);
-    assert.match(answer.text,/Finish route.*focuses ATS route name/);
-    assert.match(answer.text,/Unidirectional · first → last or Bidirectional · both directions/);
-    assert.match(answer.text,/then Save route/);
-    assert.match(answer.text,/same (?:route|geometry)/);
+    assert.match(answer.text,/Finish route/);
+    assert.match(answer.text,/route name|their name|name,/i);
+    assert.match(answer.text,/direction|Unidirectional/);
+    assert.match(answer.text,/Save route/);
+    assert.match(answer.text,/open line|open lines/);
+    assert.match(answer.text,/flight levels|FL260\/FL460/);
     assert.doesNotMatch(answer.text,/Choose One-way/);
   }
   const knowledge=require('./static/guide-knowledge.js');
@@ -210,21 +212,22 @@ test('saved exercise help describes the four main actions and direct import with
   assert.doesNotMatch(review.text,/Manage exercises & files/);
 });
 
-test('prepare airspace help keeps three methods above one save-or-load group and advanced optional tools',()=>{
+test('prepare airspace help explains separate drawing types and visible reusable chart actions',()=>{
   const start=matchGuideQuestion('Why does opening setup show only traffic?','procedural');
   assert.equal(start.intent,'procedural-start');
   assert.match(start.text,/three methods: Published airspace, Draw on chart or Enter coordinates/);
-  assert.match(start.text,/Setup type in Save or load selects Airspace only \(chart\) or Complete exercise \(aircraft \+ chart\)/);
-  assert.match(start.text,/only the selected library is shown/);
-  assert.match(start.text,/Advanced tools → Sample traffic/);
+  assert.match(start.text,/Save or load starts with Airspace only \(chart\)/);
+  assert.match(start.text,/Complete exercise \(aircraft \+ chart\)/);
+  assert.match(start.text,/Only the selected chart or full-exercise library is shown/);
+  assert.match(start.text,/Sample traffic is available under Aircraft controls/);
   assert.doesNotMatch(start.text,/Advanced chart tools & references|Saved exercises · starting traffic and chart/);
   const airspace=matchGuideQuestion('How do I reuse airspace?','procedural');
   assert.equal(airspace.intent,'saved-airspaces');
-  assert.match(airspace.text,/Prepare airspace → Save or load → Setup type: Airspace only \(chart\)/);
-  assert.match(airspace.text,/Files contains Download file, Import airspace file/);
-  assert.match(airspace.text,/Remove saved airspace is a separate collapsed group/);
+  assert.match(airspace.text,/Prepare airspace → Save or load starts with Airspace only \(chart\)/);
+  assert.match(airspace.text,/Download file.*Import airspace file/);
+  assert.match(airspace.text,/file actions are visible/);
   const saved=matchGuideQuestion('Where can I load a saved exercise?','procedural');
-  assert.match(saved.text,/Advanced tools → Current progress file \(includes records\)/);
+  assert.match(saved.text,/Review → Current progress file \(includes records\)/);
   const drawing=matchGuideQuestion('How do I draw an LFA polygon?','procedural');
   assert.match(drawing.text,/Discard unsaved airspace entries appears only when drafts exist/);
   const knowledge=require('./static/guide-knowledge.js');
@@ -237,7 +240,8 @@ test('QGH preparation help matches traffic first, collapsed settings, simplified
   assert.equal(start.intent,'instructor-start');
   assert.match(start.text,/Set up starting traffic/);
   assert.match(start.text,/Prepare airspace & radar is collapsed below traffic/);
-  assert.match(start.text,/Saved exercises folds Save, Load, Import exercise file and Download/);
+  assert.match(start.text,/Saved exercises offers Save, Import exercise file and Download/);
+  assert.match(start.text,/Saved on this device fills traffic setup directly/);
   assert.match(start.text,/new QGH sessions allow up to 2 aircraft/);
   for(const topic of ['qgh-instructor','sra']){
     const returned=matchGuideQuestion('Does Traffic setup replace the current exercise?',topic);
@@ -249,10 +253,12 @@ test('QGH preparation help matches traffic first, collapsed settings, simplified
     assert.equal(matchGuideQuestion('Will Return to exercise keep the same PIN?',topic).intent,'instructor-traffic-return');
   }
   const saved=matchGuideQuestion('How do I save a QGH instructor exercise?','qgh-instructor');
-  assert.match(saved.text,/main actions are Save, Load, Import exercise file and Download/);
+  assert.match(saved.text,/main actions are Save, Import exercise file and Download/);
+  assert.match(saved.text,/no separate Load button is needed/);
   assert.match(saved.text,/Rename or remove folds Rename selected and Remove selected/);
   assert.doesNotMatch(saved.text,/Manage \/ files keeps Save as new/);
   const knowledge=require('./static/guide-knowledge.js');
+  assert.doesNotMatch(knowledge.entries.find(entry=>entry.id==='saved-exercises').controls.join(','),/loadExercisePreset/);
   assert.equal(knowledge.tours.find(step=>step.selector==='#returnToExercise').entry,'instructor-traffic-return');
 });
 

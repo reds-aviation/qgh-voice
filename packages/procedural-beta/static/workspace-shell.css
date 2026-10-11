@@ -13,15 +13,21 @@ body .ats-logout-button{width:auto;min-width:76px;min-height:40px;margin:0;paddi
 .ats-logout-status{position:absolute;right:0;width:min(260px,calc(100vw - 24px));padding:12px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel);color:var(--ats-text);font-size:13px;line-height:1.4;box-sizing:border-box}
 body.ats-has-logout .workspace-head,body.ats-has-logout .student-head,body.ats-has-logout .exercisebar,body.ats-has-logout .site-header,body.ats-has-logout .topbar{padding-right:104px!important}
 @media(max-width:700px){body .ats-logout-button{min-width:72px;min-height:44px;padding:8px 10px}body.ats-has-logout .workspace-head,body.ats-has-logout .student-head,body.ats-has-logout .exercisebar,body.ats-has-logout .site-header,body.ats-has-logout .topbar{padding-right:96px!important}}
-.ats-overlay-header{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 0;pointer-events:auto}
-.ats-overlay-header>strong{flex:1 1 100%;font-size:12px}
+.ats-overlay-header{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;padding:4px 0;pointer-events:auto}
+.ats-overlay-header>strong{flex:1 1 auto;min-width:0;font-size:12px}
 .ats-overlay-tools{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;font-size:11px;font-weight:400}
 body.instructor-page .ats-overlay-tools button,body.instructor-desk .ats-overlay-tools button,.ats-overlay-tools button,body.instructor-page .ats-overlay-collapse,body.instructor-desk .ats-overlay-collapse{width:auto;min-width:0;min-height:30px;height:auto;margin:0;padding:4px 6px;font:inherit;line-height:1.25;letter-spacing:0;border:1px solid var(--ats-border);border-radius:5px;background:var(--ats-panel-raised);color:var(--ats-text)}
 .ats-overlay-move{cursor:grab;touch-action:none;user-select:none}
 .ats-overlay-move:active{cursor:grabbing}
+.ats-overlay-drag-bar{cursor:grab;touch-action:none;user-select:none}
+.ats-overlay-drag-bar :is(button,a,input,select,textarea,label,[contenteditable]){cursor:auto;user-select:auto}
+.ats-overlay-drag-bar .ats-overlay-move{cursor:grab}
+.ats-overlay-dragging .ats-overlay-drag-bar{cursor:grabbing}
+.ats-overlay-drag-bar>.ats-overlay-tools{margin-left:auto}
+body.instructor-page .ats-panel-icon,body.instructor-desk .ats-panel-icon,.ats-movable-overlay .ats-panel-icon{display:inline-grid;place-items:center;flex:0 0 32px;width:32px;min-width:32px;min-height:32px;height:32px;max-height:32px;margin:0;padding:0;font:600 20px/1 Arial,sans-serif;letter-spacing:0;border-radius:5px}
 .ats-movable-overlay.ats-overlay-positioned{overflow:auto;overscroll-behavior:contain;box-sizing:border-box}
 .ats-movable-overlay.ats-overlay-dragging{z-index:2001!important}
-body.instructor-page.exercise-console .ats-console-drawer>summary,body.instructor-desk.desk-open .drawer-head{flex-wrap:wrap}
+body.instructor-page.exercise-console .ats-console-drawer>summary,body.instructor-desk.desk-open .drawer-head{flex-wrap:nowrap}
 body.instructor-page.exercise-console .ats-console-drawer>summary>.ats-overlay-tools,body.instructor-desk.desk-open .drawer-head>.ats-overlay-tools{margin-left:auto}
 .ats-confirm-dialog h2,.suite-guide-chat__header,#suite-tour h2{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .ats-confirm-dialog h2>.ats-overlay-tools,#suite-tour h2>.ats-overlay-tools{margin-left:auto}
@@ -29,6 +35,7 @@ body.instructor-page.exercise-console .ats-console-drawer>summary>.ats-overlay-t
  .ats-overlay-desktop{display:none!important}
  body.instructor-page .ats-overlay-tools button,body.instructor-desk .ats-overlay-tools button,.ats-overlay-tools button{min-height:44px;padding:6px 8px}
  .ats-movable-overlay.ats-overlay-positioned{max-width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}
+ body.instructor-page .ats-panel-icon,body.instructor-desk .ats-panel-icon,.ats-movable-overlay .ats-panel-icon{flex-basis:44px;width:44px;min-width:44px;min-height:44px;height:44px;max-height:44px;padding:0}
 }
 .ats-instruments-toggle{display:none}
 body.student-desk .ats-instruments-toggle{display:none!important}
@@ -437,4 +444,20 @@ body.instructor-page.exercise-console button:disabled,body.instructor-desk.desk-
  .ats-workspace-shell input.ats-scroll-track::-webkit-slider-thumb{width:28px;height:12px;margin-top:-3px;border:1px solid #eff9fc;border-radius:6px;background:#91b5c7;appearance:none;-webkit-appearance:none}
  .ats-workspace-shell input.ats-scroll-track::-moz-range-track{height:8px;border:1px solid #7196a8;border-radius:6px;background:#18242e}
  .ats-workspace-shell input.ats-scroll-track::-moz-range-thumb{width:28px;height:10px;border:1px solid #eff9fc;border-radius:6px;background:#91b5c7}
+}
+
+/* Compact window chrome; interactive controls retain their own pointer actions. */
+body.instructor-page.exercise-console .ats-console-drawer>summary .ats-panel-icon,
+body.instructor-desk.desk-open .drawer-head .ats-panel-icon,
+body .ats-movable-overlay .ats-overlay-tools .ats-panel-icon{min-height:32px;height:32px;max-height:32px;width:32px;min-width:32px;padding:0;font-size:20px}
+body.instructor-page.exercise-console .ats-console-drawer>summary,
+body.instructor-desk.desk-open #work-panel .drawer-head{min-height:44px;padding:6px 10px;gap:6px}
+@media(max-width:700px),(pointer:coarse){
+ body.instructor-page.exercise-console .ats-console-drawer>summary .ats-panel-icon,
+ body.instructor-desk.desk-open .drawer-head .ats-panel-icon,
+ body .ats-movable-overlay .ats-overlay-tools .ats-panel-icon{min-height:44px;height:44px;max-height:44px;width:44px;min-width:44px;flex-basis:44px}
+}
+@media(max-width:700px){
+ body.ats-has-logout.instructor-desk.desk-open #work-panel .drawer-head,
+ body.ats-has-logout.instructor-page.exercise-console .ats-console-drawer>summary{padding-right:96px}
 }

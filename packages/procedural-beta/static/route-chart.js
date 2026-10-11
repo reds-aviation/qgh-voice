@@ -1,7 +1,7 @@
 import { project } from './chart-geometry.js';
 import { visibleSegment } from './scope-navigation.js';
 
-export const CHART_ENVIRONMENT_KEYS = Object.freeze(['chartOrigin', 'drawnARP', 'rangeNm', 'stationName', 'stationType', 'stationXNm', 'stationYNm', 'stationFrequency', 'aerodromeName', 'chartReference', 'effectiveInfo', 'briefing', 'magneticVariationDeg', 'magneticVariationKnown', 'trainingMagneticVariationDeg', 'map', 'runwayHeadingDeg', 'runwayLengthNm', 'aerodromeElevationFt', 'thresholdCrossingHeightFt']);
+export const CHART_ENVIRONMENT_KEYS = Object.freeze(['chartOrigin', 'drawnARP', 'rangeNm', 'stationName', 'stationType', 'stationXNm', 'stationYNm', 'stationFrequency', 'aerodromeName', 'chartReference', 'effectiveInfo', 'briefing', 'magneticVariationDeg', 'magneticVariationKnown', 'trainingMagneticVariationDeg', 'map', 'runwayHeadingDeg', 'runwayLengthNm', 'runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm', 'aerodromeElevationFt', 'thresholdCrossingHeightFt']);
 export function chartEnvironment(environment) {
     return JSON.parse(JSON.stringify(Object.fromEntries(CHART_ENVIRONMENT_KEYS.filter(key => Object.hasOwn(environment || {}, key)).map(key => [key, environment[key]]))));
 }
@@ -83,7 +83,8 @@ export function routeChartLegs(route, fixes, pointToScreen, width, height) {
 }
 
 // Draw full route polyline + annotations. The caller owns visibility, colour,
-// dashes, collision-reserved route names and reporting-point symbols.
+// dashes, collision reservation and reporting-point symbols. A route name and
+// its level limits are one label, keeping the limits directly underneath.
 export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height, label, showLabels = true, color = '#a5c4ac' }) {
     const byId = new Map(fixes.map(f => [f.id, f]));
     ctx.beginPath();
@@ -104,7 +105,12 @@ export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height
             ctx.beginPath(); ctx.moveTo(x - dx * 7 - dy * 4, y - dy * 7 + dx * 4); ctx.lineTo(x + dx * 7, y + dy * 7); ctx.lineTo(x - dx * 7 + dy * 4, y - dy * 7 - dx * 4); ctx.stroke();
             if (showLabels && arrow.label) label?.(arrow.label, x + dy * 8, y - dx * 8, color);
         }
-        if (showLabels && leg.level && Math.hypot(leg.b.x - leg.a.x, leg.b.y - leg.a.y) >= 80) label?.(leg.level, (leg.a.x + leg.b.x) / 2, (leg.a.y + leg.b.y) / 2 + 20, color);
+    }
+    const labelled = new Set(), name = route.id?.startsWith('aip-') ? route.name.split(' ')[0] : route.name;
+    for (const leg of [...legs].sort((a, b) => Math.hypot(b.b.x - b.a.x, b.b.y - b.a.y) - Math.hypot(a.b.x - a.a.x, a.b.y - a.a.y))) {
+        const text = [name, leg.level].filter(Boolean).join('\n');
+        if (!showLabels || !text || labelled.has(text) || Math.hypot(leg.b.x - leg.a.x, leg.b.y - leg.a.y) < 42) continue;
+        if (label?.(text, (leg.a.x + leg.b.x) / 2, (leg.a.y + leg.b.y) / 2, color) !== false) labelled.add(text);
     }
     ctx.restore();
     return legs;

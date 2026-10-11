@@ -12,6 +12,14 @@
     scope?.classList.add('ats-scope-surface');
     shelf?.classList.add('ats-aircraft-shelf');
     actions?.classList.add('ats-workspace-actions');
+    // Procedural exposes its retained attempt through the visible desk, traffic
+    // setup, waiting room or Return to desk control. Disabled entry actions also
+    // identify a pending login that Logout can cancel. Untouched entry has none.
+    if (!hasAttempt && root?.id === 'desk') hasAttempt=()=>{
+      const doc=root.ownerDocument;
+      const visible=id=>{const element=doc.getElementById(id);return Boolean(element&&!element.hidden);};
+      return !root.hidden || doc.body.classList.contains('setup-open') || visible('waiting') || visible('return-desk') || Boolean(doc.querySelector('#entry button:disabled'));
+    };
     if (typeof onLogout === 'function') bindLogout({root,onLogout,hasAttempt});
     if (root?.ownerDocument?.createElement && root.id === 'activeWorkspace') installInstructorConsole({root,scope,shelf,actions});
     if (root?.ownerDocument?.createElement && root.id === 'desk') installProceduralConsole(root);
@@ -38,9 +46,11 @@
     anchor.hidden=true;anchor.className='ats-instrument-anchor';shelf.before(anchor);
     const header=doc.createElement('header');header.className='ats-overlay-header';
     const title=doc.createElement('strong');title.textContent='Aircraft & radio';header.append(title);
-    const collapse=doc.createElement('button');collapse.type='button';collapse.className='ats-overlay-collapse';collapse.textContent='Collapse';
+    const collapse=doc.createElement('button');collapse.type='button';collapse.className='ats-overlay-collapse ats-panel-icon';collapse.textContent='−';
     collapse.setAttribute('aria-controls',shelf.id);collapse.setAttribute('aria-expanded','true');
-    collapse.addEventListener('click',()=>{const closed=box.classList.toggle('ats-overlay-collapsed');collapse.textContent=closed?'Expand':'Collapse';collapse.setAttribute('aria-expanded',String(!closed));});
+    const describeCollapse=closed=>{collapse.textContent=closed?'+':'−';collapse.title=closed?'Restore aircraft and radio panel':'Minimize aircraft and radio panel';collapse.setAttribute('aria-label',collapse.title);collapse.setAttribute('aria-expanded',String(!closed));};
+    describeCollapse(false);
+    collapse.addEventListener('click',()=>describeCollapse(box.classList.toggle('ats-overlay-collapsed')));
     header.append(collapse);box.append(header);parent.append(box);
     installMovableOverlay(box,{header,label:'Aircraft quick controls',desktopOnly:true});
     let current=null;
@@ -61,16 +71,31 @@
     const doc=element.ownerDocument,desktop=window.matchMedia?.('(min-width: 701px)');
     if(!header){header=doc.createElement('header');header.className='ats-overlay-header';element.prepend(header);}
     const controls=doc.createElement('span');controls.className='ats-overlay-tools';
-    const handle=doc.createElement('button');handle.type='button';handle.className='ats-overlay-move';handle.textContent='Move';
+    const handle=doc.createElement('button');handle.type='button';handle.className='ats-overlay-move ats-panel-icon';handle.textContent='⠿';
     handle.setAttribute('aria-label',`Move ${label}. Drag, or use arrow keys. Home resets position.`);
     handle.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Home');
     handle.title='Drag to move · arrow keys move · Shift makes small moves · Home resets';
-    const reset=doc.createElement('button');reset.type='button';reset.className='ats-overlay-reset';reset.textContent='Reset';reset.title='Reset position';reset.setAttribute('aria-label',`Reset ${label} position`);
-    controls.append(handle,reset);header.append(controls);element.classList.add('ats-movable-overlay');
+    const reset=doc.createElement('button');reset.type='button';reset.className='ats-overlay-reset ats-panel-icon';reset.textContent='↺';reset.title='Reset position';reset.setAttribute('aria-label',`Reset ${label} position`);
+    controls.append(handle,reset);
+    let close=header.querySelector('.ats-drawer-close,#drawer-close,.suite-guide-chat__close,.ats-panel-close');
+    if(!close&&element.tagName==='DIALOG'){
+      close=doc.createElement('button');close.type='button';close.className='ats-panel-close';
+      close.addEventListener('click',event=>{
+        event.preventDefault();event.stopPropagation();
+        if(element.dispatchEvent(new doc.defaultView.Event('cancel',{cancelable:true})))element.close?.();
+      });
+    }
+    if(close){
+      close.classList.add('ats-panel-icon');close.textContent='×';
+      if(!close.getAttribute('aria-label'))close.setAttribute('aria-label',`Close ${label}`);
+      close.title=close.getAttribute('aria-label');controls.append(close);
+    }
+    header.append(controls);element.classList.add('ats-movable-overlay');
+    header.classList.add('ats-overlay-drag-bar');
     if(desktopOnly)controls.classList.add('ats-overlay-desktop');
     const properties=['position','left','top','right','bottom','margin','transform','height','max-height','max-width'];
     const original=new Map(properties.map(name=>[name,element.style.getPropertyValue(name)]));
-    let position=null,drag=null,preferredHeight=null;
+    let position=null,drag=null,preferredHeight=null,suppressHeaderClick=false;
     const enabled=()=>!desktopOnly||Boolean(desktop?.matches);
     const clear=()=>{for(const [name,value]of original){if(value)element.style.setProperty(name,value);else element.style.removeProperty(name);}element.classList.remove('ats-overlay-positioned');};
     const viewport=()=>({width:window.visualViewport?.width||window.innerWidth||doc.documentElement?.clientWidth||1280,height:window.visualViewport?.height||window.innerHeight||doc.documentElement?.clientHeight||800,left:window.visualViewport?.offsetLeft||0,top:window.visualViewport?.offsetTop||0});
@@ -92,7 +117,18 @@
     const resetPosition=()=>{position=null;preferredHeight=null;clear();};
     const sync=()=>{if(!enabled())clear();else if(position&&rendered())place(position.x,position.y);};
     const stop=event=>{event.preventDefault();event.stopPropagation();};
+    const interactiveTarget=target=>{
+      const node=target?.closest?.('button,a,input,select,textarea,label,summary,[contenteditable],[role="button"],[role="link"],[role="checkbox"],[role="tab"],[role="slider"],[tabindex]');
+      return node&&header.contains(node)?node:null;
+    };
     handle.addEventListener('click',stop);
+    // A details summary is also its native toggle. A completed drag must not
+    // turn into a click that closes it; ordinary clicks keep their behaviour.
+    header.addEventListener('click',event=>{
+      if(!suppressHeaderClick)return;suppressHeaderClick=false;
+      const interactive=interactiveTarget(event.target);
+      if(!interactive||interactive===header||interactive===handle)stop(event);
+    },true);
     reset.addEventListener('click',event=>{stop(event);resetPosition();});
     handle.addEventListener('keydown',event=>{
       if(!enabled())return;
@@ -101,24 +137,28 @@
       if(!direction)return;stop(event);const r=bounds(),step=event.shiftKey?1:10;
       place((position?.x??r.left)+direction[0]*step,(position?.y??r.top)+direction[1]*step);
     });
-    handle.addEventListener('pointerdown',event=>{
+    header.addEventListener('pointerdown',event=>{
+      suppressHeaderClick=false;
       if(event.button!==0||!enabled())return;
-      stop(event);handle.focus?.({preventScroll:true});const r=bounds();
+      const interactive=interactiveTarget(event.target);
+      if(interactive&&interactive!==header&&interactive!==handle)return;
+      stop(event);if(event.target===handle)handle.focus?.({preventScroll:true});const r=bounds();
       drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:r.left,top:r.top,position:position&&{...position},moved:false};
-      handle.setPointerCapture?.(event.pointerId);
+      header.setPointerCapture?.(event.pointerId);
     });
-    handle.addEventListener('pointermove',event=>{
+    header.addEventListener('pointermove',event=>{
       if(!drag||drag.id!==event.pointerId)return;stop(event);
       const dx=event.clientX-drag.x,dy=event.clientY-drag.y;drag.moved ||= Math.hypot(dx,dy)>3;
       if(drag.moved){element.classList.add('ats-overlay-dragging');place(drag.left+dx,drag.top+dy);}
     });
     function finish(event,cancel=false) {
       if(!drag||drag.id!==event.pointerId)return;stop(event);const previous=drag;drag=null;
+      suppressHeaderClick=previous.moved&&!cancel;
       element.classList.remove('ats-overlay-dragging');
       if(cancel&&previous.moved){if(previous.position)place(previous.position.x,previous.position.y);else resetPosition();}
-      if(handle.hasPointerCapture?.(event.pointerId))handle.releasePointerCapture?.(event.pointerId);
+      if(header.hasPointerCapture?.(event.pointerId))header.releasePointerCapture?.(event.pointerId);
     }
-    handle.addEventListener('pointerup',event=>finish(event));handle.addEventListener('pointercancel',event=>finish(event,true));handle.addEventListener('lostpointercapture',event=>finish(event,true));
+    header.addEventListener('pointerup',event=>finish(event));header.addEventListener('pointercancel',event=>finish(event,true));header.addEventListener('lostpointercapture',event=>finish(event,true));
     window.addEventListener?.('resize',sync);desktop?.addEventListener?.('change',sync);
     window.visualViewport?.addEventListener?.('resize',sync);window.visualViewport?.addEventListener?.('scroll',sync);
     if(typeof ResizeObserver==='function')new ResizeObserver(sync).observe(element);
@@ -134,7 +174,10 @@
       const work=doc.getElementById('work-panel');installMovableOverlay(work,{header:work?.querySelector('.drawer-head'),label:'Exercise tools',preserveHeight:true});
       const popover=doc.querySelector('.ats-clock-popover');installMovableOverlay(popover,{label:'Clock settings'});
       const help=doc.getElementById('suite-guide-chat-panel');installMovableOverlay(help,{header:help?.querySelector('header'),label:'Gyani help'});
-      const tour=doc.getElementById('suite-tour');installMovableOverlay(tour,{header:tour?.querySelector('h2'),label:'Guided tour'});
+      const tour=doc.getElementById('suite-tour'),tourHeader=tour?.querySelector('h2');
+      const tourClose=[...(tour?.querySelectorAll('button')||[])].find(button=>/^(Skip|Close) tour$/.test(button.textContent));
+      if(tourClose){const label=tourClose.textContent;tourClose.textContent='×';tourClose.classList.add('ats-panel-close','ats-panel-icon');tourClose.setAttribute('aria-label',label);tourClose.title=label;(tourHeader?.querySelector('.ats-overlay-tools')||tourHeader)?.append(tourClose);}
+      installMovableOverlay(tour,{header:tourHeader,label:'Guided tour'});
       const notice=doc.getElementById('exercise-notice');installMovableOverlay(notice,{label:'Exercise notice'});
       const boundary=doc.getElementById('boundary-scope-tools');installMovableOverlay(boundary,{label:'Boundary drawing controls'});
       for(const dialog of doc.querySelectorAll('dialog'))installMovableOverlay(dialog,{header:dialog.querySelector('h2'),label:'Confirmation'});
@@ -292,7 +335,7 @@
     for(const drawer of drawers) {
       drawer.classList.add('ats-console-drawer');
       const summary=drawer.querySelector('summary');
-      const closeButton=make('button','Close','ats-drawer-close');closeButton.type='button';closeButton.setAttribute('aria-label','Close panel');
+      const closeButton=make('button','×','ats-drawer-close ats-panel-icon');closeButton.type='button';closeButton.title='Close panel';closeButton.setAttribute('aria-label','Close panel');
       closeButton.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();close();});summary?.append(closeButton);
       drawer.addEventListener('toggle',()=>{if(!doc.body.classList.contains('exercise-console'))return;if(drawer.open&&active!==drawer)open(drawer);else if(active===drawer&&!drawer.open){active=null;update();}});
     }
@@ -347,6 +390,8 @@
   function installProceduralConsole(root) {
     root.dataset.atsLayout='instructor';
     const doc=root.ownerDocument,actions=doc.getElementById('clock-controls'),end=doc.getElementById('terminate-quick');
+    const closeButton=doc.getElementById('drawer-close');
+    if(closeButton){closeButton.textContent='×';closeButton.classList.add('ats-panel-icon');closeButton.title='Close panel';closeButton.setAttribute('aria-label','Close panel');}
     if(actions&&end)actions.append(end);
     const review=actions?.querySelector('[data-tab="debrief"]');if(review)review.hidden=true;
     const title=doc.getElementById('exercise-title');if(title)title.title=title.textContent;
@@ -391,7 +436,7 @@
     // Adapters retain their attempt while setup, workspace and review visibility
     // changes. Screen visibility alone must never decide whether progress exists.
     if(typeof MutationObserver==='function'){
-      new MutationObserver(sync).observe(doc.body,{attributes:true,attributeFilter:['hidden'],subtree:true});
+      new MutationObserver(sync).observe(doc.body,{attributes:true,attributeFilter:['hidden','disabled'],subtree:true});
       new MutationObserver(sync).observe(doc.body,{attributes:true,attributeFilter:['class']});
     }
     sync();

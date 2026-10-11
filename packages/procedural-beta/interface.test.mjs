@@ -128,7 +128,7 @@ test('drawing help distinguishes mouse ARP, geographic entry, staged points, clo
   assert.match(entry.text,/Closing alone does not save/);
   assert.match(entry.text,/Cancel drawing.*keeps completed unsaved points/);
   assert.match(entry.text,/aircraft turns, transmissions, panning and exercise shortcuts are isolated/);
-  assert.match(entry.text,/Move handle.*Home or Reset/);
+  assert.match(entry.text,/empty title bar.*Home or Reset/);
   for(const question of ['Why is mouse drawing unavailable?','Does Close boundary save the polygon?','Does Cancel drawing keep my points?','How do I move the boundary drawing toolbar?']) {
     assert.equal(matchGuideQuestion(question,'procedural').intent,'custom-polygons');
   }

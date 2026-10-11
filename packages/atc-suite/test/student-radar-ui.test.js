@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
+const Visuals = require('../../qgh-engine/scope-visuals.js');
 const source = readFileSync(join(__dirname, '..', 'suite-student.js'), 'utf8');
 const page = readFileSync(join(__dirname, '..', 'student.html'), 'utf8');
 
@@ -232,6 +233,23 @@ test('SRA dashed corridor uses total training width and scales to the selected r
     assert.ok(ctx.labels.some(text => text.includes(`${configuredWidth ?? 2} NM TOTAL`) && text.includes('TRAINING')));
     assert.match(h.node('radarGuideNote').textContent, /not safety limits/i);
   }
+});
+
+test('student SRA distances start at the landing threshold while returns and ARP keep their original reference', () => {
+  const h = harness('sra', { ATCScopeVisuals: Visuals, metadata: { runwayOrientation: 90, finalTrack: 90 } });
+  h.emit({ overlays: { centrelineDeg: 270, terminationRangeNm: .5 }, plots: [plot('a', 20, 8)] });
+  const ctx = h.node('radarScope').ctx, scale = 328 / 40;
+  const strip = ctx.strokes.find(stroke => stroke.colour === '#91979c');
+  const threshold = Visuals.runwayGeometry({ runwayHeadingDeg: 90 }).threshold;
+  assert.ok(Math.abs(strip.path[0].x - (500 + threshold.xNm * scale)) < 1e-9);
+  assert.ok(Math.abs(strip.path[0].y - (400 - threshold.yNm * scale)) < 1e-9);
+  assert.ok(Math.abs(Math.hypot(strip.path[1].x - strip.path[0].x, strip.path[1].y - strip.path[0].y) - scale * 3 / 1.852) < 1e-9);
+  const termination = ctx.strokes.find(stroke => stroke.colour === '#edbb7d');
+  const midpoint = { x: (termination.path[0].x + termination.path[1].x) / 2, y: (termination.path[0].y + termination.path[1].y) / 2 };
+  assert.ok(Math.abs(midpoint.x - strip.path[0].x + .5 * scale) < 1e-9);
+  assert.ok(Math.abs(midpoint.y - strip.path[0].y) < 1e-9);
+  assert.ok(ctx.marks.some(point => point.x === 500 && point.y === 400 && point.r === 3));
+  assert.equal(returns(h)[0].x, 500 + 8 * scale);
 });
 
 test('radar environment overlays remain explicitly training-only and use the configured runway geometry', () => {

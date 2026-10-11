@@ -15,6 +15,7 @@ test('shared entry rules follow the generated Pages theme on both training famil
     const source = resolve(fixture,'source'), output = resolve(fixture,'output');
     await mkdir(resolve(source,'packages/site-landing'),{recursive:true});
     await writeFile(resolve(source,'packages/site-landing/flow-theme.css'),'/* generated theme */');
+    await writeFile(resolve(source,'packages/site-landing/iaf-theme.css'),'/* IAF theme */');
     await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.png'),'fixture');
     for (const page of [...entryPages,...otherPages]) {
       await mkdir(dirname(resolve(output,page)),{recursive:true});
@@ -26,7 +27,8 @@ test('shared entry rules follow the generated Pages theme on both training famil
       const html = await readFile(resolve(output,page),'utf8');
       assert.equal((html.match(/href="suite-entry\.css/g)||[]).length,1,`${page}: one shared entry stylesheet`);
       assert.ok(html.indexOf('flow-theme.css?release=2026.10.07.1') < html.indexOf('suite-entry.css?v=0.2.13-beta.1'),`${page}: final entry layout wins the cascade`);
-      assert.ok(html.indexOf('suite-entry.css?v=0.2.13-beta.1') < html.indexOf('</head>'),`${page}: entry rules remain in the head`);
+      assert.ok(html.indexOf('suite-entry.css?v=0.2.13-beta.1') < html.indexOf('iaf-theme.css?release=2026.10.07.1'),`${page}: IAF colours follow entry geometry`);
+      assert.ok(html.indexOf('iaf-theme.css?release=2026.10.07.1') < html.indexOf('</head>'),`${page}: IAF theme remains in the head`);
     }
     const single = await readFile(resolve(output,'single.html'),'utf8');
     assert.ok(!single.includes('suite-entry.css'),'individual exercise has no entry overrides');
@@ -62,6 +64,7 @@ test('built entry pages keep one Prepare your position label in shared and legac
     const repositoryRoot = resolve(import.meta.dirname,'../../..');
     await mkdir(resolve(source,'packages/site-landing'),{recursive:true});
     await writeFile(resolve(source,'packages/site-landing/flow-theme.css'),'/* generated theme */');
+    await writeFile(resolve(source,'packages/site-landing/iaf-theme.css'),'/* IAF theme */');
     await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.png'),'fixture');
     const procedural = await readFile(resolve(repositoryRoot,'packages/procedural-beta/static/procedural.html'),'utf8');
     const qgh = await readFile(resolve(repositoryRoot,'packages/atc-suite/index.html'),'utf8');

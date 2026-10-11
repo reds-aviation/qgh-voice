@@ -1,7 +1,7 @@
 package procedural
 
 func defaults() Environment {
-	return Environment{RangeNm: 60, StationName: "NAV0", StationType: "df", DFHoldSeconds: 10, QNHhPa: 1013.25, ThresholdCrossingHeightFt: 50, RunwayHeadingDeg: 90, RunwayLengthNm: 1.5, SeparationNm: 5, SeparationFt: 1000, SeparationMinutes: 5, Map: MapCalibration{WidthNm: 120, OriginXPct: 50, OriginYPct: 50, Opacity: 0.45}}
+	return Environment{RangeNm: 60, StationName: "ARP", StationType: "df", DFHoldSeconds: 10, QNHhPa: 1013.25, ThresholdCrossingHeightFt: 50, RunwayHeadingDeg: 90, RunwayLengthNm: 3 / 1.852, RunwayOffsetNm: 0.15, SeparationNm: 5, SeparationFt: 1000, SeparationMinutes: 5, Map: MapCalibration{WidthNm: 120, OriginXPct: 50, OriginYPct: 50, Opacity: 0.45}}
 }
 func baseAircraft(id, callsign string, x, y, heading, speed, alt float64) Aircraft {
 	return Aircraft{ID: id, Callsign: callsign, Type: "A320", XNm: x, YNm: y, HeadingDeg: heading, TargetHeadingDeg: heading, SpeedKt: speed, TargetSpeedKt: speed, AltitudeFt: alt, AltimeterReference: "qnh", TargetAltitudeFt: alt, VerticalRateFpm: 1500, TurnRateDegSec: 3, Mode: "heading", Status: "active", WakeCategory: "medium", PendingClearances: []Clearance{}, LastFixTimes: map[string]float64{}}
@@ -55,6 +55,12 @@ func preset(mode string) State {
 		s.Aircraft[3].RouteID = "B2"
 		s.Aircraft[4].SpawnTime = 180
 		s.Aircraft[4].Status = "scheduled"
+	}
+	// The threshold reporting point follows the configured strip, not the ARP.
+	for i := range s.Fixes {
+		if s.Fixes[i].ID == "THR" {
+			s.Fixes[i].XNm, s.Fixes[i].YNm = threshold(&s)
+		}
 	}
 	for _, a := range s.Aircraft {
 		s.Strips[a.ID] = Strip{}

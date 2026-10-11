@@ -76,6 +76,16 @@ test('drawing annotations never mutate route/fixes or join across a missing fix'
     assert.equal(calls.filter(c => c[0] === 'lineTo').length, 0, 'missing fix must break route line');
     assert.equal(JSON.stringify({ value, fixes }), before);
 });
+
+test('route name and FL limits form a single two-line label in display order', () => {
+    const labels = [], ctx = Object.fromEntries(['beginPath', 'moveTo', 'lineTo', 'stroke', 'save', 'restore', 'setLineDash'].map(name => [name, () => {}]));
+    chart.drawRouteChart(ctx, { ...route, name: 'A12345', chartDirection: 'both', levelLimits: 'FL260/FL460' }, fixes, screen, {
+        width: 300, height: 200, label: text => { labels.push(text); return true; }
+    });
+    assert.deepEqual(labels, ['A12345\nFL260/FL460']);
+    const environment = chart.chartEnvironment({ runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25, windSpeedKt: 20 });
+    assert.deepEqual(environment, { runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25 });
+});
 test('published rebase retains assigned old navigation while separate current points keep truthful WGS84', () => {
     const oldOrigin = { latitude: 26, longitude: 73 }, origin = { latitude: 27, longitude: 73 };
     const publishedFixes = ['A', 'B', 'C'].map((name, i) => ({ id: `aip-base-fix-${name}`, name, ...geometry.destination(oldOrigin, 90, i * 10) }));
@@ -107,7 +117,7 @@ test('rebuilt browser engine saves route and chart-only load durably without exp
     const saved = await command('route-geometry-upsert', custom); assert.equal(saved.status, 200, JSON.stringify(saved.body));
     assert.equal((await command('clock', { action: 'step', seconds: 60 })).status, 200);
     const before = await state();
-    const replaced = await command('airspace-replace', { expectedRevision: before.revision, environment: { stationName: 'ARP', aerodromeElevationFt: 1000, drawnARP: true, chartOrigin: null, stationXNm: 7.5, stationYNm: -4.25 }, fixes: before.fixes, routes: before.routes, areas: before.areas });
+    const replaced = await command('airspace-replace', { expectedRevision: before.revision, environment: { stationName: 'ARP', aerodromeElevationFt: 1000, drawnARP: true, chartOrigin: null, stationXNm: 7.5, stationYNm: -4.25, runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25 }, fixes: before.fixes, routes: before.routes, areas: before.areas });
     assert.equal(replaced.status, 200, JSON.stringify(replaced.body));
     const after = await state();
     assert.equal(after.exerciseId, initial.exerciseId); assert.equal(after.elapsed, 60); assert.deepEqual(after.aircraft, before.aircraft); assert.deepEqual(after.reports, before.reports);
@@ -116,6 +126,7 @@ test('rebuilt browser engine saves route and chart-only load durably without exp
     const visible = (await student.request('state', undefined, trainee)).body;
     assert.equal(visible.aircraft, undefined); assert.equal(visible.events, undefined); assert.equal(visible.routes.at(-1).chartDirection, 'both'); assert.deepEqual(structuredClone(visible.routes.at(-1).geoPoints), geoPoints);
     assert.equal(visible.environment.drawnARP, true); assert.equal(visible.environment.stationXNm, 7.5); assert.equal(visible.environment.stationYNm, -4.25);
+    assert.equal(visible.environment.runwayOffsetNm, .15); assert.equal(visible.environment.runwayCenterXNm, 0); assert.equal(visible.environment.runwayCenterYNm, 2.25);
     const checkpoint = structuredClone(h.saved.get('checkpoint'));
     const bad = await command('airspace-replace', { expectedRevision: after.revision, environment: {}, fixes: after.fixes, routes: [], areas: [] });
     assert.equal(bad.status, 400); assert.match(bad.body.error, /referenced/); assert.deepEqual(h.saved.get('checkpoint'), checkpoint);
@@ -123,4 +134,5 @@ test('rebuilt browser engine saves route and chart-only load durably without exp
     const restored = (await fresh.request('state', undefined, recovered)).body;
     assert.equal(restored.elapsed, 60); assert.equal(restored.routes.at(-1).chartDirection, 'both'); assert.deepEqual(structuredClone(restored.routes.at(-1).geoPoints), geoPoints);
     assert.equal(restored.environment.drawnARP, true); assert.equal(restored.environment.chartOrigin, undefined); assert.equal(restored.environment.stationXNm, 7.5); assert.equal(restored.environment.stationYNm, -4.25);
+    assert.equal(restored.environment.runwayOffsetNm, .15); assert.equal(restored.environment.runwayCenterXNm, 0); assert.equal(restored.environment.runwayCenterYNm, 2.25);
 });

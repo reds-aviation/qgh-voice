@@ -26,10 +26,19 @@ function validatedEnvironment(source) {
     // An absent geographic origin means a local chart. Send an explicit null
     // on load so an unrelated published origin cannot survive the merge.
     result.chartOrigin = geo(result.chartOrigin ?? null);
+    // Missing optional geometry in an older chart must clear a previous
+    // chart's explicit centre and retain the older zero-offset runway.
+    if (!Object.hasOwn(result, 'runwayOffsetNm')) result.runwayOffsetNm = 0;
+    result.runwayCenterXNm ??= null;
+    result.runwayCenterYNm ??= null;
+    if ((result.runwayCenterXNm === null) !== (result.runwayCenterYNm === null)) throw new Error('Runway centre needs both local NM coordinates.');
+    for (const key of ['runwayCenterXNm', 'runwayCenterYNm']) {
+        if (result[key] !== null && (typeof result[key] !== 'number' || !Number.isFinite(result[key]) || Math.abs(result[key]) > 2000)) throw new Error(`Invalid airspace ${key}.`);
+    }
     if ('map' in result) result.map = pick(result.map, ['imageId', 'widthNm', 'originXPct', 'originYPct', 'rotationDeg', 'opacity']);
     const bounds = { rangeNm: [1, 2000], stationXNm: [-2000, 2000], stationYNm: [-2000, 2000],
         magneticVariationDeg: [-180, 180], trainingMagneticVariationDeg: [-180, 180], runwayHeadingDeg: [0, 360],
-        runwayLengthNm: [.3, 5], aerodromeElevationFt: [-1500, 15000], thresholdCrossingHeightFt: [0, 1000] };
+        runwayLengthNm: [.3, 5], runwayOffsetNm: [-5, 5], aerodromeElevationFt: [-1500, 15000], thresholdCrossingHeightFt: [0, 1000] };
     for (const [key, [minimum, maximum]] of Object.entries(bounds)) {
         if (key in result && (typeof result[key] !== 'number' || !Number.isFinite(result[key]) || result[key] < minimum || result[key] > maximum)) throw new Error(`Invalid airspace ${key}.`);
     }
@@ -220,7 +229,7 @@ export function createAirspaceLibrary(host) {
     name.addEventListener('input', () => { nameEdited = true; });
     const loadRow = element('div', '', 'scenario-library-actions'); loadRow.append(selectLabel, load);
     const saveRow = element('div', '', 'scenario-library-actions'); saveRow.append(nameLabel, save);
-    const files = element('details'); files.id = 'airspace-files'; files.append(element('summary', 'Files'), exported, backup, fileLabel);
+    const files = element('details'); files.id = 'airspace-files'; files.open = true; files.append(element('summary', 'Files'), exported, backup, fileLabel);
     const remove = element('details'); remove.id = 'airspace-remove'; remove.append(element('summary', 'Remove saved airspace'), deleted);
     section.append(loadRow, saveRow, files, remove, status); host.container.prepend(section); read(); controls();
     return { open() { section.scrollIntoView({ block: 'start' }); select.focus({ preventScroll: true }); }, render() {

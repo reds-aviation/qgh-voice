@@ -19,8 +19,8 @@ export function visibleSegment(a, b, width, height, margin = 12) {
     }
     return [{ x: a.x + start * dx, y: a.y + start * dy }, { x: a.x + end * dx, y: a.y + end * dy }];
 }
-export function reserveLabel(anchor, textWidth, width, height, occupied) {
-    const boxWidth = textWidth + 8, boxHeight = 16;
+export function reserveLabel(anchor, textWidth, width, height, occupied, boxHeight = 16) {
+    const boxWidth = textWidth + 8;
     for (const [dx, dy] of [[7, -19], [7, 5], [-boxWidth - 7, -19], [-boxWidth - 7, 5]]) {
         const box = { x: anchor.x + dx, y: anchor.y + dy, width: boxWidth, height: boxHeight };
         if (box.x < 4 || box.y < 4 || box.x + box.width > width - 4 || box.y + box.height > height - 4)
