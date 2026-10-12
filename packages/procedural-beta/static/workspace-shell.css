@@ -228,7 +228,7 @@ body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var
  body.instructor-page.exercise-console>.suite-guide-chat{position:fixed;left:8px;right:auto;bottom:28px;padding:0;z-index:20;width:auto}
  body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__invitation{display:none}
  body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__launcher{padding:0;min-width:42px;min-height:42px}
- body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__fox{width:42px;height:42px}
+ body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__avatar{width:42px;height:42px}
  :root{--ats-header-height:56px;--ats-tools-width:144px}
  body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{padding:6px 10px;flex-wrap:nowrap}
  body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:20px}
@@ -336,7 +336,7 @@ body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var
 @media(min-width:701px) and (max-width:1100px){
  :root{--ats-header-height:96px}
  body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{flex-wrap:wrap}
- body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;justify-content:flex-end}
+ body.instructor-page.exercise-console .lifecycle-actions,body.instructor-desk.desk-open #clock-controls{order:5;flex:1 1 100%;min-width:0;flex-wrap:wrap;justify-content:flex-end}
  body.instructor-page.exercise-console .workspace-head>div:first-child,body.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){flex:1 1 150px}
  /* Startup details stay in their button's panel; the compact working bar has
     two explicit rows so its lifecycle controls cannot spill onto the range bar. */
@@ -460,4 +460,5 @@ body.instructor-desk.desk-open #work-panel .drawer-head{min-height:44px;padding:
 @media(max-width:700px){
  body.ats-has-logout.instructor-desk.desk-open #work-panel .drawer-head,
  body.ats-has-logout.instructor-page.exercise-console .ats-console-drawer>summary{padding-right:96px}
+ body.instructor-page.exercise-console .ats-console-drawer>summary{flex-wrap:wrap}
 }

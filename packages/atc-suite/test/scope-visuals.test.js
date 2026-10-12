@@ -15,7 +15,7 @@ function consoleHarness(useHelper=true) {
     return nodes.get(id);
   };
   const storage={getItem:()=>null,setItem(){},removeItem(){}};
-  const context={document:{body:{classList:{add(){},remove(){}}},getElementById:node,querySelectorAll:()=>[],createElement:()=>node(`created-${nodes.size}`)},
+  const context={document:{body:{classList:{add(){},remove(){}}},getElementById:node,querySelectorAll:selector=>selector==='[data-review-layer]'?[{dataset:{reviewLayer:'truth'},checked:true}]:[],createElement:()=>node(`created-${nodes.size}`)},
     structuredClone,sessionStorage:storage,localStorage:storage,devicePixelRatio:2,ATCSuiteCore:Core,ATCSuiteSensors:Sensors,ATCSuiteSession:Session,ATCSuiteDisplay:Display,
     ATCSuiteCommandReference:require('../suite-command-reference.js'),setTimeout:()=>1,clearTimeout(){},performance:{now:()=>0},Date,console};
   if(useHelper)context.ATCScopeVisuals={...Visuals,
@@ -23,7 +23,7 @@ function consoleHarness(useHelper=true) {
     drawAircraftGlyph(ctx,options){glyphs.push(options);return Visuals.drawAircraftGlyph(ctx,options);},
     drawAircraftLabels(ctx,items){labels.push(items);return Visuals.drawAircraftLabels(ctx,items);}};
   let source=readFileSync(join(__dirname,'../suite-instructor.js'),'utf8');
-  source=source.slice(0,source.indexOf("  family.addEventListener('change'"))+'\n globalThis.fixture={state,drawTruth,headingCommand,speedCommand,updateAll,performInstructorAction,shortcutActionForKey,executeKeyboardCommand};})();';
+  source=source.slice(0,source.indexOf("  family.addEventListener('change'"))+'\n globalThis.fixture={state,drawTruth,truthForReview,drawReview,headingCommand,speedCommand,updateAll,performInstructorAction,shortcutActionForKey,executeKeyboardCommand};})();';
   vm.runInNewContext(source,context);
   const state=context.fixture.state;
   state.simulation=Core.createState({exerciseFamily:'qgh',runwayOrientationDeg:230,finalTrackDeg:230,aircraft:[
@@ -80,6 +80,39 @@ test('QGH scope tag shows 030 H while heading controls and other readouts retain
   assert.ok(h.labels.at(-1).some(item=>item.lines.includes('030 H')));
   assert.match(h.node('quickAircraftStatus').textContent,/030°M/);assert.equal(h.node('truthHeading').textContent,'030°');
   assert.equal(h.node('quickHeading').value,'0','display formatting does not modify target controls');
+});
+
+test('review scope replays recorded speed at the selected time rather than the final live speed',()=>{
+  for(const helper of [true,false]){
+    const h=consoleHarness(helper);
+    h.state.review.recordTruth(h.truthForReview());
+    h.state.simulation=Core.setLifecycle(h.state.simulation,'running');
+    h.state.simulation=Core.advance(h.state.simulation,1);
+    const command=Core.applyCommand(h.state.simulation,{type:'set-speed',speedKt:300});
+    assert.equal(command.outcome.accepted,true);h.state.simulation=command.state;
+    h.state.review.recordTruth(h.truthForReview());
+    const record=h.state.review.snapshot();
+    assert.equal(record.truth[0].aircraft[0].speedKt,240);
+    assert.equal(record.truth[1].aircraft[0].speedKt,300);
+    for(const [time,speed]of [[0,240],[1,300]]){
+      h.state.reviewTime=time;h.drawReview(record);
+      const lines=helper?h.labels.at(-1).flatMap(item=>item.lines):h.calls.filter(call=>call[0]==='fillText').map(call=>call[1]);
+      assert.ok(lines.includes(`10000 FT · ${speed} KT`));
+      assert.ok(!lines.some(line=>line.includes('NaN')));
+      h.calls.length=0;
+    }
+  }
+});
+
+test('older review recordings without speed show an unavailable value in both scope renderers',()=>{
+  for(const helper of [true,false]){
+    const h=consoleHarness(helper),sample=h.truthForReview();
+    for(const aircraft of sample.aircraft)delete aircraft.speedKt;
+    h.state.reviewTime=0;h.drawReview({truth:[sample],events:[],observations:[]});
+    const lines=helper?h.labels.at(-1).flatMap(item=>item.lines):h.calls.filter(call=>call[0]==='fillText').map(call=>call[1]);
+    assert.ok(lines.includes('10000 FT · — KT'));
+    assert.ok(!lines.some(line=>line.includes('NaN')||line.includes('240 KT')));
+  }
 });
 
 test('instructor keyboard actions that depend on the heading field reject a cleared field instead of assigning north',()=>{

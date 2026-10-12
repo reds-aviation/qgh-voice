@@ -15,33 +15,31 @@
     return `https://meet.google.com/${url.pathname.slice(1).replace(/\/$/, '').toLowerCase()}`;
   }
 
-  function startupReadiness({ online = false, connected = true, meetingUrl = '', admitted = false, ready = false, disconnected = false, voiceReady = false } = {}) {
+  function startupReadiness({ online = false, connected = true, meetingUrl = '', admitted = false, ready = false, disconnected = false } = {}) {
     let shared = false; try { shared = !!normalizeMeetUrl(meetingUrl); } catch (_) {}
     const reason = online && !connected ? 'Reconnect the online exercise before Start or Resume.'
-      : online && !shared ? 'Open Session and share a Google Meet link.'
       : !admitted ? 'Open Session: share the PIN and admit the controller.'
       : disconnected ? 'Reconnect the controller before Start or Resume.'
-      : !ready ? 'Ask the admitted controller to press Ready to open the display and meeting link.'
-      : online && !voiceReady ? 'Both join Meet and check audio, then confirm this in Session.' : '';
+      : !ready ? 'Ask the admitted controller to press Ready to open the display.' : '';
     return { allowed: !reason, reason, shared };
   }
   function createStartupChecklist({ container }) {
     if (!container) return null;
-    const doc = container.ownerDocument || document, section = doc.createElement('section'), title = doc.createElement('h3'), list = doc.createElement('ol');
-    section.className = 'ats-startup-checklist'; title.textContent = 'Before Start'; section.append(title,list); container.prepend(section);
+    const doc = container.ownerDocument || document, section = doc.createElement('section'), title = doc.createElement('h3'), list = doc.createElement('ol'), voice = doc.createElement('p');
+    section.className = 'ats-startup-checklist'; title.textContent = 'Before Start'; voice.className = 'ats-meeting-help'; section.append(title,list,voice); container.prepend(section);
     return Object.freeze({ element: section, update(options = {}) {
       const result = startupReadiness(options);
       const steps = options.online ? [
-        [result.shared, 'Create a Google Meet room and share its link below.'],
         [options.admitted, 'Share the exercise PIN; the controller requests admission and you Admit.'],
-        [options.ready && !options.disconnected, 'Controller presses Ready to open the display and meeting link.'],
-        [options.voiceReady, 'Both Join Meet, check you can hear each other, and confirm below.'],
-        [result.allowed, 'Start begins aircraft movement. Keep Meet open throughout training.']
+        [options.ready && !options.disconnected, 'Controller presses Ready to open the display.'],
+        [result.allowed, 'Start begins aircraft movement.']
       ] : options.localSolo === true ? [
         [false, 'You can run this local Procedural exercise without a controller. Select Run when ready.'],
         [false, 'To work with a controller, share the PIN on this PC, Admit the controller, then ask them to press Ready before Run.']
       ] : [[options.admitted, 'Share the PIN on this PC and Admit the controller.'],[options.ready && !options.disconnected, 'Controller presses Ready; then Start begins aircraft movement.']];
       list.replaceChildren(...steps.map(([done,text]) => {const item = doc.createElement('li'); item.textContent = `${done ? 'Done · ' : ''}${text}`; return item;}));
+      voice.hidden = !options.online;
+      voice.textContent = 'Google Meet is optional. Speak in the same room or use another voice connection. To use Meet, share its link below, join and check audio together. A meeting link and audio confirmation are not required to Start or Resume.';
       return result;
     }});
   }
@@ -60,13 +58,13 @@
       return link;
     };
     const panel = make('details', '', 'ats-meeting-panel');
-    panel.append(make('summary', 'Google Meet · exercise voice'));
+    panel.append(make('summary', 'Google Meet · optional exercise voice'));
     const help = make('p', '', 'ats-meeting-help');
     const form = make('div', '', 'ats-meeting-form');
     const create = external('Create in Google Meet ↗', 'button-link');
     create.href = 'https://meet.google.com/';
     const createHelp = make('p', 'In Google Meet, choose New meeting → Create a meeting for later. Copy the meeting link and paste it below. Google handles your account and meeting.', 'ats-meeting-help');
-    const label = make('label', 'Meeting link');
+    const label = make('label', 'Meeting link · optional');
     const input = make('input');
     input.type = 'url'; input.placeholder = 'https://meet.google.com/abc-defg-hij';
     input.maxLength = 2048; input.autocomplete = 'off'; input.setAttribute('aria-label', 'Google Meet meeting link');
@@ -100,7 +98,7 @@
       audioCheck.disabled = !online || !meetingUrl || dirty || busy;
       audioCheck.checked = voiceReady;
       audioText.textContent = instructor ? 'The controller and I have joined this Meet and can hear each other.' : 'I have joined this Meet and checked audio with the instructor.';
-      readiness.textContent = voiceReady ? 'Audio confirmed for this meeting link. Keep Meet open during the exercise.' : meetingUrl ? 'Join Meet, check audio together, then tick this confirmation.' : 'Share a meeting link before checking audio.';
+      readiness.textContent = voiceReady ? 'Meet audio confirmed. Keep Meet open if you are using it for exercise voice.' : meetingUrl ? 'If you use Meet, join and check audio together. This confirmation does not control Start or Resume.' : 'No Meet link is needed to start. Speak in the same room or use another voice connection.';
       for (const link of joins) {
         link.hidden = !online || !meetingUrl;
         if (meetingUrl) link.href = meetingUrl;
@@ -152,8 +150,8 @@
         if (roomChanged) input.value = next;
         if (!online) resetVoice();
         help.textContent = instructor
-          ? 'Meet carries your voice throughout the online exercise. Both join and check audio before Start. The simulator cannot check your Google connection.'
-          : 'Press Ready to open your display and the shared meeting link. Join Meet, check audio with the instructor and tell them when you can hear each other. Keep both tabs open.';
+          ? 'Google Meet is optional for exercise voice and screen sharing. Different devices in the same room can use the online exercise without Meet. If you use Meet, join and check audio together; the simulator cannot check your Google connection.'
+          : 'Press Ready to open your display. Google Meet is optional: speak in the same room or use another voice connection. If the instructor shares a Meet link and you choose to use it, join and check audio together.';
         if (!busy && !dirty) status.textContent = options.status || (meetingUrl ? 'A Google Meet link is shared for this exercise.' : instructor ? 'No meeting link shared.' : 'The instructor has not shared a meeting link yet.');
         render();
       }

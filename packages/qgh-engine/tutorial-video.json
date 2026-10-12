@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.0.3",
+  "version": "1.0.4",
   "status": "ready",
   "youtubeId": "X9pBGBZlh84",
   "title": "ATS SIM BOX · Version 1 narrated tutorial",
@@ -97,5 +97,6 @@
       "title": "Phone controls, help and recovery",
       "startSeconds": 1574
     }
-  ]
+  ],
+  "recordingNote": "This is a recorded walkthrough of an earlier interface. The current Training guide and guided tour reflect the latest controls. Google Meet is optional, Prepare airspace uses the simplified Published / Draw / Coordinates editor, and Logout is hidden on fresh input pages."
 }

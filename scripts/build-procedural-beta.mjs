@@ -128,7 +128,7 @@ export async function buildProceduralBeta(outputRoot) {
   sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
   if (!sw.includes("'./qgh.html'") || !sw.includes("'./suite-landing.css'")) throw new Error('QGH offline suite shell was not updated');
   // The assistant assets are shared, cacheable and never fetch an AI service.
-  sw = sw.replace("  './qgh.html',", "  './qgh.html',\n  './procedural-beta/guide-knowledge.js',\n  './procedural-beta/suite-guide-chat.js',\n  './procedural-beta/suite-guide-chat.css',\n  './procedural-beta/gyani-fox.png',");
+  sw = sw.replace("  './qgh.html',", "  './qgh.html',\n  './procedural-beta/guide-knowledge.js',\n  './procedural-beta/suite-guide-chat.js',\n  './procedural-beta/suite-guide-chat.css',\n  './procedural-beta/gyani-instructor.png',");
   const proceduralShell = [...manifest.files.filter(file => file.path.startsWith('static/')).map(file => './procedural-beta/' + file.path.slice(7)), './procedural-beta/index.html', './procedural-beta/'];
   const uncached = proceduralShell.filter(path => !sw.includes(`'${path}'`));
   sw = sw.replace('const APP_SHELL = [', 'const APP_SHELL = [\n' + uncached.map(path => `  '${path}',`).join('\n'));
@@ -153,7 +153,7 @@ export async function buildProceduralBeta(outputRoot) {
   if (requestUrl.search && !isSuiteAsset) {`);
   instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
-    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-fox.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
+    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-instructor.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
   await versionHostedAssets(outputRoot, manifest.version);

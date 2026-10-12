@@ -170,7 +170,7 @@ test('shared same-screen replacement waits for a choice, preserves Cancel, and r
     assert.match(h.get('scenario-library-status').textContent, /exercise changed/i);
 });
 
-test('opening setup contains only starting traffic while airspace, file storage and required chart tools stay directly reachable', async () => {
+test('opening setup contains only starting traffic while the unified airspace editor and files stay directly reachable', async () => {
     const h = await preparationHarness();
     assert.equal(h.get('setup').contains(h.get('prepare-traffic')), true);
     assert.equal(h.get('tab-build').contains(h.get('prepare-traffic')), false);
@@ -192,6 +192,12 @@ test('opening setup contains only starting traffic while airspace, file storage 
     assert.equal(h.get('prepare-airspace-library').hidden, false);
     assert.equal(h.get('prepare-exercise-library').hidden, true, 'only the selected library is shown');
     assert.equal(h.get('prepare-advanced'), null, 'required tools are not behind an Advanced section');
+    const legacy = h.get('prepare-chart-settings');
+    assert.equal(legacy.hidden, true, 'old image, station, fixes and environment groups are absent from Prepare airspace');
+    assert.equal(legacy.getAttribute('inert'), '', 'hidden legacy controls cannot receive keyboard focus');
+    for (const id of ['map-align-form', 'chart-form', 'chart-fixes-form', 'route-form', 'area-form', 'environment-form']) {
+        assert.equal(legacy.contains(h.get(id)), true, `${id} remains bound safely behind the hidden compatibility section`);
+    }
     assert.equal(h.get('prepare-chart-settings').contains(h.get('environment-form')), true);
     assert.equal(h.get('prepare-chart-settings').contains(h.get('map-align-form')), true);
     assert.equal(h.get('tab-debrief').contains(h.get('import')), true, 'progress files are in Review rather than chart-only saving');

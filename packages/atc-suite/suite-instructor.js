@@ -38,7 +38,7 @@
   const focusMode = globalThis.ATCSuiteWorkspace?.createFocusMode?.({ root: byId('activeWorkspace'), panels: focusPanelIds.map(byId) });
   globalThis.ATCSuiteWorkspace?.bindShell?.({ root: byId('activeWorkspace'), scope: byId('instructorScope'),
     shelf: byId('instructorControlShelf'), actions: byId('instructorRunActions'), onLogout: logout,
-    hasAttempt: () => Boolean(state.session && state.simulation) });
+    hasAttempt: () => Boolean(state.session && state.simulation && (!byId('activeWorkspace').hidden || state.running || state.simulation.simulationSeconds > 0 || state.simulation.terminated)) });
   const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({
     container: byId('sessionDrawer')?.querySelector('.session-rail'), role: 'instructor',
     onReadinessChange: () => { if (state.simulation) updateAll(); },
@@ -60,12 +60,11 @@
   }
   function startupStatus() {
     const options = startupOptions();
-    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:!options.online && options.admitted && options.ready && !options.disconnected,reason:options.online ? 'Online startup tools did not load. Reload this page.' : 'Open Session: share the PIN, admit the controller and wait for Ready.'};
+    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:(!options.online || options.connected) && options.admitted && options.ready && !options.disconnected,reason:'Open Session: check the exercise connection, share the PIN, admit the controller and wait for Ready.'};
   }
   function openStartSetup() {
     const trigger = document.querySelector?.('.ats-tool-button[aria-controls="sessionDrawer"]');
     if (!byId('sessionDrawer').open && trigger?.click) trigger.click(); else byId('sessionDrawer').open = true;
-    meetingPanel?.open?.();
   }
   function requireStartup() {
     const status = startupStatus();
@@ -889,7 +888,7 @@
       byId('admitStudent').hidden = true; byId('rejectStudent').hidden = true;
     } else if (event.kind === 'student-ready') {
       byId('studentStatus').textContent = 'POSITION READY';
-      byId('studentDetail').textContent = state.cloudTransport ? 'Controller Ready. Both join Meet and confirm mutual audio before Start.' : 'The exercise can now start.';
+      byId('studentDetail').textContent = 'Controller Ready. The exercise can now start. Google Meet is optional for voice.';
       byId('startExercise').disabled = !startupStatus().allowed;
     } else if (event.kind === 'student-disconnected') {
       byId('studentStatus').textContent = 'POSITION DISCONNECTED';
@@ -1051,7 +1050,7 @@
   function truthForReview() {
     return { timestamp: state.simulation.simulationSeconds, aircraft: state.simulation.aircraftList.map(a => ({
       id: a.id, callsign: a.callsign, xNm: a.position.xNm, yNm: a.position.yNm,
-      headingDeg: a.headingDeg, altitudeFt: a.altitudeFt })) };
+      headingDeg: a.headingDeg, altitudeFt: a.altitudeFt, speedKt: a.speedKt })) };
   }
 
   function frame(timestamp) {
@@ -1253,7 +1252,7 @@
     byId('startExercise').disabled = snapshot.lifecycle !== 'ready' || !startup.allowed;
     byId('startExercise').setAttribute('aria-describedby','startSetupStatus');
     const startupAction = snapshot.lifecycle === 'paused' ? 'Resume' : 'Start';
-    byId('startSetupStatus').textContent = startup.allowed ? state.cloudTransport ? `Ready to ${startupAction}. Keep Meet open throughout the exercise.` : `Controller Ready. Select ${startupAction} to ${snapshot.lifecycle === 'paused' ? 'continue' : 'begin'} aircraft movement.` : startup.reason;
+    byId('startSetupStatus').textContent = startup.allowed ? `Controller Ready. Select ${startupAction} to ${snapshot.lifecycle === 'paused' ? 'continue' : 'begin'} aircraft movement.` : startup.reason;
     byId('startSetupStatus').hidden = !['ready','paused'].includes(snapshot.lifecycle);
     byId('openStartSetup').hidden = !['ready','paused'].includes(snapshot.lifecycle);
     document.querySelectorAll('.command-grid button, .command-grid input, .command-grid select').forEach(control => { control.disabled = !controllable; });
@@ -1387,10 +1386,13 @@
   function drawAircraft(context, transform, aircraft, selected) {
     const x = transform.cx + aircraft.xNm * transform.scale, y = transform.cy + aircraft.yNm * transform.scale;
     const visuals = globalThis.ATCScopeVisuals, color = selected ? '#fff7d5' : '#9fe1d9';
+    // Older saved reviews did not record speed; never infer it from final live state.
+    const speed = Number.isFinite(aircraft.speedKt) ? Math.round(aircraft.speedKt) : '—';
+    const details = [`${Math.round(aircraft.altitudeFt)} FT · ${speed} KT`, `${pad(aircraft.headingDeg)} H`];
     if (visuals) {
       visuals.drawAircraftGlyph(context, { x, y, headingDeg: aircraft.headingDeg, selected, color, selectionColor: '#efa93a' });
       return { id: aircraft.id, callsign: aircraft.callsign, x, y, selected, color,
-        details: [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)} H`] };
+        details };
     }
     if (selected) { context.strokeStyle = '#efa93a'; context.lineWidth = 1; context.beginPath(); context.arc(x, y, 10, 0, Math.PI * 2); context.stroke(); }
     context.save(); context.translate(x, y); context.rotate(aircraft.headingDeg * Math.PI / 180);
@@ -1399,7 +1401,7 @@
     const mode = byId('truthLabelMode')?.value || 'selected';
     if (mode === 'off') return null;
     context.fillStyle = selected ? '#fff7d5' : '#9fe1d9'; context.font = '14px IBM Plex Mono';
-    const lines = [aircraft.callsign, ...(selected || mode === 'all' ? [`${Math.round(aircraft.altitudeFt)} FT · ${Math.round(aircraft.speedKt)} KT`, `${pad(aircraft.headingDeg)} H`] : [])];
+    const lines = [aircraft.callsign, ...(selected || mode === 'all' ? details : [])];
     const width = Math.max(...lines.map(line => context.measureText(line)?.width || line.length * 8));
     const labelX = Math.max(5, Math.min(x + 16, context.canvas?.width ? context.canvas.width - width - 5 : x + 16));
     for (let i = 0; i < lines.length; i++) context.fillText(lines[i], labelX, Math.max(16, y - 12) + i * 16);

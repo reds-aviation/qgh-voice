@@ -81,7 +81,7 @@
     }
     if (event.kind === 'admitted' || event.kind === 'rejoined') {
       meetingPanel?.resetVoice?.();
-      byId('studentReady').disabled = false; byId('studentReady').textContent = state.cloudTransport ? 'Ready — open display & meeting link' : 'READY';
+      byId('studentReady').disabled = false; byId('studentReady').textContent = state.cloudTransport ? 'Ready — open my display' : 'READY';
       show('readyPanel'); byId('readyMode').textContent = modeLabel(state.metadata.mode);
       if (event.kind === 'rejoined') setPilotAudio(false);
     } else if (event.kind === 'join-rejected') {
@@ -173,7 +173,7 @@
 
   function ready() {
     if (!state.session?.ready(byId('studentAudio').checked ? 'audio' : 'captions')) return;
-    byId('studentReady').disabled = true; byId('studentReady').textContent = state.cloudTransport ? 'READY · JOIN MEET & CHECK AUDIO' : 'READY · WAITING FOR START';
+    byId('studentReady').disabled = true; byId('studentReady').textContent = 'READY · WAITING FOR START';
   }
 
   function renderLifecycle(lifecycle) {

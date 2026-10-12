@@ -12,7 +12,7 @@ import {domHarness} from '../../procedural-beta/testing/dom-harness.mjs';
 const meetUrl = 'https://meet.google.com/abc-defg-hij';
 const otherUrl = 'https://meet.google.com/xyz-abcd-efg';
 
-function instructorHarness(online = false, sessionAdapter = Session) {
+function instructorHarness(online = false, sessionAdapter = Session, exerciseFamily = 'qgh') {
   const h = domHarness(readFileSync(new URL('../instructor.html', import.meta.url), 'utf8'), '/instructor.html', 1280);
   Object.assign(h.context, {structuredClone, confirm:()=>true, ATCSuiteCore: Core, ATCSuiteSensors: Sensors,
     ATCSuiteSession: sessionAdapter, ATCSuiteCommandReference: CommandReference, ATCSuiteMeeting: Meeting});
@@ -21,10 +21,10 @@ function instructorHarness(online = false, sessionAdapter = Session) {
     + '\n globalThis.fixture={state,updateAll,startExercise,pauseExercise,advanceBy,advanceWallElapsed,performInstructorAction,onSessionEvent,createSession,restoreAttempt,checkpoint,setScenarioInput(input){scenarioInput=()=>input;}};})();';
   vm.runInContext(source, h.context);
   const f = h.context.fixture, state = f.state;
-  state.simulation = Core.setLifecycle(Core.createState({exerciseFamily: 'qgh', runwayOrientationDeg: 230, finalTrackDeg: 230,
+  state.simulation = Core.setLifecycle(Core.createState({exerciseFamily, runwayOrientationDeg: 230, finalTrackDeg: 230,
     aircraft: [{aircraftId: 'AC1', callsign: '101', initialQteDeg: 30, initialRangeNm: 20,
       initialHeadingDeg: 210, altitudeFt: 10000, speedKt: 240, rateDegPerSecond: 3}]}), 'ready');
-  state.sensor = Sensors.createDfSensor(); state.review = Sensors.createReviewTimeline(); state.trainingTimeRate = 1;
+  state.sensor = exerciseFamily === 'qgh' ? Sensors.createDfSensor() : Sensors.createSurveillanceSensor({rpm:15}); state.review = Sensors.createReviewTimeline(); state.trainingTimeRate = 1;
   const hub = Session.createFakeTransportHub(), transportFactory = name => hub.createTransport(name);
   const host = Session.createInstructorSession({pin: '123456', storage: h.context.localStorage, transportFactory,
     publicMetadata: {mode: 'qgh'}, onEvent: f.onSessionEvent});
@@ -43,7 +43,7 @@ function instructorHarness(online = false, sessionAdapter = Session) {
   return {...h, ...f, get, student, acknowledge, ready, link, close};
 }
 
-test('actual host connection callbacks clear audio before Start and after recovery, even for a brief drop before protocol timeout', async () => {
+test('host connection callbacks block startup during an outage and clear optional audio without requiring it after recovery', async () => {
   const sessionAdapter = {...Session, createInstructorSession: options => {
     const host = Session.createInstructorSession({...options, publicMetadata: JSON.parse(JSON.stringify(options.publicMetadata))});
     return {...host, publishObservation:(value,time)=>host.publishObservation(JSON.parse(JSON.stringify(value)),time)};
@@ -66,8 +66,8 @@ test('actual host connection callbacks clear audio before Start and after recove
   assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked,false);
   assert.equal(h.get('startExercise').disabled,true);
   h.state.cloudTransport.connected = true; callbacks[0]({connected:true});
-  assert.equal(h.get('startExercise').disabled,true); assert.equal(h.startExercise(),false);
-  h.acknowledge(); assert.equal(h.startExercise(),true); h.pauseExercise(); h.checkpoint(); h.state.session.detach();
+  assert.equal(h.get('startExercise').disabled,false); assert.equal(h.startExercise(),true);
+  h.pauseExercise(); h.checkpoint(); h.state.session.detach();
   await h.restoreAttempt(); assert.equal(callbacks.length,2); student.rejoin(); h.acknowledge();
   assert.equal(h.get('pauseExercise').disabled,false);
   callbacks[0]({connected:false,error:'obsolete callback'});
@@ -75,7 +75,7 @@ test('actual host connection callbacks clear audio before Start and after recove
   h.state.cloudTransport.connected = false; callbacks[1]({connected:false,error:'brief restored outage'});
   assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked,false);
   h.state.cloudTransport.connected = true; callbacks[1]({connected:true});
-  assert.equal(h.get('pauseExercise').disabled,true); assert.equal(h.pauseExercise(),false);
+  assert.equal(h.get('pauseExercise').disabled,false); assert.equal(h.pauseExercise(),true);
   student.close(); h.close();
 });
 
@@ -93,28 +93,26 @@ test('offline instructor Start and Resume still follow admission/Ready without a
   h.close();
 });
 
-test('online instructor Start and Resume require the shared current link and mutual audio acknowledgement', () => {
-  const h = instructorHarness(true); h.ready();
-  assert.equal(h.startExercise(), false); assert.equal(h.get('startExercise').disabled, true);
-  assert.match(h.get('startSetupStatus').textContent, /share a Google Meet link/);
-  h.link(meetUrl);
-  assert.equal(h.startExercise(), false);
-  assert.match(h.get('startSetupStatus').textContent, /check audio/);
-  h.acknowledge(); assert.equal(h.get('startExercise').disabled, false);
+for (const exerciseFamily of ['qgh', 'surveillance', 'sra']) test(`online ${exerciseFamily} Start and Resume do not require a Meet link or audio acknowledgement`, () => {
+  const h = instructorHarness(true, Session, exerciseFamily);
+  assert.equal(h.startExercise(), false); assert.equal(h.get('startExercise').disabled, true, 'Admission/Ready are still required');
+  h.ready(); assert.equal(h.get('startExercise').disabled, false);
+  assert.match(h.get('startSetupStatus').textContent, /Controller Ready.*Select Start/);
+  assert.equal(h.document.querySelector('.ats-meeting-audio-check').disabled, true, 'No optional Meet link is shared');
   assert.equal(h.startExercise(), true);
   assert.equal(h.pauseExercise(), true);
-  assert.match(h.get('startSetupStatus').textContent, /Ready to Resume/);
+  assert.match(h.get('startSetupStatus').textContent, /Select Resume to continue/);
   h.link(otherUrl);
-  assert.equal(h.get('pauseExercise').disabled, true); assert.equal(h.pauseExercise(), false);
+  assert.equal(h.get('pauseExercise').disabled, false);
+  assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked, false);
   const before = h.state.simulation.simulationSeconds;
   const manual = h.performInstructorAction({action: 'advance'});
-  assert.equal(manual.accepted, false); assert.equal(h.state.simulation.simulationSeconds, before);
-  h.acknowledge(); assert.equal(h.get('pauseExercise').disabled, false);
+  assert.equal(manual.accepted, true); assert.equal(h.state.simulation.simulationSeconds, before + 60);
   assert.equal(h.pauseExercise(), true);
   h.close();
 });
 
-test('a running aircraft tick does not silently freeze when a Meet draft invalidates only the next startup acknowledgement', () => {
+test('a running aircraft tick and subsequent Resume stay independent of optional Meet drafts', () => {
   const h = instructorHarness(true); h.ready(); h.link(meetUrl); h.acknowledge(); assert.equal(h.startExercise(), true);
   const input = h.document.querySelector('.ats-meeting-panel input[type="url"]');
   input.value = otherUrl; input.dispatchEvent(new h.Event('input'));
@@ -123,18 +121,19 @@ test('a running aircraft tick does not silently freeze when a Meet draft invalid
   h.advanceWallElapsed(.25);
   assert.equal(h.state.simulation.simulationSeconds, before + .25);
   assert.equal(h.state.simulation.lifecycle, 'running'); assert.equal(h.state.running, true);
+  assert.equal(h.pauseExercise(), true); assert.equal(h.pauseExercise(), true);
   h.close();
 });
 
-test('online disconnection and controller rejoin invalidate prior audio confirmation before another Start or Resume', () => {
+test('online disconnection still blocks Start, while controller rejoin can Resume without renewed optional audio', () => {
   const h = instructorHarness(true); h.ready(); h.link(meetUrl); h.acknowledge();
   h.state.cloudTransport.connected = false; h.updateAll();
   assert.equal(h.get('startExercise').disabled, true); assert.equal(h.startExercise(), false);
   assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked, false);
   h.state.cloudTransport.connected = true; h.updateAll();
-  assert.equal(h.startExercise(), false); h.acknowledge(); assert.equal(h.startExercise(), true);
+  assert.equal(h.startExercise(), true);
   h.pauseExercise(); h.student.rejoin(); h.updateAll();
   assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked, false);
-  assert.equal(h.pauseExercise(), false); h.acknowledge(); assert.equal(h.pauseExercise(), true);
+  assert.equal(h.pauseExercise(), true);
   h.close();
 });

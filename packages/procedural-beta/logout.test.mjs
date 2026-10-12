@@ -28,8 +28,8 @@ function adapterHarness(role = 'instructor') {
     session={role:roleFixture,token:'active-token',csrf:'active-csrf',workspace:'procedural',roomId:'room-a',name:'Controller'};
     view={exerciseId:'logout-exercise',available:true,running:true,terminated:false,elapsed:120,environment:{rangeNm:60},roster:[],aircraft:[],routes:[],fixes:[],areas:[]};
     setStage('desk');selected='';
-    globalThis.fixture={state:()=>({session,view,generation,loginBusy,commandBusy,stage}),command,openSession,
-      setRequest(fn){request=fn;},entry(){session=null;view=null;setStage('entry');},
+    globalThis.fixture={state:()=>({session,view,generation,loginBusy,commandBusy,stage}),command,openSession,abortPendingLogin:logoutToHome,
+      setRequest(fn){request=fn;},entry(){session=null;view=null;setStage('entry');}, setup(elapsed=0){view.elapsed=elapsed;view.running=false;setStage('setup');},
     };
   `,h.context);
   const store=h.context.sessionStorage, local=h.context.localStorage;
@@ -70,27 +70,27 @@ test('a login completed after Logout cannot reopen the desk or unlock a newer pe
   const h=adapterHarness(), first=deferred(), second=deferred(), replies=[first,second];
   h.entry();h.setRequest(()=>replies.shift().promise);
   const opening=h.openSession('student');assert.equal(h.state().loginBusy,true);
-  h.logout();await h.answer(true);
+  await h.abortPendingLogin();
   const newer=h.openSession('student');assert.equal(h.state().loginBusy,true);
   first.resolve({role:'student',token:'obsolete',csrf:'obsolete',workspace:'procedural'});await opening;
   assert.equal(h.state().session,null);assert.equal(h.state().loginBusy,true);
   assert.equal(h.document.getElementById('student-login').disabled,true,'Obsolete login finalization must preserve the new login lock');
-  h.logout();await h.answer(true);
+  await h.abortPendingLogin();
   second.resolve({role:'student',token:'also-obsolete',csrf:'obsolete',workspace:'procedural'});await newer;
   assert.equal(h.state().session,null);assert.equal(h.state().loginBusy,false);
   assert.equal(h.context.sessionStorage.getItem(sessionKey),null);
 });
 
-test('untouched Procedural entry has no Logout and a pending join retains cancellation',async()=>{
+test('untouched Procedural entry and its pending join have no exercise Logout',async()=>{
   const h=adapterHarness();h.entry();await flush();
   const slot=h.document.querySelector('.ats-logout-slot');
   assert.equal(slot.hidden,true);assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
   h.logout();assert.equal(h.document.querySelector('.ats-confirm-dialog'),null);
   const pending=deferred();h.setRequest(()=>pending.promise);
   const opening=h.openSession('student');assert.equal(h.state().loginBusy,true);
-  h.logout();await h.answer(false);
-  assert.equal(h.state().loginBusy,true,'Cancel preserves the in-flight join');
-  h.logout();await h.answer(true);
+  await flush();assert.equal(slot.hidden,true,'pending login is still an input page');
+  h.logout();assert.equal(h.document.querySelector('.ats-confirm-dialog'),null);
+  await h.abortPendingLogin();
   pending.resolve({role:'student',token:'obsolete',csrf:'obsolete',workspace:'procedural'});await opening;
   assert.equal(h.state().session,null);assert.equal(slot.hidden,true);
 });
@@ -148,4 +148,12 @@ test('Logout during online room creation prevents late activation or recovery ke
   assert.equal(h.context.sessionStorage.getItem(lastRoomKey),null);assert.equal(h.context.sessionStorage.getItem(`atc-cloud-room:${h.roomId}`),null);
   assert.ok(h.calls.some(call=>call.action==='close'&&call.id==='obsolete-cloud-room'));
   assert.equal(h.ports[0].closed,true);
+});
+
+test('starting traffic input hides Logout before movement; revisiting setup with exercise progress retains it',async()=>{
+  const h=adapterHarness(),slot=h.document.querySelector('.ats-logout-slot');
+  h.setup(0);await flush();assert.equal(slot.hidden,true,'input setup before the first run has no progress to discard');
+  h.logout();assert.equal(h.document.querySelector('.ats-confirm-dialog'),null);
+  h.setup(120);await flush();assert.equal(slot.hidden,false,'the same setup view retains an exercise already in progress');
+  h.logout();await h.answer(false);assert.equal(h.state().view.elapsed,120);
 });

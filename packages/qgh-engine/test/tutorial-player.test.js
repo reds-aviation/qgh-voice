@@ -121,3 +121,9 @@ test('failed configuration loading preserves written/offline content and leaves 
   assert.equal(h.document.getElementById('suiteTutorial').hidden,true);
   assert.equal(h.document.querySelector('iframe'),null);assert.ok(h.document.getElementById('calls'));
 });
+
+test('the recorded course discloses current workflow differences before loading remote media',()=>{
+  const h=harness();player.mount(h.document,h.win,player.configuration({...ready,recordingNote:sourceConfiguration.recordingNote},'1.0.0'));
+  const note=h.document.getElementById('suiteTutorialRecordingNote');assert.ok(note);assert.match(note.textContent,/recorded walkthrough/);assert.match(note.textContent,/Google Meet is optional/);
+  assert.equal(h.document.querySelector('iframe'),null);
+});

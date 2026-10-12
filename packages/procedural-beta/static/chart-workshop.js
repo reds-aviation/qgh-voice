@@ -106,7 +106,10 @@ export function createChartWorkshop(context) {
     const published = document.createElement('div'); published.id = 'prepare-published';
     const custom = document.createElement('div'); custom.id = 'prepare-custom';
     const existing = document.createElement('div'); existing.id = 'prepare-existing';
+    // Keep the old forms for existing bindings and saved-file compatibility.
+    // Published / Draw / Coordinates now provide the visible preparation flow.
     const chartSettings = document.createElement('section'); chartSettings.id = 'prepare-chart-settings';
+    chartSettings.className = 'prepare-legacy-controls'; chartSettings.hidden = true; chartSettings.setAttribute('inert', '');
     const publishedDetails = $('aerodrome-form').closest('details');
     // The Published choice already discloses this form; avoid a second accordion.
     published.append($('aerodrome-form')); publishedDetails.remove();
@@ -151,8 +154,6 @@ export function createChartWorkshop(context) {
     for (const panel of steps.values()) panel.prepend(panel.querySelector(':scope > summary'));
     const legacyBoundary = $('area-form')?.closest('details');
     if (legacyBoundary) legacyBoundary.hidden = true;
-    const oldChartDetails = $('chart-form')?.closest('details');
-    if (oldChartDetails) oldChartDetails.querySelector('summary').textContent = 'Station and chart settings';
     const selection = document.createElement('div'); selection.id = 'aerodrome-selection'; selection.className = 'aerodrome-selection';
     $('aerodrome-preview').after(selection);
     const dirtyFields = new Set();
@@ -404,7 +405,7 @@ export function createChartWorkshop(context) {
             return { id: area.id, name: area.name, kind: area.kind, points: geoPoints.map(p => project(p, item.origin)), coordinateOrigin: item.origin, geoPoints: geoPoints.map(p => ({ latitude: p.latitude, longitude: p.longitude })), floorLabel: area.floorLabel, ceilingLabel: area.ceilingLabel, source: area.source || 'India AIP', reference: area.reference || item.source, effectiveInfo: area.effectiveInfo || item.effectiveInfo, notes: [area.notes, area.activation].filter(Boolean).join('\n'), active: true };
         });
         const navigation = mergePublishedNavigation(scenario, chosen, item.origin);
-        scenario.environment = { ...scenario.environment, chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: 0, stationYNm: 0, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `${stationReference}\nApproximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nSet runway, QNH, wind, transition altitude, frequencies and coordination instructions before starting.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
+        scenario.environment = { ...scenario.environment, chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: 0, stationYNm: 0, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `${stationReference}\nApproximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nRunway geometry, QNH, wind and altitude references retain the current exercise configuration.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
         scenario.areas = areas;
         scenario.fixes = navigation.fixes;
         scenario.routes = navigation.routes;

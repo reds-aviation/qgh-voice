@@ -26,7 +26,7 @@
       ids.add(chapter.id);
       previous = chapter.startSeconds;
     }
-    return { youtubeId: value.youtubeId, title: value.title.trim(), chapters };
+    return { youtubeId: value.youtubeId, title: value.title.trim(), chapters, ...(typeof value.recordingNote === 'string' && value.recordingNote.trim() ? {recordingNote:value.recordingNote.trim()} : {}) };
   }
   function embedUrl(videoId, seconds = 0) {
     if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId) || !Number.isInteger(seconds) || seconds < 0) throw new Error('Invalid tutorial destination');
@@ -48,6 +48,11 @@
     const external = doc.getElementById('suiteTutorialYouTube');
     let frame = null, seconds = 0;
     doc.getElementById('suiteTutorialTitle').textContent = value.title;
+    if (value.recordingNote) {
+      const note=doc.getElementById('suiteTutorialRecordingNote') || doc.createElement('p');
+      note.id='suiteTutorialRecordingNote'; note.className='hint'; note.textContent=value.recordingNote;
+      if(!note.parentNode) doc.getElementById('suiteTutorialTitle').after(note);
+    }
     card.hidden = false;
     for (const chapter of value.chapters) {
       const option = doc.createElement('option');

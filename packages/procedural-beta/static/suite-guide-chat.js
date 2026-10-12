@@ -74,9 +74,9 @@
     let returnFocus = null;
     const root = make('div', 'suite-guide-chat'); root.id = 'suite-guide-chat';
     const launcher = make('button', 'suite-guide-chat__launcher');
-    const fox = make('img', 'suite-guide-chat__fox'); fox.src = new URL('gyani-fox.png', scriptURL || location.href).href; fox.alt = ''; fox.width = 48; fox.height = 48; fox.decoding = 'async';
+    const avatar = make('img', 'suite-guide-chat__avatar'); avatar.src = new URL('gyani-instructor.png', scriptURL || location.href).href; avatar.alt = ''; avatar.width = 48; avatar.height = 48; avatar.decoding = 'async';
     const invitation = make('span', 'suite-guide-chat__invitation', 'Gyani · Ask me if you need help');
-    launcher.append(fox, invitation); launcher.setAttribute('aria-label', 'Ask Gyani for simulator help');
+    launcher.append(avatar, invitation); launcher.setAttribute('aria-label', 'Ask Gyani for simulator help');
     launcher.type = 'button'; launcher.setAttribute('aria-haspopup', 'dialog');
     launcher.setAttribute('aria-controls', 'suite-guide-chat-panel'); launcher.setAttribute('aria-expanded', 'false');
     const panel = make('section', 'suite-guide-chat__panel'); panel.id = 'suite-guide-chat-panel'; panel.hidden = true;
@@ -86,7 +86,7 @@
     const title = make('h2', '', 'Gyani'); title.id = 'suite-guide-chat-title';
     heading.append(title, make('p', '', 'Your simulator guide'));
     const close = make('button', 'suite-guide-chat__close', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Collapse Gyani');
-    header.append(fox.cloneNode(), heading, close);
+    header.append(avatar.cloneNode(), heading, close);
     const history = make('div', 'suite-guide-chat__history'); history.setAttribute('role', 'log'); history.setAttribute('aria-live', 'polite'); history.setAttribute('aria-relevant', 'additions'); history.setAttribute('aria-label', 'Conversation with Gyani');
     const suggestions = make('div', 'suite-guide-chat__suggestions'); suggestions.setAttribute('aria-label', 'Suggested questions');
     const quickLinks = make('nav', 'suite-guide-chat__guides'); quickLinks.setAttribute('aria-label', 'Common training guide');

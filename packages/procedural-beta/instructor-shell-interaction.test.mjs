@@ -109,9 +109,9 @@ test('Procedural Logout is hidden on fresh entry and follows preparation, waitin
  assert.equal(slot.hidden,true,'untouched entry has no attempt to discard');
  assert.equal(h.document.body.classList.contains('ats-has-logout'),false);
  get('workspaceLogout').click();assert.equal(h.document.querySelector('dialog'),null);
- get('student-login').disabled=true;await tick();assert.equal(slot.hidden,false,'a pending join exposes Logout before a desk exists');
+ get('student-login').disabled=true;await tick();assert.equal(slot.hidden,true,'pending entry does not expose an exercise Logout');
  get('student-login').disabled=false;await tick();assert.equal(slot.hidden,true,'a completed or failed join without an attempt returns to hidden Logout');
- h.document.body.classList.add('setup-open');await tick();assert.equal(slot.hidden,false,'starting traffic preparation retains the exit control');
+ h.document.body.classList.add('setup-open');await tick();assert.equal(slot.hidden,true,'opening starting traffic alone has no exercise progress to discard');
  h.document.body.classList.remove('setup-open');root.hidden=false;h.document.body.classList.add('desk-open');await tick();assert.equal(slot.hidden,false);
  h.document.body.classList.add('review-open');await tick();assert.equal(slot.hidden,false,'review retains the exit control');
  root.hidden=true;h.document.body.classList.remove('desk-open','review-open');get('waiting').hidden=false;await tick();assert.equal(slot.hidden,false,'joined students can leave the waiting room');

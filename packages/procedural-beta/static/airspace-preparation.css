@@ -5,7 +5,7 @@
 .prepare-save-kind{display:grid;gap:6px;margin:12px 0;font-weight:600}.prepare-save-kind select{width:100%;min-width:0;min-height:44px;box-sizing:border-box;font:inherit;color:var(--text,#edf6f6);background:var(--panel,#19252d);border:1px solid var(--line,#62727c);border-radius:7px;padding:10px}#prepare-save-load>section+section{border:0;margin:0;padding:0}
 .boundary-drawing-status{padding:10px 12px;border:1px solid #8c7444;border-radius:7px;background:#352d1d;color:#ffe2a4;font-size:13px;line-height:1.5;margin:10px 0}.boundary-drawing-status[data-ready="true"]{border-color:#4d7b83;background:#152a30;color:#c1edf1}.airspace-sketch canvas[aria-disabled="true"]{opacity:.65}.boundary-scope-status{flex-basis:100%;font-size:12px;line-height:1.4;color:#ffe2a4}.boundary-scope-tools{position:fixed;left:max(10px,calc(50% - 280px));right:auto;bottom:max(30px,env(safe-area-inset-bottom));width:min(560px,calc(100% - 20px));max-width:calc(100% - 20px);box-sizing:border-box;max-height:45dvh;overflow:auto;overscroll-behavior:contain}
 .boundary-scope-tools [hidden]{display:none!important}
-.airspace-preparation [hidden]{display:none!important}
+.airspace-preparation [hidden],.prepare-legacy-controls[hidden]{display:none!important}
 .airspace-method-hint{padding:12px;border-left:3px solid var(--accent,#83c8d5);background:var(--panel,#19252d);line-height:1.55;margin:12px 0}
 .airspace-arp-placement{padding:12px;border:1px solid var(--line,#45545d);border-radius:8px;background:var(--panel,#19252d)}.airspace-arp-placement .hint{margin-top:0}.airspace-arp-placement button{flex:1 1 160px}
 .airspace-preparation h3{font-size:1rem;margin:22px 0 10px}

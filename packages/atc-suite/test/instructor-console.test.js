@@ -361,13 +361,8 @@ test('a fresh online SRA room after terminated QGH clears prior admission and re
     discovery:{pin:'654321',sessionId:'new-sra-room',channelName:'new-room',expiresAt:Date.now()+60000}});
   student.requestJoin(); assert.equal(h.state.session.admit(student.clientId), true); student.ready();
   const Meeting = require('../../procedural-beta/static/meeting-room.js');
-  let audioConfirmed = false;
-  h.context.ATCSuiteMeeting = {startupReadiness: options => Meeting.startupReadiness({...options,voiceReady:audioConfirmed})};
-  assert.equal(h.startExercise(), false, 'An online fresh room still needs a shared Meet link');
-  h.state.meetingUrl = 'https://meet.google.com/abc-defg-hij'; h.state.session.setMeetingLink(h.state.meetingUrl);
-  assert.equal(h.startExercise(), false, 'Ready does not substitute for mutual audio confirmation');
-  audioConfirmed = true;
-  assert.equal(h.startExercise(), true); assert.equal(student.snapshot().state, 'running');
+  h.context.ATCSuiteMeeting = {startupReadiness: options => Meeting.startupReadiness(options)};
+  assert.equal(h.startExercise(), true, 'The admitted, Ready online controller can start without Meet'); assert.equal(student.snapshot().state, 'running');
   assert.equal(h.node('pauseExercise').textContent, 'PAUSE');
   h.advanceWallElapsed(1); const elapsed = h.state.simulation.simulationSeconds;
   assert.equal(elapsed, 1);

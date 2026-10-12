@@ -30,29 +30,35 @@ function panelHarness(onSave = () => {}) {
   return {document, window, panel, input, audio, save, changes, update, edit, checkAudio};
 }
 
-test('preflight leaves offline admission/Ready unchanged and requires current online link, connection and mutual audio acknowledgement', () => {
+test('preflight preserves connection/admission/Ready gates while Meet and its audio confirmation remain optional', () => {
   assert.equal(Meeting.startupReadiness({online: false, admitted: true, ready: true}).allowed, true);
   assert.equal(Meeting.startupReadiness({online: false, admitted: true, ready: false}).allowed, false);
   assert.equal(Meeting.startupReadiness({online: false, admitted: false, ready: true}).allowed, false);
   const online = {online: true, admitted: true, ready: true, connected: true, meetingUrl: firstUrl, voiceReady: true};
   assert.equal(Meeting.startupReadiness(online).allowed, true);
-  for (const invalid of [{connected: false}, {meetingUrl: ''}, {meetingUrl: 'javascript:alert(1)'},
-    {admitted: false}, {ready: false}, {disconnected: true}, {voiceReady: false}]) {
+  for (const invalid of [{connected: false}, {admitted: false}, {ready: false}, {disconnected: true}]) {
     const result = Meeting.startupReadiness({...online, ...invalid});
     assert.equal(result.allowed, false, JSON.stringify(invalid)); assert.ok(result.reason.length > 0);
   }
+  for (const optional of [{meetingUrl: '', voiceReady: false}, {meetingUrl: firstUrl, voiceReady: false}, {meetingUrl: 'javascript:alert(1)', voiceReady: false}]) {
+    const result = Meeting.startupReadiness({...online, ...optional});
+    assert.equal(result.allowed, true, JSON.stringify(optional)); assert.equal(result.reason, '');
+    assert.equal(result.shared, optional.meetingUrl === firstUrl, 'Optional unsafe links are never treated as shared Meet rooms');
+  }
 });
 
-test('online checklist explains Ready opens the display/link before audio confirmation and Start', () => {
+test('online checklist separates admission/Ready/Start from optional Meet setup', () => {
   const {document} = parseHTML('<main></main>');
   const checklist = Meeting.createStartupChecklist({container: document.querySelector('main')});
   const pending = checklist.update({online: true, admitted: true, ready: false, meetingUrl: firstUrl});
   assert.equal(pending.allowed, false);
   const steps = [...checklist.element.querySelectorAll('li')].map(item => item.textContent);
-  assert.match(steps[2], /Ready.*display and meeting link/);
-  assert.match(steps[3], /Both Join Meet.*hear|Both Join Meet.*audio/);
-  assert.match(steps[4], /Start begins aircraft movement/);
-  assert.equal(checklist.update({online: true, admitted: true, ready: true, meetingUrl: firstUrl, voiceReady: true}).allowed, true);
+  assert.equal(steps.length, 3);
+  assert.match(steps[0], /PIN.*Admit/); assert.match(steps[1], /Ready.*display/);
+  assert.match(steps[2], /Start begins aircraft movement/);
+  assert.doesNotMatch(steps.join(' '), /Meet|audio/);
+  assert.match(checklist.element.querySelector('p').textContent, /Google Meet is optional.*same room.*another voice connection/);
+  assert.equal(checklist.update({online: true, admitted: true, ready: true, meetingUrl: '', voiceReady: false}).allowed, true);
 });
 
 test('local solo guidance never marks admission or Ready complete and cannot relax online or QGH startup', () => {
@@ -190,26 +196,31 @@ test('loading optional sample traffic completes fresh-room traffic setup, while 
   }
 });
 
-test('Procedural actual adapter preserves offline Run and gates online Run/manual step while Pause stays available', async () => {
+test('Procedural Run/manual step work online without Meet, and exercise connection still controls startup', async () => {
   const offline = proceduralHarness(); assert.equal(offline.get('resume').disabled, false);
   assert.match(offline.document.querySelector('.ats-startup-checklist').textContent, /without a controller.*Run/);
   assert.doesNotMatch(offline.document.querySelector('.ats-startup-checklist').textContent, /Done/);
   await offline.startExercise(); assert.equal(offline.context.commands.length, 1);
   assert.equal(offline.context.commands[0].payload.action, 'resume');
-  const h = proceduralHarness(true); assert.equal(h.get('resume').disabled, true);
-  await assert.rejects(h.startExercise(), /share a Google Meet link/);
-  await assert.rejects(h.advanceMinute(), /share a Google Meet link/); assert.equal(h.context.commands.length, 0);
-  h.setLink(firstUrl); await assert.rejects(h.startExercise(), /check audio/);
-  h.acknowledge(); assert.equal(h.get('resume').disabled, false); await h.startExercise();
+  const h = proceduralHarness(true); assert.equal(h.get('resume').disabled, false);
+  assert.equal(h.document.querySelector('.ats-meeting-audio-check').disabled, true);
+  await h.startExercise();
   assert.equal(h.context.commands[0].payload.action, 'resume');
   h.setLink(secondUrl); h.setRunning(true);
   assert.equal(h.get('pause').disabled, false); await h.get('pause').onclick();
   assert.equal(h.context.commands.at(-1).payload.action, 'pause');
-  await assert.rejects(h.startExercise(), /check audio/);
-  h.acknowledge(); await h.advanceMinute();
+  h.setRunning(false);
+  assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked, false);
+  assert.equal(h.get('resume').disabled, false); await h.advanceMinute();
   assert.equal(h.context.commands.at(-1).payload.action, 'step'); assert.equal(h.context.commands.at(-1).payload.seconds, 60);
   h.setConnection(false); assert.equal(h.get('resume').disabled, true);
   assert.equal(h.document.querySelector('.ats-meeting-audio-check').checked, false);
+  const commandCount = h.context.commands.length;
+  await assert.rejects(h.startExercise(), /Reconnect the online exercise/);
+  await assert.rejects(h.advanceMinute(), /Reconnect the online exercise/);
+  assert.equal(h.context.commands.length, commandCount);
+  h.setConnection(true); assert.equal(h.get('resume').disabled, false);
+  await h.startExercise(); assert.equal(h.context.commands.at(-1).payload.action, 'resume');
 });
 
 test('Procedural student Ready stays available before a meeting link/audio check and hides instructor startup tools', async () => {

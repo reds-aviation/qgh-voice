@@ -185,7 +185,7 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
   vm.runInContext(source('suite-guide-chat.js'),h.context);
   const root=h.document.getElementById('suite-guide-chat');
   assert.equal(root.parentElement.id,'edge-actions');
-  assert.ok(root.querySelector('img').src.endsWith('/gyani-fox.png'));
+  assert.ok(root.querySelector('img').src.endsWith('/gyani-instructor.png'));
   root.querySelector('.suite-guide-chat__launcher').click();
   const input=root.querySelector('textarea');input.value='How to turn right';
   root.querySelector('form').dispatchEvent(new h.Event('submit',{bubbles:true,cancelable:true}));

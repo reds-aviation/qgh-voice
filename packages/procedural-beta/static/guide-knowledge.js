@@ -1,12 +1,12 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.3",
+  "revision": "1.0.4",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Choose connection → Set up starting traffic → prepare airspace if needed → Back to traffic setup → Create exercise → Session → Admit → Ready → online Meet/audio check → Run → Terminate → Review."
+      "text": "Choose connection → Set up starting traffic → prepare airspace if needed → Back to traffic setup → Create exercise → Session → Admit → Ready → optional voice connection → Run → Terminate → Review."
     },
     {
       "title": "QGH & SRA · Single QGH",
@@ -16,7 +16,7 @@
     {
       "title": "QGH & SRA · Instructor QGH + SRA",
       "href": "instructor-led/",
-      "text": "Choose connection → Instructor setup → QGH, SRE/vectoring or SRA → create → Session → Admit → Ready → online Meet/audio check → Start → Terminate → Review."
+      "text": "Choose connection → Instructor setup → QGH, SRE/vectoring or SRA → create → Session → Admit → Ready → optional voice connection → Start → Terminate → Review."
     }
   ],
   "entries": [
@@ -37,30 +37,32 @@
       ],
       "anchor": "tutorial",
       "priority": true,
-      "match": "\\b(?:tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
-      "text": "Home → Tutorial, or Training Centre → Demonstrations, opens the course after it is published. Load tutorial, then press Play in the YouTube player; there is no autoplay. Jump to chapter selects a measured start, then press Play. Use the player's captions and full-screen controls, or Watch on YouTube. Stop video, leaving the page or starting a local clip unloads the player. YouTube needs internet and cannot be saved by Make available offline; the complete written guide and individually saved local clips remain available. If publication is pending or the video cannot load, use those written instructions. The course distinguishes recorded actions from source-described controls and does not claim an unrecorded Meet/audio or speech-recognition check.",
+      "match": "\\b(?:(?:video|tutorial|gyani|guided (?:tour|training)).*updat|tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
+      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. The written Training guide, Gyani answers and guided screen tour share the maintained current release knowledge. A note beside the recording identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
       "questions": [
         "Where is the full tutorial?",
         "Can I watch the tutorial inside the web app?",
         "How do I jump to a video chapter?",
-        "Does the YouTube tutorial work offline?"
+        "Does the YouTube tutorial work offline?",
+        "Does the YouTube video update when the app changes?",
+        "Are Gyani and guided tours updated with this app?"
       ]
     },
     {
       "id": "lfa-image-alignment",
-      "title": "Align an uploaded LFA layout",
+      "title": "Prepare airspace with the current editor",
       "topics": [
         "procedural"
       ],
       "controls": [
-        "map-file",
-        "map-align-form",
-        "map-align-apply"
+        "prepare-published",
+        "prepare-custom",
+        "airspace-feature-choices"
       ],
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:align|calibrat|embed|upload.*(?:image|map|layout)|reference point|point c\\b)\\w*\\b",
-      "text": "After saving ARP, choose a flat PNG/JPEG up to 5 MB, 4096 pixels per side and 16 megapixels. Enter source, edition and layout notes. Mark A at ARP and B/C at known points, enter coordinates and spread them across the chart. Check alignment → Apply and share. C checks scale and orientation. Aligning an image does not create editable polygons; enter or draw boundaries separately.",
+      "text": "The old LFA image guided-alignment group is no longer shown in Prepare airspace. Use Published airspace, Draw on chart or Enter coordinates. Draw LFA, prohibited, restricted, danger and control-zone boundaries separately; ATS routes remain open lines with a name, direction and flight-level limits. Existing saved airspace may retain an aligned image; loading it preserves that image. Save and Download keep reusable airspace for later use.",
       "questions": [
         "How do I align my LFA image?",
         "Why does point C fail?",
@@ -74,9 +76,6 @@
         "procedural"
       ],
       "controls": [
-        "arp-file",
-        "arp-template",
-        "chart-form",
         "custom-arp-form",
         "drawn-arp-preview",
         "drawn-arp-scope"
@@ -84,7 +83,7 @@
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:arp|aerodrome reference point|upload coordinates|origin coordinates)\\b",
-      "text": "Prepare airspace offers Published airspace, Draw on chart and Enter coordinates. In Draw on chart, select Place ARP on preview or Place ARP on radar scope, then click or tap the airfield centre. No latitude or longitude is needed. The ARP dot centres range rings and provides the custom D/F/navigation reference in local NM. A runway is a separate strip beside that reference. For geographic entry, save the ARP in WGS-84 latitude/longitude, using decimal degrees or DMS, before entering geographic routes or areas. Station and chart settings also accepts the ARP CSV/JSON template. Replacing an ARP requires confirmation, clears unsaved feature points and the previous geographic reference or aligned image, and keeps saved traffic and chart geometry in their local positions. It does not reproject existing geometry. New published loads use ARP for simulated NAV/D/F, with sourced navigation-station coordinates retained in the briefing as reference. A mouse-placed ARP does not assign real-world geographic coordinates. Enter coordinates is a separate method; saving a geographic ARP aligns the ARP / D/F station at local 0, 0 after confirmation. Saved traffic and chart geometry keep their existing local positions.",
+      "text": "Prepare airspace offers Published airspace, Draw on chart and Enter coordinates. In Draw on chart, select Place ARP on preview or Place ARP on radar scope, then click or tap the airfield centre. No latitude or longitude is needed. The ARP dot centres range rings and provides the custom D/F/navigation reference in local NM. A runway is a separate strip beside that reference. For geographic entry, save the ARP in WGS-84 latitude/longitude, using decimal degrees or DMS, before entering geographic routes or areas. Replacing an ARP requires confirmation, clears unsaved feature points and the previous geographic reference or aligned image, and keeps saved traffic and chart geometry in their local positions. It does not reproject existing geometry. New published loads use ARP for simulated NAV/D/F, with sourced navigation-station coordinates retained in the briefing as reference. A mouse-placed ARP does not assign real-world geographic coordinates. Enter coordinates is a separate method; saving a geographic ARP aligns the ARP / D/F station at local 0, 0 after confirmation. Saved traffic and chart geometry keep their existing local positions. The old ARP upload template is no longer a separate tool; enter coordinates directly or load an airspace JSON file.",
       "questions": [
         "How do I upload ARP coordinates?",
         "Can I type latitude and longitude?",
@@ -229,7 +228,7 @@
     },
     {
       "id": "meeting-room",
-      "title": "Talk through an online exercise with Google Meet",
+      "title": "Optional Google Meet for exercise conversation",
       "topics": [
         "suite",
         "qgh-instructor",
@@ -244,8 +243,8 @@
       ],
       "anchor": "voice",
       "priority": true,
-      "match": "\\b(?:google meet|meet room|meeting room|video call|conference|voice (?:chat|call)|talk (?:to|with) (?:the |my )?(?:student|instructor|controller)|talk to each other|create (?:a )?meeting|join meet|startup(?: steps)?|start (?:disabled|unavailable|blocked)|why (?:can.?t|cannot|won.?t)(?: i| we)? (?:start|run))\\b",
-      "text": "Online startup: create the simulator room, then open Startup steps or Session → Google Meet · exercise voice. In Google Meet choose New meeting → Create a meeting for later, copy its link and Share meeting link in the simulator. Share the exercise PIN; the controller requests admission and the instructor presses Admit. The controller presses Ready — open display & meeting link, then Join Meet. Both join the same meeting, allow microphone access in Google if asked, check you can hear each other, and keep both simulator and Meet open. The instructor ticks The controller and I have joined this Meet and can hear each other, then Start/Run begins aircraft movement. Meet carries conversation throughout the exercise and debrief. This is your confirmation; the simulator cannot detect a Google connection or join for you. A changed/cleared link, new room or refresh of this position clears its confirmation. Loss of the instructor exercise connection also clears the instructor confirmation. After either person reconnects to Meet, recheck together and confirm again before Resume; the simulator cannot detect another person’s Google connection. Startup status beside Start names the missing step. Manual time advance is also blocked until online startup is complete. Offline uses conversation on the same PC and does not require Meet. Meet help & screen sharing contains official Google creation/audio help. Local Procedural can run without a controller; Before Start explains this and lists the optional Share PIN, Admit and Ready steps without marking them complete. Online Procedural and instructor-led QGH/SRE/SRA retain their admission and readiness requirements.",
+      "match": "\\b(?:(?:without|optional).*meet|google meet|meet room|meeting room|video call|conference|voice (?:chat|call)|talk (?:to|with) (?:the |my )?(?:student|instructor|controller)|talk to each other|create (?:a )?meeting|join meet|startup(?: steps)?|start (?:disabled|unavailable|blocked)|why (?:can.?t|cannot|won.?t)(?: i| we)? (?:start|run))\\b",
+      "text": "Online room connects instructor and controller on different devices with internet on both, including devices in the same room. Share the exercise PIN, admit the controller and wait for Ready, then Start/Run. Google Meet is optional: a meeting link or audio confirmation is never required for Start, Resume or manual time advance. People in the same room can speak directly, and remote users may choose Meet or another voice channel. To use Meet, open Session → Google Meet · optional exercise voice. In Google Meet choose New meeting → Create a meeting for later, copy the link and Share meeting link in the simulator. After admission and Ready, the controller can Join Meet. Check you can hear each other and keep the call open during the exercise and debrief. The audio checkbox records a voluntary check; the simulator cannot detect or join a Google connection for you. A changed link or reconnect resets that check without blocking exercise controls. The simulator connection, admission and Ready requirements still apply. Local Procedural may run without a controller; online Procedural and instructor QGH/SRE/SRA require an admitted Ready controller. Before Start lists the required exercise steps and labels voice as optional.",
       "questions": [
         "Can the instructor create a Google Meet room?",
         "How can student and instructor talk to each other online?",
@@ -259,7 +258,9 @@
         "Why can't I Start?",
         "Why is Start disabled?",
         "Where are Startup steps?",
-        "Can I run a local Procedural exercise without a controller?"
+        "Can I run a local Procedural exercise without a controller?",
+        "Can we start without Google Meet?",
+        "Can different devices in the same room work without a meeting link?"
       ]
     },
     {
@@ -302,7 +303,7 @@
       "anchor": "exercise",
       "priority": true,
       "match": "\\b00 00 00\\b|\\b(?:scenario clock|scenario time|exercise time|elapsed clock|timer.*(?:start|zero)|clock.*(?:start|begin)|(?:start|begin).*clock|procedural.*clock)\\b",
-      "text": "Exercise time begins at 00:00:00 in instructor QGH/SRE/SRA and Procedural. Hours, minutes and seconds show elapsed simulated exercise time on the instructor, controller and review displays. Start/Run advances the exercise; Pause freezes it. Procedural +1 min explicitly advances the paused exercise by one minute. The clock is independent of the device's current time and connection duration. Joining or admission does not start aircraft movement: any admitted controller must be Ready and the instructor must press Start/Run. Review uses the recorded exercise timeline. QGH WAITING means startup has an unfinished step; the message beside Start names it. Startup steps opens Session to share the PIN, Admit, wait for Ready and, online, confirm mutual Meet audio before Start.",
+      "text": "Exercise time begins at 00:00:00 in instructor QGH/SRE/SRA and Procedural. Hours, minutes and seconds show elapsed simulated exercise time on the instructor, controller and review displays. Start/Run advances the exercise; Pause freezes it. Procedural +1 min explicitly advances the paused exercise by one minute. The clock is independent of the device's current time and connection duration. Joining or admission does not start aircraft movement: any admitted controller must be Ready and the instructor must press Start/Run. Review uses the recorded exercise timeline. QGH WAITING means startup has an unfinished step; the message beside Start names it. Startup steps opens Session to share the PIN, Admit, wait for Ready and, optionally, open Meet for remote conversation. Meet does not block Start.",
       "questions": [
         "Does the exercise timer start at zero?",
         "What does 00:00:00 mean?",
@@ -403,7 +404,7 @@
       "anchor": "session",
       "priority": true,
       "match": "\\b(?:log ?out|log ?off|leave (?:this |the |my )?(?:desk|position))\\b",
-      "text": "On QGH/SRE/SRA, Logout appears at the top right after a session exists: while waiting, exercising, reviewing, or returning to traffic setup with an existing attempt. Fresh instructor setup and the student PIN-entry page have no progress to discard, so Logout is hidden there. Use ATS suite Home in the normal navigation to leave the opening page. Procedural retains Logout on its setup and exercise screens. It asks: Log out and return to ATS suite Home? Current exercise progress will be lost. Cancel or Escape keeps the current position open and preserves the current attempt. Log out discards this tab’s current exercise progress and recovery, leaves the position and returns to ATS suite Home. Saved starting exercises in the browser library are retained. If leaving cannot complete, the current screen remains open with an error. Use Terminate to stop traffic and review the attempt; use Logout to discard current progress and leave the position.",
+      "text": "Logout is hidden on fresh entry and the starting traffic input page before the exercise has begun. Use ATS suite Home in normal navigation to leave those pages. Once an exercise is open, Logout is available at the top right in the workspace, waiting position and review. Returning to traffic setup after exercise progress retains Logout and Return to exercise. It asks: Log out and return to ATS suite Home? Current exercise progress will be lost. Cancel or Escape keeps the current position open and preserves the current attempt. Log out discards this tab’s current exercise progress and recovery, leaves the position and returns to ATS suite Home. Saved starting exercises in the browser library are retained. If leaving cannot complete, the current screen remains open with an error. Use Terminate to finish traffic and review the attempt; use Logout to discard current progress and leave.",
       "questions": [
         "Where is Logout?",
         "Can I log out during an exercise?",
@@ -412,7 +413,8 @@
         "How do I log out after review?",
         "Does Logout remove my saved exercises?",
         "Can Escape cancel Logout?",
-        "Why is there no Logout button on the opening QGH page?"
+        "Why is there no Logout button on the opening QGH page?",
+        "Why is Logout hidden before starting traffic?"
       ]
     },
     {
@@ -521,7 +523,7 @@
       "anchor": "help",
       "priority": true,
       "match": "\\b(?:embeddings?|rag|llm|artificial intelligence|limitations?|learning|trained|smart answers|update (?:the )?guides)\\b",
-      "text": "Gyani searches the same versioned knowledge as the common training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
+      "text": "Look for the Gyani instructor portrait with a headset to open simulator help. Gyani searches the same versioned knowledge as the common training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
       "questions": [
         "Are you a real AI?",
         "Can you see my aircraft?",
@@ -804,7 +806,7 @@
       "anchor": "review",
       "priority": true,
       "match": "\\b(?:replay|review|debrief|timeline|separation cue|zoom.*(?:bar|toolbar)|toolbar.*(?:cover|plot)|download.*(?:exercise setup|current progress)|starting setup (?:unavailable|missing))\\b|\\b(?:home.*(?:review|terminat|ended)|(?:review|terminat).*home|return to (?:the )?ats (?:simulator )?suite home)",
-      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side · altitude and 3D schematic views at the same replay time. Choose Aircraft to highlight one track and filter its events; select a timeline marker or a Commands & events item to seek to that recorded time. Cues show measured spacing against the configured threshold, the sampled cue interval and duration, plus the supplied source, applicability, evidence and instructor assessment. Red marks a configured threshold warning; amber asks for instructor assessment, and a satisfied measurement stays neutral. These are configured training cues, not a complete Doc 4444 decision; no cue at a sample does not establish safe separation. The instructor checks authorised minima and prerequisites. The 3D view exaggerates altitude, and replay never alters the completed exercise. In Procedural Review, use Download exercise setup before Logout or Home to keep the initial aircraft positions and complete starting airspace, including any map image, as a reusable JSON file. The simulator captures this setup before the first Run or +1 min; the file resets time, events, reports and radio for a new exercise and contains no PIN or room tokens. Later movement and termination do not replace these starting positions. To reuse it, open Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart) → Import exercise file, then select the record and Load. Import stores the file; Load opens the starting exercise paused. Download current progress is separate: it keeps the current attempt and records rather than resetting to its start. Older underway exercises without a captured starting setup cannot reconstruct it; use Download current progress instead. After terminating an Instructor QGH/SRE/SRA or Procedural exercise, ATS suite Home in the review screen returns to the ATS Simulator Suite home page. Use Restart for another attempt or Replay to inspect the recording; Home is a separate exit from review. QGH/SRE/SRA Review also offers Download exercise setup. It saves the initial aircraft, exercise family, radar settings and airspace, with no PIN or connection credentials. Flight movement and later traffic-form drafts do not change this download. Import it under Saved exercises to reuse it. Restart Exercise restores the original setup to the form.",
+      "text": "Terminate before review. Individual QGH replays the recorded flight path, with controls below the plot. Procedural Review offers animated Top, Side · altitude and 3D schematic views at the same replay time. Choose Aircraft to highlight one track and filter its events; select a timeline marker or a Commands & events item to seek to that recorded time. Cues show measured spacing against the configured threshold, the sampled cue interval and duration, plus the supplied source, applicability, evidence and instructor assessment. Red marks a configured threshold warning; amber asks for instructor assessment, and a satisfied measurement stays neutral. These are configured training cues, not a complete Doc 4444 decision; no cue at a sample does not establish safe separation. The instructor checks authorised minima and prerequisites. The 3D view exaggerates altitude, and replay never alters the completed exercise. In Procedural Review, use Download exercise setup before Logout or Home to keep the initial aircraft positions and complete starting airspace, including any map image, as a reusable JSON file. The simulator captures this setup before the first Run or +1 min; the file resets time, events, reports and radio for a new exercise and contains no PIN or room tokens. Later movement and termination do not replace these starting positions. To reuse it, open Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart) → Import exercise file, then select the record and Load. Import stores the file; Load opens the starting exercise paused. Download current progress is separate: it keeps the current attempt and records rather than resetting to its start. Older underway exercises without a captured starting setup cannot reconstruct it; use Download current progress instead. After terminating an Instructor QGH/SRE/SRA or Procedural exercise, ATS suite Home in the review screen returns to the ATS Simulator Suite home page. Use Restart for another attempt or Replay to inspect the recording; Home is a separate exit from review. QGH/SRE/SRA Review also offers Download exercise setup. It saves the initial aircraft, exercise family, radar settings and airspace, with no PIN or connection credentials. Flight movement and later traffic-form drafts do not change this download. Import it under Saved exercises to reuse it. Restart Exercise restores the original setup to the form. QGH/SRE/SRA replay tags show the speed recorded at that moment; an older recording without speed shows — KT.",
       "questions": [
         "The replay buttons cover my track",
         "How do I watch my flight again?",
@@ -905,7 +907,7 @@
       ],
       "anchor": "session",
       "match": "\\b(?:join|admit|admission|ready|six digit|6 digit|session pin|share.*pin|find.*pin|where.*pin)\\b",
-      "text": "Choose Exercise connection above the two entry cards. Instructor: Open instructor setup, create the exercise, then open Session on the tool rail and share its six-digit PIN. A new room resets admission and display status. Controller: use the Controller position card, enter the PIN and press Request to join. Procedural also requires your name; QGH Request to join carries the selected connection and PIN into the protected controller route and sends the request. Creating a QGH session stays on the instructor desk; it does not open a controller window automatically. Optional Session → Open controller entry opens the same paired entry page with the PIN filled in, and waits for Request to join. A direct controller link returns to that paired entry; an existing admitted seat can still recover after refresh. This does not bypass admission: Instructor → Admit, Controller → Ready, Instructor → Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Session → Google Meet · exercise voice shares the Google Meet link for conversation throughout the online exercise. After Ready opens the display/link, both join and check audio; the instructor confirms mutual audio before Start. Keep both simulator positions open.",
+      "text": "Choose Exercise connection above the two entry cards. Instructor: Open instructor setup, create the exercise, then open Session on the tool rail and share its six-digit PIN. A new room resets admission and display status. Controller: use the Controller position card, enter the PIN and press Request to join. Procedural also requires your name; QGH Request to join carries the selected connection and PIN into the protected controller route and sends the request. Creating a QGH session stays on the instructor desk; it does not open a controller window automatically. Optional Session → Open controller entry opens the same paired entry page with the PIN filled in, and waits for Request to join. A direct controller link returns to that paired entry; an existing admitted seat can still recover after refresh. This does not bypass admission: Instructor → Admit, Controller → Ready, Instructor → Start/Run. This device needs the same PC and browser profile in separate windows. Online room connects different devices with internet on both. Session → Google Meet · exercise voice shares the Google Meet link for conversation throughout the online exercise. After Ready opens the display, Start/Run is available. Use Meet if you need remote conversation; it is optional, including when different devices are in the same room. Keep both simulator positions open.",
       "intro": "Use the instructor's connection choice and six-digit PIN, then Request to join. After admission press Ready; the instructor then starts the exercise. Procedural also asks for your name. QGH's entry-page request keeps the same admission steps.",
       "questions": [
         "How do I join?",
@@ -925,7 +927,7 @@
       ],
       "anchor": "procedural",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sample traffic)\\b",
-      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form. Prepare airspace offers three methods: Published airspace, Draw on chart or Enter coordinates, with ARP, feature choices and existing routes/areas directly available. Save or load starts with Airspace only (chart); choose Complete exercise (aircraft + chart) for a starting-exercise library instead. Chart settings are named below the editor without an Advanced tools tab. Back to traffic setup preserves the roster. Create exercise applies it and opens the scope paused. Return to exercise restores the existing attempt or ended Review without applying traffic drafts. Session → Admit → controller Ready → online Meet/audio check → Run. Startup steps shows remaining requirements. Sample traffic is available under Aircraft controls; current-progress files are in Review. Sample traffic loads a complete sample exercise after replacement confirmation and is available to Run without creating its traffic again. Only the selected chart or full-exercise library is shown.",
+      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form. Prepare airspace offers three methods: Published airspace, Draw on chart or Enter coordinates, with ARP, feature choices and existing routes/areas directly available. Save or load starts with Airspace only (chart); choose Complete exercise (aircraft + chart) for a starting-exercise library instead. The three airspace methods contain the current tools; the duplicate legacy settings groups have been removed. Back to traffic setup preserves the roster. Create exercise applies it and opens the scope paused. Return to exercise restores the existing attempt or ended Review without applying traffic drafts. Session → Admit → controller Ready → optional voice connection → Run. Startup steps shows remaining requirements. Sample traffic is available under Aircraft controls; current-progress files are in Review. Sample traffic loads a complete sample exercise after replacement confirmation and is available to Run without creating its traffic again. Only the selected chart or full-exercise library is shown.",
       "questions": [
         "How do I start?",
         "Where is the aircraft roster?",
@@ -944,8 +946,7 @@
         "prepare-save-load",
         "prepare-exercise-library",
         "prepare-sample-traffic",
-        "preset-form",
-        "prepare-chart-settings"
+        "preset-form"
       ]
     },
     {
@@ -958,7 +959,7 @@
       ],
       "anchor": "instructor",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sre|vectoring)\\b",
-      "text": "Open Instructor setup → Set up starting traffic. Choose QGH, SRE/vectoring or SRA, then set the aircraft; new QGH sessions allow up to 2 aircraft, SRE/SRA up to 24. Aircraft performance folds away optional turn and vertical rates. Prepare airspace & radar is collapsed below traffic for runway, final approach, radar and local training boundary settings. Saved exercises offers Save, Import exercise file and Download. Choosing an exercise under Saved on this device fills traffic setup directly; Rename or remove holds occasional management actions. Create session starts the exercise; if an attempt already exists, confirm its replacement or Cancel to keep it. Session → Admit → controller Ready → online Meet/audio check → Start. Startup steps names missing requirements. Traffic setup pauses and retains the current attempt; Return to exercise restores its desk or ended Review without applying setup edits. More controls opens heading, speed and level controls; the floating Aircraft & radio box and right tool rail remain in the workspace.",
+      "text": "Open Instructor setup → Set up starting traffic. Choose QGH, SRE/vectoring or SRA, then set the aircraft; new QGH sessions allow up to 2 aircraft, SRE/SRA up to 24. Aircraft performance folds away optional turn and vertical rates. Prepare airspace & radar is collapsed below traffic for runway, final approach, radar and local training boundary settings. Saved exercises offers Save, Import exercise file and Download. Choosing an exercise under Saved on this device fills traffic setup directly; Rename or remove holds occasional management actions. Create session starts the exercise; if an attempt already exists, confirm its replacement or Cancel to keep it. Session → Admit → controller Ready → optional voice connection → Start. Startup steps names missing requirements. Traffic setup pauses and retains the current attempt; Return to exercise restores its desk or ended Review without applying setup edits. More controls opens heading, speed and level controls; the floating Aircraft & radio box and right tool rail remain in the workspace.",
       "questions": [
         "How do I start SRA?",
         "How do I start instructor QGH?",
@@ -1194,7 +1195,6 @@
         "prepare-airspace",
         "prepare-published",
         "prepare-custom",
-        "prepare-chart-settings",
         "prepare-airspace-discard",
         "custom-airspace-discard",
         "prepare-traffic-next",
@@ -1234,7 +1234,7 @@
       ],
       "anchor": "traffic",
       "match": "^(?!.*\\b(?:saved airspaces?|airspace library|save (?:only )?airspace|load (?:saved )?airspace|reuse airspace|export airspace|import airspace)\\b)(?!.*\\blog ?(?:out|off)\\b).*(?:\\b(?:template|preset|library|import(?:ing)?|restore (?:the |a |my )?(?:current )?progress|export|(?:save|saved|load|reuse) (?:the |a |an |my |this |current |starting |same )?(?:exercise|setup|set up))\\b|^(?!.*\\b(?:boundary|polygon|arp|drawing|draw)\\b).*\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library|(?:duplicate|rename) (?:selected|(?:(?:a|the|my) )?(?:exercise|setup|template|preset)))\\b)",
-      "text": "Prepare the starting setup before Run. Procedural: Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart). This shows the full-exercise library; Airspace only (chart) shows the chart-only library instead. The opening setup page contains only starting traffic. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. The four main actions are Save exercise, Load, Import exercise file and Download file. To save a new setup, choose New exercise / choose a saved exercise, enter Exercise name and select Save exercise. Choosing a stored exercise then Save exercise asks before replacing it. Apply unfinished chart changes and create or load the starting exercise before Save exercise. Save the full starting setup before its first Run or +1 minute. After termination, Review → Download exercise setup exports the captured initial aircraft and starting airspace for future use; Import exercise file stores that download, then Load applies it. Older underway exercises without a captured starting setup offer Download current progress instead. Saved airspace in Save or load stores the chart alone and keeps current traffic when loaded. Download file exports the selected saved setup as a portable JSON backup. Rename or remove a saved exercise is a collapsed group containing only Rename selected and Remove selected. Procedural has no separate Save as new or Duplicate action; choose the blank new-exercise option and a new name to save the current setup as a new record. Review → Current progress file (includes records) exports or restores an attempt rather than a reusable starting setup. Restoring this file confirms replacement, retains its elapsed time and records, and opens it paused; it does not require Create exercise again. Normal controller Ready and online audio checks still apply before Run. Import exercise file adds a stored starting setup; Load applies it. New Procedural traffic and template imports allow up to 20 aircraft. Previously stored device exercises and captured starting-setup archives retain 21–24 aircraft for loading, recovery or download. To move an older exercise with more than 20 aircraft to another device, use Download current progress and Restore a saved scenario; a new starting-template import still has the 20-aircraft limit. Instructor QGH/SRE/SRA: expand Saved exercises under the starting traffic form. The main actions are Save, Import exercise file and Download. Choose an exercise under Saved on this device to fill traffic setup directly; no separate Load button is needed. Import exercise file fills traffic setup and keeps an independent device copy. Create session opens a new exercise. Save updates the selected exercise; choose Current setup · new exercise and enter a new name to save a separate setup. Download exports the selected setup. Rename or remove folds Rename selected and Remove selected away until needed. Traffic setup retains an existing attempt; Return to exercise restores it without applying setup edits. Create session explicitly confirms replacement of the current exercise and PIN. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens. If another window changes the device library, the list refreshes and the action stops; select the intended exercise again before saving. An unreadable device library is protected from overwrite; download a backup and recover it before replacing saved records. QGH/SRE/SRA Review → Download exercise setup exports the original aircraft and airspace from this attempt, even if you later edited another draft. Import it under Saved exercises to fill traffic setup, then Create session to reuse it. Restart Exercise restores that same original setup to the traffic form.",
+      "text": "Prepare the starting setup before Run. Procedural: Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart). This shows the full-exercise library; Airspace only (chart) shows the chart-only library instead. The opening setup page contains only starting traffic. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. The four main actions are Save exercise, Load, Import exercise file and Download file. To save a new setup, choose New exercise / choose a saved exercise, enter Exercise name and select Save exercise. Choosing a stored exercise then Save exercise asks before replacing it. Apply unfinished chart changes and create or load the starting exercise before Save exercise. Save the full starting setup before its first Run or +1 minute. After termination, Review → Download exercise setup exports the captured initial aircraft and starting airspace for future use; Import exercise file stores that download, then Load applies it. Older underway exercises without a captured starting setup offer Download current progress instead. Saved airspace in Save or load stores the chart alone and keeps current traffic when loaded. Download file exports the selected saved setup as a portable JSON backup. Rename or remove a saved exercise is a collapsed group containing only Rename selected and Remove selected. Procedural has no separate Save as new or Duplicate action; choose the blank new-exercise option and a new name to save the current setup as a new record. Review → Current progress file (includes records) exports or restores an attempt rather than a reusable starting setup. Restoring this file confirms replacement, retains its elapsed time and records, and opens it paused; it does not require Create exercise again. Controller admission and Ready still apply before Run; Google Meet and its audio check are optional. Import exercise file adds a stored starting setup; Load applies it. New Procedural traffic and template imports allow up to 20 aircraft. Previously stored device exercises and captured starting-setup archives retain 21–24 aircraft for loading, recovery or download. To move an older exercise with more than 20 aircraft to another device, use Download current progress and Restore a saved scenario; a new starting-template import still has the 20-aircraft limit. Instructor QGH/SRE/SRA: expand Saved exercises under the starting traffic form. The main actions are Save, Import exercise file and Download. Choose an exercise under Saved on this device to fill traffic setup directly; no separate Load button is needed. Import exercise file fills traffic setup and keeps an independent device copy. Create session opens a new exercise. Save updates the selected exercise; choose Current setup · new exercise and enter a new name to save a separate setup. Download exports the selected setup. Rename or remove folds Rename selected and Remove selected away until needed. Traffic setup retains an existing attempt; Return to exercise restores it without applying setup edits. Create session explicitly confirms replacement of the current exercise and PIN. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens. If another window changes the device library, the list refreshes and the action stops; select the intended exercise again before saving. An unreadable device library is protected from overwrite; download a backup and recover it before replacing saved records. QGH/SRE/SRA Review → Download exercise setup exports the original aircraft and airspace from this attempt, even if you later edited another draft. Import it under Saved exercises to fill traffic setup, then Create session to reuse it. Restart Exercise restores that same original setup to the traffic form.",
       "questions": [
         "How do I reuse an exercise?",
         "Can I test two students on the same setup?",
@@ -1261,7 +1261,6 @@
         "prepare-save-load",
         "prepare-save-kind",
         "prepare-exercise-library",
-        "prepare-chart-settings",
         "template-manage",
         "import",
         "export",
@@ -1544,14 +1543,6 @@
       "selector": "#drawn-arp-preview",
       "title": "Place the ARP dot with your mouse",
       "entry": "arp-upload"
-    },
-    {
-      "pages": [
-        "procedural"
-      ],
-      "selector": "#map-align-form",
-      "title": "Align your local layout",
-      "entry": "lfa-image-alignment"
     },
     {
       "pages": [

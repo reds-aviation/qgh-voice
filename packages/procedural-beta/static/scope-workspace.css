@@ -439,7 +439,7 @@ body.setup-open #main { height: auto; }
 .roster-editor--cards .roster-cell input { width: 100%; }
 .roster-editor--cards .roster-row.roster-row--head { display: none; }
 .setup-actions {
-  position: sticky; bottom: 0; display: flex; gap: 12px; padding: 18px 0 12px;
+  position: static; display: flex; flex-wrap: wrap; gap: 12px; padding: 18px 0 12px;
   background: #f3f1e8f5; border-top: 1px solid transparent; z-index: 5;
 }
 .setup-actions button { min-width: 135px; min-height: 43px; }

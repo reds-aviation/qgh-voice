@@ -52,7 +52,7 @@ const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: $('tab
         if (!session?.cloud || session.role !== 'instructor') throw new Error('Open an online instructor exercise first.');
         const auth = session, stamp = generation;
         const result = await request('/api/procedural/meeting', { meetingUrl: url });
-        if (auth !== session || stamp !== generation) throw new Error('The session changed. Reopen Google Meet · exercise voice.');
+        if (auth !== session || stamp !== generation) throw new Error('The session changed. Reopen Google Meet · optional exercise voice.');
         session.meetingUrl = result.meetingUrl;
         sessionStorage.setItem(key, JSON.stringify(session));
         if (room) room.meetingUrl = result.meetingUrl;
@@ -84,9 +84,9 @@ function startupStatus() {
     if (session?.role === 'instructor' && session.startingTrafficRequired)
         return { allowed: false, reason: 'Create your starting traffic before Run. Startup steps returns to traffic setup.' };
     const options = startupOptions();
-    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:!options.online && options.ready,reason:options.online ? 'Online startup tools did not load. Reload this page.' : 'Wait for admitted controllers to press Ready.'};
+    return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:(!options.online || options.connected) && options.admitted && options.ready && !options.disconnected,reason:'Open Session: check the exercise connection, share the PIN, admit the controller and wait for Ready.'};
 }
-function openStartSetup() { if (session?.startingTrafficRequired) { void safe(showTrafficSetup)(); return; } tab('session'); meetingPanel?.open?.(); }
+function openStartSetup() { if (session?.startingTrafficRequired) { void safe(showTrafficSetup)(); return; } tab('session'); }
 function requireStartup() { const status = startupStatus(); if (status.allowed) return; text('start-setup-status',status.reason); openStartSetup(); throw new Error(status.reason); }
 function renderMeeting() {
     if (session?.cloud && (!exerciseConnectionAvailable || view?.available === false)) meetingPanel?.resetVoice?.();
@@ -98,7 +98,7 @@ function renderMeeting() {
     meetingPanel?.update({ online: !!session?.cloud, role: session?.role || 'student',
         roomKey: `${generation}:${session?.cloud?.id || room?.pin || ''}:${view?.exerciseId || ''}`,
         meetingUrl: session?.role === 'instructor' ? hostMeetingUrl : room?.status === 'ready' ? room?.meetingUrl ?? view?.meetingUrl ?? '' : '',
-        status: session?.role === 'student' && room?.status !== 'ready' ? 'After admission, press Ready to receive the instructor’s shared meeting link.' : undefined });
+        status: session?.role === 'student' && room?.status !== 'ready' ? 'After admission, press Ready to open the display. Any shared Meet link is optional.' : undefined });
     startupChecklist?.update(startupOptions());
     if (startupChecklist) startupChecklist.element.hidden = session?.role !== 'instructor';
 }
@@ -580,8 +580,8 @@ function renderRoom() {
     else {
         text('join-title', room.status === 'admitted' ? 'You are admitted' : room.status === 'rejected' ? 'This join request has ended' : 'Waiting for the instructor');
         text('session-link-status', `${session.cloud ? 'Online room' : 'This device'} · ${room.status || 'connecting'}`);
-        text('join-status', room.status === 'admitted' ? session.cloud ? 'Press Ready to open your display and meeting link. Then Join Meet, allow the microphone in Google if asked, check audio together and tell the instructor you can hear each other.' : 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
-        text('student-ready',session.cloud ? 'Ready — open display & meeting link' : 'Ready — open my scope');
+        text('join-status', room.status === 'admitted' ? session.cloud ? 'Press Ready to open your display. Google Meet is optional: speak in the same room or use another voice connection. If you use the shared Meet link, join and check audio together.' : 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
+        text('student-ready',session.cloud ? 'Ready — open my display' : 'Ready — open my scope');
         $('student-ready').hidden = room.status !== 'admitted';
         text('student-room-status', `${room.name || session.name || 'Controller'} · ${room.status}`);
     }
@@ -593,7 +593,7 @@ function renderClockControls() {
     const waiting = room?.students?.filter((s) => s.status === 'admitted').length || 0;
     const unavailable = !view?.available, busy = commandBusy;
     const startup = startupStatus(), startupBlocked = instructor && (!!session?.cloud || session?.startingTrafficRequired) && !startup.allowed;
-    text('start-setup-status', startup.allowed ? session?.cloud ? 'Ready to Run. Keep Meet open throughout the exercise.' : `Select Run to ${view?.elapsed > 0 ? 'continue' : 'begin'} aircraft movement.` : startup.reason);
+    text('start-setup-status', startup.allowed ? `Select Run to ${view?.elapsed > 0 ? 'continue' : 'begin'} aircraft movement.` : startup.reason);
     $('start-setup-status').hidden = !instructor || running || ended;
     $('open-start-setup').hidden = !instructor || running || ended;
     $('resume').setAttribute('aria-describedby','start-setup-status');
@@ -1109,7 +1109,8 @@ const studentPlotting = createStudentPlotting({ canvas, screenToPoint: position,
 });
 studentPlotting.mount(studentPlotPanel); studentPlotting.setEnabled(false);
 $('scope-wrap').append(studentPlotPanel);
-globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls'),onLogout:logoutToHome});
+globalThis.ATCSuiteWorkspace?.bindShell({root:$('desk'),scope:canvas,shelf:$('instructor-control-shelf'),actions:$('clock-controls'),onLogout:logoutToHome,
+    hasAttempt:()=>Boolean(session && (stage !== 'setup' && stage !== 'entry' || view?.running || view?.elapsed > 0 || view?.terminated))});
 Promise.resolve().then(syncPreparationControls);
 const sweep = createRadarSweep($('scope-plot'), () => ({ visible: stage === 'desk' && !!view, enabled: display.sweep, running: !!view?.running, rpm: display.sweepRpm, range, exerciseId: view?.exerciseId, xNm: view?.environment.stationXNm, yNm: view?.environment.stationYNm }), geometry);
 // Keep the scope usable if its optional shared drawing helper is unavailable.

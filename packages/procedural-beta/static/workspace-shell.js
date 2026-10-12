@@ -18,7 +18,7 @@
     if (!hasAttempt && root?.id === 'desk') hasAttempt=()=>{
       const doc=root.ownerDocument;
       const visible=id=>{const element=doc.getElementById(id);return Boolean(element&&!element.hidden);};
-      return !root.hidden || doc.body.classList.contains('setup-open') || visible('waiting') || visible('return-desk') || Boolean(doc.querySelector('#entry button:disabled'));
+      return !root.hidden || visible('waiting') || visible('return-desk');
     };
     if (typeof onLogout === 'function') bindLogout({root,onLogout,hasAttempt});
     if (root?.ownerDocument?.createElement && root.id === 'activeWorkspace') installInstructorConsole({root,scope,shelf,actions});

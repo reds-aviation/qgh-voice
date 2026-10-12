@@ -1,16 +1,16 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "go": "1.27.1",
   "files": [
     {
       "path": "static/procedural.html",
-      "bytes": 44281,
-      "sha256": "74c679b016b095680154e774774ba15a57f6c3cdec1cacb61932539b64eb9fc9"
+      "bytes": 44366,
+      "sha256": "c78956899625d3a52c90e2dccede2d4d78ceeb00be177583a3a07441e7726243"
     },
     {
       "path": "static/procedural.js",
-      "bytes": 133030,
-      "sha256": "2f1e489153e56475b03b9b0ef66d20b9fb50962d95e682215e4cdba1cf21089a"
+      "bytes": 133121,
+      "sha256": "6db9af6601a5ec8dd4e4829177b6cb9b831432c0bbc92f477bdaf047f29e698d"
     },
     {
       "path": "static/procedural.css",
@@ -19,8 +19,8 @@
     },
     {
       "path": "static/scope-workspace.css",
-      "bytes": 72256,
-      "sha256": "fe0f1d40defb1bda7690f2138f48ad3d2c65518bdce9ce914d9d8c11b6134b69"
+      "bytes": 72262,
+      "sha256": "28464dd8573b49c21839b1bc6c8b8cb157334f5b2a139a6dc588e5826592ee5b"
     },
     {
       "path": "static/scope-history.js",
@@ -34,8 +34,8 @@
     },
     {
       "path": "static/chart-workshop.js",
-      "bytes": 41670,
-      "sha256": "5b9c2c47562fec3e5705af6e94fc64e67fd274070322471c6251db8268953dcb"
+      "bytes": 41771,
+      "sha256": "73d8e743b5e73ee09a0f4c2cc8413a39dc5b127d94b5afe77c881faba1e2b28a"
     },
     {
       "path": "static/chart-geometry.js",
@@ -89,13 +89,13 @@
     },
     {
       "path": "static/suite-guide-chat.js",
-      "bytes": 15169,
-      "sha256": "5dedc7312e6e6ad75fca071b58cd031184a1e842232e06a96b2f06e4acdbaf5f"
+      "bytes": 15203,
+      "sha256": "04ee8efd4f08b343f4fe54c1b1d2e2fa4ff8b343cb6b7555c46be3de6450c493"
     },
     {
       "path": "static/suite-guide-chat.css",
-      "bytes": 8042,
-      "sha256": "17d9c08208b0004ee3561e412a79e11a2234802718c9cf962aff86639cc856d5"
+      "bytes": 10372,
+      "sha256": "1d907de4df7e2de2d49cb404ca7e2d2a4a6ffb7d37c11bf693c75218a6abd8ba"
     },
     {
       "path": "static/fonts/ibm-plex-mono-500.ttf",
@@ -214,13 +214,13 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 108982,
-      "sha256": "fa491795ece29d24e73d9718789aa588639f921fe98c10e3e4bb4adc476c455c"
+      "bytes": 109185,
+      "sha256": "31abb195fc2402b29b9a1458ebbeb58480992af102614ff3b167998b96793543"
     },
     {
-      "path": "static/gyani-fox.png",
-      "bytes": 1003252,
-      "sha256": "85a3de31e4b099923f60611a683c7fd22061cc8dbc61615b57d2d37b9ab94eb5"
+      "path": "static/gyani-instructor.png",
+      "bytes": 92629,
+      "sha256": "2741c50919fd362dc98ea1485728c09310e2653f8299dbf2eba6257803822c3b"
     },
     {
       "path": "static/radar-sweep.js",
@@ -284,8 +284,8 @@
     },
     {
       "path": "static/airspace-preparation.css",
-      "bytes": 8452,
-      "sha256": "181566f7754415ed91f50ff99688b102cf5d45fabfad959abeff88618fc77b1d"
+      "bytes": 8485,
+      "sha256": "eb2dfd1b4f411f2068df6dce7c3dc6a45cb37c23359538133e615d298115896c"
     },
     {
       "path": "static/scenario-library.js",
@@ -314,18 +314,18 @@
     },
     {
       "path": "static/workspace-shell.js",
-      "bytes": 36300,
-      "sha256": "5b821a11847641c332dbf2d08b6615aff3042f28ca9991f97d9c6aaf7d315968"
+      "bytes": 36199,
+      "sha256": "44df046251cf50d472ce833fd880c63db75610165a1db18c1cc85c218c332686"
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 56194,
-      "sha256": "9294f8536f68bdc41efbc05a6406c26280d1bbfd2672fc0b35910f23fdde4d83"
+      "bytes": 56307,
+      "sha256": "65bba9ffea6cf73ca44aa0481ae919e0923b293543c8c764a63c7c557ec7b5c5"
     },
     {
       "path": "static/meeting-room.js",
-      "bytes": 11622,
-      "sha256": "55579b7413f4ccbab7e18e402160dd9bb3de6d35459c21ec767a8d260d10acf3"
+      "bytes": 11786,
+      "sha256": "3f475b2d83aa6bbd33d169967d1ab8cb2edf13c0784ded234f355b42f1a94803"
     },
     {
       "path": "static/scope-visuals.js",

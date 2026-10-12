@@ -24,7 +24,7 @@ test('The common panel hides offline, shares and clears links, and opens externa
   panel.update({ online: false });
   assert.equal(panel.element.hidden, true);
   panel.update({ online: true, role: 'instructor' });
-  assert.equal(panel.element.querySelector('summary').textContent, 'Google Meet · exercise voice');
+  assert.equal(panel.element.querySelector('summary').textContent, 'Google Meet · optional exercise voice');
   const input = panel.element.querySelector('input');
   input.value = 'https://meet.google.com/abc-defg-hij?authuser=1';
   panel.element.querySelector('button').dispatchEvent(new window.Event('click'));

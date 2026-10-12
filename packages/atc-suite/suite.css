@@ -145,6 +145,9 @@ input:invalid { border-color: var(--red); }
 .aircraft-tabs button[aria-current="true"], .aircraft-tabs button[aria-pressed="true"], .aircraft-tabs button.selected { border-color: var(--teal); background: var(--teal); color: white; }
 .workspace-head, .student-head { min-height: 86px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--line); margin-bottom: 20px; }
 .workspace-head > div:first-child { min-width: 0; }
+#reviewScreen > .workspace-head { flex-wrap: wrap; }
+#reviewScreen > .workspace-head > div:first-child { flex: 1 1 100%; }
+#reviewScreen > .workspace-head > :is(button, a) { max-width: 100%; }
 .workspace-head h1, .student-head h1 { margin: 7px 0 0; font-size: clamp(1.7rem, 3vw, 2.7rem); font-weight: 400; letter-spacing: -.03em; }
 .status-stack { display: grid; gap: 5px; text-align: right; }
 .student-head { flex-wrap: wrap; }
