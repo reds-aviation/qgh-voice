@@ -9,3 +9,9 @@
 - Publish only with user authorization. Keep GitHub Pages and Netlify hosted suite builds aligned when the user requests deployment; build native apps only when requested.
 
 - Keep hardware procurement and the owner’s offline installation handbook private in untracked output. Do not publish its pages, source document, links or Gyani answers about the handbook. Retain brief operational connection and extended-screen guidance.
+
+## QGH Design Preview approval gate — 15 October 2026
+
+- This design task is local preview only. Do not push any branch, open remote PRs, merge production, upload artifacts, trigger deployments, change hosting settings or expose public tunnels.
+- Earlier publication approvals do not apply. Publish only after the user explicitly approves a named preview; that later approval is for the existing GitHub Pages target only, never Netlify.
+- Preserve simulation, command, radio and instructor/student semantics. Use synthetic traffic and a separate local preview origin. Consult `docs/design-preview-v1/brief.md` for scope and evidence.
