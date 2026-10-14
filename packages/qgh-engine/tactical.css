@@ -1122,12 +1122,13 @@ select:focus-visible {
 }
 
 .tactical-df-stage .tactical-display {
-  min-height: 245px;
-  height: clamp(245px, 24vw, 310px);
+  min-height: 200px;
+  height: clamp(200px, 20vw, 256px);
 }
 
 .tactical-readout strong { margin-top: var(--t-space-2); font-size: clamp(48px, 6vw, 76px); }
-.tactical-signal { bottom: var(--t-space-3); letter-spacing: .075em; }
+.tactical-signal { bottom: var(--t-space-3); font-size: 12px; letter-spacing: 0; }
+.tactical-readout small { font-size: 14px; letter-spacing: 0; }
 .tactical-df-mode { width: min(100%, 350px); margin: var(--t-space-3) auto 0; }
 
 .tactical-controls { gap: var(--t-space-2); padding: var(--t-space-3); }
@@ -1546,11 +1547,10 @@ select:focus-visible {
 .tactical-setup-actions .tactical-pilot-readback-setup,
 .tactical-setup-actions .tactical-start { width: auto; min-height: 52px; margin: 0; padding-inline: 14px; }
 .tactical-setup-actions .tactical-start { font-size: 13px; box-shadow: 0 4px 12px rgba(0, 125, 125, .16); }
-.tactical-controls button { min-height: 44px; line-height: 1.25; }
-.tactical-controls .tactical-info-row button,
-.tactical-controls .tactical-heading-row button,
-.tactical-controls .tactical-us-turns button { font-size: 11px; }
-.tactical-controls .tactical-clock button { min-height: 44px; font-size: 10px; }
+.tactical-controls button { min-height: 44px; padding: 8px; font-size: 14px; line-height: 1.35; letter-spacing: 0; }
+.tactical-controls header strong { font-size: 16px; letter-spacing: 0; }
+.tactical-controls header small { font-size: 12px; line-height: 1.5; }
+.tactical-controls .tactical-speed-row label { font-size: 12px; letter-spacing: 0; }
 @media (max-width: 1120px) { .tactical-setup-actions { grid-template-columns: minmax(0, 1fr) minmax(200px, auto); } .tactical-setup-actions p { grid-column: 1 / -1; } }
 @media (max-width: 920px) { .tactical-aircraft-row { padding: 14px 12px 14px 25px; } .tactical-aircraft-row::before { left: 8px; } }
 @media (max-width: 600px) {

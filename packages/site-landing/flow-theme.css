@@ -1,5 +1,6 @@
-/* Shared with the suite landing: local Plex fonts, warm paper, blue-grey ink.
-   No rule below selects a live or paused exercise, its canvas or controls. */
+/* Shared local Plex typography and light preparation surfaces.
+   Geometry and palette rules are scoped to entry/setup; shared font roles also
+   cover HTML chrome. Canvas-drawn scope labels are unaffected. */
 @font-face{font-family:Suite Sans;src:url('fonts/ibm-plex-sans-400.ttf') format('truetype');font-weight:400;font-display:swap}
 @font-face{font-family:Suite Sans;src:url('fonts/ibm-plex-sans-600.ttf') format('truetype');font-weight:600;font-display:swap}
 @font-face{font-family:Suite Mono;src:url('fonts/ibm-plex-mono-500.ttf') format('truetype');font-weight:500;font-display:swap}
@@ -9,7 +10,7 @@ body[data-suite-surface="single"]:has(#setup.active),
 body[data-suite-surface="tactical"]:has(#tSetup.active),
 body[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])),
 body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):not([hidden])) {
-  --entry-paper:#fafaf8;--entry-card:#fff;--entry-ink:#071d3d;--entry-muted:#526f93;--entry-line:#c9d7e4;--entry-accent:#007c9e;--entry-accent-dark:#006b89;--entry-shadow:none;
+  --entry-paper:#eef4f8;--entry-card:#fff;--entry-ink:#17324a;--entry-muted:#4f6576;--entry-line:#b2c6d7;--entry-accent:#345e78;--entry-accent-dark:#203f58;--entry-shadow:none;
   --bg:#fafaf8;--paper:#fff;--paper-strong:#fff;--ink:#071d3d;--muted:#526f93;--line:#c9d7e4;--line-strong:#a3bbd0;--teal:#007c9e;--teal-dark:#006b89;--teal-soft:#e2f5fa;--accent:#007c9e;--accent-dark:#006b89;--shadow:none;
   background:#fafaf8;color:#071d3d;font-family:Suite Sans,Arial,sans-serif;color-scheme:light;
 }
@@ -23,22 +24,22 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
 [data-suite-surface="qgh"] .entry-card{width:100%;padding:0;border:0;background:none;border-radius:0;box-shadow:none}
 [data-suite-surface="qgh"] .entry-program-tabs{padding:14px 0;margin:0;border:0;gap:20px;justify-content:flex-start}
 [data-suite-surface="qgh"] .entry-program-tab{background:none;border:0;border-radius:0;padding:6px 0;min-height:32px;color:#007c9e;font:500 11px/1.5 Suite Mono,monospace}
-[data-suite-surface="qgh"] .entry-intro,[data-suite-surface="instructor"] .entry-hero,[data-suite-surface="procedural"] #entry .entry-copy{position:relative;background:#fafaf8 url('qgh-cloudbreak.png') center/cover no-repeat;padding:32px 30px;min-height:286px;margin:0 0 25px;border:0;border-radius:0;isolation:isolate}
+[data-suite-surface="qgh"] .entry-intro,[data-suite-surface="instructor"] .entry-hero,[data-suite-surface="procedural"] #entry .entry-copy{position:relative;background:#fafaf8 url('qgh-cloudbreak.png') center/cover no-repeat;padding:24px;min-height:0;margin:0 0 16px;border:0;border-radius:8px;isolation:isolate}
 [data-suite-surface="qgh"] .entry-intro>span,[data-suite-surface="instructor"] .entry-hero .eyebrow,[data-suite-surface="procedural"] #entry .entry-copy>.eyebrow{display:block;font:500 11px/1.6 Suite Mono,monospace;letter-spacing:.12em;color:#526f93}
 [data-suite-surface="qgh"] .entry-intro>span:after,[data-suite-surface="instructor"] .entry-hero .eyebrow:after,[data-suite-surface="procedural"] #entry .entry-copy>.eyebrow:after{content:'';display:block;width:85px;height:3px;background:linear-gradient(90deg,#ff8a00 0 47%,transparent 47% 53%,#078655 53%);margin:16px 0 20px}
-[data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font:600 clamp(36px,4.1vw,60px)/1.06 Suite Sans,Arial,sans-serif;letter-spacing:-.05em;color:#071d3d;max-width:760px;margin:0 0 18px}
+[data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font:600 clamp(26px,2.6vw,36px)/1.15 Suite Sans,Arial,sans-serif;letter-spacing:-.025em;color:#17324a;max-width:760px;margin:0 0 12px}
 [data-suite-surface="qgh"] .entry-intro p,[data-suite-surface="instructor"] .entry-hero p,[data-suite-surface="procedural"] #entry .entry-copy p{font:400 19px/1.5 Suite Sans,Arial,sans-serif;color:#526f93;max-width:520px;margin:0}
 .flow-section-label{display:flex;align-items:center;gap:18px;margin:22px 0 16px;font:500 11px/1.4 Suite Mono,monospace;letter-spacing:.12em;color:#2d7599}
 .flow-section-label>span{flex:1;height:1px;background:#afc2d3}
 [data-suite-surface="qgh"] .entry-intro .flow-subtitle{font:500 19px/1.4 Suite Mono,monospace;margin:-7px 0 16px;color:#007c9e}
 [data-suite-surface="qgh"] .entry-options{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-[data-suite-surface="qgh"] .entry-option{display:grid;grid-template-columns:38px 1fr;gap:12px 14px;min-height:185px;padding:27px;border:1px solid #c9d7e4;border-radius:11px;background:#fff url('qgh-towers.png') right bottom/auto 135px no-repeat;box-shadow:0 10px 28px #0b27420a}
+[data-suite-surface="qgh"] .entry-option{display:grid;grid-template-columns:30px 1fr;gap:12px;min-height:160px;padding:20px;border:1px solid #b2c6d7;border-radius:8px;background:#fff url('qgh-towers.png') right bottom/auto 100px no-repeat;box-shadow:none}
 [data-suite-surface="qgh"] .entry-option-index{color:#007c9e;font:500 14px/1.4 Suite Mono,monospace}
-[data-suite-surface="qgh"] .entry-option-copy strong{font:600 30px/1.2 Suite Sans,Arial,sans-serif;letter-spacing:-.03em}
+[data-suite-surface="qgh"] .entry-option-copy strong{font:600 24px/1.2 Suite Sans,Arial,sans-serif;letter-spacing:-.02em}
 [data-suite-surface="qgh"] .entry-option-copy small{font:500 11px/1.7 Suite Mono,monospace;color:#526f93;white-space:normal}
 [data-suite-surface="qgh"] .entry-option-action{grid-column:2;justify-self:start;border:0;border-radius:0;padding:8px 0;background:transparent;color:#007c9e;font:500 15px/1.4 Suite Mono,monospace}
 [data-suite-surface="qgh"] .entry-option-action:after{content:' →';margin-left:32px}
-[data-suite-surface="qgh"] .entry-option:hover{border-color:#007c9e;transform:translateY(-2px)}
+[data-suite-surface="qgh"] .entry-option:hover{border-color:#345e78;background-color:#f3f7fa}
 [data-suite-surface="qgh"] .entry-quote{font:500 10px/1.6 Suite Mono,monospace;letter-spacing:.07em;font-style:normal;color:#607d9b;margin:20px 0}
 [data-suite-surface="qgh"] .entry-training-note{font-size:13px;color:#526f93}
 [data-suite-surface="qgh"] .entry-web-distribution{box-shadow:none;border-color:#c9d7e4;background:#fff}
@@ -66,9 +67,9 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
 [data-suite-surface="procedural"]:not(.desk-open) .topbar nav{font:500 11px/1.5 Suite Mono,monospace;gap:18px}
 [data-suite-surface="procedural"]:not(.desk-open) #creator-credit{font-size:12px;color:#526f93}
 [data-suite-surface="procedural"] #entry{display:block;max-width:1600px;margin:auto;padding:24px 4.1% 28px}
-[data-suite-surface="procedural"] #entry .entry-copy{background-image:url('hero-airspace.png');min-height:280px;padding-right:38%;margin:0}
+[data-suite-surface="procedural"] #entry .entry-copy{background-image:url('hero-airspace.png');min-height:0;padding-right:25%;margin:0}
 [data-suite-surface="procedural"] #entry .entry-copy p{font-size:18px}
-[data-suite-surface="procedural"] #entry h1{font-size:clamp(36px,3.9vw,57px)}
+[data-suite-surface="procedural"] #entry h1{font-size:clamp(26px,2.6vw,36px)}
 [data-suite-surface="procedural"] #entry .entry-rule{border:0;padding:0;margin:17px 0 0;gap:14px}
 [data-suite-surface="procedural"] #entry .entry-rule b{font:500 27px/1.2 Suite Mono,monospace;color:#007c9e;white-space:nowrap;flex:0 0 auto}
 [data-suite-surface="procedural"] #entry .entry-rule span{font-size:12px;color:#526f93}
@@ -95,14 +96,14 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
 /* Preparation pages share the palette only while their own setup is visible. */
 [data-suite-surface="single"]:has(#setup.active) .app,[data-suite-surface="tactical"]:has(#tSetup.active) .tactical-app{max-width:1600px;margin:auto}
 [data-suite-surface="single"] #setup .setup-card,[data-suite-surface="tactical"] #tSetup .tactical-setup-card{background:#fff;border:1px solid #c9d7e4;border-radius:11px;box-shadow:none}
-[data-suite-surface="single"] #setup .setup-intro,[data-suite-surface="tactical"] #tSetup .tactical-setup-intro{background:url('qgh-cloudbreak.png') right center/cover no-repeat;padding:22px;margin-bottom:24px}
-[data-suite-surface="single"] #setup h2,[data-suite-surface="tactical"] #tSetup h2{font:600 clamp(28px,3vw,40px)/1.15 Suite Sans,Arial,sans-serif;letter-spacing:-.03em;max-width:650px}
-[data-suite-surface="host-setup"] #setupPanel>.section-title{padding:25px;background:url('qgh-cloudbreak.png') center/cover no-repeat}
+[data-suite-surface="single"] #setup .setup-intro,[data-suite-surface="tactical"] #tSetup .tactical-setup-intro{background:none;padding:0 0 16px;margin-bottom:16px}
+[data-suite-surface="single"] #setup h2,[data-suite-surface="tactical"] #tSetup h2{font:600 clamp(24px,2.3vw,30px)/1.2 Suite Sans,Arial,sans-serif;letter-spacing:-.02em;max-width:650px}
+[data-suite-surface="host-setup"] #setupPanel>.section-title{padding:0 0 16px;background:none;border-bottom:1px solid #b2c6d7}
 [data-suite-surface="host-setup"] #setupPanel{border:1px solid #c9d7e4;box-shadow:none;background:#fff}
 [data-suite-surface="join"] :is(#joinPanel,#waitingPanel,#readyPanel){background:#fafaf8 url('qgh-cloudbreak.png') center/cover no-repeat}
 [data-suite-surface="join"] .join-card{background:#fffffff0;border-color:#c9d7e4;box-shadow:none}
 [data-suite-surface="procedural"]:not(.desk-open) #setup .setup-panel{border-color:#c9d7e4;box-shadow:none}
-[data-suite-surface="procedural"]:not(.desk-open) #setup .section-title{padding:24px;background:url('hero-airspace.png') center/cover no-repeat}
+[data-suite-surface="procedural"]:not(.desk-open) #setup .section-title{padding:0 0 16px;background:none;border-bottom:1px solid #b2c6d7}
 [data-suite-surface="guide"] :is(.guide-hero,.training-hero){background:#fafaf8 url('hero-airspace.png') right center/cover no-repeat;padding:28px;border-color:#c9d7e4}
 [data-suite-surface="guide"] :is(h1,h2,h3){color:#071d3d;font-family:Suite Sans,Arial,sans-serif}
 [data-suite-surface="guide"] :is(.site-header,.guide-sidebar,.section-nav,.guide-section,.current-flow-guide){border-color:#c9d7e4}
@@ -121,11 +122,11 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
  [data-suite-surface="instructor"] .header-left{flex-wrap:wrap;gap:12px}
  [data-suite-surface="qgh"] .entry-intro,[data-suite-surface="instructor"] .entry-hero,[data-suite-surface="procedural"] #entry .entry-copy{padding:24px 18px;background-position:65% center}
  [data-suite-surface="qgh"] .entry-intro:before,[data-suite-surface="instructor"] .entry-hero:before,[data-suite-surface="procedural"] #entry .entry-copy:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#fafaf8f2,#fafaf8ad);z-index:-1}
- [data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font-size:clamp(32px,8.5vw,44px)}
+ [data-suite-surface="qgh"] .entry-intro h2,[data-suite-surface="instructor"] .entry-hero h1,[data-suite-surface="procedural"] #entry h1{font-size:28px}
  [data-suite-surface="qgh"] .entry-intro p,[data-suite-surface="instructor"] .entry-hero p,[data-suite-surface="procedural"] #entry .entry-copy p{font-size:17px}
  [data-suite-surface="qgh"] .entry-options,[data-suite-surface="procedural"] #entry .entry-desks{grid-template-columns:1fr;gap:15px}
  [data-suite-surface="qgh"] .entry-option{min-height:160px;padding:22px 18px;grid-template-columns:27px 1fr}
- [data-suite-surface="qgh"] .entry-option-copy strong{font-size:27px}
+ [data-suite-surface="qgh"] .entry-option-copy strong{font-size:24px}
  [data-suite-surface="instructor"] .mode-orbit{grid-template-columns:1fr;gap:0}
  [data-suite-surface="instructor"] .mode-orbit div{padding:9px 0}
  [data-suite-surface="procedural"]:not(.desk-open) .topbar{padding:16px 5%;gap:10px}
@@ -140,6 +141,96 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel):no
 }
 @media(prefers-reduced-motion:reduce){[data-suite-surface="qgh"] .entry-option{transition:none;transform:none}}
 
+/* The shared position chooser is the actual entry in both instructor flows. */
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry{display:grid;width:min(1200px,calc(100% - 48px));max-width:1200px;padding:24px 0;gap:16px}
+body[data-suite-surface="instructor"] #entry.suite-entry{width:100%}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-copy{min-height:0;padding:20px 24px;background-position:right center;border-radius:8px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry h1{font-size:clamp(26px,2.4vw,32px);line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-copy p{font-size:16px;line-height:1.5}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-families{margin-top:12px;gap:8px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry :is(.eyebrow,label){font-size:14px;line-height:1.4;letter-spacing:0}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .session-connection{padding:16px;gap:16px;border-radius:8px;grid-template-columns:minmax(240px,340px) minmax(0,1fr);align-items:center}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .session-connection p{font-size:14px;line-height:1.5;margin:0}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-desks{gap:16px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-role{padding:16px;border-radius:8px;box-shadow:none}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-role h2{font-size:22px;line-height:1.25;margin:0 0 8px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-role p{margin-bottom:12px;font-size:14px;line-height:1.5}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-role :is(form,.entry-role-actions){gap:12px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry :is(.entry-action,.entry-role button){min-height:44px;padding:10px 16px;font-size:16px;line-height:1.4;border-radius:8px}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry :is(small,.entry-note){font-size:14px;line-height:1.5}
+body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-note{padding-top:16px}
+
+/* Preparation density comes from grouping, not smaller field text. */
+body[data-suite-surface="host-setup"] #setupPanel{max-width:1200px;margin:24px auto;padding:24px;border-radius:8px}
+body[data-suite-surface="host-setup"] #setupPanel>.section-title{margin-bottom:0}
+body[data-suite-surface="host-setup"] #setupPanel>.section-title h1{font-size:28px;line-height:1.2;font-weight:600;margin:4px 0 8px;letter-spacing:-.02em}
+body[data-suite-surface="host-setup"] #setupPanel>.section-title :is(p,span){font-size:14px;line-height:1.5;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .setup-form{gap:16px;margin-top:16px}
+body[data-suite-surface="host-setup"] #setupPanel .setup-form>label:has(#exerciseConnection){grid-column:1}
+body[data-suite-surface="host-setup"] #setupPanel .connection-help{grid-column:2 / -1;align-self:end;margin:0;font-size:14px;line-height:1.5;max-width:none}
+body[data-suite-surface="host-setup"] #setupPanel :is(input,select,textarea){min-height:44px;padding:8px 12px;border-radius:8px}
+body[data-suite-surface="host-setup"] #setupPanel label{gap:6px;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .roster-editor{border-radius:8px}
+body[data-suite-surface="host-setup"] #setupPanel .roster-editor-head{min-height:0;padding:12px;background:#eef4f8;gap:12px}
+body[data-suite-surface="host-setup"] #setupPanel .roster-editor-head :is(span,b,small){font-size:14px;line-height:1.4;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .roster-row{padding:12px;gap:12px}
+body[data-suite-surface="host-setup"] #setupPanel .roster-row::before{font:600 14px/1.4 Suite Sans,Arial,sans-serif;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .roster-row:nth-child(even){background:#f3f7fa}
+body[data-suite-surface="host-setup"] #setupPanel :is(.setup-environment,.ats-saved-exercises){padding:0 12px;border-radius:8px}
+body[data-suite-surface="host-setup"] #setupPanel .setup-preview{min-height:44px;gap:12px;border:0;padding:8px 0;justify-content:flex-start}
+body[data-suite-surface="host-setup"] #setupPanel .setup-preview span{font-size:14px;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .primary-action{min-height:44px;letter-spacing:0}
+
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-panel{max-width:1200px;padding:24px 0;margin:auto}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .section-title :is(h1,h2){margin:0 0 8px;font-size:28px;font-weight:600;line-height:1.2;letter-spacing:-.02em}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .section-title p{margin:0;font-size:14px;line-height:1.5}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-form{margin-top:16px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-settings{grid-template-columns:2fr 1.4fr 1fr;gap:16px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup :is(.setup-field,.roster-cell::before){font-size:14px;line-height:1.4;color:#4f6576}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup :is(input,select){min-height:44px;font-size:16px;border-radius:8px;background:#fff;border-color:#b2c6d7;color:#17324a}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-airspace{padding:8px 0;margin:12px 0;gap:12px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-airspace :is(p,button){font-size:14px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-airspace button{min-height:44px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor{border-color:#b2c6d7;background:#fff}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor-head{font-size:16px;padding:12px;line-height:1.4}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-body{padding:12px;gap:12px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-row{border-color:#b2c6d7}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-row::before{padding:8px 12px;background:#e6eff6;color:#345e78;font:600 14px/1.4 Suite Sans,Arial,sans-serif;letter-spacing:0}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-cell{padding:8px 12px;border-color:#e1e9ef}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-cell::before{min-height:20px;margin-bottom:6px;font-size:14px;color:#4f6576}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-actions{padding:16px 0;background:none;gap:12px}
+body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-actions button{min-height:44px;font-size:16px;padding:10px 16px}
+
+body:is([data-suite-surface="host-setup"],[data-suite-surface="procedural"]:not(.desk-open),[data-suite-surface="single"],[data-suite-surface="tactical"]) :is(#setupPanel,#setup,#tSetup) :is(button,summary){letter-spacing:0;text-transform:none}
+body:is([data-suite-surface="host-setup"],[data-suite-surface="procedural"]:not(.desk-open),[data-suite-surface="single"],[data-suite-surface="tactical"]) :is(#setupPanel,#setup,#tSetup) :is(input,select,textarea,button):disabled{opacity:1;background:#edf1f5;color:#526378;border-color:#a3b3c2;cursor:not-allowed}
+body:is([data-suite-surface="host-setup"],[data-suite-surface="procedural"]:not(.desk-open),[data-suite-surface="single"],[data-suite-surface="tactical"]) :is(#setupPanel,#setup,#tSetup) :is(input,select,textarea)[aria-invalid="true"]{border-color:#9b2438;box-shadow:0 0 0 1px #9b2438}
+body:is([data-suite-surface="host-setup"],[data-suite-surface="procedural"]:not(.desk-open),[data-suite-surface="single"],[data-suite-surface="tactical"]) :is(#setupPanel,#setup,#tSetup) :focus-visible{outline:3px solid #9a5300;outline-offset:3px}
+
+@media(max-width:900px){
+ body[data-suite-surface="host-setup"] #setupPanel .setup-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body[data-suite-surface="host-setup"] #setupPanel .connection-help{grid-column:2;align-self:center}
+ body[data-suite-surface="host-setup"] #setupPanel :is(.setup-preview,.primary-action){grid-column:span 2}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-panel{width:calc(100% - 32px)}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-settings{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-settings .setup-field:first-child{grid-column:1 / -1}
+}
+@media(max-width:680px){
+ body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry{width:calc(100% - 32px);padding:16px 0}
+ body[data-suite-surface="instructor"] #entry.suite-entry{width:100%}
+ body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry .entry-copy{padding:16px;min-height:0;background-position:65% center}
+ body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry h1{font-size:26px}
+ body:is([data-suite-surface="instructor"],[data-suite-surface="procedural"]:not(.desk-open)) #entry.suite-entry :is(.entry-desks,.session-connection){grid-template-columns:minmax(0,1fr);gap:16px}
+ body[data-suite-surface="host-setup"] #setupPanel{padding:16px;margin:16px auto}
+ body[data-suite-surface="host-setup"] #setupPanel .setup-form{grid-template-columns:minmax(0,1fr)}
+ body[data-suite-surface="host-setup"] #setupPanel :is(.connection-help,.setup-preview,.primary-action,.setup-form>label:has(#exerciseConnection)){grid-column:1}
+ body[data-suite-surface="host-setup"] #setupPanel .roster-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body[data-suite-surface="host-setup"] #setupPanel .roster-editor-head small{text-align:left}
+ body[data-suite-surface="host-setup"] #setupPanel .setup-preview{flex-wrap:wrap}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-settings{grid-template-columns:minmax(0,1fr)}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .setup-airspace{flex-wrap:wrap}
+ body[data-suite-surface="procedural"]:not(.desk-open) #setup .roster-editor--cards .roster-cell{padding:8px}
+}
+
 /* Typography is shared across every state; exercise colours remain unchanged. */
 body[data-suite-surface],body[data-suite-surface] :is(button,input,select,textarea,h1,h2,h3,h4,label,summary){font-family:Suite Sans,Arial,sans-serif!important}
 body[data-suite-surface] :is(code,kbd,time,input[type="number"],#clock,#elapsedTime,#sessionPin,#student-pin,#quick-heading,.numeric-data){font-family:Suite Mono,monospace!important;font-variant-numeric:tabular-nums}
@@ -151,20 +242,15 @@ body[data-suite-surface] button{max-width:100%;white-space:normal}
 /* Opening forms use readable labels and values without changing scope typography. */
 body[data-suite-surface="host-setup"] #setupPanel label,
 body[data-suite-surface="single"] #setup label,
-body[data-suite-surface="tactical"] #tSetup label{font-size:14px;line-height:1.45;letter-spacing:.02em;color:#365373}
+body[data-suite-surface="tactical"] #tSetup label{font-size:14px;line-height:1.45;letter-spacing:0;color:var(--iaf-muted,#4f6576)}
 body[data-suite-surface="host-setup"] #setupPanel :is(input,select,textarea),
 body[data-suite-surface="single"] #setup :is(input,select,textarea),
-body[data-suite-surface="tactical"] #tSetup :is(input,select,textarea){font-size:16px;line-height:1.45;background:#fff;color:#071d3d;border-color:#7893aa}
-body[data-suite-surface="host-setup"] #setupPanel :is(input,textarea)::placeholder{color:#526f93;opacity:1}
+body[data-suite-surface="tactical"] #tSetup :is(input,select,textarea){min-height:44px;font-size:16px;line-height:1.45;background:var(--entry-card,#fff);color:var(--iaf-ink,#17324a);border-color:var(--iaf-line,#b2c6d7)}
+body[data-suite-surface="host-setup"] #setupPanel :is(input,textarea)::placeholder{color:var(--iaf-muted,#4f6576);opacity:1}
 body[data-suite-surface="host-setup"] #setupPanel :is(button,summary),
 body[data-suite-surface="single"] #setup button,
-body[data-suite-surface="tactical"] #tSetup button{font-size:14px;line-height:1.45;letter-spacing:.02em}
-body[data-suite-surface="host-setup"] #setupPanel .primary-action{font-size:16px;background:#006b89;color:#fff}
-body[data-suite-surface="host-setup"] #setupPanel .primary-action:hover:not(:disabled){background:#00556d;color:#fff}
-body[data-suite-surface="host-setup"] #setupPanel button:disabled{background:#edf1f5;color:#526378;border-color:#a3b3c2;opacity:1}
-body[data-suite-surface="host-setup"] #setupPanel :focus-visible,
-body[data-suite-surface="single"] #setup :focus-visible,
-body[data-suite-surface="tactical"] #tSetup :focus-visible{outline:3px solid #006b89;outline-offset:3px}
+body[data-suite-surface="tactical"] #tSetup button{font-size:14px;line-height:1.45;letter-spacing:0}
+body[data-suite-surface="host-setup"] #setupPanel .primary-action{font-size:16px;background:var(--iaf-blue,#345e78);color:#fff}
+body[data-suite-surface="host-setup"] #setupPanel .primary-action:hover:not(:disabled){background:var(--iaf-blue-dark,#203f58);color:#fff}
 
 body[data-suite-surface="host-setup"]:has(#setupPanel:not([hidden])) .suite-return-link{display:inline-flex;align-items:center;min-height:40px;font-size:14px;letter-spacing:.03em;color:#006b89}
-@media(max-width:600px){body[data-suite-surface="host-setup"] #setupPanel>.section-title{background-image:linear-gradient(90deg,#fafaf8f5,#fafaf8e8 60%,#fafaf84d),url('qgh-cloudbreak.png')}}

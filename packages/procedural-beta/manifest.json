@@ -209,13 +209,13 @@
     },
     {
       "path": "static/current-flow-guide.css",
-      "bytes": 4098,
-      "sha256": "9082a1238d9a2dda2ccabdf7e4358b9135cb0a9aa6e69eccba4222bcb5a22156"
+      "bytes": 7180,
+      "sha256": "53787e55e9e8124422a78cc26238121dc9a840c2dd8391575135438ed903e37f"
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 109185,
-      "sha256": "31abb195fc2402b29b9a1458ebbeb58480992af102614ff3b167998b96793543"
+      "bytes": 109885,
+      "sha256": "dee7bba8baa493d9c1b9cea7dc6e4739a879508d87a0a8b72226a18dd75ee9f7"
     },
     {
       "path": "static/gyani-instructor.png",
@@ -314,13 +314,13 @@
     },
     {
       "path": "static/workspace-shell.js",
-      "bytes": 36199,
-      "sha256": "44df046251cf50d472ce833fd880c63db75610165a1db18c1cc85c218c332686"
+      "bytes": 37506,
+      "sha256": "4faba79676b8b38b3b8e5f7795cb7542eaead4ab45ed1e5893f27d0ec3425cdd"
     },
     {
       "path": "static/workspace-shell.css",
-      "bytes": 56307,
-      "sha256": "65bba9ffea6cf73ca44aa0481ae919e0923b293543c8c764a63c7c557ec7b5c5"
+      "bytes": 67159,
+      "sha256": "0baa43a0507016fe18c2394cab03b64bd05148190714ff70e02a7beba536f3a8"
     },
     {
       "path": "static/meeting-room.js",

@@ -23,6 +23,12 @@
     if (typeof onLogout === 'function') bindLogout({root,onLogout,hasAttempt});
     if (root?.ownerDocument?.createElement && root.id === 'activeWorkspace') installInstructorConsole({root,scope,shelf,actions});
     if (root?.ownerDocument?.createElement && root.id === 'desk') installProceduralConsole(root);
+    if (root?.ownerDocument?.createElement && root.id === 'studentWorkspace') {
+      const heading=root.querySelector('.student-head > div:first-child');
+      if(heading&&!heading.querySelector('.ats-workspace-role')){
+        const role=root.ownerDocument.createElement('span');role.className='ats-workspace-role';role.textContent='Controller';heading.prepend(role);
+      }
+    }
     // Procedural moves its existing fleet into the toolbar later in the same
     // module. Attach after that move so the track keeps the correct home.
     if (root?.ownerDocument?.createElement) Promise.resolve().then(()=>{
@@ -297,6 +303,14 @@
     scope?.setAttribute('tabindex','0');
     if (!doc.querySelector('.ats-skip')) {const skip=make('a','Skip to workspace','ats-skip');skip.href='#setupPanel';doc.body.prepend(skip);}
     const head=root.querySelector('.workspace-head');
+    const role=byId('workspaceTitle');
+    if(role){role.classList.add('ats-workspace-role');role.textContent='Instructor / pseudo-pilot';}
+    // Keep the adapter's live startup message and its bindings intact. Its full
+    // instruction belongs beside admission controls, rather than competing
+    // with the clock and Pause in the working header.
+    const startupStatus=byId('startSetupStatus'),sessionRail=byId('sessionDrawer')?.querySelector('.session-rail');
+    if(startupStatus&&sessionRail)sessionRail.prepend(startupStatus);
+    if(startupStatus)byId('openStartSetup')?.setAttribute('aria-describedby',startupStatus.id);
     const elapsed=byId('instructorClock');
     if(elapsed){const label=make('span','Exercise time','ats-clock-label');elapsed.before(label);elapsed.title='Elapsed simulated exercise time, starting at 00:00:00';}
     const rate=byId('trainingTimeRate'),clockSummary=byId('clockSettings')?.querySelector('summary');
@@ -339,7 +353,7 @@
       closeButton.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();close();});summary?.append(closeButton);
       drawer.addEventListener('toggle',()=>{if(!doc.body.classList.contains('exercise-console'))return;if(drawer.open&&active!==drawer)open(drawer);else if(active===drawer&&!drawer.open){active=null;update();}});
     }
-    for(const [label,id] of [['Session','sessionDrawer'],['Aircraft controls','aircraftControlDrawer'],['Review','eventDrawer'],['Navigation & help','consoleNavigation']]) {
+    for(const [label,id] of [['Session','sessionDrawer'],['Aircraft controls','aircraftControlDrawer'],['Event history','eventDrawer'],['Navigation & help','consoleNavigation']]) {
       const drawer=byId(id);if(!drawer)continue;
       const button=make('button',label,'ats-tool-button');button.type='button';button.setAttribute('aria-controls',id);button.setAttribute('aria-expanded','false');
       if(id==='sessionDrawer'){const pin=make('span','—');pin.id='toolSessionPin';button.append(pin);}
@@ -396,6 +410,9 @@
     const review=actions?.querySelector('[data-tab="debrief"]');if(review)review.hidden=true;
     const title=doc.getElementById('exercise-title');if(title)title.title=title.textContent;
     const bar=root.querySelector('.exercisebar'),clock=bar?.querySelector('.clockblock'),options=doc.getElementById('workspace-options-toggle');
+    const startupStatus=doc.getElementById('start-setup-status'),session=doc.getElementById('tab-session');
+    if(startupStatus&&session)session.prepend(startupStatus);
+    if(startupStatus)doc.getElementById('open-start-setup')?.setAttribute('aria-describedby',startupStatus.id);
     const time=doc.getElementById('clock');
     if(time){const label=doc.createElement('span');label.className='ats-clock-label';label.textContent='Exercise time';time.before(label);time.title='Elapsed exercise time, starting at 00:00:00; advances while running and stops when paused';}
     if(clock&&options)bar.insertBefore(clock,options);

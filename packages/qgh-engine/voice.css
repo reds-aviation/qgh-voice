@@ -362,23 +362,23 @@
   --qgh-voice-dock-height: 0px;
   --qgh-browser-bottom-inset: 0px;
 }
-body:has(.voice-dock) { padding-right: 90px; }
+body:has(.voice-dock) { padding-right: 110px; }
 .voice-dock {
   --voice-safe-top: env(safe-area-inset-top, 0px);
   --voice-safe-right: env(safe-area-inset-right, 0px);
   --voice-safe-bottom: env(safe-area-inset-bottom, 0px);
   --voice-safe-left: env(safe-area-inset-left, 0px);
-  width: 76px;
+  width: 96px;
   right: max(8px, env(safe-area-inset-right, 0px));
-  border-radius: 15px;
-  box-shadow: 0 5px 15px #17262b20;
+  border-radius: 8px;
+  box-shadow: none;
 }
-.voice-dock button { min-height: 44px; min-width: 44px; font-size: 10px; }
+.voice-dock button { min-height: 44px; min-width: 44px; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 13px; letter-spacing: 0; }
 .voice-compact-toggle {
   min-height: 44px;
   border-color: rgba(255, 254, 250, .62) !important;
   background: rgba(255, 254, 250, .12) !important;
-  font-size: 10px !important;
+  font-size: 13px !important;
 }
 .voice-compact-toggle:hover { background: rgba(255, 254, 250, .22) !important; }
 .voice-dock[data-compact='true'] {
@@ -392,8 +392,8 @@ body:has(.voice-dock) { padding-right: 90px; }
 .voice-mic { touch-action: none; user-select: none; -webkit-user-select: none; }
 .voice-mic[aria-pressed='true'] { background: #064d50 !important; color: white !important; outline: 2px solid #fffefa; outline-offset: 2px; }
 .voice-mic[data-processing='true'] { border-style: dashed !important; }
-.voice-status { min-height: 34px; font-size: 9px; -webkit-line-clamp: 3; }
-.voice-feedback { font-size: 9px; }
+.voice-status { min-height: 38px; font: 600 12px/1.35 'IBM Plex Sans', Arial, sans-serif; letter-spacing: 0; -webkit-line-clamp: 4; }
+.voice-feedback { font-size: 12px; letter-spacing: 0; }
 .voice-settings, .voice-confirmation,
 .voice-dock[data-popover-side] .voice-settings,
 .voice-dock[data-popover-side] .voice-confirmation {
@@ -415,7 +415,7 @@ body:has(.voice-dock) { padding-right: 90px; }
 .voice-settings small { font: 400 12px/1.6 'IBM Plex Sans', sans-serif; letter-spacing: 0; }
 .voice-reset-position { color: #075e60 !important; border-color: #b8c2be !important; }
 .voice-last-call { border-top: 1px solid #d9d9d1; color: #17262b; }
-.voice-last-call summary { min-height: 44px; padding: 13px 0; cursor: pointer; font: 600 11px 'IBM Plex Mono', monospace; }
+.voice-last-call summary { min-height: 44px; padding: 13px 0; cursor: pointer; font: 600 14px 'IBM Plex Sans', Arial, sans-serif; }
 .voice-last-call p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 500 11px/1.65 'IBM Plex Mono', monospace; }
 .voice-confirmation small { white-space: normal; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; }
 .voice-confirmation strong { font-size: 11px; }
@@ -470,7 +470,7 @@ body:has(.voice-dock) { padding-right: 90px; }
   .voice-drag-handle { grid-area: drag; }
   .voice-mic { grid-area: mic; min-height: 56px !important; font-size: 15px !important; letter-spacing: .16em; }
   .voice-settings-toggle { grid-area: settings; }
-  .voice-status { grid-area: status; min-height: 17px; font-size: 10px; -webkit-line-clamp: 2; }
+  .voice-status { grid-area: status; min-height: 20px; font-size: 12px; -webkit-line-clamp: 2; }
   .voice-feedback, .voice-listening-indicator { display: none; }
   body:has(.voice-dock[data-compact='true']) {
     --qgh-voice-dock-height: calc(64px + var(--qgh-phone-bottom-inset));

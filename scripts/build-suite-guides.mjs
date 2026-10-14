@@ -1,6 +1,7 @@
 import {readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createRequire} from 'node:module';
+import {renderExerciseFlow} from './render-exercise-flow.mjs';
 const require = createRequire(import.meta.url);
 const knowledge = require('../packages/procedural-beta/static/guide-knowledge.js');
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,8 +33,20 @@ export function renderCurrentGuide(topic, prefix = '', version = knowledge.revis
 }
 
 function renderCommonGuideSource(version) {
+  const startingLinks = knowledge.flow.map(step => `<li><a href="${escape(step.href)}"><strong>${escape(step.title)}</strong><span>${escape(step.text)}</span><span class="common-start-arrow" aria-hidden="true">→</span></a></li>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#fafaf8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"><title>Training guide · ATS SIM BOX · Version 1</title><link rel="icon" href="icons/favicon-32.png"><link rel="stylesheet" href="procedural-beta/current-flow-guide.css"><link rel="stylesheet" href="procedural-beta/suite-guide-chat.css"><script defer src="procedural-beta/guide-knowledge.js"></script><script defer src="procedural-beta/guide-search.js"></script><script defer src="procedural-beta/suite-guide-chat.js"></script><script defer src="suite-landing-register.js?release=${escape(version)}"></script></head>
-<body class="suite-common-guide"><a class="common-skip" href="#guide-main">Skip to guide</a><header class="common-header"><a href="./">ATS SIM BOX · Version 1</a><nav aria-label="Guide navigation"><a href="qgh.html">Single QGH</a><a href="instructor-led/">Instructor QGH + SRA</a><a href="procedural-beta/">Procedural</a></nav></header><div class="common-layout"><aside class="common-nav"><strong>TRAINING GUIDE</strong><nav aria-label="Guide sections">${sections.map(([id,title])=>`<a href="#${id}">${escape(title)}</a>`).join('')}</nav><a href="training-centre.html#catalogue">Accepted QGH radio calls ↗</a></aside><main id="guide-main"><section class="common-hero"><p class="common-eyebrow">ONE GUIDE · ALL EXERCISES</p><h1>Prepare. Control. Review.</h1><p>QGH cloud-breaking, SRE/vectoring, SRA and procedural control.</p><small>Version 1 · updated with this release</small></section><section class="common-flow" id="current-flow" data-guide-revision="${escape(version)}"><h2>Choose your starting point</h2><div>${knowledge.flow.map(step=>`<a href="${escape(step.href)}"><strong>${escape(step.title)}</strong><span>${escape(step.text)}</span></a>`).join('')}</div></section>${sections.map(([id,title,ids])=>`<section class="common-section" id="${id}"><h2>${escape(title)}</h2>${ids.map(key=>knowledge.entries.find(e=>e.id===key)).filter(Boolean).map(renderEntry).join('')}${id==='individual'?'<p><a href="training-centre.html#catalogue">Open the accepted radio-call catalogue</a></p>':''}</section>`).join('')}<footer class="common-footer">Independent training simulator · ${escape(knowledge.learning)}</footer></main></div></body></html>`;
+<body class="suite-common-guide">
+<a class="common-skip" href="#guide-main">Skip to guide</a>
+<header class="common-header"><a href="./">ATS SIM BOX · Version 1</a><nav aria-label="Guide navigation"><a href="qgh.html">Single QGH</a><a href="instructor-led/">Instructor QGH + SRA</a><a href="procedural-beta/">Procedural</a></nav></header>
+<div class="common-layout">
+<aside class="common-nav"><strong>Training guide</strong><nav aria-label="Guide sections">${sections.map(([id,title])=>`<a href="#${id}">${escape(title)}</a>`).join('')}</nav><a href="training-centre.html#catalogue">Accepted QGH radio calls ↗</a></aside>
+<main id="guide-main">
+<section class="common-hero"><p class="common-eyebrow">One guide · All exercises</p><h1>Prepare. Control. Review.</h1><p>QGH cloud-breaking, SRE/vectoring, SRA and procedural control.</p><small>Version 1 · updated with this release</small></section>
+<section class="common-flow" id="current-flow" data-guide-revision="${escape(version)}"><h2>Choose your starting point</h2><ul class="common-start-links">${startingLinks}</ul></section>
+${renderExerciseFlow()}
+${sections.map(([id,title,ids])=>`<section class="common-section" id="${id}"><h2>${escape(title)}</h2>${ids.map(key=>knowledge.entries.find(e=>e.id===key)).filter(Boolean).map(renderEntry).join('')}${id==='individual'?'<p><a href="training-centre.html#catalogue">Open the accepted radio-call catalogue</a></p>':''}</section>`).join('')}
+<footer class="common-footer">Independent training simulator · ${escape(knowledge.learning)}</footer>
+</main></div></body></html>`;
 }
 
 export function renderCommonGuide(version = knowledge.revision) {

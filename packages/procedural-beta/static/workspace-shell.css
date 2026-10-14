@@ -225,10 +225,13 @@ body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var
 /* Desktop instruments sit at the edges of a full-size scope. Opening a drawer
    or the heading controls does not change the aircraft picture's scale. */
 @media(min-width:701px){
- body.instructor-page.exercise-console>.suite-guide-chat{position:fixed;left:8px;right:auto;bottom:28px;padding:0;z-index:20;width:auto}
+ body.instructor-page.exercise-console>.suite-guide-chat{position:fixed;left:auto;right:8px;bottom:28px;padding:0;z-index:20;width:auto}
  body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__invitation{display:none}
  body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__launcher{padding:0;min-width:42px;min-height:42px}
  body.instructor-page.exercise-console>.suite-guide-chat .suite-guide-chat__avatar{width:42px;height:42px}
+ /* Keep the launcher clear of the movable left instruments, and open its
+    real dialog below the lifecycle header. The dialog remains draggable. */
+ body.instructor-page.exercise-console:has(#activeWorkspace:not([hidden]))>.suite-guide-chat .suite-guide-chat__panel{top:calc(var(--ats-header-height) + 8px);bottom:auto;height:min(650px,calc(100dvh - var(--ats-header-height) - 36px));max-height:calc(100dvh - var(--ats-header-height) - 36px)}
  :root{--ats-header-height:56px;--ats-tools-width:144px}
  body.instructor-page.exercise-console .workspace-head,body.instructor-desk.desk-open .exercisebar{padding:6px 10px;flex-wrap:nowrap}
  body.instructor-page.exercise-console .status-stack time,body.instructor-desk.desk-open .clockblock strong{font-size:20px}
@@ -318,9 +321,11 @@ body.instructor-desk.desk-open.review-open #work-panel{left:0;width:100%;top:var
  .ats-instrument-box :is(.instructor-homing,#homing){order:2}
  .ats-instrument-box :is(.instructor-pilot-channel,#pilot-readback){order:3}
  body.instructor-page.exercise-console .ats-instrument-box .ats-quick-turn-row,
- body.instructor-desk.desk-open .ats-instrument-box #aircraft-quick-controls>div{grid-template-columns:repeat(3,minmax(0,1fr))}
- .ats-instrument-box .ats-quick-turn-row button:nth-child(4),
- .ats-instrument-box #aircraft-quick-controls>div button:nth-child(4){grid-column:1/3}
+ body.instructor-desk.desk-open .ats-instrument-box #aircraft-quick-controls>div{grid-template-columns:repeat(6,minmax(0,1fr))}
+ .ats-instrument-box .ats-quick-turn-row button,
+ .ats-instrument-box #aircraft-quick-controls>div button{grid-column:span 2}
+ .ats-instrument-box .ats-quick-turn-row button:nth-child(n+4),
+ .ats-instrument-box #aircraft-quick-controls>div button:nth-child(n+4){grid-column:span 3}
  body.instructor-page.exercise-console .ats-instrument-box .quick-heading-row,
  body.instructor-desk.desk-open .ats-instrument-box #quick-heading-form{grid-template-columns:repeat(2,minmax(0,1fr))}
  .ats-instrument-box :is(.quick-heading-row,#quick-heading-form) label{grid-column:1/-1}
@@ -461,4 +466,100 @@ body.instructor-desk.desk-open #work-panel .drawer-head{min-height:44px;padding:
  body.ats-has-logout.instructor-desk.desk-open #work-panel .drawer-head,
  body.ats-has-logout.instructor-page.exercise-console .ats-console-drawer>summary{padding-right:96px}
  body.instructor-page.exercise-console .ats-console-drawer>summary{flex-wrap:wrap}
+}
+
+/* Design Preview v1: shared operational chrome. The plot and its transform
+   remain owned by each simulator adapter; these rules style surrounding UI. */
+:root{--ats-font-sans:Plex,"IBM Plex Sans",Arial,sans-serif;--ats-font-mono:PlexMono,"IBM Plex Mono",Consolas,monospace;--ats-selection:#f4cd77;--ats-selection-surface:#2d414d;--ats-feedback:#b2e3ec;--ats-error:#ffbdc5;--ats-border-subtle:#3c515f}
+.ats-workspace-shell{font-family:var(--ats-font-sans)}
+.ats-workspace-role{display:block;font-size:13px;line-height:1.3;font-weight:600;letter-spacing:0;color:var(--ats-text)}
+body.instructor-page.exercise-console #activeWorkspace .workspace-head>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:120px}
+body.instructor-page.exercise-console #activeWorkspace .workspace-head h1.ats-workspace-role{display:block;order:-1;margin:0;font-size:13px;line-height:1.3;white-space:normal;color:var(--ats-text)}
+body.instructor-page.exercise-console #activeWorkspace .workspace-head .eyebrow,
+body.instructor-desk.desk-open .exercisebar .eyebrow{font-family:var(--ats-font-sans);font-size:12px;line-height:1.3;letter-spacing:.02em;color:var(--ats-muted);white-space:normal}
+body.instructor-desk.desk-open .exercisebar h1{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+body.instructor-page.exercise-console .status-stack time,
+body.instructor-desk.desk-open .clockblock strong{font-family:var(--ats-font-mono);font-variant-numeric:tabular-nums;min-width:8ch;text-align:center}
+body.instructor-page.exercise-console #exerciseState,
+body.instructor-desk.desk-open #clock-state{font-family:var(--ats-font-mono);min-width:7ch;text-align:center;letter-spacing:.02em}
+body.instructor-page.exercise-console .session-rail #startSetupStatus,
+body.instructor-desk.desk-open #tab-session #start-setup-status{display:block;flex:0 0 auto;max-width:none;margin:0 0 12px;padding:12px;border-left:3px solid var(--ats-feedback);background:var(--ats-input);font-size:14px;line-height:1.5;color:var(--ats-text)}
+body.instructor-page.exercise-console .ats-tool-button,
+body.instructor-desk.desk-open #edge-actions button,
+body.instructor-page.exercise-console .ats-quick-turn-row button,
+body.instructor-desk.desk-open #aircraft-quick-controls>div button{font-family:var(--ats-font-sans);font-size:14px;line-height:1.35;min-height:40px;letter-spacing:0}
+body.instructor-page.exercise-console .aircraft-tabs button.selected,
+body.instructor-desk.desk-open #scope-traffic-bar .fleet button.selected{background:var(--ats-selection-surface);color:var(--ats-turn-ink);border-color:var(--ats-selection);box-shadow:inset 0 -3px var(--ats-selection);font-weight:600}
+body.instructor-page.exercise-console #quickAircraftStatus,
+body.instructor-desk.desk-open #quick-aircraft-info{display:block;font-family:var(--ats-font-mono);font-size:14px;line-height:1.5;font-weight:500;color:var(--ats-turn-ink);padding:4px 0 8px;border-bottom:1px solid var(--ats-border-subtle);overflow-wrap:anywhere}
+body.instructor-page.exercise-console .instructor-homing,
+body.instructor-page.exercise-console .ats-instrument-box .instructor-homing,
+body.instructor-desk.desk-open #instructor-control-shelf #homing,
+body.instructor-desk.desk-open .ats-instrument-box #instructor-control-shelf #homing{height:auto;min-height:104px;overflow:visible;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;gap:4px;align-content:start}
+body.instructor-page.exercise-console .instructor-homing label{grid-column:auto;display:flex;align-items:center;justify-content:space-between;font-family:var(--ats-font-sans);font-size:13px}
+body.instructor-page.exercise-console .instructor-homing strong,
+body.instructor-desk.desk-open #instructor-control-shelf #bearing{font-family:var(--ats-font-mono);font-size:30px;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--ats-turn-ink)}
+body.instructor-page.exercise-console .instructor-homing strong{grid-column:auto}
+body.instructor-page.exercise-console .instructor-homing #instructorDfPhase,
+body.instructor-desk.desk-open #instructor-control-shelf :is(#df-source,#mag-reference-note){display:block;font-family:var(--ats-font-sans);font-size:12px;line-height:1.4;color:var(--ats-muted);white-space:normal;overflow-wrap:anywhere}
+body.instructor-page.exercise-console .instructor-homing select,
+body.instructor-desk.desk-open #instructor-control-shelf #bearing-type{height:auto;min-height:36px;font-size:14px;padding:4px}
+body.instructor-page.exercise-console .instructor-pilot-channel,
+body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback{background:var(--ats-input);color:var(--ats-text);border-color:var(--ats-border-subtle)}
+body.instructor-page.exercise-console .instructor-pilot-channel>span,
+body.instructor-desk.desk-open #instructor-control-shelf #pilot-readback .eyebrow{font-family:var(--ats-font-sans);font-size:12px;line-height:1.4;letter-spacing:.02em;color:var(--ats-muted)}
+body.instructor-page.exercise-console .instructor-pilot-channel p,
+body.instructor-desk.desk-open #instructor-control-shelf #radio-caption{font-family:var(--ats-font-sans);font-size:14px;line-height:1.5;color:var(--ats-text)}
+body.instructor-page.exercise-console .keyboard-command-bar output[data-state="rejected"]{color:var(--ats-error)}
+body.instructor-page.exercise-console .keyboard-command-bar output[data-state="accepted"]{color:var(--ats-feedback)}
+
+/* Student chrome uses the same hierarchy, without introducing truth data. */
+body.student-page.exercise-console #studentWorkspace .student-head{align-items:center;gap:8px;border-color:var(--ats-border-subtle)}
+body.student-page.exercise-console #studentWorkspace .student-head>div:first-child{display:flex;flex-direction:column;gap:2px}
+body.student-page.exercise-console #studentWorkspace .student-head .eyebrow{font-family:var(--ats-font-sans);font-size:12px;line-height:1.3;letter-spacing:.02em;color:var(--ats-muted)}
+body.student-page.exercise-console #studentWorkspace .student-head h1{font-size:14px;line-height:1.3;color:var(--ats-text)}
+body.student-page.exercise-console #studentWorkspace .header-clock{font-family:var(--ats-font-mono);font-variant-numeric:tabular-nums;min-width:8ch;text-align:center}
+body.student-page.exercise-console #studentWorkspace .student-head :is(button,.status-stack b,.status-stack span){font-size:12px;line-height:1.4;letter-spacing:.02em}
+body.student-page.exercise-console #studentWorkspace .student-head button{font-family:var(--ats-font-sans);min-height:40px;color:var(--ats-text);background:var(--ats-panel-raised);border-color:var(--ats-border)}
+body.student-page.exercise-console #studentWorkspace .df-console :is(header span,header b,.df-readout small,.df-readout span,.segmented button){font-size:12px;line-height:1.4;letter-spacing:.02em}
+body.student-page.exercise-console #studentWorkspace .df-console .segmented button{font-family:var(--ats-font-sans);min-height:40px}
+body.student-page.exercise-console #studentWorkspace .df-readout strong{font-family:var(--ats-font-mono);font-variant-numeric:tabular-nums;color:var(--ats-turn-ink)}
+
+/* Tablet actions share the second header row with Options. Reserving a full
+   extra row for lifecycle controls would put them behind the aircraft shelf. */
+@media(min-width:701px) and (max-width:1100px){
+ :root{--ats-header-height:112px}
+ body.instructor-page.exercise-console .lifecycle-actions{flex:1 1 auto;width:auto}
+ body.instructor-page.exercise-console .workspace-head button,
+ body.instructor-desk.desk-open .exercisebar button{min-height:44px}
+ body.instructor-desk.desk-open #desk .exercisebar #clock-controls :is(button,label){min-height:44px;font-size:12px;padding:6px 8px}
+}
+
+@media(max-width:700px){
+ body.ats-has-logout.instructor-page.exercise-console #activeWorkspace .workspace-head,
+ body.ats-has-logout.instructor-desk.desk-open .exercisebar{padding-right:8px!important}
+ body.ats-has-logout.instructor-page.exercise-console #activeWorkspace .workspace-head>div:first-child,
+ body.ats-has-logout.instructor-desk.desk-open .exercisebar>div:not(.clockblock):not(#clock-controls){padding-right:88px}
+ body.instructor-page.exercise-console #activeWorkspace .workspace-head>div:first-child{flex:1 1 100%;min-width:0}
+ body.instructor-page.exercise-console #activeWorkspace .status-stack{flex:1 1 100%;min-width:0;max-width:100%;justify-content:flex-start;gap:8px;white-space:normal}
+ body.instructor-page.exercise-console #activeWorkspace .status-stack .ats-clock-label{display:none}
+ body.instructor-page.exercise-console #activeWorkspace .status-stack time{order:-1}
+ body.instructor-page.exercise-console .lifecycle-actions,
+ body.instructor-desk.desk-open #clock-controls{flex-wrap:wrap;justify-content:flex-start;min-width:0}
+ body.instructor-page.exercise-console .workspace-head button,
+ body.instructor-desk.desk-open .exercisebar button{min-height:44px;max-width:100%;font-size:14px}
+ body.instructor-page.exercise-console .instructor-homing,
+ body.instructor-desk.desk-open #instructor-control-shelf #homing{min-height:136px}
+ body.instructor-page.exercise-console .instructor-homing select,
+ body.instructor-desk.desk-open #instructor-control-shelf #bearing-type{min-height:44px}
+ body.instructor-page.exercise-console .ats-quick-turn-row,
+ body.instructor-desk.desk-open #aircraft-quick-controls>div{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ body.instructor-page.exercise-console .ats-quick-turn-row button,
+ body.instructor-desk.desk-open #aircraft-quick-controls>div button{min-height:44px;padding:6px 4px}
+ body.student-page.exercise-console #studentWorkspace .student-head>div:first-child{flex:1 1 100%;min-width:0}
+ body.student-page.exercise-console #studentWorkspace .student-head :is(button,.header-clock,.status-stack){max-width:100%}
+ body.student-page.exercise-console #studentWorkspace .student-head :is(button,.status-stack b,.status-stack span){font-size:13px}
+ body.student-page.exercise-console #studentWorkspace :is(.student-head button,.df-console .segmented button){min-height:44px}
+ body.student-page.exercise-console #studentWorkspace .df-console{min-width:0}
+ body.student-page.exercise-console #studentWorkspace .df-console :is(header,.df-readout,.segmented){min-width:0;overflow-wrap:anywhere}
 }

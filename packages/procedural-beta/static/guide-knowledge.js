@@ -6,17 +6,17 @@
     {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Choose connection → Set up starting traffic → prepare airspace if needed → Back to traffic setup → Create exercise → Session → Admit → Ready → optional voice connection → Run → Terminate → Review."
+      "text": "Set starting traffic and prepare optional airspace. Create the exercise, connect your controller when needed, then Run and debrief."
     },
     {
       "title": "QGH & SRA · Single QGH",
       "href": "qgh.html",
-      "text": "Single aircraft or Tactical → configure QGH cloud-breaking → Start → control and transmit → Terminate → Review."
+      "text": "Configure Single or Tactical QGH, start individual practice, then terminate to review your track."
     },
     {
       "title": "QGH & SRA · Instructor QGH + SRA",
       "href": "instructor-led/",
-      "text": "Choose connection → Instructor setup → QGH, SRE/vectoring or SRA → create → Session → Admit → Ready → optional voice connection → Start → Terminate → Review."
+      "text": "Set traffic for QGH, SRE/vectoring or SRA. Create a session, admit a Ready controller, then Start and debrief."
     }
   ],
   "entries": [
@@ -208,7 +208,7 @@
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark)|same (?:screen|layout|workspace)|instructor (?:layout|interface|workspace)|scroll ?bar|scroll track|scroll.*(?:aircraft list|tools|legend)|(?:move|drag|reset) (?:the |a )?(?:box|panel|floating|aircraft controls)|floating (?:box|controls|panel))\\b",
-      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the compact move symbol and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Gyani, tour and same-screen confirmations also have Move/Reset controls. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session, Aircraft controls and Review sit on the right tool rail, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation.",
+      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the compact move symbol and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Gyani, tour and same-screen confirmations also have Move/Reset controls. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session and Aircraft controls sit on the right tool rail. QGH/SRE/SRA Event history opens the running command/event list; Terminate opens the full debrief. Procedural retains its Review tool, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation. The compact live header identifies instructor role, mode, exercise time and actual session state. The startup explanation is inside Session, reachable with Startup steps. The selected aircraft summary stays above its quick controls; minimizing the panel retains selection and field values. Homing keeps the actual transmission/source status visible beneath its numerical readout. Help includes one seven-step instructor flow with the optional airspace and connection differences explained. Individual QGH readouts and voice settings use larger labels; unavailable offline voice still requires its existing one-time setup, while manual controls remain available.",
       "questions": [
         "Where is the homing display?",
         "Where are pilot messages now?",
@@ -223,7 +223,9 @@
         "How do I move a floating panel?",
         "How do I reset a moved box?",
         "Why are there no Move buttons in the opening navigation?",
-        "Why are flight controls grey before Start?"
+        "Why are flight controls grey before Start?",
+        "Where is Event history?",
+        "Does minimizing the panel reset my aircraft?"
       ]
     },
     {
@@ -1783,7 +1785,7 @@
         "instructor"
       ],
       "selector": "#instructorTools",
-      "title": "Session, aircraft and review tools",
+      "title": "Session, aircraft and event tools",
       "entry": "instructor-instrument-shelf"
     },
     {

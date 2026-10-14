@@ -717,7 +717,9 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   --space-5: 24px;
   --space-6: 32px;
   --surface-soft: #fbfcf9;
-  --focus-ring: #78bcb8;
+  --focus-ring: #075e60;
+  --console-label-size: 14px;
+  --console-meta-size: 12px;
 }
 
 html { background: var(--bg); }
@@ -765,8 +767,10 @@ select:focus-visible {
 .mode-home-link {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  letter-spacing: .075em;
+  min-height: 44px;
+  font-family: 'IBM Plex Sans', Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
 }
 .credit small,
 .field label,
@@ -810,8 +814,8 @@ select:focus-visible {
 
 #console .controls,
 #console .df-card {
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(23, 38, 43, .045);
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 #console .controls { padding: var(--space-3); gap: var(--space-2); }
@@ -824,8 +828,8 @@ select:focus-visible {
 }
 
 .df-top { padding-bottom: var(--space-3); }
-.df-top h3 { font-size: 13px; letter-spacing: .02em; }
-.df-top b { letter-spacing: .055em; }
+.df-top h3 { font-size: var(--console-label-size); letter-spacing: 0; }
+.df-top b { font-size: var(--console-meta-size); letter-spacing: 0; }
 
 .display {
   min-height: 220px;
@@ -838,12 +842,13 @@ select:focus-visible {
 }
 
 #console .df-card .display {
-  min-height: 220px;
-  height: clamp(220px, 25vw, 320px);
+  min-height: 200px;
+  height: clamp(200px, 20vw, 256px);
 }
 
 .readout strong { font-size: clamp(48px, 6vw, 76px); }
-.signal { bottom: 16%; letter-spacing: .075em; }
+.readout small { font-size: var(--console-label-size); letter-spacing: 0; }
+.signal { bottom: 16%; font-size: var(--console-meta-size); letter-spacing: 0; }
 .df-mode { width: min(100%, 350px); margin: 0 auto; }
 
 .controls .primary-row,
@@ -1219,12 +1224,14 @@ select:focus-visible {
 .setup-actions .start { width: auto; min-height: 52px; margin: 0; padding-inline: 17px; }
 .setup-actions .start { font-size: 13px; box-shadow: 0 4px 12px rgba(0, 125, 125, .16); }
 @media (min-width: 1040px) { .setup-card .fields { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-#console .controls button { min-height: 44px; font-size: 11px; line-height: 1.25; }
-#console .controls .tx { min-height: 50px; font-size: 12px; }
-#console .controls .info-row button,
-#console .controls .heading-row button,
-#console .controls .us-turns button { font-size: 12px; }
-#console .controls b { font-size: 11px; }
+#console .controls button { min-height: 44px; padding: 8px; font-size: var(--console-label-size); line-height: 1.35; letter-spacing: 0; }
+#console .controls .tx { min-height: 48px; font-size: var(--console-label-size); }
+#console .controls b { font-size: var(--console-meta-size); }
+#console .controls :is(.speed-row label,.clock small) { font-size: var(--console-meta-size); letter-spacing: 0; }
+#console .controls .clock { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#console .controls .clock small { display:block; grid-column:1; grid-row:1; }
+#console .controls .clock strong { grid-column:2 / -1; grid-row:1; text-align:right; white-space:nowrap; }
+#console .controls .clock button { grid-row:2; min-width:0; }
 @media (max-width: 980px) { .setup-actions { grid-template-columns: minmax(0, 1fr) minmax(190px, auto); } .setup-actions p { grid-column: 1 / -1; } }
 @media (max-width: 600px) {
   .brand .mode-home-link { min-height: 32px; }
