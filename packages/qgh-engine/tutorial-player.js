@@ -51,7 +51,7 @@
     if (value.recordingNote) {
       const note=doc.getElementById('suiteTutorialRecordingNote') || doc.createElement('p');
       note.id='suiteTutorialRecordingNote'; note.className='hint'; note.textContent=value.recordingNote;
-      if(!note.parentNode) doc.getElementById('suiteTutorialTitle').after(note);
+      player.after(note);
     }
     card.hidden = false;
     for (const chapter of value.chapters) {

@@ -1,6 +1,6 @@
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.5",
+  "revision": "1.0.6",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -38,14 +38,16 @@
       "anchor": "tutorial",
       "priority": true,
       "match": "\\b(?:(?:video|tutorial|gyani|guided (?:tour|training)).*updat|tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
-      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. The written Training guide, Gyani answers and guided screen tour share the maintained current release knowledge. A note beside the recording identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
+      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. Recent updates mean some screens, button positions and setup steps may differ; no percentage of differences has been measured. The written Training guide, Gyani answers and guided screen tour share the maintained current release knowledge. A notice below the video identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. A revised video is planned after the simulator changes are finalised, possibly for Version 2. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
       "questions": [
         "Where is the full tutorial?",
         "Can I watch the tutorial inside the web app?",
         "How do I jump to a video chapter?",
         "Does the YouTube tutorial work offline?",
         "Does the YouTube video update when the app changes?",
-        "Are Gyani and guided tours updated with this app?"
+        "Are Gyani and guided tours updated with this app?",
+        "What percentage of the video differs from the simulator?",
+        "Will the tutorial video be updated for Version 2?"
       ]
     },
     {

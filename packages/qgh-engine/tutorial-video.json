@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.0.5",
+  "version": "1.0.6",
   "status": "ready",
   "youtubeId": "X9pBGBZlh84",
   "title": "ATS SIM BOX · Version 1 narrated tutorial",
@@ -98,5 +98,5 @@
       "startSeconds": 1574
     }
   ],
-  "recordingNote": "This is a recorded walkthrough of an earlier interface. The current Training guide and guided tour reflect the latest controls. Google Meet is optional, Prepare airspace uses the simplified Published / Draw / Coordinates editor, and Logout is hidden on fresh input pages."
+  "recordingNote": "Tutorial update notice: This recorded walkthrough shows an earlier Version 1 interface. Recent updates mean some screens, button positions and setup steps may differ. Follow the current Training guide and guided tour for the latest flow. Google Meet is optional, Prepare airspace uses Published / Draw / Coordinates, and fresh input pages hide Logout. We plan to update the video after the simulator changes are finalised, possibly for Version 2."
 }
