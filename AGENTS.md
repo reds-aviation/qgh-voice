@@ -15,3 +15,9 @@
 - This design task is local preview only. Do not push any branch, open remote PRs, merge production, upload artifacts, trigger deployments, change hosting settings or expose public tunnels.
 - Earlier publication approvals do not apply. Publish only after the user explicitly approves a named preview; that later approval is for the existing GitHub Pages target only, never Netlify.
 - Preserve simulation, command, radio and instructor/student semantics. Use synthetic traffic and a separate local preview origin. Consult `docs/design-preview-v1/brief.md` for scope and evidence.
+
+## Publication approval — 15 October 2026
+
+- After receiving the working Design Preview v1 and circled GitHub comparisons, the user explicitly requested publication to Netlify and then GitHub Pages as well. This later approval supersedes the preview-only and Netlify exclusions above for this release.
+- Publish the reviewed design with release/cache metadata 1.0.5 to the existing `voice-qgh-reds.netlify.app` and `reds-aviation.github.io/qgh-voice` targets. Preserve the preview's interface and simulator behaviour.
+- Keep private outputs, comparison screenshots, tutorial production files, credentials and unrelated untracked material out of the public source and deployment artifact. Verify both deployed releases and retain the 1.0.4 rollback reference.
