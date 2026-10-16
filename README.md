@@ -93,4 +93,6 @@ See SECURITY.md for reporting guidance.
 
 ## Copyright and licence
 
-Copyright (c) 2026 Flt Lt Balaram Reddy, Service No. 38703. This project is open source under the MIT License; see LICENSE. The bundled IBM Plex fonts retain their own SIL Open Font License; see THIRD_PARTY_NOTICES.md.
+Copyright (c) 2026 Balaram Reddy. Starting with version 1.0.7, the original application code and original project changes are open source under the Common Public Attribution License Version 1.0 (CPAL-1.0); see [LICENSE](LICENSE) and [COPYRIGHT.md](COPYRIGHT.md). Exhibit B requires visible copyright attribution, including in Larger Works, but no attribution URL, phrase or graphic. Covered source availability and network-use requirements apply.
+
+Versions up to and including 1.0.6 retain their MIT permissions; the original notice is preserved in [LICENSES/MIT-legacy.txt](LICENSES/MIT-legacy.txt). This is not a retroactive change to those releases. Third-party code, fonts, models and data retain their own terms; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -1,3 +1,11 @@
+# The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+# Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+# The Original Code is ATS SIM BOX.
+# The Original Developer is the Initial Developer.
+# The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+# Contributor(s): None designated in this initial notice.
+# No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+
 [CmdletBinding()]
 param(
     [ValidateSet('All', 'Android', 'Windows')]
@@ -16,6 +24,7 @@ $engineRoots = [ordered]@{
     Shared = Join-Path $repoRoot 'packages\qgh-engine'
 }
 $engineFiles = @(
+    'license-footer.css',
     'index.html',
     'entry.css',
     'user-guide.html',
@@ -67,6 +76,12 @@ $assetDirectories = @(
     'vendor\pilot-tts'
 )
 $releaseFiles = @('app-version.json')
+$legalFiles = [ordered]@{
+    'LICENSE' = 'LICENSE.txt'
+    'COPYRIGHT.md' = 'COPYRIGHT.txt'
+    'LICENSES\MIT-legacy.txt' = 'MIT-legacy.txt'
+    'THIRD_PARTY_NOTICES.md' = 'THIRD_PARTY_NOTICES.txt'
+}
 
 foreach ($relativeDirectory in $assetDirectories) {
     $sourceDirectory = Join-Path $engineRoots.Shared $relativeDirectory
@@ -129,6 +144,23 @@ foreach ($relativeFile in $releaseFiles) {
             $mismatches.Add("$targetName is missing release $relativeFile")
         } elseif ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ne $sourceHash) {
             $mismatches.Add("$relativeFile differs between Shared release and $targetName")
+        }
+    }
+}
+
+foreach ($relativeFile in $legalFiles.Keys) {
+    $sourceFile = Join-Path $repoRoot $relativeFile
+    if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
+        $mismatches.Add("Shared legal notice is missing: $relativeFile")
+        continue
+    }
+    $sourceHash = (Get-FileHash -LiteralPath $sourceFile -Algorithm SHA256).Hash
+    foreach ($targetName in $selectedTargets) {
+        $candidate = Join-Path $availableRoots[$targetName] $legalFiles[$relativeFile]
+        if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+            $mismatches.Add("$targetName is missing legal notice $($legalFiles[$relativeFile])")
+        } elseif ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ne $sourceHash) {
+            $mismatches.Add("$relativeFile differs between Shared legal notice and $targetName")
         }
     }
 }

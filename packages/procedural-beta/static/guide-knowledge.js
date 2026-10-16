@@ -1,6 +1,16 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.6",
+  "revision": "1.0.7",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -20,6 +30,17 @@
     }
   ],
   "entries": [
+    {
+      "id": "copyright-licence",
+      "title": "Copyright, licence and source code",
+      "topics": ["suite", "qgh-individual", "qgh-instructor", "procedural", "sra"],
+      "controls": [],
+      "anchor": "licence",
+      "priority": true,
+      "match": "\\b(?:copyright|licen[cs]e|cpal|attribution|source code|original developer)\\b",
+      "text": "Copyright © 2026 Balaram Reddy. Starting with version 1.0.7, the original application code and original project changes use CPAL 1.0. It requires the specified visible copyright attribution and covered source availability, including for external deployment. The page footer shows only the copyright line; licence and source links are in this guide's Licence and source section. Versions up to and including 1.0.6 retain their existing MIT permissions. Third-party libraries, fonts, runtimes, models and data retain their own terms. This notice is not a claim of copyright registration.",
+      "questions": ["Who owns ATS SIM BOX?", "What licence does the simulator use?", "Where is the source code?", "Is a licence link required in the footer?", "Can I remove the copyright credit?"]
+    },
     {
       "id": "youtube-tutorial",
       "title": "Watch the narrated ATS SIM BOX tutorial",

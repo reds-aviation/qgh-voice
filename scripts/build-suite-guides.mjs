@@ -1,3 +1,13 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 import {readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createRequire} from 'node:module';
@@ -24,6 +34,7 @@ const sections = [
   ['review','Terminate and debrief',['terminate-exercise','terminate-instructor','terminate-individual','review-controls']],
   ['tour','Guided tour',['guided-tour']],
   ['help','Ask Gyani',['help-limits']],
+  ['licence','Licence and source',['copyright-licence']],
 ];
 const renderEntry = entry => `<details id="answer-${escape(entry.id)}"><summary>${escape(entry.title)}</summary><p>${escape(entry.text)}</p></details>`;
 
@@ -52,7 +63,8 @@ ${sections.map(([id,title,ids])=>`<section class="common-section" id="${id}"><h2
 export function renderCommonGuide(version = knowledge.revision) {
   return renderCommonGuideSource(version).replaceAll('training-centre.html#catalogue','training-centre.html#calls')
     .replace('<a href="procedural-beta/">Procedural</a>', '<a href="procedural-beta/">Procedural</a><a href="training-centre.html#demonstrations">Tutorial</a>')
-    .replace('<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2>', '<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2><p><a href="training-centre.html#demonstrations">Open the tutorial player in Training Centre</a></p>');
+    .replace('<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2>', '<section class="common-section" id="tutorial"><h2>Narrated tutorial</h2><p><a href="training-centre.html#demonstrations">Open the tutorial player in Training Centre</a></p>')
+    .replace('<section class="common-section" id="licence"><h2>Licence and source</h2>', '<section class="common-section" id="licence"><h2>Licence and source</h2><p><a href="COPYRIGHT.txt">Copyright and source notice</a> · <a href="LICENSE.txt">CPAL 1.0 licence</a> · <a href="https://github.com/reds-aviation/qgh-voice" target="_blank" rel="noopener noreferrer">Source code</a> · <a href="THIRD_PARTY_NOTICES.txt">Third-party notices</a></p>');
 }
 
 function legacyGuide(prefix, anchor) {

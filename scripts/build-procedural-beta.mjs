@@ -1,6 +1,17 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 import {buildSuiteGuides} from './build-suite-guides.mjs';
 import {buildEntryTheme} from './build-entry-theme.mjs';
 import {buildInstalledBrand} from './build-installed-brand.mjs';
+import {addLicenseFooter} from './build-license-notice.mjs';
 import {verifyProceduralScopeVisuals} from './sync-procedural-scope-visuals.mjs';
 import {releaseQueryGuard, versionHostedAssets} from './version-hosted-assets.mjs';
 import {readFile, writeFile, mkdir, copyFile} from 'node:fs/promises';
@@ -156,6 +167,15 @@ export async function buildProceduralBeta(outputRoot) {
     .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-instructor.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
+  // The hosted suite replaces its entry and generated guides after the
+  // individual build. Restore the same launch-page credit on those outputs.
+  for (const page of ['index.html','qgh.html','single.html','tactical.html','training-centre.html','user-guide.html',
+    'instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','instructor-led/training-guide.html',
+    'procedural-beta/index.html','procedural-beta/procedural.html','procedural-beta/procedural-guide.html']) {
+    const path = resolve(outputRoot, page);
+    const html = await readFile(path, 'utf8');
+    await writeFile(path, addLicenseFooter(html, page.startsWith('procedural-beta/') ? '../' : ''), 'utf8');
+  }
   await versionHostedAssets(outputRoot, manifest.version);
   console.log(`Built ATS SIM BOX Version 1 with Procedural (${manifest.version})`);
 }

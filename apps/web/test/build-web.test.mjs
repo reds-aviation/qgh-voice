@@ -1,3 +1,13 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -19,6 +29,11 @@ const outputFiles = directory => absoluteFiles(directory)
   .sort();
 
 const instructorLedFiles = [
+  'LICENSE.txt',
+  'COPYRIGHT.txt',
+  'MIT-legacy.txt',
+  'THIRD_PARTY_NOTICES.txt',
+  'license-footer.css',
   'meeting-room.js',
   'index.html',
   'instructor.html',
@@ -60,6 +75,11 @@ const instructorLedFiles = [
 
 test('web build creates an allowlisted PWA package', () => {
   const expectedFiles = [
+    'LICENSE.txt',
+    'COPYRIGHT.txt',
+    'MIT-legacy.txt',
+    'THIRD_PARTY_NOTICES.txt',
+    'license-footer.css',
     'index.html',
     'entry.css',
     'user-guide.html',
@@ -169,6 +189,18 @@ test('web build creates an allowlisted PWA package', () => {
   assert.deepEqual(JSON.parse(readFileSync(resolve(outputRoot,'tutorial-video.json'),'utf8')),JSON.parse(readFileSync(resolve(repositoryRoot,'packages/qgh-engine/tutorial-video.json'),'utf8')),'built tutorial configuration preserves the supplied identity and measured chapters');
   const instructorEntry = readFileSync(resolve(outputRoot, 'instructor-led', 'index.html'), 'utf8');
   const instructorWorker = readFileSync(resolve(outputRoot, 'instructor-led', 'service-worker.js'), 'utf8');
+  for (const [source, destination] of [['LICENSE','LICENSE.txt'],['COPYRIGHT.md','COPYRIGHT.txt'],['LICENSES/MIT-legacy.txt','MIT-legacy.txt'],['THIRD_PARTY_NOTICES.md','THIRD_PARTY_NOTICES.txt']]) {
+    const expected = readFileSync(resolve(repositoryRoot, source), 'utf8');
+    for (const branch of ['', 'instructor-led/']) {
+      assert.equal(readFileSync(resolve(outputRoot, branch, destination), 'utf8'), expected, `${branch}${destination} preserves the original notice`);
+    }
+    assert.ok(serviceWorker.includes(`'./${destination}'`), `${destination} remains readable offline`);
+    assert.ok(instructorWorker.includes(`'./${destination}'`), `instructor ${destination} remains readable offline`);
+  }
+  for (const html of [entry, guide, centre, single, tactical, instructorEntry]) {
+    assert.equal((html.match(/class="license-footer"/g) || []).length, 1, 'exactly one normal-flow copyright footer per page');
+    assert.ok(html.includes('© 2026 Balaram Reddy'));
+  }
   const { version } = JSON.parse(readFileSync(resolve(outputRoot, 'app-version.json'), 'utf8'));
   for (const html of [entry, guide, single, tactical]) {
     const versionedAssets = [...html.matchAll(/(?:src|href)="([^"]+\?v=[^"]+)"/g)];

@@ -5,6 +5,10 @@ on:
     branches:
       - main
     paths:
+      - LICENSE
+      - COPYRIGHT.md
+      - LICENSES/**
+      - THIRD_PARTY_NOTICES.md
       - apps/web/**
       - apps/windows/package.json
       - apps/android/app/build.gradle.kts
@@ -18,6 +22,7 @@ on:
       - scripts/build-procedural-beta.mjs
       - scripts/version-hosted-assets.mjs
       - scripts/build-suite-guides.mjs
+      - scripts/build-license-notice.mjs
       - scripts/build-entry-theme.mjs
       - scripts/build-installed-brand.mjs
       - scripts/build-offline-guide.mjs

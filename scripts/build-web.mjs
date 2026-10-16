@@ -1,8 +1,19 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 import { access, copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import {addLicenseFooter, copyLicenseNotices} from './build-license-notice.mjs';
 const require = createRequire(import.meta.url);
 const tutorialPlayer = require('../packages/qgh-engine/tutorial-player.js');
 
@@ -15,6 +26,7 @@ const suiteWebOutputRoot = resolve(repositoryRoot, 'apps', 'suite-web', 'dist');
 const instructorLedOutputRoot = resolve(outputRoot, 'instructor-led');
 
 const engineFiles = [
+  'license-footer.css',
   'index.html',
   'entry.css',
   'user-guide.html',
@@ -142,7 +154,7 @@ function addPwaMarkup(pageName, source, version) {
   // The simulator's shared pages intentionally use versioned asset URLs. Rewrite
   // their query strings for each PWA build so a browser cannot retain a previous
   // voice or simulator script after the service worker has updated.
-  let html = source.replace(/\?v=[0-9][a-zA-Z0-9.+-]*/g, `?v=${version}`);
+  let html = addLicenseFooter(source).replace(/\?v=[0-9][a-zA-Z0-9.+-]*/g, `?v=${version}`);
   html = html.replace(/((?:src|href)="[a-zA-Z0-9_./-]+\.(?:js|css))"/g, `$1?v=${version}"`);
 
   if (!html.includes("worker-src 'self'")) {
@@ -283,6 +295,7 @@ async function build() {
   await Promise.all(filesToCopy.map(copyEngineFile));
 
   await Promise.all(pwaFiles.map(copyStaticFile));
+  await copyLicenseNotices(outputRoot, repositoryRoot);
   await applyVersionToServiceWorker(version);
 
   await Promise.all(pageFiles.map(async pageName => {

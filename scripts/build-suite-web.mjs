@@ -1,7 +1,18 @@
+/*
+The contents of this file are subject to the Common Public Attribution License Version 1.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at https://opensource.org/license/cpal_1-0. The License is based on the Mozilla Public License Version 1.1 but Sections 14 and 15 have been added to cover use of software over a computer network and provide for limited attribution for the Original Developer. In addition, Exhibit A has been modified to be consistent with Exhibit B.
+Software distributed under the License is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License for the specific language governing rights and limitations under the License.
+The Original Code is ATS SIM BOX.
+The Original Developer is the Initial Developer.
+The Initial Developer of the Original Code is Balaram Reddy. All portions of the code written by Balaram Reddy are Copyright (c) 2026 Balaram Reddy. All Rights Reserved.
+Contributor(s): None designated in this initial notice.
+No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
+*/
+
 import { access, copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import commandReference from '../packages/atc-suite/suite-command-reference.js';
+import {addLicenseFooter, copyLicenseNotices} from './build-license-notice.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const suiteRoot = resolve(repositoryRoot, 'packages', 'atc-suite');
@@ -29,6 +40,7 @@ const suiteFiles = [
   'suite-student.js',
 ];
 const sharedEngineFiles = [
+  'license-footer.css',
   'simulator-core.js',
   'scope-visuals.js',
   'procedure-core.js',
@@ -76,7 +88,7 @@ async function readSuiteVersion() {
 
 function preparePage(source, version) {
   const escape = text => String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-  let html = source.replaceAll('__ATC_GUIDE_VERSION__', version).replace('<!-- DIRECT_COMMANDS -->',
+  let html = addLicenseFooter(source).replaceAll('__ATC_GUIDE_VERSION__', version).replace('<!-- DIRECT_COMMANDS -->',
     commandReference.commands.map(row => `<tr><td>${row.aliases.map(alias => `<code>${escape(alias)}</code>`).join(' / ')}</td><td>${escape(row.description)}</td></tr>`).join('\n'));
   if (!html.includes('pwa.css')) {
     html = html.replace('</head>', '  <link rel="stylesheet" href="pwa.css">\n</head>');
@@ -118,6 +130,7 @@ async function build() {
     ...staticFiles.map(file => copyFrom(staticRoot, file)),
     ...sharedIcons.map(file => copyFrom(sharedIconRoot, file, `icons/${file}`)),
   ]);
+  await copyLicenseNotices(outputRoot, repositoryRoot);
   await applyBuildVersion(version);
   await writeFile(resolve(outputRoot,'remote-config.js'), 'export const remoteConfig = Object.freeze({url:"",publishableKey:""});\n');
 
