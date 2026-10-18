@@ -24,6 +24,8 @@ const PILOT_ASSET_PATH = /^(?:pilot-voices|vendor\/pilot-tts)\/(?:[a-z0-9_-][a-z
 const PILOT_MAX_BYTES = 192 * 1024 * 1024;
 const LEGACY_CACHE_NAMES = new Set(['qgh-simulator-v4.0.1']);
 const APP_SHELL = [
+  './ats-simbox-logo.png',
+  './icons/icon-maskable-512.png',
   './LICENSE.txt',
   './COPYRIGHT.txt',
   './MIT-legacy.txt',

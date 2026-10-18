@@ -26,6 +26,7 @@ const suiteWebOutputRoot = resolve(repositoryRoot, 'apps', 'suite-web', 'dist');
 const instructorLedOutputRoot = resolve(outputRoot, 'instructor-led');
 
 const engineFiles = [
+  'ats-simbox-logo.png',
   'license-footer.css',
   'index.html',
   'entry.css',
@@ -88,6 +89,7 @@ const pwaFiles = [
   '_headers',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png',
   'icons/favicon-32.png',
 ];

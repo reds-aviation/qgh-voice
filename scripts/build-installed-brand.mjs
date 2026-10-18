@@ -14,7 +14,7 @@ import {resolve} from 'node:path';
 // Hosted installed-app identity. Keep document titles, visible branding,
 // manifest IDs, start URLs and scopes unchanged.
 export async function buildInstalledBrand(output, root) {
-  const assets = ['ats-simbox-192.png', 'ats-simbox-512.png', 'ats-simbox-apple.png'];
+  const assets = ['ats-simbox-192.png', 'ats-simbox-512.png', 'ats-simbox-apple.png', 'ats-simbox-maskable-512.png'];
   for (const branch of ['', 'instructor-led/']) {
     const iconRoot = resolve(output, branch, 'icons');
     await mkdir(iconRoot, {recursive: true});
@@ -25,7 +25,8 @@ export async function buildInstalledBrand(output, root) {
     manifest.description = `${branch ? 'QGH, SRA and vectoring instructor' : 'QGH, Procedural, SRA and vectoring'} training. Offline: same PC and browser profile. Online: different devices with internet on both.`;
     manifest.icons = [
       {src: 'icons/ats-simbox-192.png', sizes: '192x192', type: 'image/png', purpose: 'any'},
-      {src: 'icons/ats-simbox-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable'},
+      {src: 'icons/ats-simbox-512.png', sizes: '512x512', type: 'image/png', purpose: 'any'},
+      {src: 'icons/ats-simbox-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable'},
     ];
     await writeFile(path, JSON.stringify(manifest, null, 2) + '\n');
   }
@@ -37,9 +38,10 @@ export async function buildInstalledBrand(output, root) {
     const prefix = page.startsWith('procedural-beta/') ? '../' : '';
     let html = await readFile(path, 'utf8');
     html = html.replace(/<meta name="apple-mobile-web-app-title"[^>]*>/g, '')
-      .replace(/<link rel="apple-touch-icon"[^>]*>/g, '');
+      .replace(/<link rel="apple-touch-icon"[^>]*>/g, '')
+      .replace(/<link rel="icon"[^>]*>/g, '');
     const manifestLink = html.includes('rel="manifest"') ? '' : `<link rel="manifest" href="${prefix}manifest.webmanifest">`;
-    html = html.replace('</head>', `${manifestLink}<meta name="apple-mobile-web-app-title" content="ATS SIM BOX"><link rel="apple-touch-icon" sizes="180x180" href="${prefix}icons/ats-simbox-apple.png"></head>`);
+    html = html.replace('</head>', `${manifestLink}<meta name="apple-mobile-web-app-title" content="ATS SIM BOX"><link rel="icon" type="image/png" sizes="32x32" href="${prefix}icons/favicon-32.png"><link rel="apple-touch-icon" sizes="180x180" href="${prefix}icons/ats-simbox-apple.png"></head>`);
     await writeFile(path, html);
   }
   for (const branch of ['', 'instructor-led/']) {

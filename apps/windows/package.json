@@ -1,6 +1,6 @@
 {
   "name": "qgh-simulator",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Offline single-aircraft and tactical QGH simulator for Windows",
   "author": "Balaram Reddy",
   "license": "CPAL-1.0",

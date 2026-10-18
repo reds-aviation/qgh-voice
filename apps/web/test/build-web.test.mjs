@@ -29,6 +29,7 @@ const outputFiles = directory => absoluteFiles(directory)
   .sort();
 
 const instructorLedFiles = [
+  'ats-simbox-logo.png',
   'LICENSE.txt',
   'COPYRIGHT.txt',
   'MIT-legacy.txt',
@@ -71,10 +72,14 @@ const instructorLedFiles = [
   'app-version.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
+  'icons/apple-touch-icon.png',
+  'icons/favicon-32.png',
 ].sort();
 
 test('web build creates an allowlisted PWA package', () => {
   const expectedFiles = [
+    'ats-simbox-logo.png',
     'LICENSE.txt',
     'COPYRIGHT.txt',
     'MIT-legacy.txt',
@@ -137,6 +142,7 @@ test('web build creates an allowlisted PWA package', () => {
     '_headers',
     'icons/icon-192.png',
     'icons/icon-512.png',
+    'icons/icon-maskable-512.png',
     'icons/apple-touch-icon.png',
     'icons/favicon-32.png',
     ...JSON.parse(readFileSync(resolve(repositoryRoot, 'packages/qgh-engine/pilot-voices/manifest.json'), 'utf8')).assets.map(asset => asset.path),

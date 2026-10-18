@@ -1,5 +1,5 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "go": "1.27.1",
   "files": [
     {
@@ -214,8 +214,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 112605,
-      "sha256": "618eee24734d242079c9118ae589be5287c94bf72f67ee69921b9503b594d8b1"
+      "bytes": 113398,
+      "sha256": "2212c6c4d8332f7a01bb654254dac4f614b8c90be15a38477a395cf70a52ce3d"
     },
     {
       "path": "static/gyani-instructor.png",

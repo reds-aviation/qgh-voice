@@ -40,6 +40,7 @@ const suiteFiles = [
   'suite-student.js',
 ];
 const sharedEngineFiles = [
+  'ats-simbox-logo.png',
   'license-footer.css',
   'simulator-core.js',
   'scope-visuals.js',
@@ -68,6 +69,9 @@ const staticFiles = [
 const sharedIcons = [
   'icon-192.png',
   'icon-512.png',
+  'icon-maskable-512.png',
+  'apple-touch-icon.png',
+  'favicon-32.png',
 ];
 const pageFiles = ['index.html', 'instructor.html', 'student.html', 'training-guide.html'];
 

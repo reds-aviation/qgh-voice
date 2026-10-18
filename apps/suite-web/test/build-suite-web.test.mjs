@@ -28,6 +28,7 @@ const suiteProbe = resolve(repositoryRoot, 'packages', 'atc-suite', '__suite-bui
 const staticProbe = resolve(repositoryRoot, 'apps', 'suite-web', 'static', '__suite-static-probe__.txt');
 
 const expectedFiles = [
+  'ats-simbox-logo.png',
   'LICENSE.txt',
   'COPYRIGHT.txt',
   'MIT-legacy.txt',
@@ -70,6 +71,9 @@ const expectedFiles = [
   'app-version.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
+  'icons/apple-touch-icon.png',
+  'icons/favicon-32.png',
 ].sort();
 
 const absoluteFiles = directory => readdirSync(directory, { withFileTypes: true })

@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.7",
+  "revision": "1.0.8",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -30,6 +30,28 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
   ],
   "entries": [
+    {
+      "id": "app-logo",
+      "title": "ATS SIM BOX logo",
+      "topics": [
+        "suite",
+        "qgh-individual",
+        "qgh-instructor",
+        "procedural",
+        "sra"
+      ],
+      "controls": [],
+      "anchor": "help",
+      "priority": true,
+      "match": "\\b(?:logo|brand badge|roundel|app icon|browser icon|install(?:ed)? icon)\\b",
+      "text": "The ATS SIM BOX badge combines an air traffic controller, radar, an ATC tower, an airliner and a roundel. It appears on suite, setup and Help pages, and in browser and install icons.",
+      "questions": [
+        "What does the new ATS SIM BOX logo represent?",
+        "Why does the app icon look different?",
+        "Where does the app logo appear?",
+        "Where is the simulator badge shown?"
+      ]
+    },
     {
       "id": "copyright-licence",
       "title": "Copyright, licence and source code",

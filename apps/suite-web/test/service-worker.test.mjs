@@ -71,6 +71,10 @@ test('install precaches the complete local two-position shell', async () => {
   assert.equal(harness.calls.addAll.length, 1);
   const shell = harness.calls.addAll[0];
   const expectedShell = [
+    './ats-simbox-logo.png',
+    './icons/icon-maskable-512.png',
+    './icons/apple-touch-icon.png',
+    './icons/favicon-32.png',
     './LICENSE.txt',
     './COPYRIGHT.txt',
     './MIT-legacy.txt',

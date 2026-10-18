@@ -18,6 +18,10 @@ const CACHE_NAME = `${CACHE_PREFIX}v${APP_VERSION}`;
 // This explicit shell is the complete offline boundary. Session messages and
 // review data are intentionally never written to Cache Storage.
 const APP_SHELL = [
+  './ats-simbox-logo.png',
+  './icons/icon-maskable-512.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32.png',
   './LICENSE.txt',
   './COPYRIGHT.txt',
   './MIT-legacy.txt',
