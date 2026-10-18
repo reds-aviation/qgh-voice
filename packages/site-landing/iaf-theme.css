@@ -45,8 +45,8 @@ body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#st
 body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header{
   --ink:#fff;--muted:#d5e6f3;--entry-ink:#fff;--entry-muted:#d5e6f3;
   --teal:#e6f2fc;--teal-dark:#e6f2fc;--entry-accent:#e6f2fc;
-  min-height:80px;height:auto;padding:12px 20px 12px 84px;gap:16px;
-  background:var(--iaf-header) url('ats-simbox-logo.png') 20px center/48px 48px no-repeat;
+  min-height:80px;height:auto;padding:12px 20px 12px 70px;gap:16px;
+  background:var(--iaf-header) url('iaf-roundel.png') 20px center/34px 34px no-repeat;
   color:#fff;border-radius:0;border-bottom:3px solid;
   border-image:linear-gradient(to right,var(--iaf-saffron) 0 33.333%,#fff 33.333% 66.666%,var(--iaf-green) 66.666%) 1;
   flex-wrap:wrap;
@@ -170,7 +170,7 @@ body:is([data-suite-surface="qgh"],[data-suite-surface="instructor"],[data-suite
   body[data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active) .tactical-app-header,
   body[data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])) #consoleNavigation .site-header,
   body[data-suite-surface="join"]:has(:is(#joinPanel,#waitingPanel,#readyPanel,#studentEnded):not([hidden])):has(#studentWorkspace[hidden]) #studentNavigation .site-header,
-  body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header{padding:12px 16px 12px 72px;background-position:16px 16px;background-size:40px 40px;gap:12px}
+  body[data-suite-surface="procedural"]:not(.desk-open) .topbar.suite-entry-header{padding:12px 16px 12px 60px;background-position:16px 16px;background-size:30px 30px;gap:12px}
 }
 @media print{body[data-suite-surface="guide"]{background:#fff;color:#132d46}}
 
