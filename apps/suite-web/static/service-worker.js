@@ -123,6 +123,18 @@ self.addEventListener('fetch', event => {
   const cacheKey = shellCacheKey(event.request);
   if (!cacheKey) return;
 
+  // Revalidate installed-app identity without replacing the active exercise.
+  if (cacheKey.url === new URL('./manifest.webmanifest', self.registration.scope).href) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request, { cache: 'no-cache' });
+        if (response.ok) return response;
+      } catch { /* Use the installed manifest when offline. */ }
+      return (await cachedShell(cacheKey)) || new Response('', { status: 504, statusText: 'Offline manifest unavailable' });
+    })());
+    return;
+  }
+
   const requestPath = new URL(event.request.url).pathname;
   if (PAGE_SHELL_PATHS.has(requestPath)) {
     event.respondWith((async () => {

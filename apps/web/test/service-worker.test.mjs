@@ -18,9 +18,9 @@ const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
 const workerTemplate = readFileSync(resolve(repositoryRoot, 'apps', 'web', 'static', 'service-worker.js'), 'utf8');
 const scope = 'https://qgh.example/simulator/';
 
-function createWorkerHarness({ cachedResponse = null, cacheNames = [], version = '4.0.2' } = {}) {
+function createWorkerHarness({ cachedResponse = null, cacheNames = [], version = '4.0.2', networkFails = false, networkStatus = 200 } = {}) {
   const handlers = new Map();
-  const cacheCalls = { deleted: [], match: [], put: 0 };
+  const cacheCalls = { deleted: [], match: [], put: 0, fetchOptions: [] };
   let networkCalls = 0;
   const cache = {
     addAll: async () => {},
@@ -52,9 +52,11 @@ function createWorkerHarness({ cachedResponse = null, cacheNames = [], version =
         return true;
       },
     },
-    fetch: async () => {
+    fetch: async (_request, options) => {
       networkCalls += 1;
-      return new Response('network');
+      cacheCalls.fetchOptions.push(options);
+      if (networkFails) throw new TypeError('offline');
+      return new Response('network', {status: networkStatus});
     },
     self,
   }, { filename: 'service-worker.js' });
@@ -105,6 +107,28 @@ test('service worker serves a versioned approved shell asset from the named cach
   assert.deepEqual(harness.cacheCalls.match, [`${scope}simulator.js`], 'query variants use the canonical approved shell key');
   assert.equal(harness.cacheCalls.put, 0, 'runtime responses are never written to Cache Storage');
   assert.equal(harness.networkCalls(), 0, 'an approved cached asset remains available offline');
+});
+
+test('installed-app manifest revalidates online without overwriting the offline shell', async () => {
+  const harness = createWorkerHarness({ cachedResponse: new Response('old manifest') });
+  let reply;
+  harness.fetchHandler({request: new Request(`${scope}manifest.webmanifest`), respondWith: value => {reply = value;}});
+  assert.equal(await (await reply).text(), 'network');
+  assert.equal(harness.networkCalls(), 1);
+  assert.equal(harness.cacheCalls.fetchOptions[0].cache, 'no-cache');
+  assert.deepEqual(harness.cacheCalls.match, []);
+  assert.equal(harness.cacheCalls.put, 0);
+});
+
+test('installed-app manifest keeps its offline fallback on connection and HTTP errors', async () => {
+  for (const failure of [{networkFails: true}, {networkStatus: 503}]) {
+    const harness = createWorkerHarness({...failure, cachedResponse: new Response('offline manifest')});
+    let reply;
+    harness.fetchHandler({request: new Request(`${scope}manifest.webmanifest`), respondWith: value => {reply = value;}});
+    assert.equal(await (await reply).text(), 'offline manifest');
+    assert.deepEqual(harness.cacheCalls.match, [`${scope}manifest.webmanifest`]);
+    assert.equal(harness.cacheCalls.put, 0);
+  }
 });
 
 test('service worker serves release-qualified current assets offline', async () => {

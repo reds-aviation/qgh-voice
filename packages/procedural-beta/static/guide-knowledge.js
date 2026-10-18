@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.8",
+  "revision": "1.0.9",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
@@ -43,13 +43,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "controls": [],
       "anchor": "help",
       "priority": true,
-      "match": "\\b(?:logo|brand badge|roundel|app icon|browser icon|install(?:ed)? icon)\\b",
-      "text": "The ATS SIM BOX badge combines an air traffic controller, radar, an ATC tower, an airliner and a roundel. It appears on suite, setup and Help pages, and in browser and install icons.",
+      "match": "\\b(?:logo|brand badge|simulator badge|roundel|icons?|review app update|updat.*installed app)\\b",
+      "text": "The ATS SIM BOX badge combines an air traffic controller, radar, an ATC tower, an airliner and a roundel. It appears on suite, setup and Help pages, and in browser and install icons. An app installed from the website can keep its previous Android or Windows icon until the browser detects and applies the new icon. Finish the current exercise, open the installed app while online, choose Update app if offered, then close and reopen it. In newer Chrome versions, open the app's three-dot menu and choose Review app update if shown, then accept the new ATS SIM BOX logo. This browser approval is separate from the simulator's Update app action. Android update checks and the device launcher can take longer; the simulator cannot promise an immediate icon refresh. This update does not erase saved exercises. Older browsers may require separate installation help if they cannot apply icon changes.",
       "questions": [
         "What does the new ATS SIM BOX logo represent?",
         "Why does the app icon look different?",
         "Where does the app logo appear?",
-        "Where is the simulator badge shown?"
+        "Where is the simulator badge shown?",
+        "Why is the Android app icon still old?",
+        "Why did the Windows app logo not change?",
+        "How do I update the icon of the app installed from the website?",
+        "Where is Review app update?",
+        "Does updating the logo delete my saved exercises?"
       ]
     },
     {

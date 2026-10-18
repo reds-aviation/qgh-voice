@@ -67,5 +67,9 @@
 /manifest.webmanifest
   Cache-Control: no-cache
 
+/instructor-led/manifest.webmanifest
+  Cache-Control: no-cache
+  Content-Type: application/manifest+json; charset=utf-8
+
 /app-version.json
   Cache-Control: no-cache

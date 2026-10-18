@@ -366,6 +366,19 @@ self.addEventListener('fetch', event => {
   const cacheKey = shellCacheKey(request);
   if (!cacheKey) return;
 
+  // Installed-app identity must revalidate even while the app shell is cached.
+  // Keep the installed manifest URL stable and retain its offline fallback.
+  if (cacheKey.url === new URL('./manifest.webmanifest', self.registration.scope).href) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request, { cache: 'no-cache' });
+        if (response.ok) return response;
+      } catch { /* Use the installed manifest when offline. */ }
+      return (await cachedShell(cacheKey)) || new Response('', { status: 504, statusText: 'Offline manifest unavailable' });
+    })());
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith((async () => {
       try {

@@ -20,9 +20,9 @@ const workerTemplate = readFileSync(resolve(staticRoot, 'service-worker.js'), 'u
 const registrationSource = readFileSync(resolve(staticRoot, 'pwa-register.js'), 'utf8');
 const scope = 'https://training.example/atc-suite/';
 
-function createWorkerHarness({ cachedResponse = null, cacheNames = [], networkFails = false } = {}) {
+function createWorkerHarness({ cachedResponse = null, cacheNames = [], networkFails = false, networkStatus = 200 } = {}) {
   const handlers = new Map();
-  const calls = { addAll: [], deleted: [], match: [], skipWaiting: 0 };
+  const calls = { addAll: [], deleted: [], match: [], skipWaiting: 0, fetchOptions: [] };
   const cache = {
     addAll: async paths => { calls.addAll.push([...paths]); },
     match: async request => {
@@ -52,9 +52,10 @@ function createWorkerHarness({ cachedResponse = null, cacheNames = [], networkFa
         return true;
       },
     },
-    fetch: async () => {
+    fetch: async (_request, options) => {
+      calls.fetchOptions.push(options);
       if (networkFails) throw new TypeError('offline');
-      return new Response('network');
+      return new Response('network', {status: networkStatus});
     },
     self,
   }, { filename: 'service-worker.js' });
@@ -166,6 +167,25 @@ test('query-tainted, wrong-version, cross-origin and non-GET requests bypass the
     assert.equal(response, undefined, `${request.method} ${request.url} is not intercepted`);
   }
   assert.deepEqual(harness.calls.match, []);
+});
+
+test('installed instructor manifest revalidates online while normal assets stay cached', async () => {
+  const harness = createWorkerHarness({cachedResponse: new Response('old manifest')});
+  let reply;
+  harness.handlers.get('fetch')({request: new Request(`${scope}manifest.webmanifest`), respondWith: value => {reply = value;}});
+  assert.equal(await (await reply).text(), 'network');
+  assert.equal(harness.calls.fetchOptions[0].cache, 'no-cache');
+  assert.deepEqual(harness.calls.match, []);
+});
+
+test('installed instructor manifest remains available offline or after an HTTP error', async () => {
+  for (const failure of [{networkFails: true}, {networkStatus: 503}]) {
+    const harness = createWorkerHarness({...failure, cachedResponse: new Response('offline manifest')});
+    let reply;
+    harness.handlers.get('fetch')({request: new Request(`${scope}manifest.webmanifest`), respondWith: value => {reply = value;}});
+    assert.equal(await (await reply).text(), 'offline manifest');
+    assert.deepEqual(harness.calls.match, [`${scope}manifest.webmanifest`]);
+  }
 });
 
 test('entry navigation, shared entry layout and scope graphics survive offline use', async () => {
