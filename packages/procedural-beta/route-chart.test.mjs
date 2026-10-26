@@ -96,6 +96,21 @@ test('route name and FL limits form a single two-line label in display order', (
     const environment = chart.chartEnvironment({ runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25, windSpeedKt: 20 });
     assert.deepEqual(environment, { runwayOffsetNm: .15, runwayCenterXNm: 0, runwayCenterYNm: 2.25 });
 });
+
+test('compact published route labels keep one designator without ambiguous unlabelled Odd/Even arrows', () => {
+    const value = { ...route, id: 'aip-test-route', name: 'A1 published route',
+        publishedSegments: [{ oddLevels: '↑', evenLevels: '↓', levelLimits: 'FL 460 FL 270 Class D 2400 FT' }] };
+    const before = JSON.stringify(value), labels = [], calls = [];
+    const ctx = Object.fromEntries(['beginPath', 'moveTo', 'lineTo', 'stroke', 'save', 'restore', 'setLineDash'].map(name => [name, (...args) => calls.push([name, ...args])]));
+    chart.drawRouteChart(ctx, value, fixes, screen, { width: 300, height: 200, compactLabels: true, label: text => { labels.push(text); return true; } });
+    assert.deepEqual(labels, ['A1']);
+    assert.equal(calls.filter(call => call[0] === 'lineTo').length, 1, 'only route geometry is drawn; published table directions are never shown without their qualifier');
+    assert.equal(JSON.stringify(value), before, 'full source levels and direction table remain unchanged');
+    const customLabels = [];
+    chart.drawRouteChart(ctx, { ...route, chartDirection: 'both', levelLimits: 'FL260/FL460' }, fixes, screen,
+        { width: 300, height: 200, compactLabels: true, label: text => customLabels.push(text) });
+    assert.deepEqual(customLabels, ['Route\nFL260/FL460'], 'custom route direction and concise authored levels remain available');
+});
 test('published rebase retains assigned old navigation while separate current points keep truthful WGS84', () => {
     const oldOrigin = { latitude: 26, longitude: 73 }, origin = { latitude: 27, longitude: 73 };
     const publishedFixes = ['A', 'B', 'C'].map((name, i) => ({ id: `aip-base-fix-${name}`, name, ...geometry.destination(oldOrigin, 90, i * 10) }));

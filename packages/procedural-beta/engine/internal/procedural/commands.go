@@ -469,8 +469,18 @@ func apply(s *State, c Command, role string) (effect, error) {
 		record(s, "scope-display", "Shared scope chart selection updated", "")
 	case "environment":
 		v := s.Environment
+		// Decode the origin independently so an in-place JSON update cannot
+		// conceal a changed chart reference when comparing the old environment.
+		if v.ChartOrigin != nil {
+			origin := *v.ChartOrigin
+			v.ChartOrigin = &origin
+		}
 		if e := decode(c.Payload, &v); e != nil {
 			return efx, e
+		}
+		if chartReferenceChanged(s.Environment, v) {
+			v.PublishedAirspace = nil
+			v.ReferenceBoundaries = nil
 		}
 		if e := validateEnvironment(v); e != nil {
 			return efx, e

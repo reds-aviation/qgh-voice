@@ -277,7 +277,8 @@ test('interprets flexible local RT phrasing only when the essential command slot
   assert.equal(Voice.parseCommand('Raven One Two Three transmit for D/F', {
     callsigns: [{ id: 'R12', callsign: 'RAVEN 12' }, { id: 'R123', callsign: 'RAVEN 123' }]
   }).aircraft, 'R123', 'the complete configured numeric callsign must win over its prefix');
-  assert.equal(Voice.parseCommand('would you turn right heading two seven zero', options).heading, 270, 'recognized lead-in fillers must not block a valid RT call');
+  assert.equal(Voice.parseCommand('please turn right heading two seven zero', options).heading, 270, 'polite imperative instructions remain accepted');
+  assert.equal(Voice.parseCommand('would you turn right heading two seven zero', options).accepted, false, 'a question is not a manoeuvre instruction');
   assert.equal(Voice.parseCommand('Tiger turn right heading two seven zero', options).accepted, false, 'an unknown callsign must not become a generic command');
   assert.equal(Voice.parseCommand('the speed is two hundred', options).accepted, false, 'conversation must not alter a field');
   [
@@ -290,6 +291,45 @@ test('interprets flexible local RT phrasing only when the essential command slot
   ].forEach(transcript => {
     assert.equal(Voice.parseCommand(transcript, options).accepted, false, `conflicting call must be rejected: ${transcript}`);
   });
+});
+
+test('complete heading variants and compact ASR spacing retain the same assigned manoeuvre', () => {
+  const options = { callsigns: [{ id: 'R', callsign: 'RAVEN 21' }, { id: 'N', callsign: '101' }] };
+  for (const addressee of ['', 'Raven twenty one ', 'one zero one ']) for (const side of ['left', 'right']) {
+    for (const body of [
+      `turn ${side} 260`, `turn ${side} heading 260`, `turn ${side} heading260`, `turn ${side}260`,
+      `turn ${side} to 260`, `turn ${side} to heading 260`, `turn ${side} onto heading 260`,
+      `turn ${side} heading two six zero`, `turn ${side} heading two hundred and sixty`,
+      `please turn ${side} heading two sixty degrees magnetic`, `steer ${side} heading 260 please`
+    ]) {
+      const phrase = addressee + body, command = Voice.parseCommand(phrase, options);
+      assert.equal(command.accepted, true, phrase);
+      assert.equal(command.intent, 'normal-turn-heading', phrase);
+      assert.equal(command.heading, 260, phrase);
+      assert.equal(command.side, side, phrase);
+      assert.equal(command.aircraft, !addressee ? undefined : addressee.startsWith('Raven') ? 'R' : 'N', phrase);
+    }
+  }
+});
+
+test('questions, conversation, negation and incomplete targets cannot become turns of any kind', () => {
+  const options = { callsigns: [{ id: 'R', callsign: 'RAVEN 21' }] };
+  for (const addressee of ['', 'Raven 21 ']) for (const body of [
+    'can you turn right heading260', 'could you turn right 260', 'would you turn right 260',
+    'did you turn right heading 260', 'are you turning right 260', 'turn right heading260?',
+    "don't turn right heading260", 'don’t turn right heading 260', 'dont turn right 260', 'don t turn right260',
+    'do not turn right 260', 'we will turn right heading260', 'the phrase turn right heading260',
+    'did turn right heading260', 'turn right heading260 yesterday', 'turn right heading260 or 270',
+    'turn right heading260 270', 'turn right heading999', 'turn right heading two six',
+    'turn right heading', 'turn right heading260 then report heading', 'turn right heading260 if able',
+    'turn right heading260 correction 270'
+  ]) {
+    const phrase = addressee + body;
+    assert.equal(Voice.parseCommand(phrase, options).accepted, false, phrase);
+  }
+  for (const phrase of ['Tiger 21 turn right heading260', 'Raven22 turn right heading260', 'Raven21 turn right heading260']) {
+    assert.equal(Voice.parseCommand(phrase, options).accepted, false, 'A compact/unknown callsign is not guessed: ' + phrase);
+  }
 });
 
 test('rejects qualified, malformed-unit, and compound calls rather than silently executing a subset', () => {

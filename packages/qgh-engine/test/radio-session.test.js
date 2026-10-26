@@ -111,6 +111,24 @@ test('DF is live only during TX, freezes a complete observation at release and b
   assert.equal(h.radio.read().phase, 'idle');
 });
 
+test('D/F observations never expose range or heading, while explicit pilot reports remain available', () => {
+  const h = receiver();
+  h.move({ range: 12.3, heading: 325, x: 12, y: 3, simulationSeconds: 100 });
+  h.radio.transmit('A');
+  const assertBearingOnly = () => {
+    const observation = h.radio.read();
+    assert.equal(observation.callsign, 'RAVEN 21');
+    assert.equal(observation.qdm, 60);
+    for (const key of ['range', 'heading', 'x', 'y', 'simulationSeconds']) assert.equal(Object.hasOwn(observation, key), false, key);
+  };
+  assertBearingOnly(); h.radio.release(); h.time(1999); assertBearingOnly();
+  h.time(2000); assert.equal(h.radio.read().phase, 'idle');
+  const aircraft = { callsign: 'RAVEN 21', range: 12.3, heading: 325, procedure: 'normal' };
+  assert.doesNotMatch(Radio.replyFor({ intent: 'transmit-df' }, aircraft).text, /12\.3|325|RANGE|HEADING/);
+  assert.match(Radio.replyFor({ intent: 'request-distance' }, aircraft).text, /^RANGE 12\.3 NM/);
+  assert.match(Radio.replyFor({ intent: 'report-heading' }, aircraft).text, /^HEADING 325°M/);
+});
+
 test('new transmissions supersede held bearings and stale release callbacks cannot end them', () => {
   const h = receiver();
   const first = h.radio.transmit('A');

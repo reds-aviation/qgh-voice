@@ -24,7 +24,7 @@ function normalizeHeader(html) {
       });
     }else header=header.replace('</header>','<div class="iaf-header-credit"><strong>Flt Lt Balaram Reddy</strong><small>Service No. 38703</small></div></header>');
     return header.replace(/SERVICE NO\. 38703/g,'Service No. 38703')
-      .replace(/>TRAINING CENTRE</g,'>Training centre<')
+      .replace(/>TRAINING CENTRE</g,'>Training guide<')
       .replace(/>CHANGE QGH TYPE</g,'>Change QGH type<')
       .replace(/>SUITE HOME</g,'>Suite home<')
       .replace(/>ATC SUITE</g,'>Suite home<')
@@ -69,8 +69,8 @@ export async function buildEntryTheme(output, root, version) {
       html = html.replace(/(<meta name="theme-color" content=")[^"]+/, '$1#365e7b');
     }
     if (surface === 'qgh') {
-      html = html.replace('<title>QGH Simulator</title>', '<title>ATS SIM BOX · Version 1 · QGH</title>')
-        .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATS SIM BOX</h1><span class="product-version">Version 1</span>')
+      html = html.replace('<title>QGH Simulator</title>', '<title>ATS SIM BOX · QGH</title>')
+        .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATS SIM BOX</h1>')
         .replace('SELECT QGH TYPE', 'SINGLE QGH · INDIVIDUAL PRACTICE')
         .replace('Choose your exercise</h2>', 'QGH</h2><p class="flow-subtitle">Cloud-breaking procedure</p>')
         .replace('Practise one aircraft, or manage a small tactical flight. Each path opens its own setup before the exercise begins.', 'Practise the QGH cloud-breaking procedure. Choose a single aircraft or tactical flight, then prepare your exercise.')
@@ -95,7 +95,7 @@ export async function buildEntryTheme(output, root, version) {
     }
     // Operational guides stay public; the owner’s hardware handbook is private.
     if (['qgh', 'instructor', 'procedural', 'guide'].includes(surface)) {
-      html = html.replace('</body>', `<footer class="flow-footer"><span>ATS SIM BOX · Version 1</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
+      html = html.replace('</body>', `<footer class="flow-footer"><span>ATS SIM BOX</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
     }
     html=normalizeHeader(html);
     await writeFile(path, html);

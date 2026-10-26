@@ -26,6 +26,7 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
   let qdm = 60;
   let enabled = true;
   const headings = { A: 230, B: 230 };
+  const ranges = { A: 10, B: 10 };
   const callsigns = { A: 'FALCON 11', B: 'RAVEN 21' };
   let simulationSeconds = 0;
   let procedure = 'normal';
@@ -33,7 +34,7 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
   const timers = new Map();
   const utterances = [];
   const gates = [];
-  const snapshots = id => ({ source: id || selected, callsign: callsigns[id || selected], procedure, heading: headings[id || selected], simulationSeconds, range: 10, qdm, qte: (qdm + 180) % 360 });
+  const snapshots = id => ({ source: id || selected, callsign: callsigns[id || selected], procedure, heading: headings[id || selected], simulationSeconds, range: ranges[id || selected], qdm, qte: (qdm + 180) % 360 });
   const setTimer = (callback, ms) => { const id = ++next; timers.set(id, { callback, at: time + ms }); return id; };
   const clearTimer = id => timers.delete(id);
   let paints = 0;
@@ -95,11 +96,33 @@ function harness(voices = [], enableAudio = true, nativeCapability, bundled = fa
     queuedSpeech: () => queuedSpeech, cancellations: () => cancellations,
     callsign: (id, value) => { callsigns[id] = value; },
     heading: (id, value, seconds = .25) => { headings[id] = value; simulationSeconds += seconds; sandbox.QGHRadioWorkspace.observeHeading(id, value); },
+    range: (id, value) => { ranges[id] = value; },
     procedure: value => { procedure = value; },
     select: id => { selected = id; }, move: bearing => { qdm = bearing; }, close: () => { enabled = false; }, paints: () => paints };
 }
 const local = [{ localService: true, lang: 'en-IN', name: 'Local test voice' }];
 const turn = { intent: 'normal-turn-heading', aircraft: 'A', side: 'right', heading: 230 };
+
+test('only explicit distance requests disclose range; delayed reports sample the addressed aircraft', () => {
+  const h = harness([], false);
+  for (const command of [{ intent: 'transmit-df', aircraft: 'A' }, turn, { intent: 'report-heading', aircraft: 'A' }]) {
+    h.radio.controllerStart(); h.radio.acknowledge(command); h.radio.controllerEnd(); h.advance(300);
+    assert.doesNotMatch(h.captions.at(-1), /RANGE|\bNM\b/);
+    assert.equal(Object.hasOwn(h.receiver.read(), 'range'), false);
+  }
+  h.radio.controllerStart();
+  h.radio.acknowledge({ intent: 'request-distance', aircraft: 'A' });
+  h.range('A', 8.4); h.range('B', 31.7); h.select('B');
+  h.radio.controllerEnd(); h.advance(300);
+  assert.equal(h.captions.at(-1), 'RANGE 8.4 NM · FALCON 11');
+  assert.equal(h.receiver.read().source, 'A');
+  assert.equal(Object.hasOwn(h.receiver.read(), 'range'), false, 'the explicit report does not turn D/F into a range sensor');
+  h.range('A', 7.2); h.advance(100);
+  assert.equal(h.captions.at(-1), 'RANGE 8.4 NM · FALCON 11', 'the reported value remains a sample');
+  h.radio.controllerStart(); h.radio.acknowledge({ intent: 'transmit-df', aircraft: 'B' }); h.radio.controllerEnd(); h.advance(300);
+  assert.equal(h.captions.at(-1), 'TRANSMITTING FOR D/F · RAVEN 21');
+  assert.equal(Object.hasOwn(h.receiver.read(), 'range'), false);
+});
 
 test('queued audible replies reserve automatic listening only while the selected output can speak', () => {
   for (const h of [harness(local), harness([], true, 'ready'), harness([], true, undefined, true)]) {

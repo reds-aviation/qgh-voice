@@ -40,6 +40,7 @@ const suiteFiles = [
   'suite-student.js',
 ];
 const sharedEngineFiles = [
+  'published-boundaries.js',
   'ats-simbox-logo.png',
   'license-footer.css',
   'simulator-core.js',
@@ -51,6 +52,11 @@ const sharedEngineFiles = [
   'fonts/OFL-1.1.txt',
 ];
 const sharedProceduralFiles = [
+  'published-airspace.js',
+  'published-airspace.css',
+  'india-airbase-lfa-catalogue.json',
+  'india-airspace.json',
+  'india-aip-enroute.json',
   'remote-service.js',
   'student-plotting.js',
   'student-plotting.css',
@@ -99,7 +105,7 @@ function preparePage(source, version) {
   }
   html = html.replace(
     /BETA PROJECT · UNDER DEVELOPMENT · USER TRIALS · [0-9]+\.[0-9]+\.[0-9]+(?:[-+][a-zA-Z0-9.-]+)?/g,
-    'ATS SIM BOX · Version 1'
+    'ATS SIM BOX'
   );
   return html.replace(
     /((?:src|href)=")([^"#?]+\.(?:js|css))("\s*)/g,

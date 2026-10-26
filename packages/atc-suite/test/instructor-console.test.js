@@ -40,7 +40,7 @@ function harness(mode = 'qgh', sessionAdapter = Session, displayAdapter = Displa
   const document = { body: { classList: { add() {}, remove() {} } }, getElementById: node, querySelectorAll: () => [], createElement: () => node(`created-${nodes.size}`) };
   let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, updateAll, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, openTrafficSetup, returnToExercise, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
+    '\n globalThis.fixture = {state, updateAll, configureActiveControls, command, scopeTransmit, finishTransmission, publishCurrentObservation, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, openTrafficSetup, returnToExercise, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
   const context = { document, structuredClone, sessionStorage: store(), localStorage: store(),
     ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: sessionAdapter, ATCSuiteDisplay: displayAdapter, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     ATCSuiteWorkspace: {bindShell(options) {shellOptions = options;}},
@@ -61,6 +61,94 @@ function harness(mode = 'qgh', sessionAdapter = Session, displayAdapter = Displa
   }
   return { ...context.fixture, context, ctx, node, captions, timers, event, get shellOptions(){return shellOptions;},tick(ms) { now += ms; }, flush() { const jobs = [...timers.values()]; timers.clear(); jobs.forEach(fn => fn()); } };
 }
+
+test('instructor wheel zoom works during running and paused exercises without changing flight or pan', () => {
+  for (const mode of ['qgh', 'sra', 'surveillance']) {
+    const h = harness(mode);
+    h.state.scopePan = { x: 12, y: -8 };
+    for (const lifecycle of ['running', 'paused']) {
+      h.state.simulation = Core.setLifecycle(h.state.simulation, lifecycle);
+      const before = h.state.simulation;
+      h.node('scopeRange').value = '40';
+      h.collapseSetupControls();
+      const wheel = { deltaY: -100, preventDefault() { this.prevented = true; } };
+      h.node('instructorScope').emit('wheel', wheel);
+      assert.equal(h.node('scopeRange').value, '20', `${mode}/${lifecycle}`);
+      assert.equal(wheel.prevented, true);
+      h.node('instructorScope').emit('wheel', { ...wheel, deltaY: 100, ctrlKey: true });
+      assert.equal(h.node('scopeRange').value, '40');
+      assert.equal(h.state.simulation, before, 'Zoom is display-only');
+      assert.deepEqual(h.state.scopePan, { x: 12, y: -8 });
+      assert.equal(h.captions.length, 0);
+    }
+  }
+});
+
+test('SRA and vectoring expose Position report in the main controls and radio shortcut', () => {
+  for (const mode of ['surveillance', 'sra']) {
+    const h = harness(mode);
+    h.configureActiveControls(); h.updateAll();
+    assert.equal(h.node('reportPosition').hidden, false, mode);
+    assert.equal(h.node('transmitDf').hidden, true, mode);
+    assert.equal(h.node('quickTransmit').textContent, 'Position report', mode);
+    assert.equal(h.node('radarApproachCommands').hidden, mode === 'surveillance', 'Vectoring has no empty approach controls');
+    h.state.simulation = Core.selectAircraft(h.state.simulation, 'AC2');
+    for (const send of [() => h.command({type: 'report-position'}, 'reportPosition'), () => h.scopeTransmit()]) {
+      const before = h.state.simulation, captions = h.captions.length;
+      const result = send();
+      assert.equal(result.outcome.accepted, true);
+      assert.equal(result.outcome.readback.aircraftId, 'AC2');
+      assert.equal(h.captions.length, captions + 1, 'One action creates exactly one student transmission');
+      assert.match(h.captions.at(-1), /QTE 080 DEGREES, RANGE 24\.0 NAUTICAL MILES/);
+      assert.match(h.captions.at(-1), /102/);
+      assert.deepEqual(h.state.simulation.aircraftList, before.aircraftList, 'A report cannot change either aircraft');
+      assert.equal(h.state.simulation.simulationSeconds, before.simulationSeconds);
+      assert.equal(h.state.simulation.selectedAircraftId, 'AC2');
+      assert.equal(h.state.transmission.aircraftId, 'AC2');
+      assert.equal(h.state.review.snapshot().events.at(-1).command.type, 'report-position');
+    }
+  }
+});
+
+test('QGH retains D/F transmission and does not offer radar position reports', () => {
+  const h = harness();
+  h.configureActiveControls(); h.updateAll();
+  assert.equal(h.node('reportPosition').hidden, true);
+  assert.equal(h.node('transmitDf').hidden, false);
+  assert.equal(h.node('quickTransmit').textContent, 'Transmit for D/F');
+  const result = h.scopeTransmit();
+  assert.equal(result.outcome.command.type, 'transmit');
+  assert.equal(h.captions.length, 1);
+  assert.doesNotMatch(h.captions[0], /QTE|RANGE/);
+});
+
+test('SRA and vectoring D/F follows pilot replies, holds for two wall seconds, then blanks without affecting flight', () => {
+  for (const mode of ['sra', 'surveillance']) {
+    const h = harness(mode);
+    h.state.simulation = Core.selectAircraft(h.state.simulation, 'AC2');
+    h.publishCurrentObservation();
+    assert.equal(h.state.latestObservation.homing.status, 'idle');
+    assert.equal(h.state.latestObservation.homing.bearingDeg, undefined);
+    const aircraft = JSON.stringify(h.state.simulation.aircraftList);
+    h.command({ type: 'report-position' }, 'reportPosition');
+    assert.equal(h.state.latestObservation.homing.status, 'live');
+    assert.equal(h.state.latestObservation.homing.callsign, '102');
+    assert.ok(Math.abs(h.state.latestObservation.homing.bearingDeg - 260) < 1e-8);
+    assert.equal(h.node('instructorHoming').hidden, false);
+    assert.equal(h.node('instructorDfBearing').textContent, '260°');
+    h.tick(1000); h.finishTransmission();
+    const held = h.state.latestObservation.homing;
+    assert.equal(held.status, 'held');
+    h.state.trainingTimeRate = 10;
+    h.tick(1999); h.publishCurrentObservation(); assert.deepEqual(h.state.latestObservation.homing, held);
+    h.tick(1); h.publishCurrentObservation(); assert.equal(h.state.latestObservation.homing.status, 'idle');
+    h.updateAll(); assert.equal(h.node('instructorDfBearing').textContent, '—');
+    assert.equal(JSON.stringify(h.state.simulation.aircraftList), aircraft);
+    h.command({ type: 'report-position' }, 'reportPosition');
+    h.state.sensor = Sensors.createSurveillanceSensor({ rpm: 15 });
+    h.publishCurrentObservation(); assert.equal(h.state.latestObservation.homing.status, 'idle', 'new radar instance cannot inherit a previous exercise transmission');
+  }
+});
 
 test('creating a local session keeps the instructor desk without opening a controller window',async()=>{
   const hub=Session.createFakeTransportHub(),calls=[],h=harness('qgh',{...Session,
@@ -96,12 +184,12 @@ test('explicit controller open uses the paired portal and updates new-session PI
 
 test('reduced motion hides the decorative radar sweep while retaining aircraft and SRA references', () => {
   const h = harness('sra'), simulation = h.state.simulation;
-  assert.ok(h.ctx.strokes.includes('rgba(90,210,164,.5)'));
+  assert.ok(h.ctx.strokes.includes('#389481'));
   h.ctx.strokes.length = 0;
   h.context.matchMedia = query => ({ matches: query === '(prefers-reduced-motion: reduce)' });
   h.drawTruth(h.node('instructorScope'), simulation, null);
-  assert.equal(h.ctx.strokes.includes('rgba(90,210,164,.5)'), false);
-  assert.ok(h.ctx.strokes.includes('#d8c780'), 'SRA distance references remain available');
+  assert.equal(h.ctx.strokes.includes('#389481'), false);
+  assert.ok(h.ctx.strokes.includes('#c4af64'), 'SRA distance references remain available');
   assert.equal(h.state.simulation, simulation);
 });
 
@@ -338,7 +426,8 @@ test('a fresh online SRA room after terminated QGH clears prior admission and re
   // correctly rejects foreign prototypes, so cross that test boundary as JSON.
   const h = harness('qgh', {...Session, createInstructorSession: options => {
     const session = Session.createInstructorSession({...options, publicMetadata:JSON.parse(JSON.stringify(options.publicMetadata))});
-    return {...session, publishObservation: (observation, time) => session.publishObservation(JSON.parse(JSON.stringify(observation)), time)};
+    return {...session, publishObservation: (observation, time) => session.publishObservation(JSON.parse(JSON.stringify(observation)), time),
+      updatePublicMetadata: (metadata, time) => session.updatePublicMetadata(JSON.parse(JSON.stringify(metadata)), time)};
   }});
   h.onSessionEvent({kind:'student-ready', audioMode:'audio'});
   h.onSessionEvent({kind:'terminated'});
@@ -482,4 +571,37 @@ test('instructor Logout invalidates pending saved-room recovery before returning
  try{await h.shellOptions.onLogout();fixture.finish();await fixture.pending;
  assert.equal(h.state.session,null);assert.equal(h.state.simulation,null);assert.equal(h.state.cloudTransport,null);assert.equal(fixture.closed,1);assert.equal(h.context.sessionStorage.getItem('atc-suite.instructor-attempt.v1'),null);
  }finally{fixture.cleanup();}
+});
+
+test('instructor radar uses shared configured chart aids and local visibility never changes exercise data', () => {
+  for (const mode of ['sra', 'surveillance']) {
+    const chartCalls = [], approachCalls = [];
+    const h = harness(mode, Session, { ...Display,
+      drawRadarEnvironment(context, options) { chartCalls.push(options); },
+      drawSraReferences(context, options) { approachCalls.push(options); }
+    });
+    h.state.simulation = Core.setLifecycle(Core.createState({ exerciseFamily: mode, runwayOrientationDeg: 230, finalTrackDeg: 230,
+      radarEnvironment: { runwayOrientationDeg: 230, extendedCentreline: true, extendedCentrelineNm: 20, centrelineTickNm: 2,
+        lfaBoundary: [{ bearingDeg: 0, rangeNm: 20 }, { bearingDeg: 120, rangeNm: 20 }, { bearingDeg: 240, rangeNm: 20 }], sraDescentProfile: mode === 'sra' },
+      aircraft: [{ aircraftId: 'AC1', callsign: '101', initialQteDeg: 30, initialRangeNm: 20, initialHeadingDeg: 210, altitudeFt: 10000, speedKt: 240, rateDegPerSecond: 3 }]
+    }), 'running');
+    const before = JSON.stringify(h.state.simulation);
+    h.drawTruth(h.node('instructorScope'), h.state.simulation, null);
+    assert.equal(chartCalls.at(-1).showLfa, true);
+    assert.equal(chartCalls.at(-1).showExtendedCentreline, true);
+    assert.equal(h.node('instructorOverlayLfa').disabled, false);
+    assert.equal(h.node('instructorOverlayDescentControl').hidden, mode !== 'sra');
+    if (mode === 'sra') {
+      assert.equal(approachCalls.at(-1).showDescentProfile, true);
+      assert.equal(approachCalls.at(-1).overlays.centrelineDeg, 50);
+      assert.equal(approachCalls.at(-1).overlays.terminationRangeNm, .5);
+    } else assert.equal(approachCalls.length, 0);
+    for (const name of ['Lfa', 'Centreline', 'Descent']) h.node(`instructorOverlay${name}`).checked = false;
+    h.drawTruth(h.node('instructorScope'), h.state.simulation, null);
+    assert.equal(chartCalls.at(-1).showLfa, false);
+    assert.equal(chartCalls.at(-1).showExtendedCentreline, false);
+    if (mode === 'sra') assert.equal(approachCalls.at(-1).showDescentProfile, false);
+    assert.equal(JSON.stringify(h.state.simulation), before);
+    assert.equal(chartCalls.at(-1).metadata.aircraft, undefined, 'chart helpers receive only the public scenario');
+  }
 });

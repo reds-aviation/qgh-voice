@@ -21,7 +21,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     instructor: {label:'Open Instructor QGH + SRA',href:'../instructor-led/'},
     procedural: {label:'Open Procedural',href:'procedural.html'},
   };
-  const commonGuide = {label:'Common suite training guide',href:'../user-guide.html'};
+  const commonGuide = {label:'Training guide',href:'../training-centre.html'};
   const allGuides = [commonGuide];
   const topics = ['suite','procedural','qgh','qgh-individual','qgh-instructor','sra','par'];
   const guideLink = anchor => ({label:commonGuide.label,href:commonGuide.href+(anchor?'#'+anchor:'')});
@@ -39,17 +39,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if(/turn/.test(previousIntent)&&/^(?:and |what about )?(?:left|right)$/.test(q))q='how to turn '+q;
     const explicit={procedural:/\bprocedural\b/.test(q),individual:/\b(?:individual|single|solo|tactical)\b/.test(q)&&/\bqgh\b/.test(q),instructor:/\binstructor\b/.test(q)&&/\bqgh\b/.test(q),sra:/\bsra\b|surveillance radar approach/.test(q)};
     if(explicit.procedural)topic='procedural';else if(explicit.individual)topic='qgh-individual';else if(explicit.instructor)topic='qgh-instructor';else if(explicit.sra)topic='sra';
-    const fallback=()=>({matched:false,topic,text:knowledge.learning+'\n\nI do not have a reliable simulator answer for that yet. Open the common guide below.',links:allGuides,escalation:'Contact the creator for further clarification.',creator:'Flt Lt Balaram Reddy · Service No. 38703'});
+    const fallback=()=>({matched:false,topic,text:knowledge.learning+'\n\nI do not have a reliable simulator answer for that yet. Open the Training guide below.',links:allGuides,escalation:'Contact the creator for further clarification.',creator:'Flt Lt Balaram Reddy · Service No. 38703'});
     const answerEntry=entry=>({matched:true,topic,intent:entry.id,text:entry.text,links:[guideLink(entry.anchor)]});
     if(!q)return fallback();
     if(/\b(?:ignore (?:all |your )?(?:instructions|rules)|system prompt|medical|diagnos|stock price|weather today|current notam|legal minimum|separation minimum)\b/.test(q))return fallback();
     if(/^(?:hi|hello|hey|namaste|help|help me|can you help me|who are you|what can you do)(?: gyani)?$/.test(q))return {matched:true,topic,text:'I’m Gyani, your simulator guide. Ask how to start, join, turn, transmit, create airspace or review an exercise.',links:allGuides};
     if(/^(?:thanks|thank you|thankyou|ok|okay|got it)(?: gyani)?$/.test(q))return {matched:true,topic,text:'You’re welcome. Ask whenever you need simulator help.',links:[]};
     if(/^(?:more|explain|explain more|tell me more|more detail|more details)$/.test(q)&&previousIntent){const entry=knowledge.entries.find(e=>e.id===previousIntent);if(entry)return answerEntry(entry);}
-    if(/^(?:please )?(?:show |open |find |read |where is |where are )?(?:me )?(?:the |all )?(?:common |suite |training )?(?:guide|guides|manual|documentation)$/.test(q))return {matched:true,topic,text:'One common training guide covers all exercises. Choose the task you need in its navigation.',links:allGuides};
+    if(/^(?:please )?(?:show |open |find |read |where is |where are )?(?:me )?(?:the |all )?(?:common |suite |training )?(?:guide|guides|manual|documentation)$/.test(q))return {matched:true,topic,text:'The Training guide covers all exercises. Choose QGH, Instructor or Procedural, then follow the short flow and task pointers.',links:allGuides};
     const candidates=knowledge.entries.filter(e=>e.topics.includes(topic)&&new RegExp(e.match,'i').test(q));
     // Specific intents take precedence over broad words such as "turn" or "start".
-    const specific=['traffic-return-exercise','instructor-traffic-return','meeting-debrief','meeting-room','exercise-time','training-time','stop-turn','extended-screens','guided-tour','mobile-workspace','local-pin-recovery','student-estimates','logout-position','review-controls','arp-upload','saved-exercises','custom-polygons','suite-turn','transmit','instructor-transmit','scope-tools','roster-mobile','approach-reference'];
+    const specific=['individual-distance','traffic-return-exercise','instructor-traffic-return','meeting-debrief','meeting-room','exercise-time','training-time','stop-turn','extended-screens','guided-tour','mobile-workspace','local-pin-recovery','student-estimates','logout-position','review-controls','arp-upload','saved-exercises','custom-polygons','suite-turn','transmit','instructor-transmit','scope-tools','roster-mobile','approach-reference'];
     const storedSetup=/\b(?:exercise|template|preset|setup)\b/.test(q)&&candidates.find(e=>e.id==='saved-exercises');
     const selected=storedSetup||specific.map(id=>candidates.find(e=>e.id===id)).find(Boolean)||candidates.find(e=>e.priority)||candidates[0];
     if(selected)return answerEntry(selected);
@@ -61,8 +61,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function topicForPage(path, hash = '') {
     if (/\/procedural-beta(?:\/|$)|\/procedural(?:-guide)?\.html$/.test(path)) return 'procedural';
     if (path.includes('/instructor-led/')) return hash === '#sra' ? 'sra' : hash === '#par' ? 'par' : 'qgh-instructor';
-    if (/\/user-guide\.html$/.test(path)) return hash === '#procedural' ? 'procedural' : hash === '#instructor' ? 'qgh-instructor' : hash === '#individual' ? 'qgh-individual' : 'suite';
-    if (/\/(?:qgh|qgh-individual|single|tactical|training-centre)\.html$/.test(path)) return 'qgh-individual';
+    if (/\/(?:user-guide|training-centre)\.html$/.test(path)) return hash === '#procedural' ? 'procedural' : hash === '#instructor' ? 'qgh-instructor' : ['#qgh','#individual','#calls'].includes(hash) ? 'qgh-individual' : 'suite';
+    if (/\/(?:qgh|qgh-individual|single|tactical)\.html$/.test(path)) return 'qgh-individual';
     return 'suite';
   }
   if (typeof module === 'object' && module.exports) {
@@ -135,6 +135,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         button.addEventListener('click', () => { input.value = question; sendQuestion(); }); suggestions.append(button);
       }
     }
+    window.addEventListener('hashchange', () => {
+      topic = topicForPage(location.pathname, location.hash);
+      previousIntent = '';
+      setSuggestions();
+    });
     const exerciseState = document.getElementById('exerciseState') || document.getElementById('studentExerciseState');
     const activeExercise = () => (document.body.classList.contains('desk-open') && document.body.classList.contains('exercise-running')) || (!exerciseState?.closest('[hidden]') && exerciseState?.textContent.trim() === 'RUNNING') || !!document.querySelector('#console.active, #tConsole.active');
     function closePanel(restoreFocus = true) {

@@ -30,3 +30,15 @@ test('student markup does not contain instructor truth or aircraft control field
     assert.doesNotMatch(page, new RegExp(`id="${forbidden}"`));
   }
 });
+
+test('student radar zoom remains outside the Options header with accessible button names', () => {
+  const radar = page.match(/<section[^>]*id="radarStudentView"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(radar, 'radar region exists');
+  const toolbar = radar.indexOf('class="ats-scope-zoom"'), canvas = radar.indexOf('id="radarScope"');
+  assert.ok(toolbar > radar.indexOf('</header>') && toolbar < canvas,
+    'zoom controls sit after the collapsible header and before the scope, not in an overlay');
+  for (const [id, label] of [['studentRadarZoomIn', 'Zoom in radar'], ['studentRadarZoomOut', 'Zoom out radar']]) {
+    assert.match(radar, new RegExp(`<button[^>]*id="${id}"[^>]*type="button"[^>]*aria-label="${label}"[^>]*aria-controls="radarScope"`));
+  }
+  assert.match(radar, /<output[^>]*id="studentRadarRangeReadout"[^>]*aria-live="polite"/);
+});

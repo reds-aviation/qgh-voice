@@ -349,7 +349,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const atOverhead = rangeNm() <= OVERHEAD_ZONE_NM;
     logCommand('TRANSMIT FOR D/F', atOverhead
       ? 'Overhead / no-bearing indication.'
-      : `QDM ${padHeading(qdm())}°M · QTE ${padHeading(qte())}°T · ${rangeNm().toFixed(1)} NM.`);
+      : `QDM ${padHeading(qdm())}°M · QTE ${padHeading(qte())}°T.`);
     if (!window.QGHVoiceWorkspace?.isDispatchingRadioCommand()) {
       window.QGHRadioWorkspace?.interrupt();
       const token = beginRadioTransmit();

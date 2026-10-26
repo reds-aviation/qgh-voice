@@ -93,6 +93,12 @@ func findArea(s *State, id string) *AirspaceArea {
 	return nil
 }
 func validateEnvironment(e Environment) error {
+	if err := validateReferenceBoundaries(e.ReferenceBoundaries); err != nil {
+		return err
+	}
+	if err := validatePublishedAirspace(e.PublishedAirspace); err != nil {
+		return err
+	}
 	if !between(e.DFHoldSeconds, 2, 30) {
 		return errors.New("D/F hold must be 2–30 seconds")
 	}

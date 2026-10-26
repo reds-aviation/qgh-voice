@@ -14,6 +14,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import Core from '../suite-core.js';
 import Sensors from '../suite-sensors.js';
+import Display from '../suite-display.js';
 import Session from '../suite-session.js';
 import CommandReference from '../suite-command-reference.js';
 import Meeting from '../../procedural-beta/static/meeting-room.js';
@@ -25,7 +26,7 @@ const otherUrl = 'https://meet.google.com/xyz-abcd-efg';
 function instructorHarness(online = false, sessionAdapter = Session, exerciseFamily = 'qgh') {
   const h = domHarness(readFileSync(new URL('../instructor.html', import.meta.url), 'utf8'), '/instructor.html', 1280);
   Object.assign(h.context, {structuredClone, confirm:()=>true, ATCSuiteCore: Core, ATCSuiteSensors: Sensors,
-    ATCSuiteSession: sessionAdapter, ATCSuiteCommandReference: CommandReference, ATCSuiteMeeting: Meeting});
+    ATCSuiteDisplay: Display, ATCSuiteSession: sessionAdapter, ATCSuiteCommandReference: CommandReference, ATCSuiteMeeting: Meeting});
   let source = readFileSync(new URL('../suite-instructor.js', import.meta.url), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'"))
     + '\n globalThis.fixture={state,updateAll,startExercise,pauseExercise,advanceBy,advanceWallElapsed,performInstructorAction,onSessionEvent,createSession,restoreAttempt,checkpoint,setScenarioInput(input){scenarioInput=()=>input;}};})();';
@@ -38,9 +39,11 @@ function instructorHarness(online = false, sessionAdapter = Session, exerciseFam
   const hub = Session.createFakeTransportHub(), transportFactory = name => hub.createTransport(name);
   const host = Session.createInstructorSession({pin: '123456', storage: h.context.localStorage, transportFactory,
     publicMetadata: {mode: 'qgh'}, onEvent: f.onSessionEvent});
-  // The VM is a separate JavaScript realm. Clone observation envelopes at the
+  // The VM is a separate JavaScript realm. Clone shared envelopes at the
   // controlled transport boundary before the real session's shape checks.
-  state.session = {...host, publishObservation: (value, time) => host.publishObservation(JSON.parse(JSON.stringify(value)), time)};
+  state.session = {...host,
+    publishObservation: (value, time) => host.publishObservation(JSON.parse(JSON.stringify(value)), time),
+    updatePublicMetadata: (value, time, options) => host.updatePublicMetadata(JSON.parse(JSON.stringify(value)), time, options)};
   if (online) state.cloudTransport = {connected: true};
   const student = Session.createStudentSession({pin: '123456', storage: h.context.localStorage, transportFactory});
   const get = id => h.document.getElementById(id);
@@ -56,7 +59,9 @@ function instructorHarness(online = false, sessionAdapter = Session, exerciseFam
 test('host connection callbacks block startup during an outage and clear optional audio without requiring it after recovery', async () => {
   const sessionAdapter = {...Session, createInstructorSession: options => {
     const host = Session.createInstructorSession({...options, publicMetadata: JSON.parse(JSON.stringify(options.publicMetadata))});
-    return {...host, publishObservation:(value,time)=>host.publishObservation(JSON.parse(JSON.stringify(value)),time)};
+    return {...host,
+      publishObservation:(value,time)=>host.publishObservation(JSON.parse(JSON.stringify(value)),time),
+      updatePublicMetadata:(value,time,options)=>host.updatePublicMetadata(JSON.parse(JSON.stringify(value)),time,options)};
   }};
   const h = instructorHarness(false,sessionAdapter), hub = Session.createFakeTransportHub(), callbacks = [];
   const channelName = 'host-callback-room';

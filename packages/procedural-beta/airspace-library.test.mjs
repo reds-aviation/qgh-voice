@@ -12,6 +12,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import '../qgh-engine/published-boundaries.js';
+import './static/published-airspace.js';
 import { domHarness } from './testing/dom-harness.mjs';
 
 const source = name => readFileSync(new URL('./static/' + name, import.meta.url), 'utf8');
@@ -102,7 +104,7 @@ test('portable airspace strips all traffic, records, identity and exercise envir
     state.scopeDisplay.aircraft = copy(state.aircraft); state.environment.map.pin = '123456';
     const asset = prepared(state), text = JSON.stringify(asset);
     assert.equal(asset.format, 'ats-simbox-airspace'); assert.equal(asset.version, 1);
-    assert.deepEqual(Object.keys(asset.environment).sort(), library.AIRSPACE_ENVIRONMENT_KEYS.filter(key => key in state.environment || ['runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm'].includes(key)).sort());
+    assert.deepEqual(Object.keys(asset.environment).sort(), library.AIRSPACE_ENVIRONMENT_KEYS.filter(key => key in state.environment || ['runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm', 'referenceBoundaries', 'publishedAirspace'].includes(key)).sort());
     for (const field of ['aircraft', 'exerciseId', 'elapsed', 'strips', 'calls', 'reports', 'events', 'criteria', 'radio', 'pin', 'token', 'qnhHpa', 'windSpeedKt', 'transitionLevel', 'dfHoldSeconds']) assert.doesNotMatch(text, new RegExp('"' + field + '"'));
     assert.equal(asset.routes[0].publishedSegments[0].oddLevels, '↑');
     assert.equal(asset.routes[0].publishedSegments[0].evenLevels, '↓');
@@ -327,4 +329,43 @@ test('unreadable stored library is not silently erased when saving a new portabl
     assert.equal(h.context.localStorage.getItem(storageKey), 'corrupt saved airspace bytes');
     assert.match(h.status(), /not saved/); assert.equal(h.get('airspace-backup').hidden, false);
     await h.click('airspace-backup'); assert.equal(JSON.parse(await h.downloads[0].text()).name, 'Recovery snapshot');
+});
+
+
+test('published Pune chart, source table and visibility survive offline airspace roundtrip', () => {
+    const data = {
+        catalogue: JSON.parse(source('india-airbase-lfa-catalogue.json')),
+        airspace: JSON.parse(source('india-airspace.json')),
+        enroute: JSON.parse(source('india-aip-enroute.json')),
+    };
+    const base = data.catalogue.airbases.find(row => row.id === 'pune');
+    const entry = base.lfaEntries.find(row => row.geometryRef);
+    const selected = globalThis.ATSPublishedAirspace.buildSelection(data, base.id, entry.id, {atsRoutes: false});
+    const chart = globalThis.ATSPublishedAirspace.publicChart(selected);
+    const state = scenario(); state.environment.publishedAirspace = chart;
+    const restored = library.parseAirspaceTemplate(JSON.stringify(prepared(state)));
+    assert.deepEqual(restored.environment.publishedAirspace, chart);
+    assert.equal(restored.environment.publishedAirspace.layerVisibility.atsRoutes, false);
+    assert.ok(restored.environment.publishedAirspace.runways.length > 0);
+    assert.equal(restored.environment.runwayHeadingDeg, state.environment.runwayHeadingDeg);
+    assert.equal(restored.aircraft, undefined);
+    state.environment.publishedAirspace = {...chart, referenceBoundaries: {type:'Polygon'}};
+    assert.throws(() => prepared(state), /invalid published reference boundaries/i);
+});
+
+test('older saved airspace explicitly clears stale published and boundary overlays', () => {
+    const restored = library.parseAirspaceTemplate(JSON.stringify(prepared()));
+    assert.equal(restored.environment.publishedAirspace, null);
+    assert.deepEqual(restored.environment.referenceBoundaries, []);
+});
+
+test('offline import rejects malformed or unverified reference boundary instead of dropping provenance', () => {
+    const state = scenario();
+    state.environment.referenceBoundaries = [{id:'unverified-line', kind:'IB', geometry:{type:'MultiLineString',coordinates:[[[70,25],[71,26]]]}}];
+    assert.throws(() => prepared(state), /source|verification/i);
+    state.environment.referenceBoundaries = {type:'Polygon'};
+    assert.throws(() => prepared(state), /boundaries must be a list/i);
+    state.environment.referenceBoundaries = [];
+    state.environment.publishedAirspace = {schemaVersion:1,baseId:'pune'};
+    assert.throws(() => prepared(state), /invalid|coordinates/i);
 });

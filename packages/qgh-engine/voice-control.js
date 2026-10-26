@@ -107,6 +107,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     let text = value.normalize ? value.normalize('NFKD') : value;
     text = text.toLowerCase()
       .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(?:don['’]?t|don t|do nt)\b/g, 'do not')
+      .replace(/\b(heading|left|right|continue)(?=\d)/g, '$1 ')
+      .replace(/\bhundred and (?=(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|one|two|three|four|five|six|seven|eight|nine)\b)/g, 'hundred ')
       .replace(/(\d)\s*[.,]\s*(\d)/g, '$1 point $2')
       .replace(/\bq\s*[\/-]?\s*d\s*[\/-]?\s*m\b/g, 'qdm')
       .replace(/\bq\s*[\/-]?\s*t\s*[\/-]?\s*e\b/g, 'qte')
@@ -720,6 +723,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function safetyRejection(transcript) {
     const tokens = normalizeTranscript(transcript).split(' ').filter(Boolean);
     if (!tokens.length) return null;
+    if (/\b(?:can|could|would|should|shall|will|do|did|does|have|has|are|is|was|were) (?:you|we|i|they|he|she|it)\b/.test(transcript)) return 'question-not-instruction';
     const hasAction = tokens.some(token => CONTROL_ACTION_WORDS.has(SEMANTIC_ALIASES[token] || token));
     if (hasAction && tokens.some(token => UNSAFE_CONTROL_QUALIFIERS.has(token))) return 'qualified-command';
 
@@ -971,6 +975,39 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return null;
   }
 
+  function parseImperativeManoeuvre(transcript, target, options) {
+    // Accept complete variants of an instruction, never a number-bearing fragment
+    // inside a question, quotation, retrospective comment or alternative clearance.
+    const polite = /^(?:please|kindly)\s+|\s+(?:please|kindly)$/g;
+    let body = transcript.replace(polite, '').trim();
+    let words = body.split(' ').map(word => SEMANTIC_ALIASES[word] || word);
+    if (target) {
+      const addressed = exactAircraftMention(words, options);
+      if (!addressed || addressed.aircraft !== target.aircraft
+        || (addressed.start !== 0 && !(addressed.start === 1 && words[0] === 'aircraft'))) return null;
+      words = words.slice(addressed.end);
+    }
+    body = words.join(' ').replace(polite, '').trim();
+    const detail = target ? { aircraft: target.aircraft } : {};
+    const headingValue = raw => parseLooseHeading(raw.replace(/\s+now$/, '')
+      .replace(/\s+degrees?(?: magnetic)?$/, '').replace(/\s+magnetic$/, ''));
+    const turn = /^(turn )?(left|right)(?: (?:to|onto|on))?(?: (?:a|the))?(?: (heading))? (.+)$/.exec(body);
+    if (turn && (turn[1] || turn[3] || target)) {
+      if (turn[4] === 'now' && turn[1] && !turn[3]) return semanticAccept(transcript, 'us-turn', { ...detail, side: turn[2] });
+      const heading = headingValue(turn[4]);
+      return heading === null ? null : semanticAccept(transcript, 'normal-turn-heading', { ...detail, side: turn[2], heading });
+    }
+    const timed = /^turn (left|right)$/.exec(body);
+    if (timed && target) return semanticAccept(transcript, 'us-turn', { ...detail, side: timed[1] });
+    if (/^stop(?: the)? turn(?: now)?$/.test(body)) return semanticAccept(transcript, 'us-turn-stop', detail);
+    const continuation = /^(?:continue|maintain)(?: on)?(?: heading)? (.+)$/.exec(body);
+    if (continuation) {
+      const heading = headingValue(continuation[1]);
+      if (heading !== null) return semanticAccept(transcript, 'continue-turn-heading', { ...detail, heading });
+    }
+    return null;
+  }
+
   function parseSemanticCommand(value, options) {
     const transcript = normalizeTranscript(value);
     if (!transcript) return null;
@@ -979,10 +1016,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const target = exactAircraftMention(tokens, options);
     if (!target && hasUnresolvedCallsignAttempt(tokens, options)) return null;
     const targetDetail = target ? { aircraft: target.aircraft } : {};
-    const direction = hasToken(tokens, 'left') && !hasToken(tokens, 'right')
-      ? 'left'
-      : hasToken(tokens, 'right') && !hasToken(tokens, 'left') ? 'right' : null;
-
     if (tokens.length === 1 && (tokens[0] === 'qdm' || tokens[0] === 'qte')) {
       return semanticAccept(transcript, 'set-bearing-mode', { mode: tokens[0] });
     }
@@ -1109,32 +1142,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return semanticAccept(transcript, 'request-distance', targetDetail);
     }
 
-    if (hasToken(tokens, 'continue', 'maintain') && !direction && !hasToken(tokens, 'speed', 'flight')) {
-      const heading = valueAfter(tokens, ['continue', 'maintain'], 'heading');
-      if (heading) return semanticAccept(transcript, 'continue-turn-heading', target ? { ...targetDetail, heading: heading.value } : { heading: heading.value });
-    }
-    if (hasToken(tokens, 'stop') && hasToken(tokens, 'turn') && !hasToken(tokens, 'heading')) {
-      return target ? semanticAccept(transcript, 'us-turn-stop', targetDetail) : semanticAccept(transcript, 'us-turn-stop');
-    }
-    if (direction && hasToken(tokens, 'turn') && hasToken(tokens, 'now') && !hasToken(tokens, 'heading')) {
-      const detail = target ? { ...targetDetail, side: direction } : { side: direction };
-      return semanticAccept(transcript, 'us-turn', detail);
-    }
-    if (direction && (hasToken(tokens, 'turn', 'heading') || target)) {
-      const heading = valueAfter(tokens, ['heading'], 'heading') || valueAfter(tokens, [direction], 'heading');
-      if (heading) {
-        const detail = target ? { ...targetDetail, side: direction, heading: heading.value } : { side: direction, heading: heading.value };
-        return semanticAccept(transcript, 'normal-turn-heading', detail);
-      }
-    }
-    // In tactical U/S Compass control a callsign is essential for a terse RT call
-    // such as "Raven turn right". The page router still enforces the active procedure.
-    if (target && direction && hasToken(tokens, 'turn')) {
-      return semanticAccept(transcript, 'us-turn', { ...targetDetail, side: direction });
-    }
-    if (target && hasToken(tokens, 'stop') && hasToken(tokens, 'turn')) {
-      return semanticAccept(transcript, 'us-turn-stop', targetDetail);
-    }
+    const manoeuvre = parseImperativeManoeuvre(transcript, target, options);
+    if (manoeuvre) return manoeuvre;
 
     const callsignIndex = firstTokenIndex(tokens, 'callsign', 'rename');
     if (callsignIndex !== -1) {
@@ -1184,6 +1193,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function parseCommand(value, options) {
     const transcript = normalizeTranscript(value);
+    if (typeof value === 'string' && value.includes('?')) return reject(transcript, 'question-not-instruction');
     const unsafe = safetyRejection(transcript);
     if (unsafe) return reject(transcript, unsafe);
     const strict = parseStrictCommand(value, options);
@@ -1193,7 +1203,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const semantic = parseSemanticCommand(value, options);
     if (strict.reason === 'ambiguous-aircraft') return strict;
     if (strict.reason === 'unknown-aircraft') {
-      // Natural lead-ins such as "would you" can make the rigid grammar think it saw an
+      // Polite imperatives such as "please turn" can make the rigid grammar think it saw an
       // aircraft. Allow the semantic result only when it independently resolved a configured
       // callsign, or when every word before the first RT action is a recognized filler.
       if (!semantic?.accepted) return strict;

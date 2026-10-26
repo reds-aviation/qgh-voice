@@ -8,6 +8,7 @@ Contributor(s): None designated in this initial notice.
 No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
 */
 
+import './published-airspace.js';
 import { circle, coordinate, destination, project, readPoint } from './chart-geometry.js';
 import { mergePublishedNavigation } from './aip-navigation.js';
 import { parseARP, alignmentBriefing } from './chart-calibration.js';
@@ -93,8 +94,8 @@ export function createChartWorkshop(context) {
         return approved && exerciseId === context.view()?.exerciseId && stamp === context.generation();
     }
     let catalogue = [], signature = '', formExercise = '';
-    let enroute;
-    for (const href of ['airspace-preparation.css', 'scenario-library.css']) {
+    let enroute, publishedSelectionStamp = '';
+    for (const href of ['airspace-preparation.css', 'scenario-library.css', 'published-airspace.css']) {
         if (!document.querySelector(`link[href="${href}"]`)) {
             const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = href; document.head.append(link);
         }
@@ -291,6 +292,14 @@ export function createChartWorkshop(context) {
             payload.map = { ...context.view().environment.map, imageId: '' };
             payload.briefing = alignmentBriefing(payload.briefing ?? context.view().environment.briefing, 'ARP changed; any previous image alignment is invalid. Calibrate a new image for this origin.');
         }
+        const previousEnvironment = context.view().environment;
+        const referenceChanged = payload.chartOrigin !== undefined && JSON.stringify(payload.chartOrigin) !== JSON.stringify(oldOrigin || null)
+            || payload.drawnARP !== undefined && payload.drawnARP !== previousEnvironment.drawnARP
+            || ['stationXNm','stationYNm'].some(key => payload[key] !== undefined && payload[key] !== (previousEnvironment[key] || 0));
+        if (referenceChanged) {
+            payload.publishedAirspace = null; payload.referenceBoundaries = [];
+            payload.briefing = alignmentBriefing(payload.briefing ?? previousEnvironment.briefing, 'Custom reference changed. Retained routes and areas are local training geometry until published airspace is loaded again.');
+        }
         await context.command('environment', payload);
         for (const name of names) {
             const input = field('chart-form', name), current = input.type === 'checkbox' ? String(input.checked) : value('chart-form', name);
@@ -415,7 +424,7 @@ export function createChartWorkshop(context) {
             return { id: area.id, name: area.name, kind: area.kind, points: geoPoints.map(p => project(p, item.origin)), coordinateOrigin: item.origin, geoPoints: geoPoints.map(p => ({ latitude: p.latitude, longitude: p.longitude })), floorLabel: area.floorLabel, ceilingLabel: area.ceilingLabel, source: area.source || 'India AIP', reference: area.reference || item.source, effectiveInfo: area.effectiveInfo || item.effectiveInfo, notes: [area.notes, area.activation].filter(Boolean).join('\n'), active: true };
         });
         const navigation = mergePublishedNavigation(scenario, chosen, item.origin);
-        scenario.environment = { ...scenario.environment, chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: 0, stationYNm: 0, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `${stationReference}\nApproximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nRunway geometry, QNH, wind and altitude references retain the current exercise configuration.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
+        scenario.environment = { ...scenario.environment, publishedAirspace: null, referenceBoundaries: [], chartOrigin: item.origin, drawnARP: false, stationName: station?.name || `${item.id} REF`, stationType: station?.type || 'df', stationFrequency: station?.frequency || '', stationXNm: 0, stationYNm: 0, magneticVariationDeg: station?.magneticVariationDeg ?? 0, magneticVariationKnown: station?.magneticVariationDeg != null, trainingMagneticVariationDeg: scenario.environment.trainingMagneticVariationDeg ?? 0, dfHoldSeconds: scenario.environment.dfHoldSeconds || 10, aerodromeName: item.name + (item.icao ? ` (${item.icao})` : ''), chartReference: item.source, effectiveInfo: enroute.effectiveInfo, briefing: `${stationReference}\nApproximate published LFA / control-zone and P/R/D outlines; available nearby ATS segments. Use Declutter to choose the visible chart features, and Route overview to fit the route network. Exercise activation is instructor-set, not live NOTAM status. ${station ? 'QDM uses the labelled training magnetic reference unless a chart reference is configured.' : 'D/F uses the chart reference point; no VOR configured.'}\nRunway geometry, QNH, wind and altitude references retain the current exercise configuration.\n${extra.omissions.length} catalogue omissions are listed in the aerodrome preview; use the cited AIP for complete boundaries and routes.`, rangeNm: 60, map: { ...scenario.environment.map, imageId: '' } };
         scenario.areas = areas;
         scenario.fixes = navigation.fixes;
         scenario.routes = navigation.routes;
@@ -433,12 +442,31 @@ export function createChartWorkshop(context) {
         return r.json();
     })).then(([data, routes]) => {
         enroute = routes;
-        catalogue = Array.isArray(data) ? data : data.aerodromes;
+        catalogue = (Array.isArray(data) ? data : data.aerodromes).filter(item => !['sirsa', 'jamnagar'].includes(item.id.toLowerCase()) && routes.aerodromes[item.id]);
         signature = '';
         const select = $('aerodrome-select');
         select.replaceChildren(new Option('Select published aerodrome…', ''), ...catalogue.map(a => new Option(a.name + (a.icao ? ` · ${a.icao}` : ''), a.id)));
-        preview();
+        syncPublishedSelection(context.view());
+        if (!select.value) preview();
     }).catch(e => $('aerodrome-preview').textContent = e.message);
+    function syncPublishedSelection(state) {
+        if (!catalogue.length || !state) return;
+        const env = state.environment || {}, current = env.publishedAirspace;
+        const stamp = JSON.stringify([state.exerciseId, env.aerodromeName, env.chartOrigin, current?.baseId, current?.selectionId]);
+        // Recover the applied chart once. Ordinary ticks must not discard an
+        // unsubmitted aerodrome or visibility choice in this form.
+        if (stamp === publishedSelectionStamp) return;
+        publishedSelectionStamp = stamp;
+        const item = catalogue.find(a => a.id === current?.baseId)
+            || catalogue.find(a => env.aerodromeName === a.name || env.aerodromeName === `${a.name} (${a.icao})`);
+        $('aerodrome-select').value = item?.id || '';
+        preview();
+        const hiddenRoutes = new Set(state.scopeDisplay?.hiddenRouteIds || []), hiddenAreas = new Set(state.scopeDisplay?.hiddenAreaIds || []);
+        for (const input of selection.querySelectorAll('input[data-route-id]')) input.checked = !hiddenRoutes.has(input.dataset.routeId) && current?.layerVisibility?.atsRoutes !== false;
+        for (const input of selection.querySelectorAll('input[data-area-id]')) input.checked = !hiddenAreas.has(input.dataset.areaId);
+        // Recalculate the count and picture after restoring checkbox values.
+        selection.querySelector('input')?.dispatchEvent(new Event('change'));
+    }
     return {
         openStep: name => openStep(name === 'traffic' ? 'prepare-traffic-step' : name === 'saved' ? 'prepare-save-load' : 'prepare-airspace'),
         hasDraft: () => preparation.hasDraft?.() || dirtyFields.size > 0,
@@ -456,10 +484,12 @@ export function createChartWorkshop(context) {
             if (!state) {
                 signature = '';
                 formExercise = '';
+                publishedSelectionStamp = '';
                 dirtyFields.clear();
                 discardAirspace.hidden = true;
                 return;
             }
+            syncPublishedSelection(state);
             preparation.render(); library.render(); airspaceLibrary.render();
             syncDiscard();
             currentAirspace.textContent = `Current airspace: ${state.environment.aerodromeName || 'Custom airspace'}`;

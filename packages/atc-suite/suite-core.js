@@ -12,10 +12,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const flightCore = typeof module === 'object' && module.exports
     ? require('../qgh-engine/simulator-core.js')
     : root.QGHCore;
-  const api = factory(flightCore);
+  const published = typeof module === 'object' && module.exports ? require('../procedural-beta/static/published-airspace.js') : root.ATSPublishedAirspace;
+  const api = factory(flightCore, published);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.ATCSuiteCore = api;
-})(typeof globalThis === 'undefined' ? this : globalThis, function createAtcSuiteCore(Flight) {
+})(typeof globalThis === 'undefined' ? this : globalThis, function createAtcSuiteCore(Flight, Published) {
   'use strict';
 
   if (!Flight) throw new Error('QGH flight core failed to load.');
@@ -167,7 +168,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       extendedCentrelineNm,
       centrelineTickNm,
       lfaBoundary: points,
-      sraDescentProfile: value.sraDescentProfile !== false
+      sraDescentProfile: value.sraDescentProfile !== false,
+      ...(value.publishedAirspace != null ? {publishedAirspace: Published.normalizePublishedAirspace(value.publishedAirspace)} : {})
     });
   }
 
@@ -911,6 +913,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const correlated = state.scenario.surveillanceProfile === 'correlated';
     const observation = {};
     addFinite(observation, 'scanAngleDeg', source.scanAngleDeg);
+    if (source.homing && typeof source.homing === 'object' && !Array.isArray(source.homing)) {
+      const homing = sanitizeQghObservation(source.homing);
+      if (!['live', 'held'].includes(homing.status) || !['pilot', 'held'].includes(homing.transmissionState)) delete homing.bearingDeg;
+      observation.homing = homing;
+    }
     const plot = sanitizePlot(source.plot, correlated);
     if (plot) observation.plot = plot;
     const plots = sanitizeHistory(source.plots, item => sanitizePlot(item, correlated), MAX_AIRCRAFT);
@@ -1012,6 +1019,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return freeze(envelope);
   }
 
+  function withRadarEnvironment(state, environment) {
+    assertState(state);
+    if (!['surveillance','sra'].includes(state.scenario.exerciseFamily) || !['configuring','ready','paused'].includes(state.lifecycle)) throw new Error('Pause a radar exercise before loading published airspace.');
+    const next = clone(state);
+    next.scenario.radarEnvironment = normalizeRadarEnvironment(environment, state.scenario.runwayOrientationDeg);
+    next.revision++;
+    return freeze(next);
+  }
+
   return freeze({
     SCHEMA_VERSION,
     STEP_SECONDS,
@@ -1028,6 +1044,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     setLifecycle,
     truthSnapshot,
     studentEnvelope,
+    withRadarEnvironment,
     bearingFromPosition,
     positionFromBearing,
     padHeading,

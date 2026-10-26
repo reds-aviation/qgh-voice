@@ -24,6 +24,7 @@ async function harness() {
   const blobs = [];
   Object.assign(h.context, {
     ATCSuiteCore: require('../atc-suite/suite-core.js'), ATCSuiteSensors: require('../atc-suite/suite-sensors.js'), ATCSuiteSession: require('../atc-suite/suite-session.js'),
+    ATCSuiteDisplay: require('../atc-suite/suite-display.js'),
     structuredClone, confirm: () => true,
     URL: {createObjectURL(blob) {blobs.push(blob); return 'blob:test';}, revokeObjectURL(){}},
   });

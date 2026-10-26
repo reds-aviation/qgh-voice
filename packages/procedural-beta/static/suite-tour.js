@@ -55,7 +55,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     function show(){
       clearTarget(); const step=steps[index]; target=document.querySelector(step.selector);
       target?.classList.add('suite-tour-target'); target?.scrollIntoView({block:'center',behavior:'auto'});
-      title.textContent=step.title;description.textContent=step.text;progress.textContent=`${tourMode==='first'?'Quick introduction · ':''}${index+1} / ${steps.length} · Version 1`;
+      title.textContent=step.title;description.textContent=step.text;progress.textContent=`${tourMode==='first'?'Quick introduction · ':''}${index+1} / ${steps.length}`;
       back.disabled=index===0;next.textContent=index===steps.length-1?'Finish':'Next';
       // Keep the highlighted control outside the help panel on short screens.
       requestAnimationFrame(()=>{

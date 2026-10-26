@@ -40,7 +40,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
   } catch (_) { /* Test/embedded hosts without navigation keep the controller form. */ }
   const byId = id => document.getElementById(id);
+  let publishedBoundaryControls = null;
   const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const radarSweepClock = globalThis.ATCSuiteDisplay?.createRadarSweepClock();
   function enterWorkspace(element) {
     if (!element) return;
     if (globalThis.ATCSuiteWorkspace?.enter) globalThis.ATCSuiteWorkspace.enter(element, { block: 'start' });
@@ -71,6 +73,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function show(id, { scroll = true } = {}) {
+    document.body.classList.toggle('exercise-console', id === 'studentWorkspace');
     const entering = byId(id).hidden;
     for (const name of ['joinPanel', 'waitingPanel', 'readyPanel', 'studentWorkspace', 'studentEnded', 'orientationGate']) byId(name).hidden = name !== id;
     if (id === 'joinPanel') byId('studentNavigation').open = true;
@@ -97,6 +100,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     } else if (event.kind === 'join-rejected') {
       show('joinPanel'); byId('joinStatus').textContent = 'Unable to join. Check the PIN and active instructor session.';
     } else if (event.kind === 'lifecycle') {
+      radarSweepClock?.hold();
       renderLifecycle(snapshot.state);
     } else if (event.kind === 'public-metadata') {
       state.metadata = event.publicMetadata || snapshot?.publicMetadata || state.metadata;
@@ -105,22 +109,30 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       // (such as the configured SRA approach speed) keeps the live picture.
       if (priorMode && (state.metadata?.mode !== priorMode || state.metadata?.radarProfile !== priorProfile)) {
         state.observation = null; state.renderedAt = null; cancelPilotAudio();
+        radarSweepClock?.reset();
       }
       if (!byId('studentWorkspace').hidden) {
         renderWorkspaceMode();
         renderObservation();
       }
     } else if (event.kind === 'observation') {
-      state.observation = event.observation; state.observationReceivedAt = Date.now(); renderObservation();
+      state.observation = event.observation; state.observationReceivedAt = Date.now();
+      radarSweepClock?.observe({ angleDeg: event.observation.scanAngleDeg,
+        simulationTime: state.simulationTime, receivedAt: state.observationReceivedAt,
+        rpm: state.metadata?.scanRpm || 15, timeRate: state.metadata?.trainingTimeRate || 1,
+        running: snapshot?.state === 'running' });
+      renderObservation();
     } else if (event.kind === 'caption') {
       renderCaption(event.caption, event.transmissionId);
     } else if (event.kind === 'observation-rejected') {
       state.pictureError = true;
     } else if (event.kind === 'disconnected') {
+      radarSweepClock?.hold();
       meetingPanel?.resetVoice?.();
       setPilotAudio(false);
       byId('connectionState').textContent = 'DISCONNECTED'; byId('studentExerciseState').textContent = 'PICTURE FROZEN';
     } else if (event.kind === 'terminated') {
+      radarSweepClock?.hold();
       setPilotAudio(false);
       // A lost/closed host link is recoverable; it is not a completed attempt.
       if (['host-left', 'heartbeat-timeout'].includes(event.reason)) {
@@ -209,7 +221,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function chooseMode(mode) {
-    byId('qghStudentView').hidden = mode !== 'qgh';
+    byId('qghStudentView').hidden = !['qgh', 'surveillance', 'sra'].includes(mode);
     byId('studentEstimateScopePanel').hidden = mode !== 'qgh';
     byId('radarStudentView').hidden = !['surveillance', 'sra'].includes(mode);
     byId('parStudentView').hidden = mode !== 'par';
@@ -279,7 +291,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     try {
       if (state.metadata.mode === 'qgh') renderDf();
       else if (state.metadata.mode === 'par') renderPar();
-      else renderRadar();
+      else { renderRadar(); renderDf(); }
       state.renderedAt = Date.now(); state.pictureError = false;
     } catch (_) { state.pictureError = true; }
     renderFreshness();
@@ -311,55 +323,79 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function renderDf() {
-    renderEstimateScope();
-    const observation = state.observation || {};
+    if (state.metadata?.mode === 'qgh') renderEstimateScope();
+    const observation = (state.metadata?.mode === 'qgh' ? state.observation : state.observation?.homing) || {};
     const status = String(observation.status || 'idle').toUpperCase();
     byId('dfSignalState').textContent = status === 'IDLE' ? 'NO SIGNAL' : `SIGNAL ${status}`;
     let bearing = observation.bearingDeg;
     if (bearing != null && observation.bearingType !== state.displayBearing) bearing = (bearing + 180) % 360;
     byId('dfBearing').textContent = bearing == null ? '---' : `${pad(bearing)}°`;
+    drawHomingDial(bearing);
     byId('dfModeLabel').textContent = state.displayBearing === 'qdm' ? 'QDM · HOMING' : 'QTE · TRUE BEARING';
     byId('dfCallsign').textContent = `${observation.callsign || 'AIRCRAFT'} · ${observation.transmissionState === 'pilot' ? 'SIGNAL LIVE' : observation.transmissionState === 'held' ? 'SIGNAL HELD' : 'NO TRANSMISSION'}`;
   }
 
+  function drawHomingDial(bearing) {
+    const canvas = byId('studentHomingDial');
+    if (!canvas?.getContext) return;
+    const ctx = canvas.getContext('2d'), cx = canvas.width / 2, cy = canvas.height / 2, radius = Math.min(cx, cy) - 13;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);ctx.strokeStyle = '#527d84';ctx.fillStyle = '#bbcad3';ctx.lineWidth = 1;
+    ctx.font = '10px Arial';ctx.textAlign = 'center';ctx.textBaseline = 'middle';
+    for (let degree = 0; degree < 360; degree += 30) {
+      const angle = degree * Math.PI / 180, inner = radius - 5;
+      ctx.beginPath();ctx.moveTo(cx + Math.sin(angle) * inner, cy - Math.cos(angle) * inner);ctx.lineTo(cx + Math.sin(angle) * radius, cy - Math.cos(angle) * radius);ctx.stroke();
+      if (degree % 90 === 0) ctx.fillText(String(degree).padStart(3, '0'), cx + Math.sin(angle) * (radius + 10), cy - Math.cos(angle) * (radius + 10));
+    }
+    // The needle is a radio observation, never a continuously tracked target.
+    if (Number.isFinite(bearing)) {
+      const angle = bearing * Math.PI / 180;
+      ctx.strokeStyle = '#ffdf94';ctx.lineWidth = 2;ctx.beginPath();ctx.moveTo(cx, cy);ctx.lineTo(cx + Math.sin(angle) * (radius - 4), cy - Math.cos(angle) * (radius - 4));ctx.stroke();
+      ctx.fillStyle = '#ffdf94';ctx.beginPath();ctx.arc(cx, cy, 3, 0, Math.PI * 2);ctx.fill();
+    }
+  }
+
   function radarTransform(canvas, rangeNm, azimuthDeg) {
-    const radius = Math.min(canvas.width, canvas.height) * .41 * rangeNm / selectedRadarRange(), radians = azimuthDeg * Math.PI / 180;
+    const radius = Math.min(canvas.width, canvas.height) * .44 * rangeNm / selectedRadarRange(), radians = azimuthDeg * Math.PI / 180;
     return { x: canvas.width / 2 + state.scopePan.x + Math.sin(radians) * radius, y: canvas.height / 2 + state.scopePan.y - Math.cos(radians) * radius };
   }
 
   function renderRadar() {
     const canvas = byId('radarScope'), context = canvas.getContext('2d'), observation = state.observation || {};
     sizeStudentCanvas(canvas);
-    const width = canvas.width, height = canvas.height, cx = width / 2 + state.scopePan.x, cy = height / 2 + state.scopePan.y, radius = Math.min(width, height) * .41, range = selectedRadarRange();
-    context.clearRect(0, 0, width, height); context.fillStyle = '#071b1d'; context.fillRect(0, 0, width, height);
+    const width = canvas.width, height = canvas.height, cx = width / 2 + state.scopePan.x, cy = height / 2 + state.scopePan.y, radius = Math.min(width, height) * .44, range = selectedRadarRange();
+    const rangeLabel = `${range} NM`, rangeReadout = byId('studentRadarRangeReadout');
+    if (rangeReadout.textContent !== rangeLabel) rangeReadout.textContent = rangeLabel;
+    byId('studentRadarZoomIn').disabled = range <= 5;
+    byId('studentRadarZoomOut').disabled = range >= 100;
+    context.clearRect(0, 0, width, height); context.fillStyle = '#0e1319'; context.fillRect(0, 0, width, height);
     context.strokeStyle = '#24504d'; context.lineWidth = 1; context.fillStyle = '#92b6ad'; context.font = '14px IBM Plex Mono';
-    for (let ring = 1; ring <= 4; ring += 1) { context.beginPath(); context.arc(cx, cy, radius * ring / 4, 0, Math.PI * 2); context.stroke(); context.fillText(`${range * ring / 4} NM`, cx + 9, cy - radius * ring / 4 + 18); }
+    const ringLabelBoxes = drawStudentRangeRings(context, canvas, range, radius, cx, cy, 'radarRingSpacing');
     context.beginPath(); context.moveTo(cx, cy - radius); context.lineTo(cx, cy + radius); context.moveTo(cx - radius, cy); context.lineTo(cx + radius, cy); context.stroke();
     for (let degree = 0; degree < 360; degree += 10) {
       const theta = degree * Math.PI / 180, inner = radius - (degree % 30 === 0 ? 13 : 6);
       context.beginPath(); context.moveTo(cx + Math.sin(theta) * inner, cy - Math.cos(theta) * inner); context.lineTo(cx + Math.sin(theta) * radius, cy - Math.cos(theta) * radius); context.stroke();
     }
     context.textAlign = 'center'; context.fillStyle = '#c0d5c9'; context.font = '16px IBM Plex Mono';
-    [['N · 000', cx, cy - radius - 23], ['E · 090', cx + radius + 49, cy + 5], ['S · 180', cx, cy + radius + 30], ['W · 270', cx - radius - 49, cy + 5]].forEach(([label, x, y]) => context.fillText(label, x, y));
+    [['N · 000', cx, cy - radius - 23], ['E · 090', cx + radius + 49, cy + 5], ['S · 180', cx, cy + radius + 30], ['W · 270', cx - radius - 49, cy + 5]].forEach(([label, x, y]) => context.fillText(label, x, Math.max(18, Math.min(height - 12, y))));
     context.textAlign = 'left';
-    context.fillStyle = '#9abbaf'; context.font = '14px IBM Plex Mono'; context.fillText(`RANGE ${range} NM`, 26, 32); context.fillText('NORTH UP', width - 120, 32);
     const environment = radarEnvironment();
     drawRunway(context, canvas, environment);
     const scopePresentation = updateRadarScopeControls(environment);
-    drawRadarEnvironment(context, canvas, environment, scopePresentation.extendedCentreline);
-    if (state.metadata.mode === 'sra' && observation.overlays) drawSraReferences(context, canvas, observation.overlays, radius, environment, scopePresentation.descent);
+    const chartLabels = drawRadarEnvironment(context, canvas, environment, scopePresentation.extendedCentreline, scopePresentation.lfa, ringLabelBoxes);
+    if (state.metadata.mode === 'sra' && observation.overlays) drawSraReferences(context, canvas, observation.overlays, radius, environment, scopePresentation.descent, chartLabels);
+    if (!reducedMotion() && Number.isFinite(observation.scanAngleDeg)) {
+      const running = state.session?.snapshot().state === 'running' && (!state.cloudTransport || state.cloudTransport.connected);
+      globalThis.ATCSuiteDisplay?.drawRadarSweep(context, { cx, cy, radius,
+        angleDeg: radarSweepClock?.angle(Date.now(), running) ?? observation.scanAngleDeg });
+    }
     // Only the sensor's transmitted samples are used. No target extrapolation occurs here.
     const plots = currentRadarPlots();
     selectedHistory(observation.history || [], Number(byId('radarHistory').value), plots).forEach(plot => drawPlot(context, canvas, plot, .35, false));
     plots.forEach(plot => drawPlot(context, canvas, plot, 1, true));
-    if (!reducedMotion() && Number.isFinite(observation.scanAngleDeg)) {
-      const elapsed = state.session?.snapshot().state === 'running' && state.observationReceivedAt != null ? Math.max(0, (Date.now() - state.observationReceivedAt) / 1000) : 0;
-      const sweep = (observation.scanAngleDeg + elapsed * 90) * Math.PI / 180; context.strokeStyle = '#389481'; context.lineWidth = 1.5; context.beginPath(); context.moveTo(cx, cy); context.lineTo(cx + Math.sin(sweep) * radius, cy - Math.cos(sweep) * radius); context.stroke();
-    }
     drawRadarLabels(context, canvas, plots);
     state.plotting?.draw(context);
     updateRadarInspection(plots);
-    byId('scanRate').textContent = `${state.metadata.scanRpm || 15} RPM · ${state.metadata.revisitSeconds || 4} SIM SEC REVISIT`;
+    byId('scanRate').textContent = `${state.metadata.scanRpm || 15} RPM · ${state.metadata.revisitSeconds || 4} SIM SEC REVISIT · ${state.metadata.trainingTimeRate || 1}×`;
     const hasSecondary = correlatedRadarProfile() && plots.some(plot => plot.surveillance?.secondary === true);
     byId('radarProfileStatus').textContent = correlatedRadarProfile()
       ? `CORRELATED TRAINING · + PRIMARY · □ SSR${hasSecondary ? '' : ' · NO SSR RETURN'}`
@@ -372,6 +408,25 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function selectedRadarRange() { return Number(byId('radarRange').value) || 40; }
 
+  function drawStudentRangeRings(context, canvas, range, radius, cx, cy, spacingId) {
+    const labelBoxes = [];
+    const spacingNm = Number(byId(spacingId)?.value) === 5 ? 5 : 10;
+    const visuals = globalThis.ATCScopeVisuals;
+    if (visuals?.drawRangeRings) {
+      visuals.drawRangeRings(context, { rangeNm: range, spacingNm, scale: radius / range, cx, cy,
+        width: canvas.width, height: canvas.height, strokeStyle: '#1d5551', fillStyle: '#79aaa4', font: '11px IBM Plex Mono', labelBoxes,
+        obstacles: document.querySelectorAll ? visuals.overlayObstacles(canvas, { document, width: canvas.width, height: canvas.height }) : [] });
+    } else {
+      for (let distance = spacingNm; distance <= range + spacingNm; distance += spacingNm) {
+        const nm = Math.min(distance, range), r = radius * nm / range;
+        context.beginPath(); context.arc(cx, cy, r, 0, Math.PI * 2); context.stroke(); context.fillText(`${nm} NM`, cx + 7, cy - r + 14);
+        labelBoxes.push({ x: cx + 7, y: cy - r + 2, width: context.measureText?.(`${nm} NM`)?.width || 40, height: 14 });
+        if (nm === range) break;
+      }
+    }
+    return labelBoxes;
+  }
+
   function studentScopeCanvas() { return byId(state.metadata?.mode === 'qgh' ? 'studentEstimateScope' : 'radarScope'); }
   function studentScopeRange() { return state.metadata?.mode === 'qgh' ? Number(byId('studentScopeRange').value) || 40 : selectedRadarRange(); }
   function sizeStudentCanvas(canvas) {
@@ -379,20 +434,20 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (bounds?.width > 0 && bounds?.height > 0) { canvas.width = Math.round(bounds.width); canvas.height = Math.round(bounds.height); }
   }
   function projectStudentPoint(xNm, yNm) {
-    const canvas = studentScopeCanvas(), scale = Math.min(canvas.width, canvas.height) * .41 / studentScopeRange();
+    const canvas = studentScopeCanvas(), scale = Math.min(canvas.width, canvas.height) * .44 / studentScopeRange();
     return [canvas.width / 2 + state.scopePan.x + xNm * scale, canvas.height / 2 + state.scopePan.y - yNm * scale];
   }
   function inverseStudentPoint(event) {
-    const canvas = studentScopeCanvas(), bounds = canvas.getBoundingClientRect(), scale = Math.min(canvas.width, canvas.height) * .41 / studentScopeRange();
+    const canvas = studentScopeCanvas(), bounds = canvas.getBoundingClientRect(), scale = Math.min(canvas.width, canvas.height) * .44 / studentScopeRange();
     return { xNm: ((event.clientX - bounds.left) * canvas.width / bounds.width - canvas.width / 2 - state.scopePan.x) / scale,
       yNm: -((event.clientY - bounds.top) * canvas.height / bounds.height - canvas.height / 2 - state.scopePan.y) / scale };
   }
   function renderEstimateScope() {
     const canvas = byId('studentEstimateScope'), ctx = canvas.getContext('2d'); sizeStudentCanvas(canvas);
-    const cx = canvas.width / 2 + state.scopePan.x, cy = canvas.height / 2 + state.scopePan.y, radius = Math.min(canvas.width, canvas.height) * .41, range = studentScopeRange();
+    const cx = canvas.width / 2 + state.scopePan.x, cy = canvas.height / 2 + state.scopePan.y, radius = Math.min(canvas.width, canvas.height) * .44, range = studentScopeRange();
     ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#0e1319'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = '#354954'; ctx.fillStyle = '#8eb0b7'; ctx.font = '12px IBM Plex Mono';
-    for (let ring = 1; ring <= 4; ring++) { ctx.beginPath(); ctx.arc(cx, cy, radius * ring / 4, 0, Math.PI * 2); ctx.stroke(); ctx.fillText(`${range * ring / 4} NM`, cx + 7, cy - radius * ring / 4 + 14); }
+    drawStudentRangeRings(ctx, canvas, range, radius, cx, cy, 'studentRingSpacing');
     ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius); ctx.stroke();
     globalThis.ATCScopeVisuals?.drawRunwayStrip(ctx, { runwayHeadingDeg: Number(state.metadata?.runwayOrientation) || 0 }, (x, y) => [cx + x * radius / range, cy - y * radius / range], radius / range);
     ctx.fillStyle = '#b8d1ca'; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillText('ARP / D/F', cx + 8, cy - 9);
@@ -484,19 +539,37 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     for (const [, id] of radarLabelFields) byId(id).disabled = !correlated;
     const centrelineAvailable = environment.extendedCentreline === true;
     const descentAvailable = state.metadata?.mode === 'sra' && environment.sraDescentProfile === true;
+    const lfaAvailable = environment.publishedAirspace
+      ? environment.publishedAirspace.layerVisibility?.lfa !== false && environment.publishedAirspace.areas?.some(area => area.id === environment.publishedAirspace.lfaId)
+      : environment.lfaBoundary.length >= 3;
+    byId('radarOverlayLfa').disabled = !lfaAvailable;
     byId('radarOverlayCentreline').disabled = !centrelineAvailable;
     byId('radarOverlayDescent').disabled = !descentAvailable;
     byId('radarLabelHelp').textContent = correlated
       ? 'Labels are shown only beside cooperative square returns. Heading and ground speed are sampled track estimates. Primary + returns remain anonymous.'
       : 'Primary-only picture: labels are unavailable and every return remains anonymous.';
-    byId('radarAidHelp').textContent = centrelineAvailable || descentAvailable
+    byId('radarAidHelp').textContent = centrelineAvailable || descentAvailable || lfaAvailable
       ? 'Available instructor-provided aids can be hidden locally for declutter.'
       : 'No instructor-provided scope aids are available for this exercise.';
-    const visibleAids = [centrelineAvailable && byId('radarOverlayCentreline').checked, descentAvailable && byId('radarOverlayDescent').checked].filter(Boolean).length;
+    const summary = byId('studentChartSummary');
+    if (summary) {
+      const lines = globalThis.ATCSuiteDisplay?.radarChartSummary?.({ environment, metadata: state.metadata,
+        overlays: state.observation?.overlays, showExtendedCentreline: centrelineAvailable && byId('radarOverlayCentreline').checked,
+        showLfa: lfaAvailable && byId('radarOverlayLfa').checked,
+        showDescentProfile: descentAvailable && byId('radarOverlayDescent').checked }) || [];
+      summary.textContent = lines.join(' · '); summary.hidden = !lines.length;
+      const reference = byId('studentChartReference'), label = byId('studentChartLabel');
+      if (reference) reference.hidden = !lines.length;
+      if (label) {
+        label.textContent = environment.publishedAirspace ? `${environment.publishedAirspace.baseName} · ${environment.publishedAirspace.lfaName}` : 'Exercise chart references';
+        label.hidden = !lines.length;
+      }
+    }
+    const visibleAids = [centrelineAvailable && byId('radarOverlayCentreline').checked, descentAvailable && byId('radarOverlayDescent').checked, lfaAvailable && byId('radarOverlayLfa').checked].filter(Boolean).length;
     byId('radarScopeControlStatus').textContent = correlated
       ? `${labelCount ? `${labelCount} LABEL${labelCount === 1 ? '' : 'S'}` : 'DECLUTTERED'}${visibleAids ? ` · ${visibleAids} AID${visibleAids === 1 ? '' : 'S'}` : ''}`
       : 'PRIMARY ONLY';
-    return { preferences, extendedCentreline: centrelineAvailable && byId('radarOverlayCentreline').checked,
+    return { preferences, extendedCentreline: centrelineAvailable && byId('radarOverlayCentreline').checked, lfa: lfaAvailable && byId('radarOverlayLfa').checked,
       descent: descentAvailable && byId('radarOverlayDescent').checked };
   }
 
@@ -542,6 +615,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const overlaps = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
     // Reserve sampled return symbols as well as label boxes; layout never consults aircraft truth.
     const occupied = samples.map(({ point }) => ({ x: point.x - 8, y: point.y - 8, width: 16, height: 16 }));
+    if (document.querySelectorAll) occupied.push(...(globalThis.ATCScopeVisuals?.overlayObstacles(canvas, { document, width: canvas.width, height: canvas.height }) || []));
     const labels = [];
     for (const { plot, point } of samples) {
       const lines = radarLabelLines(plot, preferences);
@@ -679,34 +753,22 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function radarEnvironment() {
-    const source = state.metadata?.radarEnvironment || {}, fallbackRunway = Number(state.metadata?.runwayOrientation) || 0;
-    const points = Array.isArray(source.lfaBoundary) ? source.lfaBoundary
-      .filter(point => Number.isFinite(point?.bearingDeg) && Number.isFinite(point?.rangeNm) && point.rangeNm >= 0)
-      .slice(0, 12).map(point => ({ bearingDeg: point.bearingDeg, rangeNm: point.rangeNm })) : [];
-    return {
-      runwayOrientationDeg: Number.isFinite(source.runwayOrientationDeg) ? source.runwayOrientationDeg : fallbackRunway,
-      extendedCentreline: source.extendedCentreline === true,
-      extendedCentrelineNm: Number.isFinite(source.extendedCentrelineNm) ? Math.max(0, source.extendedCentrelineNm) : 20,
-      centrelineTickNm: Number.isFinite(source.centrelineTickNm) ? Math.max(.5, source.centrelineTickNm) : 2,
-      lfaBoundary: points,
-      // A student can only hide an instructor-provided SRA aid. Do not infer a
-      // guide when the safe metadata did not declare one.
-      sraDescentProfile: state.metadata?.mode === 'sra' && source.sraDescentProfile === true
-    };
+    return globalThis.ATCSuiteDisplay.radarChartEnvironment(state.metadata);
   }
 
   function radarGuideNote(environment, sra, presentation = {}) {
     const notes = ['North up', 'sampled returns only', 'range rings in NM', 'runway symbol schematic'];
     notes.push(correlatedRadarProfile() ? '+ primary return · □ selectable SSR return' : '+ primary return');
     if (environment.extendedCentreline && presentation.extendedCentreline) notes.push('extended runway centreline is a training overlay');
-    if (environment.lfaBoundary.length >= 3) notes.push('LFA boundary is a local training reference only');
+    if (environment.publishedAirspace) notes.push('Published chart references are separate from the configured exercise runway and SRA final');
+    else if (environment.lfaBoundary.length >= 3) notes.push('LFA boundary is a local training reference only');
     if (sra) notes.push(presentation.descent ? 'SRA corridor and descent profile are training guides, not safety limits or clearances' : 'SRA corridor is a training guide, not safety limits or clearances');
     return notes.join(' · ');
   }
 
   function drawRunway(context, canvas, environment) {
     const runway = environment.runwayOrientationDeg;
-    const scale = Math.min(canvas.width, canvas.height) * .41 / selectedRadarRange();
+    const scale = Math.min(canvas.width, canvas.height) * .44 / selectedRadarRange();
     const project = (x, y) => [canvas.width / 2 + state.scopePan.x + x * scale, canvas.height / 2 + state.scopePan.y - y * scale];
     if (globalThis.ATCScopeVisuals?.drawRunwayStrip) globalThis.ATCScopeVisuals.drawRunwayStrip(context, environment, project, scale);
     else {
@@ -714,107 +776,34 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       context.strokeStyle = '#91979c'; context.lineWidth = 5; context.beginPath(); context.moveTo(start.x, start.y); context.lineTo(end.x, end.y); context.stroke();
     }
     const [cx, cy] = project(0, 0);
-    context.fillStyle = '#b8d1ca'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
-    context.font = '11px IBM Plex Mono'; context.fillText('ARP', cx + 8, cy - 9);
-    context.fillText(`RWY ${pad(runway)}°`, cx + 13, cy + 21);
+    context.fillStyle = '#b8d1ca'; context.font = '11px IBM Plex Mono';
+    if (environment.publishedAirspace?.layerVisibility?.arp !== false) {
+      context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+      context.fillText('ARP', cx + 8, cy - 9);
+    }
+    context.fillText(`${environment.publishedAirspace ? 'EXERCISE ' : ''}RWY ${pad(runway)}°`, cx + 13, cy + 21);
   }
 
-  function drawRadarEnvironment(context, canvas, environment, showExtendedCentreline) {
-    const range = selectedRadarRange();
-    if (showExtendedCentreline && environment.extendedCentreline && environment.extendedCentrelineNm > 0) {
-      const total = Math.min(range, environment.extendedCentrelineNm), runway = environment.runwayOrientationDeg;
-      const strip = globalThis.ATCScopeVisuals?.runwayGeometry(environment);
-      const centre = strip?.centre || { xNm: 0, yNm: 0 };
-      const scale = Math.min(canvas.width, canvas.height) * .41 / selectedRadarRange();
-      const cx = canvas.width / 2 + state.scopePan.x + centre.xNm * scale, cy = canvas.height / 2 + state.scopePan.y - centre.yNm * scale;
-      context.strokeStyle = '#8f936d'; context.lineWidth = 1; context.setLineDash([9, 6]);
-      for (const direction of [runway, runway + 180]) {
-        const point = radarTransform(canvas, total, direction);
-        context.beginPath(); context.moveTo(cx, cy); context.lineTo(point.x + centre.xNm * scale, point.y - centre.yNm * scale); context.stroke();
-      }
-      context.setLineDash([]); context.fillStyle = '#b6bd91'; context.font = '11px IBM Plex Mono';
-      const tick = environment.centrelineTickNm;
-      for (const direction of [runway, runway + 180]) {
-        const theta = direction * Math.PI / 180;
-        for (let distance = tick; distance <= total + 1e-9; distance += tick) {
-          const point = radarTransform(canvas, distance, direction), dx = Math.cos(theta) * 5, dy = Math.sin(theta) * 5;
-          point.x += centre.xNm * scale; point.y -= centre.yNm * scale;
-          context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
-          context.fillText(`${Math.round(distance)} NM`, point.x + 7, point.y - 5);
-        }
-      }
-      const labelY = state.metadata?.mode === 'sra' ? canvas.height - 118 : canvas.height - 28;
-      context.fillText(`EXTENDED RWY CENTRELINE · ${pad(runway)}° / ${pad(runway + 180)}°`, 26, labelY);
-    }
-    if (environment.lfaBoundary.length >= 3) {
-      const points = environment.lfaBoundary.map(point => radarTransform(canvas, point.rangeNm, point.bearingDeg));
-      context.strokeStyle = '#ca8a6a'; context.lineWidth = 1.4; context.setLineDash([4, 8]); context.beginPath();
-      context.moveTo(points[0].x, points[0].y); points.slice(1).forEach(point => context.lineTo(point.x, point.y)); context.lineTo(points[0].x, points[0].y); context.stroke(); context.setLineDash([]);
-      const first = environment.lfaBoundary[0];
-      if (first.rangeNm <= range) { context.fillStyle = '#e3aa84'; context.font = '11px IBM Plex Mono'; context.fillText('LFA · TRAINING BOUNDARY', points[0].x + 8, points[0].y - 8); }
-    }
+  function radarChartOptions(canvas, environment) {
+    return { width: canvas.width, height: canvas.height,
+      cx: canvas.width / 2 + state.scopePan.x, cy: canvas.height / 2 + state.scopePan.y,
+      scale: Math.min(canvas.width, canvas.height) * .44 / selectedRadarRange(), rangeNm: selectedRadarRange(),
+      environment, metadata: state.metadata, runway: globalThis.ATCScopeVisuals?.runwayGeometry(environment),
+      obstacles: globalThis.ATCScopeVisuals?.overlayObstacles(canvas, { document, width: canvas.width, height: canvas.height }) || [] };
   }
 
-  function drawSraReferences(context, canvas, overlays, radius, environment, showDescentProfile) {
-    const bearing = overlays.centrelineDeg ?? ((Number(overlays.runwayOrientationDeg ?? state.metadata.runwayOrientation) + 180) % 360);
-    const threshold = globalThis.ATCScopeVisuals?.runwayGeometry(environment).threshold || { xNm: 0, yNm: 0 };
-    const scale = radius / selectedRadarRange();
-    const angle = bearing * Math.PI / 180, cx = canvas.width / 2 + state.scopePan.x + threshold.xNm * scale, cy = canvas.height / 2 + state.scopePan.y - threshold.yNm * scale;
-    const fromThreshold = distance => { const point = radarTransform(canvas, distance, bearing); return { x: point.x + threshold.xNm * scale, y: point.y - threshold.yNm * scale }; };
-    const totalWidthNm = Number.isFinite(overlays.approachCorridorWidthNm) && overlays.approachCorridorWidthNm >= 0 ? overlays.approachCorridorWidthNm : 2;
-    const halfWidthPx = totalWidthNm / 2 / selectedRadarRange() * radius;
-    const alongPx = Math.sqrt(Math.max(0, radius * radius - halfWidthPx * halfWidthPx));
-    context.strokeStyle = '#597966'; context.lineWidth = 1; context.setLineDash([5, 7]);
-    if (halfWidthPx < radius) {
-      for (const side of [-1, 1]) {
-        const x = cx + Math.cos(angle) * halfWidthPx * side, y = cy + Math.sin(angle) * halfWidthPx * side;
-        context.beginPath(); context.moveTo(x, y); context.lineTo(x + Math.sin(angle) * alongPx, y - Math.cos(angle) * alongPx); context.stroke();
-      }
-    }
-    context.setLineDash([]);
-    const glidepathDeg = Number.isFinite(state.metadata.glidepathDeg) ? state.metadata.glidepathDeg : 3;
-    const configuredSpeed = Number.isFinite(state.metadata.approachSpeedKt) ? state.metadata.approachSpeedKt : null;
-    const configuredType = state.metadata.approachAircraftType ? String(state.metadata.approachAircraftType).toUpperCase() : null;
-    const feetPerNm = Math.tan(glidepathDeg * Math.PI / 180) * 6076.12;
-    const descentRateFpm = configuredSpeed == null ? null : Math.round((feetPerNm * configuredSpeed / 60) / 10) * 10;
-    context.fillStyle = '#a6b99b'; context.font = '12px IBM Plex Mono';
-    context.fillText(`SRA TRAINING CORRIDOR · ${totalWidthNm} NM TOTAL`, 26, canvas.height - (showDescentProfile ? 98 : 51));
-    context.strokeStyle = '#c4af64'; context.lineWidth = 1.5; context.setLineDash([9, 8]); context.beginPath(); context.moveTo(cx, cy); context.lineTo(cx + Math.sin(angle) * radius, cy - Math.cos(angle) * radius); context.stroke(); context.setLineDash([]);
-    context.font = '12px IBM Plex Mono'; context.fillStyle = '#dac981';
-    // Use the same instructor-selected interval as the extended centreline so
-    // range cues remain consistent across the training scope.
-    const markStep = Number.isFinite(environment.centrelineTickNm) ? environment.centrelineTickNm : 2;
-    const cueLabels = [];
-    const marks = [];
-    for (let distance = .5; distance <= Math.min(5, selectedRadarRange()); distance += .5) marks.push(distance);
-    for (let distance = markStep; distance < selectedRadarRange(); distance += markStep) if (distance > 5) marks.push(distance);
-    // Draw every tick; prioritise the existing major-distance labels before
-    // filling remaining space with the new half-mile labels.
-    marks.sort((a, b) => Number(a % markStep !== 0) - Number(b % markStep !== 0) || a - b);
-    for (const distance of marks) {
-      const point = fromThreshold(distance), dx = Math.cos(angle) * 6, dy = Math.sin(angle) * 6;
-      context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
-      const height = Math.round((feetPerNm * distance) / 10) * 10;
-      const label = showDescentProfile ? `${distance} NM · ${height.toLocaleString()} FT AAL` : `${distance}`;
-      const labelWidth = context.measureText(label).width;
-      const labelX = Math.max(12, Math.min(point.x + 9, canvas.width - labelWidth - 12));
-      const labelY = Math.max(80, Math.min(point.y + 5, canvas.height - 130));
-      const box = { left: labelX - 5, right: labelX + labelWidth + 5, top: labelY - 18, bottom: labelY + 7 };
-      if (cueLabels.some(prior => box.left < prior.right && box.right > prior.left && box.top < prior.bottom && box.bottom > prior.top)) continue;
-      cueLabels.push(box);
-      context.fillText(label, labelX, labelY);
-    }
-    if (Number.isFinite(overlays.terminationRangeNm) && overlays.terminationRangeNm <= selectedRadarRange()) {
-      const point = fromThreshold(overlays.terminationRangeNm), dx = Math.cos(angle) * 13, dy = Math.sin(angle) * 13;
-      context.strokeStyle = '#edbb7d'; context.lineWidth = 3; context.beginPath(); context.moveTo(point.x - dx, point.y - dy); context.lineTo(point.x + dx, point.y + dy); context.stroke();
-      context.fillStyle = '#edbb7d'; context.fillText(`TERMINATION ${overlays.terminationRangeNm} NM`, 26, canvas.height - 28);
-    }
-    context.fillText(`FINAL ${pad(state.metadata.finalTrack ?? (bearing + 180))}°`, 26, 56);
-    if (showDescentProfile) {
-      context.fillStyle = '#d9c980'; context.font = '11px IBM Plex Mono';
-      context.fillText(`${glidepathDeg.toFixed(1)}° DESCENT TRAINING GUIDE · INBOUND CL ${pad(bearing)}° · HEIGHTS AAL`, 26, canvas.height - 74);
-      context.fillText(`${configuredType ? `${configuredType} · ` : ''}${configuredSpeed == null ? 'CONFIGURED SPEED UNAVAILABLE' : `${configuredSpeed} KT CONFIGURED · ≈ ${descentRateFpm.toLocaleString()} FT/MIN`}`, 26, canvas.height - 51);
-    }
+  function drawRadarEnvironment(context, canvas, environment, showExtendedCentreline, showLfa = true, ringLabelBoxes = []) {
+    const options = radarChartOptions(canvas, environment), Display = globalThis.ATCSuiteDisplay;
+    if (!publishedBoundaryControls) publishedBoundaryControls = globalThis.ATSPublishedBoundaries?.createBoundaryControls(byId('studentChartReference'), { onChange: renderObservation });
+    publishedBoundaryControls?.update(environment.publishedAirspace?.referenceBoundaries, { enabled: environment.publishedAirspace?.layerVisibility?.internationalBoundary !== false });
+    const chartLabels = Display?.drawRadarEnvironment(context, { ...options, obstacles: [...options.obstacles, ...ringLabelBoxes], showExtendedCentreline, showLfa });
+    Display?.drawPublishedAirspace(context, { ...options, publishedAirspace: environment.publishedAirspace,
+      layerVisibility: { lfa: showLfa }, boundaryVisibleIds: publishedBoundaryControls?.visibleIds(), chartLabels });
+    return chartLabels;
+  }
+
+  function drawSraReferences(context, canvas, overlays, radius, environment, showDescentProfile, chartLabels) {
+    globalThis.ATCSuiteDisplay?.drawSraReferences(context, { ...radarChartOptions(canvas, environment), overlays, showDescentProfile, chartLabels });
   }
 
   function renderPar() {
@@ -891,6 +880,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   // them. Student data labels intentionally start off for a decluttered scope.
   byId('radarOverlayCentreline').checked = true;
   byId('radarOverlayDescent').checked = true;
+  byId('radarOverlayLfa').checked = true;
   byId('joinPin').addEventListener('input', event => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6); });
   byId('joinSession').addEventListener('click', requestJoin); byId('joinPin').addEventListener('keydown', event => { if (event.key === 'Enter') requestJoin(); });
   byId('reconnectStudent').addEventListener('click', () => {
@@ -899,12 +889,32 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   });
   byId('cancelJoin').addEventListener('click', () => { state.session?.close(); state.session = null; show('joinPanel'); });
   byId('studentReady').addEventListener('click', ready); byId('selectQdm').addEventListener('click', () => changeDf('qdm')); byId('selectQte').addEventListener('click', () => changeDf('qte'));
-  for (const control of ['radarHistory', 'radarRange', 'parRangeScale', 'parHistory', ...radarLabelFields.map(([, id]) => id), 'radarOverlayCentreline', 'radarOverlayDescent']) byId(control).addEventListener('change', renderObservation);
+  for (const control of ['radarHistory', 'radarRange', 'parRangeScale', 'parHistory', ...radarLabelFields.map(([, id]) => id), 'radarOverlayCentreline', 'radarOverlayDescent', 'radarOverlayLfa']) byId(control).addEventListener('change', renderObservation);
+  // Range changes redraw only this controller's received picture, including
+  // while paused. They never request aircraft truth or change session state.
+  const radarZoom = globalThis.ATCSuiteDisplay?.bindScopeZoom(byId('radarScope'), {
+    getRange: selectedRadarRange,
+    setRange: range => { byId('radarRange').value = String(range); renderObservation(); },
+    isEnabled: () => !byId('studentWorkspace').hidden && !byId('radarStudentView').hidden
+      && ['surveillance', 'sra'].includes(state.metadata?.mode)
+  });
+  byId('studentRadarZoomIn').addEventListener('click', () => radarZoom?.zoom('in'));
+  byId('studentRadarZoomOut').addEventListener('click', () => radarZoom?.zoom('out'));
   for (const id of ['radarScope', 'studentEstimateScope']) {
     byId(id).addEventListener('pointerdown', studentScopePointerDown); byId(id).addEventListener('pointermove', studentScopePointerMove);
     byId(id).addEventListener('pointerup', studentScopePointerUp); byId(id).addEventListener('pointercancel', event => { state.plotting?.onPointerCancel(event); state.scopeDrag = null; });
   }
   byId('studentScopeRange').addEventListener('change', renderObservation);
+  for (const id of ['studentRingSpacing', 'radarRingSpacing']) byId(id)?.addEventListener('change', renderObservation);
+  if (typeof ResizeObserver === 'function') {
+    let resizeFrame = null;
+    const redrawScope = () => {
+      if (resizeFrame != null || byId('studentWorkspace').hidden || !state.metadata) return;
+      resizeFrame = requestAnimationFrame(() => { resizeFrame = null; renderObservation(); });
+    };
+    const resizeObserver = new ResizeObserver(redrawScope);
+    for (const id of ['radarScope', 'studentEstimateScope']) resizeObserver.observe(byId(id));
+  }
   byId('resetStudentScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
   byId('resetRadarScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
   byId('closeRadarInspection').addEventListener('click', closeRadarInspection);

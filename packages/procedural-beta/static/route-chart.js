@@ -11,9 +11,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 import { project } from './chart-geometry.js';
 import { visibleSegment } from './scope-navigation.js';
 
-export const CHART_ENVIRONMENT_KEYS = Object.freeze(['chartOrigin', 'drawnARP', 'rangeNm', 'stationName', 'stationType', 'stationXNm', 'stationYNm', 'stationFrequency', 'aerodromeName', 'chartReference', 'effectiveInfo', 'briefing', 'magneticVariationDeg', 'magneticVariationKnown', 'trainingMagneticVariationDeg', 'map', 'runwayHeadingDeg', 'runwayLengthNm', 'runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm', 'aerodromeElevationFt', 'thresholdCrossingHeightFt']);
+export const CHART_ENVIRONMENT_KEYS = Object.freeze(['referenceBoundaries', 'publishedAirspace', 'chartOrigin', 'drawnARP', 'rangeNm', 'stationName', 'stationType', 'stationXNm', 'stationYNm', 'stationFrequency', 'aerodromeName', 'chartReference', 'effectiveInfo', 'briefing', 'magneticVariationDeg', 'magneticVariationKnown', 'trainingMagneticVariationDeg', 'map', 'runwayHeadingDeg', 'runwayLengthNm', 'runwayOffsetNm', 'runwayCenterXNm', 'runwayCenterYNm', 'aerodromeElevationFt', 'thresholdCrossingHeightFt']);
 export function chartEnvironment(environment) {
-    return JSON.parse(JSON.stringify(Object.fromEntries(CHART_ENVIRONMENT_KEYS.filter(key => Object.hasOwn(environment || {}, key)).map(key => [key, environment[key]]))));
+    const result = JSON.parse(JSON.stringify(Object.fromEntries(CHART_ENVIRONMENT_KEYS.filter(key => Object.hasOwn(environment || {}, key)).map(key => [key, environment[key]]))));
+    const boundaries = environment?.referenceBoundaries;
+    if (boundaries != null && !Array.isArray(boundaries)) throw new Error('Reference boundaries must be a list.');
+    if (boundaries?.length && !globalThis.ATSPublishedBoundaries) throw new Error('Verified boundary validation is unavailable.');
+    if (environment?.publishedAirspace != null && !globalThis.ATSPublishedAirspace) throw new Error('Published chart validation is unavailable.');
+    if (Object.hasOwn(environment || {}, 'referenceBoundaries')) result.referenceBoundaries = boundaries?.length ? globalThis.ATSPublishedBoundaries.normalizeBoundaries(boundaries) : [];
+    if (Object.hasOwn(environment || {}, 'publishedAirspace')) result.publishedAirspace = environment?.publishedAirspace == null ? null : globalThis.ATSPublishedAirspace.normalizePublishedAirspace(environment.publishedAirspace);
+    return result;
 }
 export const filterChartEnvironment = chartEnvironment;
 const textLimits = { source: 100, reference: 500, levelLimits: 240, effectiveInfo: 500, designator: 32, publishedLimitsHeading: 500, trackDistance: 500, lateralLimits: 240, oddLevels: 80, evenLevels: 80, notes: 2000 };
@@ -95,7 +102,7 @@ export function routeChartLegs(route, fixes, pointToScreen, width, height) {
 // Draw full route polyline + annotations. The caller owns visibility, colour,
 // dashes, collision reservation and reporting-point symbols. A route name and
 // its level limits are one label, keeping the limits directly underneath.
-export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height, label, showLabels = true, color = '#a5c4ac' }) {
+export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height, label, showLabels = true, compactLabels = false, color = '#a5c4ac' }) {
     const byId = new Map(fixes.map(f => [f.id, f]));
     ctx.beginPath();
     let connected = false;
@@ -108,9 +115,13 @@ export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height
     }
     ctx.stroke();
     const legs = routeChartLegs(route, fixes, pointToScreen, width, height);
+    const published = route.id?.startsWith('aip-') || route.publishedSegments?.length;
     ctx.save(); ctx.setLineDash([]);
     for (const leg of legs) {
         for (const arrow of leg.arrows) {
+            // A table's Odd/Even direction must never become an unlabelled
+            // one-way arrow. The full source table remains in Chart briefing.
+            if (published && compactLabels && arrow.label) continue;
             const { x, y, dx, dy } = arrow;
             ctx.beginPath(); ctx.moveTo(x - dx * 7 - dy * 4, y - dy * 7 + dx * 4); ctx.lineTo(x + dx * 7, y + dy * 7); ctx.lineTo(x - dx * 7 + dy * 4, y - dy * 7 - dx * 4); ctx.stroke();
             if (showLabels && arrow.label) label?.(arrow.label, x + dy * 8, y - dx * 8, color);
@@ -118,7 +129,7 @@ export function drawRouteChart(ctx, route, fixes, pointToScreen, { width, height
     }
     const labelled = new Set(), name = route.id?.startsWith('aip-') ? route.name.split(' ')[0] : route.name;
     for (const leg of [...legs].sort((a, b) => Math.hypot(b.b.x - b.a.x, b.b.y - b.a.y) - Math.hypot(a.b.x - a.a.x, a.b.y - a.a.y))) {
-        const text = [name, leg.level].filter(Boolean).join('\n');
+        const text = [name, published && compactLabels ? '' : leg.level].filter(Boolean).join('\n');
         if (!showLabels || !text || labelled.has(text) || Math.hypot(leg.b.x - leg.a.x, leg.b.y - leg.a.y) < 42) continue;
         if (label?.(text, (leg.a.x + leg.b.x) / 2, (leg.a.y + leg.b.y) / 2, color) !== false) labelled.add(text);
     }

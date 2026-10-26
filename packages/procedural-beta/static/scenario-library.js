@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 import { validateBoundary } from './airspace-preparation.js';
 import { project } from './chart-geometry.js';
-import { validateRouteChartMetadata } from './route-chart.js';
+import { validateRouteChartMetadata, chartEnvironment } from './route-chart.js';
 
 const storageKey = 'ats-simbox-exercise-templates-v1';
 const stateKeys = ['version', 'exerciseId', 'revision', 'elapsed', 'running', 'terminated', 'mode', 'title', 'environment', 'fixes', 'routes', 'areas', 'scopeDisplay', 'aircraft', 'strips', 'calls', 'reports', 'events', 'criteria', 'radio', 'sequence'];
@@ -64,6 +64,9 @@ export function prepareExerciseTemplate(bundle, name, id = '', createdAt = '', o
     if (createdAt && (typeof createdAt !== 'string' || createdAt.length > 40 || !Number.isFinite(Date.parse(createdAt)))) throw new Error('Saved exercise date is invalid.');
     const scenario = {};
     for (const key of stateKeys) if (key in source) scenario[key] = cloneSafe(source[key]);
+    const chart = chartEnvironment(scenario.environment);
+    if ('referenceBoundaries' in chart) scenario.environment.referenceBoundaries = chart.referenceBoundaries;
+    if ('publishedAirspace' in chart) scenario.environment.publishedAirspace = chart.publishedAirspace;
     Object.assign(scenario, { exerciseId: 'saved-template', revision: 0, sequence: 0, elapsed: 0, running: false, terminated: false, title: label, calls: [], reports: [], events: [], radio: { id: '', aircraftId: '', callsign: '', text: '', phase: 'idle', remainingMs: 0 } });
     const callsigns = new Set(), aircraftIds = new Set();
     for (const aircraft of scenario.aircraft) {

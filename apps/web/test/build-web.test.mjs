@@ -60,6 +60,12 @@ const instructorLedFiles = [
   'workspace-shell.css',
   'simulator-core.js',
   'scope-visuals.js',
+  'published-boundaries.js',
+  'published-airspace.js',
+  'published-airspace.css',
+  'india-airbase-lfa-catalogue.json',
+  'india-airspace.json',
+  'india-aip-enroute.json',
   'procedure-core.js',
   'fonts/ibm-plex-mono-500.ttf',
   'fonts/ibm-plex-sans-400.ttf',
@@ -254,7 +260,8 @@ test('web build creates an allowlisted PWA package', () => {
   assert.match(headers, /\/service-worker\.js\s+Content-Security-Policy: default-src 'self'; script-src 'self'; connect-src 'self'/);
   assert.match(headers, /\/instructor-led\/\*\s+Content-Security-Policy:[^\n]+connect-src 'self' https:\/\/yigmtmdrqpufdwvzswjd\.supabase\.co;/);
   assert.match(headers, /\/procedural-beta\/\*\s+Content-Security-Policy:[^\n]+connect-src 'self' https:\/\/yigmtmdrqpufdwvzswjd\.supabase\.co;/);
-  assert.match(instructorEntry, /ATS SIM BOX · Version 1/);
+  assert.match(instructorEntry, /ATS SIM BOX/);
+  assert.doesNotMatch(instructorEntry.replace(/<[^>]+>/g, ' '), /Version 1/);
   assert.doesNotMatch(instructorEntry.replace(/<[^>]+>/g,' '), /BETA PROJECT|UNDER DEVELOPMENT|USER TRIALS/);
   assert.match(instructorEntry, /href="\.\.\/index\.html"/);
   assert.match(instructorWorker, /reds-atc-suite-/);

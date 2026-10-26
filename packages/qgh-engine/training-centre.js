@@ -107,6 +107,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 (function () {
   'use strict';
   if (typeof document === 'undefined') return;
+  const redirect = document.querySelector('meta[name="training-guide-redirect"]');
+  if (redirect) {
+    const destination = new URL(redirect.getAttribute('content'), location.href);
+    // Old bookmarked answer/section fragments survive the handbook consolidation.
+    if (location.hash) destination.hash = location.hash;
+    location.replace(destination.href);
+    return;
+  }
   const Media = globalThis.QGHTrainingMedia;
   const $ = id => document.getElementById(id);
   const entries = globalThis.QGHRTCatalogue?.entries || [];
@@ -167,16 +175,45 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     previouslyOpen.forEach(([detail]) => { detail.open = true; });
   });
   window.addEventListener('afterprint', () => { previouslyOpen.forEach(([detail, open]) => { detail.open = open; }); });
-  const helpAliases = { continuous: 'continuous-listening', 'report-heading-passing': 'heading-passing', 'resume': 'resume-normal', 'detach': 'stop-following-leader', 'pilot-replies': 'voice', 'headphones': 'voice', 'level': 'controls' };
+  const helpAliases = { individual: 'qgh', catalogue: 'calls', continuous: 'continuous-listening', 'report-heading-passing': 'heading-passing', 'resume': 'resume-normal', 'detach': 'stop-following-leader', 'pilot-replies': 'voice', 'headphones': 'voice', 'level': 'controls' };
   function revealTopic() {
     const requested = location.hash.slice(1) || params.get('topic') || params.get('help');
     const target = document.getElementById(helpAliases[requested] || requested);
     if (!target) return;
     if (target.tagName === 'DETAILS') target.open = true;
+    for (let parent = target.parentElement; parent; parent = parent.parentElement) {
+      if (parent.tagName === 'DETAILS') parent.open = true;
+    }
     target.scrollIntoView({ block: 'start' });
   }
+  // Search includes collapsed guidance. Results open the relevant answer, so
+  // concise task pointers remain the first view without concealing detail.
+  const guideSearch = $('guideSearch');
+  if (guideSearch) {
+    const answers = [...document.querySelectorAll('[data-guide-entry]')];
+    guideSearch.addEventListener('input', () => {
+      const words = guideSearch.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+      const results = $('guideSearchResults');
+      results.replaceChildren();
+      if (!words.length) { results.hidden = true; $('guideSearchStatus').textContent = ''; return; }
+      const matches = answers.filter(answer => words.every(word => answer.textContent.toLowerCase().includes(word)));
+      $('guideSearchStatus').textContent = matches.length ? `${matches.length} matching topics${matches.length > 12 ? ' · first 12 shown; refine your search' : ''}` : 'No matching topic. Try fewer words or search Accepted RT calls below.';
+      for (const answer of matches.slice(0,12)) {
+        const item = node('li'), link = node('a', answer.querySelector('summary').textContent, {href:'#'+answer.id});
+        link.addEventListener('click', () => {
+          answer.open = true;
+          const full = answer.querySelector('.guide-full');
+          if (full) full.open = true;
+          answer.querySelector('summary').focus();
+          answer.scrollIntoView({block:'start'});
+        });
+        item.append(link); results.append(item);
+      }
+      results.hidden = !matches.length;
+    });
+  }
   if ('IntersectionObserver' in window) {
-    const sections = [...document.querySelectorAll('main>.section')];
+    const sections = [...document.querySelectorAll('main .section')];
     const active = new Map();
     const observer = new IntersectionObserver(changes => {
       changes.forEach(change => active.set(change.target.id, change.isIntersecting));

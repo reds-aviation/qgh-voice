@@ -573,3 +573,73 @@ body.student-page.exercise-console #studentWorkspace .df-readout strong{font-fam
  body.student-page.exercise-console #studentWorkspace .df-console{min-width:0}
  body.student-page.exercise-console #studentWorkspace .df-console :is(header,.df-readout,.segmented){min-width:0;overflow-wrap:anywhere}
 }
+
+/* Controller and instructor share the same working regions: a compact header,
+   full-height scope, movable radio on the left and scope tools on the right. */
+body.student-page.exercise-console{--bg:var(--ats-page);--paper:var(--ats-panel);--paper-strong:var(--ats-panel-raised);--ink:var(--ats-text);--muted:var(--ats-muted);--line:var(--ats-border);--line-strong:var(--ats-border);height:100dvh;overflow:hidden;background:var(--ats-page);color:var(--ats-text)}
+body.student-page.exercise-console>.shell{width:100%;max-width:none;margin:0;padding:0}
+body.student-page.exercise-console #studentWorkspace{height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:0;padding:0}
+body.student-page.exercise-console #studentWorkspace .student-head{grid-column:1;min-height:64px;padding:8px 16px;margin:0;background:var(--ats-panel);border-bottom:1px solid var(--ats-border)}
+body.student-page.exercise-console .student-console{position:relative;min-width:0;min-height:0;grid-column:1;overflow:hidden}
+body.student-page.exercise-console .student-console>:is(.student-estimate-scope,.radar-student){height:100%;margin:0;border:0;border-radius:0}
+body.student-page.exercise-console .student-console .radar-scope,body.student-page.exercise-console .student-console .student-estimate-scope{height:100%;display:flex;flex-direction:column;border:0;border-radius:0;overflow:hidden;background:var(--ats-scope)}
+body.student-page.exercise-console .student-console :is(#radarScope,#studentEstimateScope){flex:1 1 0;min-height:0;height:0;width:100%;max-width:none;aspect-ratio:auto;margin:0;background:var(--ats-scope)}
+body.student-page.exercise-console .student-console :is(.card-head,.radar-scope>header){flex:0 0 auto;min-height:46px;padding:5px 9px;gap:8px;background:var(--ats-panel);color:var(--ats-text);border-bottom:1px solid var(--ats-border);overflow:visible}
+body.student-page.exercise-console .student-console .instrument-controls{flex-wrap:wrap;align-items:center;gap:8px}
+body.student-page.exercise-console .student-console :is(button,select){font-family:var(--ats-font-sans,Arial,sans-serif);font-size:13px;letter-spacing:0;min-height:36px;background:var(--ats-panel-raised);color:var(--ats-text);border:1px solid var(--ats-border);border-radius:6px}
+body.student-page.exercise-console .student-console label{font-size:12px;color:var(--ats-muted);letter-spacing:0}
+body.student-page.exercise-console .student-console select{width:auto;padding:5px 8px;background:var(--ats-input)}
+body.student-page.exercise-console .student-console .radar-status{flex:0 0 auto;background:var(--ats-panel);color:var(--ats-muted);min-height:24px;padding:4px 10px;gap:8px;font-size:11px}
+body.student-page.exercise-console .student-console .instrument-note{flex:0 0 auto;color:var(--ats-muted);background:var(--ats-panel);font-size:11px;padding:4px 10px}
+body.student-page.exercise-console .student-console>.ats-tool-rail{position:absolute;z-index:12;right:8px;top:68px;width:var(--ats-tools-width);max-height:calc(100% - 110px);display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel);overflow:auto;scrollbar-width:auto}
+body.student-page.exercise-console .student-console .ats-tool-button{min-height:40px;padding:8px;text-align:left;white-space:normal}
+body.student-page.exercise-console .ats-student-radio{position:absolute;z-index:10;left:8px;top:68px;width:240px;max-height:calc(100% - 110px);padding:8px;overflow:auto;scrollbar-width:auto;border:1px solid var(--ats-border);border-radius:8px;background:var(--ats-panel);box-sizing:border-box}
+body.student-page.exercise-console .ats-student-radio-body{display:flex;flex-direction:column;gap:8px}
+body.student-page.exercise-console .ats-student-radio .qgh-student{width:100%;align-self:stretch}
+body.student-page.exercise-console #studentHomingDial{display:block;width:180px;height:110px;max-width:100%;margin:auto;background:var(--ats-input)}
+body.student-page.exercise-console .ats-student-radio .pilot-caption{width:100%;max-height:210px;overflow:auto;flex:none;border:1px solid #986875;border-radius:8px}
+body.student-page.exercise-console .ats-student-radio .pilot-caption strong{white-space:normal}
+body.student-page.exercise-console .ats-student-drawer{position:fixed;z-index:35;top:64px;bottom:0;right:0;width:var(--ats-drawer-width);height:auto;max-height:none;overflow:auto;margin:0;background:var(--ats-panel);border:1px solid var(--ats-border);border-radius:0;padding:0;color:var(--ats-text);scrollbar-width:auto}
+body.student-page.exercise-console .ats-student-drawer:not([open]){display:none}
+body.student-page.exercise-console .ats-student-drawer>summary{position:sticky;top:0;display:flex;align-items:center;gap:6px;list-style:none;min-height:54px;padding:8px 12px;z-index:2;background:var(--ats-panel);border-bottom:1px solid var(--ats-border);font-size:14px}
+body.student-page.exercise-console .ats-student-drawer .site-header{padding:12px!important;display:flex;flex-direction:column;align-items:stretch;gap:12px}
+body.student-page.exercise-console .ats-student-drawer .site-header nav{display:flex;flex-wrap:wrap;gap:8px}
+body.student-page.exercise-console .ats-student-drawer :is(.student-plot-tools,.ats-meeting-panel){margin:12px}
+body.student-page.exercise-console .ats-student-focus .student-console :is(.radar-scope>header,.student-estimate-scope>.card-head){display:none}
+body.student-page.exercise-console .ats-student-focus .student-console>:is(.ats-student-radio,.ats-tool-rail){top:8px;max-height:calc(100% - 52px)}
+body.student-page.exercise-console .scope-display-controls>summary{color:var(--ats-text);background:var(--ats-panel-raised);border-color:var(--ats-border)}
+body.student-page.exercise-console .scope-control-panel{z-index:25}
+body.student-page.exercise-console .student-console>:is(.ats-student-radio,.ats-tool-rail){top:calc(var(--student-plot-top,60px) + 8px);max-height:calc(100% - var(--student-plot-top,60px) - 52px)}
+body.student-page.exercise-console .student-console:has(.par-student:not([hidden])){overflow:auto}
+body.student-page.exercise-console.narrow-radar #studentWorkspace{display:none}
+@media(max-width:1000px) and (min-width:701px){
+ body.student-page.exercise-console .ats-student-radio{width:210px}
+}
+@media(max-width:700px){
+ body.student-page.exercise-console{height:auto;min-height:100dvh;overflow-y:auto;overflow-x:hidden}
+ body.student-page.exercise-console #studentWorkspace{height:auto;min-height:100dvh;display:flex;flex-direction:column}
+ body.student-page.exercise-console #studentWorkspace .student-head{min-height:120px;flex-wrap:wrap;padding:8px}
+ body.student-page.exercise-console .student-console{display:flex;flex-direction:column;overflow:visible}
+ body.student-page.exercise-console .student-console>:is(.student-estimate-scope,.radar-student){height:auto;order:1}
+ body.student-page.exercise-console .student-console :is(#radarScope,#studentEstimateScope){flex:none;height:55dvh;min-height:300px}
+ body.student-page.exercise-console .student-console>.ats-tool-rail{position:static;order:0;width:100%;max-height:none;display:flex;flex-direction:row;overflow-x:auto;border-radius:0;flex-wrap:nowrap}
+ body.student-page.exercise-console .student-console .ats-tool-button{flex:0 0 auto;min-height:44px}
+ body.student-page.exercise-console .ats-student-radio{position:static;order:2;width:100%;max-height:none;margin:0;border-radius:0}
+ body.student-page.exercise-console .student-console :is(button,select){min-height:44px}
+ body.student-page.exercise-console .student-console .radar-scope>header{align-items:flex-start}
+ body.student-page.exercise-console .ats-student-drawer{inset:0;width:100%;height:100dvh}
+ body.student-page.exercise-console .ats-student-drawer>summary{padding-right:96px;flex-wrap:wrap}
+ body.student-page.exercise-console .student-console .scope-control-panel{z-index:40;max-height:70dvh;overflow:auto}
+}
+
+body.exercise-console .ats-chart-summary{margin:6px 10px 10px;color:var(--ats-muted);font:12px/1.6 var(--ats-font-sans,Arial,sans-serif);white-space:normal;overflow-wrap:anywhere}
+
+/* Zoom stays available when secondary scope settings are collapsed. */
+body.instructor-page.exercise-console .ats-scope-toolbar{grid-row:1;min-width:0}
+body.exercise-console .ats-scope-zoom{display:flex;flex:0 0 auto;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;min-height:44px;padding:4px 8px;background:var(--ats-panel);color:var(--ats-text);border-bottom:1px solid var(--ats-border);font:13px var(--ats-font-sans,Arial,sans-serif)}
+body.exercise-console .ats-scope-zoom>span{display:flex;align-items:center;gap:8px}
+body.exercise-console .ats-scope-zoom output{min-width:60px;font-variant-numeric:tabular-nums}
+body.exercise-console .ats-scope-zoom button{min-width:36px;min-height:36px;padding:2px 8px;font-size:20px;line-height:1;background:var(--ats-panel-raised);color:var(--ats-text);border:1px solid var(--ats-border);border-radius:6px}
+body.exercise-console .ats-scope-zoom button:disabled{opacity:.45}
+body.exercise-console .ats-scope-zoom small{font-size:12px;color:var(--ats-muted)}
+@media(max-width:600px){body.exercise-console .ats-scope-zoom small{display:none}}

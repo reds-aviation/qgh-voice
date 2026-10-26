@@ -45,3 +45,34 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   .topic-shortcuts a { min-height: 44px; font-size: 12px; }
 }
 @media print { .topic-nav-wrap, .topic-shortcuts { display: none !important; } }
+
+/* One guide: three familiar starting choices and compact, expandable pointers. */
+.suite-training-guide{--paper:#eef3f7;--card:#fff;--ink:#17344b;--muted:#466177;--line:#b9cbd9;--accent:#24647f;--accent-dark:#174763;--tint:#e1edf4;font-family:Arial,Plex,sans-serif}
+.suite-training-guide .site-header{background:#294f6b;color:#fff;border-bottom:4px solid #f49b3a}
+.suite-training-guide .brand,.suite-training-guide .brand span,.suite-training-guide .back-link{color:#fff}
+.suite-training-guide .training-layout{grid-template-columns:210px minmax(0,1fr);gap:32px}
+.suite-training-guide .section{padding-bottom:30px;margin-bottom:30px}
+.suite-training-guide h1{font-size:clamp(34px,4.2vw,54px);font-weight:600;margin-top:8px}
+.suite-training-guide h2{font-size:clamp(26px,2.6vw,34px);font-weight:600}
+.suite-training-guide h3{font-size:18px;margin-top:14px}
+.guide-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:24px 0}
+.guide-choice{display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--accent);padding:20px;border-radius:10px;text-decoration:none;color:var(--ink);min-width:0}
+.guide-choice:hover{background:var(--tint);border-color:var(--accent)}
+.guide-choice .choice-number{font:12px PlexMono,monospace;color:var(--muted)}
+.guide-choice h2{font-size:25px;margin:0}.guide-choice p{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 12px}.guide-choice>span:last-child{margin-top:auto;font-size:14px;font-weight:600}
+.guide-search{margin:24px 0 12px;max-width:720px}.guide-search>label{font-weight:600;font-size:15px}.guide-search>p{font-size:13px;color:var(--muted);margin:5px 0;min-height:1.5em}.guide-search ul{list-style:none;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--card);margin:8px 0;max-height:320px;overflow:auto;scrollbar-color:#62879e #e6eef4}
+.guide-search li+li{border-top:1px solid var(--line)}.guide-search a{display:block;padding:11px 14px;font-size:15px;text-decoration:none}.guide-search a:hover{background:var(--tint)}
+.guide-flow{margin:20px 0 24px}.guide-flow figcaption,.scope-layout-guide figcaption{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--muted)}
+.guide-flow ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;counter-reset:flow;margin:0;padding:0}
+.guide-flow li{position:relative;counter-increment:flow;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:14px 28px 14px 14px;min-width:0;line-height:1.4}
+.guide-flow li:before{content:counter(flow,decimal-leading-zero);display:block;font:11px PlexMono,monospace;color:var(--muted);margin-bottom:6px}.guide-flow li:not(:last-child):after{content:'→';position:absolute;right:9px;top:12px;color:var(--accent)}
+.guide-flow strong,.guide-flow span{display:block}.guide-flow strong{font-size:16px}.guide-flow span{font-size:13px;color:var(--muted);margin-top:4px}
+.guide-pointers{padding-left:22px;margin:14px 0;max-width:84ch}.guide-pointers li{font-size:15px;line-height:1.6;margin:8px 0;color:var(--ink)}
+.guide-answer{background:var(--card);border:1px solid var(--line);border-radius:8px;margin:10px 0;padding:12px 17px}.guide-answer>summary{font-size:16px;min-height:24px}.guide-answer .guide-full{border-top:1px solid var(--line);border-bottom:none;padding:8px 0 0;margin-top:12px}.guide-full>summary{font-size:13px;color:var(--accent-dark)}.guide-full .guide-pointers li{font-size:14px;color:var(--muted)}
+.guide-anchor{display:block;scroll-margin-top:24px}.guide-launch{margin:18px 0 0}.guide-reference h2{font-size:24px}
+.scope-layout-guide{margin:18px 0 24px;max-width:850px}.scope-layout-header{background:#253e50;color:#f4f7fa;border-radius:9px 9px 0 0;text-align:center;padding:10px;font-size:13px}.scope-layout-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.65fr) minmax(0,1fr);border:1px solid #486273;border-radius:0 0 9px 9px;background:#101c25;overflow:hidden;color:#e6eff5}
+.scope-layout-body>div{padding:16px 12px;display:flex;flex-direction:column;gap:9px;min-width:0;position:relative}.scope-layout-body>div+div{border-left:1px solid #486273}.scope-layout-body strong{font-size:14px;color:#f9d978;z-index:1}.scope-layout-body span:not(.scope-layout-ring){font-size:12px;line-height:1.5;z-index:1}.scope-layout-centre{min-height:190px;text-align:center;align-items:center;justify-content:center}.scope-layout-ring{position:absolute;width:145px;height:145px;border-radius:50%;border:1px solid #376779;box-shadow:inset 0 0 0 22px #101c25,inset 0 0 0 23px #376779,inset 0 0 0 45px #101c25,inset 0 0 0 46px #376779;opacity:.5}.scope-layout-guide>p{font-size:13px;color:var(--muted);margin-top:10px}
+@media(max-width:1000px){.suite-training-guide .training-layout{grid-template-columns:180px minmax(0,1fr);gap:24px}.guide-choices{gap:9px}.guide-choice{padding:16px 12px}.guide-choice h2{font-size:22px}}
+@media(max-width:800px){.suite-training-guide .training-layout{display:block}.suite-training-guide .section-nav{max-width:100%;padding-bottom:14px}.suite-training-guide .topic-nav-wrap{margin-bottom:20px}}
+@media(max-width:600px){.guide-choices{grid-template-columns:1fr}.guide-choice{display:grid;grid-template-columns:32px minmax(0,1fr);gap:4px 8px;padding:14px 16px}.guide-choice .choice-number{grid-row:1/4;padding-top:6px}.guide-choice p{margin:0}.guide-choice>span:last-child{grid-column:2;margin-top:5px}.guide-flow ol{grid-template-columns:repeat(2,minmax(0,1fr))}.scope-layout-body>div{padding:12px 7px}.scope-layout-body strong{font-size:12px}.scope-layout-body span:not(.scope-layout-ring){font-size:11px}.scope-layout-centre{min-height:180px}.scope-layout-ring{width:105px;height:105px}.guide-answer{padding:10px 13px}}
+@media print{.guide-search,.guide-choices,.guide-launch{display:none}.suite-training-guide .training-layout{display:block}.guide-flow ol{grid-template-columns:repeat(3,1fr)}.guide-flow,.scope-layout-guide,.guide-answer{break-inside:avoid}.guide-answer .guide-full{display:block}.guide-pointers{display:block!important}}

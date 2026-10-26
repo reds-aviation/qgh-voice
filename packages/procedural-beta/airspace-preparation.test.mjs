@@ -15,6 +15,7 @@ import vm from 'node:vm';
 import { domHarness } from './testing/dom-harness.mjs';
 const source = name => readFileSync(new URL('./static/' + name, import.meta.url), 'utf8');
 const uri = text => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
+await import(uri(source('published-airspace.js')));
 const geometryURI = uri(source('chart-geometry.js'));
 const geometry = await import(geometryURI);
 const routeChartURI = uri(source('route-chart.js').replace("'./chart-geometry.js'", JSON.stringify(geometryURI)).replace("'./scope-navigation.js'", JSON.stringify(uri(source('scope-navigation.js')))));
@@ -79,27 +80,36 @@ test('custom editor shares validated polygon geometry and keeps sketch changes s
     form.dispatchEvent(new h.Event('submit')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(commands.length, 1); assert.equal(commands[0][0], 'area-upsert'); assert.equal(commands[0][1].geoPoints.length, 4); assert.equal(commands[0][2], undefined); assert.equal(commands[0][3], 'ex1');
 });
-test('published airspace defaults all features visible and unchecked routes/areas hide without replacing traffic or geometry', async () => {
+test('original published base flow keeps complete geometry and individual visibility without replacing traffic or progress', async () => {
     const h = domHarness(source('procedural.html'));
     const bases = JSON.parse(source('india-airspace.json')), enroute = JSON.parse(source('india-aip-enroute.json'));
     const base = bases[0], extra = enroute.aerodromes[base.id];
     const merge = await import(uri(source('aip-navigation.js').replace("'./chart-geometry.js'", JSON.stringify(geometryURI))));
-    const scenario = { version: 1, exerciseId: 'chart-ex', revision: 2, environment: { map: {}, dfHoldSeconds: 10 }, routes: [], fixes: [], aircraft: [{ id: 'traffic-1', callsign: '101', xNm: -10, yNm: 5 }], elapsed: 120, calls: [{ text: 'Retain calls' }] };
+    const scenario = { version: 1, exerciseId: 'chart-ex', revision: 2, environment: { map: {}, dfHoldSeconds: 10, publishedAirspace: {source:'prior subset chart'}, referenceBoundaries:[{id:'prior-boundary'}] }, routes: [], fixes: [], aircraft: [{ id: 'traffic-1', callsign: '101', xNm: -10, yNm: 5 }], elapsed: 120, calls: [{ text: 'Retain calls' }] };
+    const original = JSON.stringify(scenario);
     const state = { role: 'instructor', exerciseId: 'chart-ex', environment: scenario.environment, running: false, terminated: false };
     const commands = [];
-    Object.assign(h.context, geometry, routeChart, merge, { parseARP() {}, alignmentBriefing: (s, a) => s + a, confirm: () => true, host: { view: () => state, generation: () => 1, command: async (...args) => commands.push(args), request: async () => ({ version: 1, scenario: JSON.parse(JSON.stringify(scenario)) }), changed() {}, message() {} }, fetch: async path => ({ ok: true, json: async () => path === 'india-airspace.json' ? bases : enroute }) });
+    Object.assign(h.context, geometry, routeChart, merge, { parseARP() {}, alignmentBriefing: (s, a) => s + a, confirm: () => true, host: { view: () => state, generation: () => 1, command: async (...args) => commands.push(args), request: async () => ({ version: 1, scenario: JSON.parse(JSON.stringify(scenario)) }), changed() {}, message() {} }, fetch: async path => ({ ok: true, json: async () => JSON.parse(source(path)) }) });
+    vm.runInContext(source('published-airspace.js'), h.context);
     for (const name of ['airspace-preparation.js', 'scenario-library.js', 'airspace-library.js', 'airspace-preview.js', 'chart-workshop.js']) {
         const text = source(name), exports = [...text.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+([A-Za-z_$][\w$]*)/g)].map(match => match[1]);
         vm.runInContext(`(() => { ${text.replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '')}; Object.assign(globalThis,{${exports.join(',')}}); })()`, h.context);
     }
     vm.runInContext('globalThis.workshop=createChartWorkshop(host);', h.context);
     await new Promise(resolve => setImmediate(resolve));
-    const selector = h.document.getElementById('aerodrome-select'); selector.value = base.id; selector.dispatchEvent(new h.Event('change'));
+    const selector = h.document.getElementById('aerodrome-select');
+    assert.equal(selector.closest('label').hidden,false,'Original base dropdown is visible');
+    assert.deepEqual([...selector.querySelectorAll('option')].map(option=>option.value).filter(Boolean),bases.map(base=>base.id),'The list contains only the seven genuinely loadable bases');
+    assert.equal(h.document.getElementById('prepare-published-base'),null,'No parallel base/LFA picker is inserted into Procedural');
+    selector.value = base.id; selector.dispatchEvent(new h.Event('change'));
     const pick = h.document.getElementById('aerodrome-selection');
-    const checkboxes = [...pick.querySelectorAll('input')]; assert.ok(checkboxes.length > 2); assert.ok(checkboxes.every(checkbox => checkbox.checked), 'Every available feature starts visible');
-    for (const checkbox of checkboxes) checkbox.setAttribute('checked', ''); // linkedom models :checked from the attribute.
-    const route = pick.querySelector('input[data-route-id]'), area = pick.querySelector('input[data-area-id]'); route.checked = false; area.checked = false;
-    route.removeAttribute('checked'); area.removeAttribute('checked');
+    const checkboxes = [...pick.querySelectorAll('input')];
+    assert.equal(pick.querySelectorAll('input[data-route-id]').length,extra.routes.length);
+    assert.equal(pick.querySelectorAll('input[data-area-id]').length,base.areas.length+extra.areas.length);
+    assert.ok(checkboxes.every(checkbox=>checkbox.checked),'All available individual features start visible');
+    for(const checkbox of checkboxes)checkbox.setAttribute('checked',''); // linkedom :checked uses attributes.
+    const route=pick.querySelector('input[data-route-id]'),area=pick.querySelector('input[data-area-id]');
+    for(const checkbox of [route,area]){checkbox.checked=false;checkbox.removeAttribute('checked');checkbox.dispatchEvent(new h.Event('change'));}
     h.document.getElementById('aerodrome-form').dispatchEvent(new h.Event('submit')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(commands.length, 1); assert.equal(commands[0][0], 'airspace-replace');
     const imported = JSON.parse(JSON.stringify(commands[0][1]));
@@ -111,16 +121,44 @@ test('published airspace defaults all features visible and unchecked routes/area
     assert.ok(Math.hypot(...Object.values(geometry.project(base.station, base.origin))) > .01, 'The test station has an actual published offset');
     assert.ok(imported.environment.briefing.includes(`latitude ${base.station.latitude}, longitude ${base.station.longitude}`));
     assert.match(imported.environment.briefing, /places the navigation\/DF reference at the ARP for training/);
-    assert.equal(imported.routes.length, extra.routes.length);
+    assert.equal(imported.routes.length, extra.routes.length,'Restoring the old flow must not trim whole-base coverage to an LFA envelope');
+    assert.equal(imported.areas.length,base.areas.length+extra.areas.length);
     const visibleRoute = imported.routes.find(record => record.id === route.dataset.routeId), visibleArea = imported.areas.find(record => record.id === area.dataset.areaId);
     assert.ok(visibleRoute && visibleArea);
     assert.deepEqual(imported.scopeDisplay.hiddenRouteIds, [route.dataset.routeId]);
     assert.deepEqual(imported.scopeDisplay.hiddenAreaIds, [area.dataset.areaId]);
-    assert.equal(imported.routes.filter(record => !imported.scopeDisplay.hiddenRouteIds.includes(record.id)).length, extra.routes.length - 1);
+    assert.equal(imported.routes.filter(record => !imported.scopeDisplay.hiddenRouteIds.includes(record.id)).length, extra.routes.length-1);
+    assert.equal(imported.environment.publishedAirspace,null,'Whole-base load clears stale subset scene metadata');
+    assert.deepEqual(imported.environment.referenceBoundaries,[]);
     assert.deepEqual(JSON.parse(JSON.stringify(visibleArea.coordinateOrigin)), base.origin); assert.equal(visibleArea.geoPoints.length, visibleArea.points.length);
-    assert.deepEqual(visibleRoute.fixIds.map(id => imported.fixes.find(fix => fix.id === id).name), extra.routes.find(record => record.id === route.dataset.routeId).fixNames);
+    assert.deepEqual(visibleRoute.fixIds.map(id => imported.fixes.find(fix => fix.id === id).name),extra.routes.find(record=>record.id===route.dataset.routeId).fixNames);
     for (const key of ['aircraft', 'elapsed', 'calls', 'radio', 'strips']) assert.equal(Object.hasOwn(imported, key), false, 'Published airspace command cannot replace traffic or progress');
     assert.equal(imported.expectedRevision, 2);
+    assert.equal(JSON.stringify(scenario),original,'Preparing the load cannot alter the exported current attempt');
+});
+
+test('published picker automatically selects a sole usable LFA and unavailable bases cannot retain it', () => {
+    const h = domHarness('<html><body><section id="picker"></section></body></html>');
+    vm.runInContext(source('published-airspace.js'),h.context);
+    const data={catalogue:JSON.parse(source('india-airbase-lfa-catalogue.json')),airspace:JSON.parse(source('india-airspace.json')),enroute:JSON.parse(source('india-aip-enroute.json'))};
+    const picker=h.context.ATSPublishedAirspace.createPicker(h.document.getElementById('picker'),{data,idPrefix:'test'});
+    const base=h.document.getElementById('test-base');base.value='pune';base.dispatchEvent(new h.Event('change'));
+    assert.equal(h.document.getElementById('test-lfa').value,'var37');
+    assert.equal(picker.get().entry.id,'var37');
+    assert.equal(h.document.getElementById('test-lfa').disabled,false);
+    assert.equal(h.document.getElementById('test-layer-runways').disabled,false);
+    assert.equal(h.document.getElementById('test-layer-internationalBoundary').disabled,true);
+    for(const id of ['test-search','test-base','test-lfa','test-feature']) {
+        const input=h.document.getElementById(id);
+        assert.ok(h.document.querySelector(`label[for="${id}"]`));
+        assert.ok(input.getAttribute('aria-label'));
+    }
+    const unavailable=data.catalogue.airbases.find(item=>!['sirsa','jamnagar'].includes(item.id) && item.lfaEntries.length && item.lfaEntries.every(entry=>!entry.geometryRef));
+    base.value=unavailable.id;base.dispatchEvent(new h.Event('change'));
+    assert.equal(picker.get(),null);
+    const lfa=h.document.getElementById('test-lfa');lfa.value=unavailable.lfaEntries[0].id;lfa.dispatchEvent(new h.Event('change'));
+    assert.equal(picker.get(),null,'A source-only LFA cannot load the previous base');
+    assert.ok([...h.document.querySelectorAll('input[data-layer]')].every(input=>input.disabled));
 });
 test('scope and preview drag existing vertices through NM transforms; deletion and multiple P/LFA boundaries stay staged', async () => {
     const h = domHarness('<html><body><div id="scope-wrap"><canvas id="scope"></canvas></div><section id="tab-build"></section></body></html>');
@@ -302,6 +340,8 @@ test('saving geographic ARP after mouse placement puts the station at its projec
     const routes = [{ id: 'r1', fixIds: ['f1', 'f2'], coordinateOrigin: origin, geoPoints: [{ ...origin }, airspace.localToGeographic({ xNm: 10, yNm: 0 }, origin)] }];
     const fixes = [{ id: 'f1', name: 'A', xNm: 0, yNm: 0 }, { id: 'f2', name: 'B', xNm: 10, yNm: 0 }];
     Object.assign(h.state, { aircraft, areas, routes, fixes });
+    h.state.environment.publishedAirspace = { source: 'old snapshot' };
+    h.state.environment.referenceBoundaries = [{ id: 'old-boundary' }];
     h.editor.setMethod('coordinates'); h.edit(arpForm.elements.namedItem('latitude'), 26); h.edit(arpForm.elements.namedItem('longitude'), 73);
     h.context.confirm = () => true; await h.submit('custom-arp-form');
     const environment = h.state.environment, projectedARP = geometry.project(origin, environment.chartOrigin);
@@ -309,9 +349,28 @@ test('saving geographic ARP after mouse placement puts the station at its projec
     assert.equal(environment.stationName, 'ARP');
     assert.equal(environment.stationXNm, projectedARP.xNm, 'Station must coincide with the coordinate ARP at local zero');
     assert.equal(environment.stationYNm, projectedARP.yNm, 'Station must coincide with the coordinate ARP at local zero');
+    assert.equal(environment.publishedAirspace, null);
+    assert.deepEqual(environment.referenceBoundaries, []);
+    assert.match(environment.briefing, /local training geometry/);
     for (const [key, value] of Object.entries({ aircraft, areas, routes, fixes })) assert.equal(h.state[key], value, `Saving ARP preserves ${key}`);
     assert.equal(h.commands.at(-1).name, 'environment');
     for (const key of ['aircraft', 'areas', 'routes', 'fixes']) assert.equal(Object.hasOwn(h.commands.at(-1).payload, key), false);
+});
+
+test('custom mouse ARP clears published provenance while saving the identical coordinate reference retains it', async () => {
+    const h = mouseDrawingHarness(), chart = { source: 'retained snapshot' }, boundaries = [{ id: 'published-boundary' }];
+    Object.assign(h.state.environment, { publishedAirspace: chart, referenceBoundaries: boundaries, stationXNm: 0, stationYNm: 0 });
+    h.editor.setMethod('coordinates');
+    await h.submit('custom-arp-form');
+    assert.equal(h.state.environment.publishedAirspace, chart);
+    assert.equal(h.state.environment.referenceBoundaries, boundaries);
+    h.editor.setMethod('draw'); h.context.confirm = () => true;
+    h.get('drawn-arp-preview').click(); h.clickPoint(6, -4); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.state.environment.publishedAirspace, null);
+    assert.deepEqual(h.state.environment.referenceBoundaries, []);
+    assert.match(h.state.environment.briefing, /local training geometry/);
+    assert.equal(h.commands.at(-1).name, 'environment');
+    assert.equal(Object.hasOwn(h.commands.at(-1).payload, 'aircraft'), false);
 });
 
 test('cancelling geographic ARP relocation preserves an existing mouse ARP even without an unsaved feature draft', async () => {

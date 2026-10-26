@@ -102,7 +102,7 @@ const webHead = version => `
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ATS SIM BOX">
-  <meta property="og:title" content="ATS SIM BOX · Version 1">
+  <meta property="og:title" content="ATS SIM BOX">
   <meta property="og:description" content="Offline single-aircraft and tactical QGH training simulator.">
   <link rel="stylesheet" href="pwa.css?v=${version}">
 `;
@@ -112,7 +112,6 @@ const webDistribution = version => `
         <section class="entry-web-distribution" id="webDistribution" aria-label="Install and downloads" hidden>
           <div class="entry-web-distribution-head">
             <span>ATS SIM BOX · WEB APP</span>
-            <small id="webVersion">Version 1</small>
           </div>
           <div class="entry-web-grid">
             <button class="entry-web-install" id="installWebApp" type="button">INSTALL ATS SIM BOX ON THIS DEVICE</button>
@@ -126,7 +125,7 @@ const webDistribution = version => `
         <dialog class="pwa-install-sheet" id="pwaInstallSheet" aria-labelledby="pwaInstallTitle">
           <div class="pwa-install-sheet-card">
             <button class="pwa-install-close" id="closeInstallSheet" type="button" aria-label="Close install instructions">×</button>
-            <span>ATS SIM BOX · Version 1</span>
+            <span>ATS SIM BOX</span>
             <h2 id="pwaInstallTitle">Install ATS SIM BOX</h2>
             <div id="pwaInstallContent"></div>
           </div>

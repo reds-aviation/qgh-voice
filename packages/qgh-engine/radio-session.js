@@ -157,6 +157,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     let held = null;
     let holdUntil = 0;
     let expiryTimer = null;
+    function bearingObservation(id) {
+      const sample = observe(id);
+      if (!sample) return null;
+      // A D/F transmission supplies a bearing, not aircraft heading or range.
+      // Explicit pilot reports sample the aircraft through the radio adapter.
+      return { source: sample.source, callsign: sample.callsign, overhead: sample.overhead,
+        qdm: sample.qdm, qte: sample.qte };
+    }
     function reset() {
       clearTimer(expiryTimer);
       expiryTimer = null;
@@ -172,7 +180,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     function release(token = generation) {
       if (token !== generation || source === null) return;
-      const observation = observe(source);
+      const observation = bearingObservation(source);
       held = observation ? { ...observation } : null;
       source = null;
       holdUntil = now() + HOLD_MS;
@@ -185,7 +193,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     function read() {
       if (source !== null) {
-        const observation = observe(source);
+        const observation = bearingObservation(source);
         return observation ? { ...observation, phase: 'live' } : { phase: 'idle' };
       }
       return held && now() < holdUntil ? { ...held, phase: 'hold' } : { phase: 'idle' };

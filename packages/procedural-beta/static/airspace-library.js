@@ -33,6 +33,9 @@ const clone = value => JSON.parse(JSON.stringify(value));
 function validatedEnvironment(source) {
     if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error('Airspace needs chart settings.');
     const result = chartEnvironment(source);
+    // An older chart must clear an unrelated previously loaded reference layer.
+    result.referenceBoundaries ??= [];
+    result.publishedAirspace ??= null;
     // An absent geographic origin means a local chart. Send an explicit null
     // on load so an unrelated published origin cannot survive the merge.
     result.chartOrigin = geo(result.chartOrigin ?? null);

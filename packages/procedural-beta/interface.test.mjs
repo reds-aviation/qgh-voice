@@ -97,7 +97,7 @@ test('Gyani recognises all deployed page paths and ordinary control questions',(
   assert.match(matchGuideQuestion('and left','procedural','turn').text,/Stop turn/);
   assert.match(matchGuideQuestion('how to turn right','qgh-individual').text,/Normal QGH/);
   const unknown=matchGuideQuestion('What is the weather tomorrow in Delhi?','procedural');
-  assert.equal(unknown.matched,false);assert.ok(unknown.text.includes(knowledge.learning));assert.equal(unknown.links.length,1);assert.match(unknown.links[0].href,/user-guide\.html/);
+  assert.equal(unknown.matched,false);assert.ok(unknown.text.includes(knowledge.learning));assert.equal(unknown.links.length,1);assert.match(unknown.links[0].href,/training-centre\.html/);
   assert.match(unknown.escalation,/Contact the creator/);
 });
 
@@ -115,14 +115,15 @@ test('generated guides and Gyani use the same control explanations',()=>{
   const procedural=source('procedural.html');assert.ok(!procedural.includes('tab-feedback'));assert.ok(!source('procedural.js').includes('feedback-form'));
 });
 
-test('Version 1 entry pages and common guide use ATS SIM BOX branding without beta labels',()=>{
- for(const path of ['../site-landing/index.html','../atc-suite/index.html','../atc-suite/instructor.html','../atc-suite/student.html','../qgh-engine/index.html','../qgh-engine/single.html','../qgh-engine/tactical.html','../qgh-engine/training-centre.html','./static/procedural.html']){
+test('app pages use ATS SIM BOX branding without version tags while the guide retains release information',()=>{
+ for(const path of ['../site-landing/index.html','../atc-suite/index.html','../atc-suite/instructor.html','../atc-suite/student.html','../qgh-engine/index.html','../qgh-engine/single.html','../qgh-engine/tactical.html','./static/procedural.html']){
    const{document}=parseHTML(readFileSync(new URL(path,import.meta.url),'utf8'));
-   assert.match(document.querySelector('title').textContent,/ATS SIM BOX · Version 1/,path);
-   assert.match(document.body.textContent,/ATS SIM BOX/,path);assert.match(document.body.textContent,/Version 1/,path);
-   assert.doesNotMatch(document.body.textContent,/\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,path);
+   assert.match(document.querySelector('title').textContent,/ATS SIM BOX/,path);
+   assert.doesNotMatch(document.querySelector('title').textContent,/\b(?:version\s*\d|beta)\b/i,path);
+   assert.match(document.body.textContent,/ATS SIM BOX/,path);
+   assert.doesNotMatch(document.body.textContent,/\bVERSION\s*\d|\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,path);
  }
- const{document}=parseHTML(renderCommonGuide());assert.match(document.querySelector('title').textContent,/ATS SIM BOX · Version 1/);assert.match(document.body.textContent,/Version 1/);
+ const{document}=parseHTML(renderCommonGuide());assert.match(document.querySelector('title').textContent,/Training guide · ATS SIM BOX/);assert.ok(document.querySelector('#guideVersion'));assert.ok(document.querySelector('#releaseDetail'));
  assert.ok(knowledge.entries.every(entry=>!(/\bbeta\b/i.test(entry.text))),'Gyani retains training limitations without a beta release label');
  assert.equal(document.querySelector('#current-flow').getAttribute('data-guide-revision'),knowledge.revision,'display branding never replaces the release identity used for cache/guide compatibility');
 });

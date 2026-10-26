@@ -131,6 +131,7 @@ function syncEnvironmentInputs() {
 let lastElapsed = -1, trailHistory = new Map(), drafts = new Map(), stripRevision = 0;
 let pan = { x: 0, y: 0 }, ruler = [], pointer = null;
 const display = { areas: true, rings: true, ringSpacing: 10, routes: true, labels: true, labelMode: 'selected', areaLabels: false, routeLabels: true, fixLabels: true, trails: true, trailCount: 8, vectors: false, runway: true, approach: false, ruler: false, fullscreen: false, sweep: !window.matchMedia('(prefers-reduced-motion: reduce)').matches, sweepRpm: 15 };
+let publishedBoundaryControls = null;
 const assignmentDrafts = new Map(), commandDrafts = new Map();
 let assignmentDraftIdentity = '', draftCommandKey = '';
 let linkedCallId = '', focusExerciseId = '';
@@ -722,6 +723,8 @@ async function selectLayers(group, action) {
 function renderLayerLists() {
     if (!view)
         return;
+    if (!publishedBoundaryControls) publishedBoundaryControls = globalThis.ATSPublishedBoundaries?.createBoundaryControls($('tab-layers'), { onChange: draw });
+    publishedBoundaryControls?.update(view.environment.referenceBoundaries, { enabled: view.environment.publishedAirspace?.layerVisibility?.internationalBoundary !== false });
     const shared = view.scopeDisplay;
     hiddenRoutes.clear();
     (shared?.hiddenRouteIds || []).forEach(id => hiddenRoutes.add(id));
@@ -968,6 +971,7 @@ function render() {
             if (confirm(`Delete route ${r.name}?`))
                 await command('route-delete', { id: r.id });
         }));
+        if (v.environment.publishedAirspace?.routes?.some(route => route.id === r.id)) for (const button of [...e.querySelectorAll('button')].slice(1)) { button.disabled = true; button.title = 'Published reference is read-only. Use Declutter to hide it.'; }
         return e;
     }));
     const criteria = v.criteria || [];
@@ -1156,6 +1160,9 @@ function draw() {
     const p = (x, y) => [g.cx + x * g.scale, g.cy - y * g.scale];
     const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
     const env = view.environment;
+    const compactChartLabels = g.height < 440 || g.width < 900;
+    const ringLabelBoxes = [];
+    const chartObstacles = globalThis.ATCScopeVisuals?.overlayObstacles(canvas, { document, width: g.width, height: g.height }) || [];
     const [stationX, stationY] = p(env.stationXNm || 0, env.stationYNm || 0);
     const airfield = scopeRunwayGeometry(env);
     if (showMap && mapImage) {
@@ -1175,7 +1182,7 @@ function draw() {
         const visuals = globalThis.ATCScopeVisuals;
         if (visuals) visuals.drawRangeRings(ctx, { rangeNm: range, spacingNm: display.ringSpacing, scale: g.scale,
             cx: stationX, cy: stationY, width: g.width, height: g.height, font: '11px PlexMono,monospace',
-            obstacles: visuals.overlayObstacles(canvas, { document, width: g.width, height: g.height }) });
+            obstacles: chartObstacles, labelBoxes: ringLabelBoxes });
         else {
             const distances = [];
             for (let distance = display.ringSpacing; distance <= range; distance += display.ringSpacing) distances.push(distance);
@@ -1201,28 +1208,43 @@ function draw() {
         }
         ctx.textAlign = 'left';
     }
+    const visibleAreas = (view.areas || []).filter(a => !hiddenAreas.has(a.id));
     if (display.areas)
-        drawAreas(ctx, (view.areas || []).filter(a => !hiddenAreas.has(a.id)), p, display.areaLabels ? (range > 100 ? 'name' : 'full') : false);
+        drawAreas(ctx, visibleAreas, p, display.areaLabels && !compactChartLabels ? (range > 100 ? 'name' : 'full') : false);
     const stationName = (env.stationName || 'ARP').split(' ')[0];
     const atARP = Math.hypot(airfield.arp.xNm - (env.stationXNm || 0), airfield.arp.yNm - (env.stationYNm || 0)) <= .001;
     const stationLabel = atARP && stationName !== 'ARP' ? `ARP / ${stationName}` : stationName;
-    const navigationLabels = [{ x: stationX + 5, y: stationY - 22, width: ctx.measureText(stationLabel).width + 8, height: 18 }];
+    const navigationLabels = [...chartObstacles, ...ringLabelBoxes,
+        { x: stationX - 6, y: stationY - 24, width: ctx.measureText(stationLabel).width + 24, height: 30 }];
+    const chartLabel = (text, x, y, color) => {
+        const lines = String(text).split('\n');
+        const box = reserveLabel({ x, y }, Math.max(...lines.map(line => ctx.measureText(line).width)), g.width, g.height, navigationLabels, lines.length * 14 + 2);
+        if (!box) return false;
+        ctx.fillStyle = '#111416'; ctx.fillRect(box.x, box.y, box.width, box.height);
+        ctx.fillStyle = color;
+        lines.forEach((line, i) => ctx.fillText(line, box.x + 4, box.y + 12 + i * 14));
+        return true;
+    };
+    if (display.areas && display.areaLabels && compactChartLabels) {
+        // Name-only compact labels share the route collision map. Reserve the
+        // selected LFA first, while keeping every source boundary unchanged.
+        const selectedLfa = env.publishedAirspace?.lfaId;
+        const ordered = [...visibleAreas].sort((a, b) => Number(b.id === selectedLfa) - Number(a.id === selectedLfa));
+        for (const area of ordered) {
+            if (!area.points?.length) continue;
+            const points = area.points.map(point => p(point.xNm, point.yNm));
+            const candidates = [[points.reduce((sum, point) => sum + point[0], 0) / points.length,
+                points.reduce((sum, point) => sum + point[1], 0) / points.length], ...points];
+            const color = area.kind === 'control-zone' ? '#74bdd1' : '#e77b81';
+            for (const [x, y] of candidates) if (chartLabel(area.name, x, y, color)) break;
+        }
+    }
     if (display.routes) {
         const fixesById = new Map(view.fixes.map(f => [f.id, f]));
         const routeFixIds = new Set(view.routes.flatMap(r => r.fixIds));
         const shownFixes = new Set();
         const coordinateLabels = new Map();
-        const label = (text, x, y, color) => {
-            const lines = String(text).split("\n");
-            const box = reserveLabel({ x, y }, Math.max(...lines.map(line => ctx.measureText(line).width)), g.width, g.height, navigationLabels, lines.length * 14 + 2);
-            if (!box)
-                return false;
-            ctx.fillStyle = '#111416';
-            ctx.fillRect(box.x, box.y, box.width, box.height);
-            ctx.fillStyle = color;
-            lines.forEach((line, i) => ctx.fillText(line, box.x + 4, box.y + 12 + i * 14));
-            return true;
-        };
+        const label = chartLabel;
         for (const route of view.routes) {
             if (hiddenRoutes.has(route.id))
                 continue;
@@ -1236,9 +1258,10 @@ function draw() {
             drawRouteChart(ctx, route, view.fixes, p, {
                 width: g.width, height: g.height, label,
                 showLabels: display.routeLabels,
+                compactLabels: compactChartLabels,
                 color: open ? '#a5c4ac' : '#8e9691'
             });
-            if (route.coordinateOrigin)
+            if (route.coordinateOrigin && !compactChartLabels)
                 for (const [id, text] of routePointLabels(route, view.fixes)) coordinateLabels.set(id, text);
             ctx.restore();
         }
@@ -1262,6 +1285,18 @@ function draw() {
         }
     }
     if (display.runway) {
+        if (env.publishedAirspace?.layerVisibility?.runways !== false) for (const reference of env.publishedAirspace?.runways || []) {
+            if (!Array.isArray(reference.points) || reference.points.length < 2) continue;
+            ctx.save(); ctx.setLineDash([]); ctx.lineCap = 'butt'; ctx.strokeStyle = '#a8adb2';
+            ctx.lineWidth = Math.max(2, Math.min(20, (reference.widthNm || .025) * g.scale));
+            ctx.beginPath(); ctx.moveTo(...p(reference.points[0].xNm, reference.points[0].yNm));
+            for (const vertex of reference.points.slice(1)) ctx.lineTo(...p(vertex.xNm, vertex.yNm));
+            ctx.stroke();
+            const [x, y] = p(reference.points[0].xNm, reference.points[0].yNm), text = `PUBLISHED RWY ${reference.name}`;
+            const box = x >= 0 && x <= g.width && y >= 0 && y <= g.height ? reserveLabel({ x, y: y + 38 }, ctx.measureText(text).width, g.width, g.height, navigationLabels, 16) : null;
+            if (box) { ctx.fillStyle = '#111416'; ctx.fillRect(box.x, box.y, box.width, box.height); ctx.fillStyle = '#d3d8dc'; ctx.fillText(text, box.x + 4, box.y + 12); }
+            ctx.restore();
+        }
         const runway = airfield;
         if (globalThis.ATCScopeVisuals?.drawRunwayStrip) globalThis.ATCScopeVisuals.drawRunwayStrip(ctx, env, p, g.scale);
         else {
@@ -1273,18 +1308,30 @@ function draw() {
         ctx.save(); ctx.lineWidth = 1; ctx.strokeStyle = '#829098'; ctx.setLineDash([4, 5]);
         const first = p(runway.threshold.xNm, runway.threshold.yNm), end = scopeApproachPoint(env, 12);
         line(...first, ...p(end.xNm, end.yNm)); ctx.restore();
+        if (env.publishedAirspace) {
+            const text = `EXERCISE RWY ${pad(env.runwayHeadingDeg || 0)}`, box = reserveLabel({ x: first[0], y: first[1] }, ctx.measureText(text).width, g.width, g.height, navigationLabels, 16);
+            if (box) { ctx.fillStyle = '#111416'; ctx.fillRect(box.x, box.y, box.width, box.height); ctx.fillStyle = '#d3d8dc'; ctx.fillText(text, box.x + 4, box.y + 12); }
+        }
     }
     if (display.approach)
         drawApproachReference(p, g.scale, navigationLabels);
-    if (Math.hypot(airfield.arp.xNm - (env.stationXNm || 0), airfield.arp.yNm - (env.stationYNm || 0)) > .001) {
+    const showPublishedArp = env.publishedAirspace?.layerVisibility?.arp !== false;
+    if (showPublishedArp && Math.hypot(airfield.arp.xNm - (env.stationXNm || 0), airfield.arp.yNm - (env.stationYNm || 0)) > .001) {
         const [x, y] = p(airfield.arp.xNm, airfield.arp.yNm);
         ctx.fillStyle = '#bce0b9'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillText('ARP', x + 8, y - 8);
     }
-    ctx.fillStyle = '#bce0b9';
-    ctx.beginPath();
-    ctx.arc(stationX, stationY, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillText(stationLabel, stationX + 8, stationY - 8);
+    if (showPublishedArp || !atARP) {
+        ctx.fillStyle = '#bce0b9';
+        ctx.beginPath();
+        ctx.arc(stationX, stationY, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillText(stationLabel, stationX + 8, stationY - 8);
+    }
+    const boundaries = globalThis.ATSPublishedBoundaries;
+    if (boundaries && env.referenceBoundaries?.length && env.publishedAirspace?.layerVisibility?.internationalBoundary !== false) boundaries.drawBoundaries(ctx, { features: env.referenceBoundaries,
+        project(longitude, latitude) { const local = boundaries.projectGeographic(longitude, latitude, env.chartOrigin); return p(local.xNm, local.yNm); },
+        viewport: { x: 0, y: 0, width: g.width, height: g.height }, visibleIds: publishedBoundaryControls?.visibleIds(),
+        obstacles: [...navigationLabels, ...(globalThis.ATCScopeVisuals?.overlayObstacles(canvas, { document, width: g.width, height: g.height }) || [])] });
     if (session?.role === 'instructor' && !startingTrafficPending()) {
         const labels = [];
         const symbols = [];

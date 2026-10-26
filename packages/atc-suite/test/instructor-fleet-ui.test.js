@@ -32,7 +32,9 @@ function harness() {
   let source = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'")) +
     '\n globalThis.fixture = {state, runtimeTick, frame, onSessionEvent, truthForSensor, advanceSensors, advanceBy, advanceWallElapsed, setTrainingTimeRate, resetTrainingTimeRate, normaliseTrainingTimeRate, scenarioInput, publicMetadata, publicMetadataForSimulation, createSensor, command, transferSelectedToPar, syncRoster, finishTransmission, selectAircraft, updateAll, handleShortcut, drawReview};})();';
-  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
+  // The hidden published-chart input starts blank in the real setup page.
+  document.getElementById('publishedAirspaceData').value = '';
+  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteDisplay: require('../suite-display.js'), ATSPublishedAirspace: require('../../procedural-beta/static/published-airspace.js'), ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     setTimeout() { return 1; }, clearTimeout() {}, requestAnimationFrame() {}, performance: { now: () => wallMs }, console };
   vm.runInNewContext(source, context);
   const aircraft = Array.from({ length: 24 }, (_, index) => ({ aircraftId: `AC${index + 1}`, callsign: String(101 + index),

@@ -106,7 +106,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         const box = { x, y: y - 12, width: textWidth, height: 14 };
         if (box.x >= 3 && box.y >= 3 && box.x + box.width <= width - 3 && box.y + box.height <= height - 3
           && !(options.obstacles || []).some(obstacle => overlaps(box, obstacle, 3))) {
-          context.fillText(text, x, y); break;
+          context.fillText(text, x, y);
+          if (Array.isArray(options.labelBoxes)) options.labelBoxes.push(box);
+          break;
         }
       }
     }
@@ -137,7 +139,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (!document?.querySelectorAll || !canvasBounds?.width || !canvasBounds?.height) return [];
     const width = options.width || canvas.clientWidth || canvasBounds.width;
     const height = options.height || canvas.clientHeight || canvasBounds.height;
-    const selectors = options.selectors || '.ats-aircraft-shelf > *, .ats-tool-rail > *, .scope-edge-actions > *, .console-control-rail > *, #homing, #pilot-readback, #scope-manual-dock';
+    const selectors = options.selectors || '.ats-aircraft-shelf > *, .ats-tool-rail, .ats-student-radio, .radar-inspection, .scope-control-panel, .scope-edge-actions > *, .console-control-rail > *, #homing, #pilot-readback, #scope-manual-dock';
     const result = [];
     for (const element of document.querySelectorAll(selectors)) {
       if (element.hidden || element.closest?.('[hidden]') || element.getClientRects?.().length === 0) continue;

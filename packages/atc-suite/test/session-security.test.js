@@ -13,6 +13,29 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const Session = require('../suite-session.js');
 
+test('radar animation receives only supported training time rates in public metadata', () => {
+  for (const rate of [1, 5, 10]) assert.equal(Session.sanitizePublicMetadata({ trainingTimeRate: rate }).trainingTimeRate, rate);
+  for (const rate of [-1, 0, 2, 3, 11, Infinity, NaN, 'fast']) {
+    assert.throws(() => Session.sanitizePublicMetadata({ trainingTimeRate: rate }), /invalid-trainingTimeRate/);
+  }
+  assert.equal(Session.sanitizePublicMetadata({}).trainingTimeRate, undefined);
+});
+
+test('radar homing transmits only radio observation fields and blanks idle or unavailable bearings', () => {
+  for (const mode of ['surveillance', 'sra']) {
+    const live = Session.sanitizeStudentObservation({ mode, homing: { status: 'live', transmissionState: 'pilot', bearingType: 'qdm', bearingDeg: 260, callsign: '202', rangeNm: 20, altitudeFt: 12000 } });
+    assert.deepEqual(live.homing, { status: 'live', transmissionState: 'pilot', bearingType: 'qdm', bearingDeg: 260, callsign: '202' });
+    const held = Session.sanitizeStudentObservation({ mode, homing: { ...live.homing, status: 'held', transmissionState: 'held' } });
+    assert.equal(held.homing.bearingDeg, 260);
+    for (const status of ['idle', 'unavailable']) {
+      const result = Session.sanitizeStudentObservation({ mode, homing: { status, transmissionState: 'idle', bearingType: 'qdm', bearingDeg: 260, callsign: '202' } });
+      assert.equal(result.homing.bearingDeg, undefined); assert.equal(result.homing.callsign, undefined);
+    }
+    assert.throws(() => Session.sanitizeStudentObservation({ mode, homing: { ...live.homing, position: { xNm: 10, yNm: 20 } } }), /truth-shaped|forbidden/);
+    assert.throws(() => Session.sanitizeStudentObservation({ mode, homing: [] }), /invalid-homing/);
+  }
+});
+
 function deterministicCrypto(seed = 1) {
   let next = seed;
   return { getRandomValues(array) { for (let i = 0; i < array.length; i += 1) array[i] = next++; return array; } };

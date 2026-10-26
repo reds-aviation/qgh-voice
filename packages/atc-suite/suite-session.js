@@ -15,6 +15,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 })(typeof globalThis === 'undefined' ? this : globalThis, function createSessionModule(root) {
   'use strict';
   const Meeting = root.ATCSuiteMeeting || (typeof require === 'function' ? require('../procedural-beta/static/meeting-room.js') : null);
+  const Published = root.ATSPublishedAirspace || (typeof require === 'function' ? require('../procedural-beta/static/published-airspace.js') : null);
 
   const PROTOCOL_VERSION = 1;
   const PIN_TTL_MS = 15 * 60 * 1000;
@@ -121,6 +122,20 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     for (const [key, item] of Object.entries(value)) {
       if (key === '__proto__' || key === 'prototype' || key === 'constructor') throw new Error('unsafe-key');
       visitor(key, item);
+      // Only this strictly allowlisted public chart has geographic coordinates.
+      // Aircraft observations and all other payload fields keep the truth guard.
+      if (key === 'publishedAirspace') {
+        const normalized = Published?.normalizePublishedAirspace(item);
+        if (!normalized) throw new Error('invalid-published-airspace');
+        const knownShape = (raw, safe) => {
+          if (!raw || typeof raw !== 'object') return;
+          if (Array.isArray(raw)) { raw.forEach((row,i)=>knownShape(row,safe?.[i])); return; }
+          if (!isPlainObject(raw) || !safe || Object.keys(raw).some(field=>!Object.hasOwn(safe,field))) throw new Error('unknown-published-field');
+          for (const [field,row] of Object.entries(raw)) knownShape(row,safe[field]);
+        };
+        knownShape(item, normalized);
+        continue;
+      }
       inspectObject(item, visitor, depth + 1, budget);
     }
   }
@@ -335,6 +350,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         return vertex;
       });
     }
+    if (value.publishedAirspace != null) safe.publishedAirspace = Published.normalizePublishedAirspace(value.publishedAirspace);
     return safe;
   }
 
@@ -402,6 +418,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         || source.profile;
       const correlated = ['correlated', 'correlated-training'].includes(declaredProfile);
       copyNumber(safe, source, 'scanAngleDeg', 0, 360);
+      if (source.homing != null) {
+        if (!isPlainObject(source.homing)) throw new Error('invalid-homing');
+        const { mode: ignoredMode, ...homing } = sanitizeStudentObservation({ ...source.homing, mode: 'qgh' });
+        // A radar return is not a radio transmission. Never pass an idle or
+        // unavailable bearing, even if a malformed sender supplied one.
+        if (!['live', 'held'].includes(homing.status) || !['pilot', 'held'].includes(homing.transmissionState)) delete homing.bearingDeg;
+        safe.homing = homing;
+      }
       if (source.plot != null) safe.plot = sanitizedRadarPlot(source.plot, correlated);
       if (source.plots != null) {
         if (!Array.isArray(source.plots) || source.plots.length > 24) throw new Error('invalid-plots');
@@ -454,6 +478,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (safe.scanRpm != null && ![10, 12, 15].includes(safe.scanRpm)) throw new Error('invalid-scanRpm');
     copyNumber(safe, metadata, 'revisitSeconds', 4, 6);
     if (safe.revisitSeconds != null && ![4, 5, 6].includes(safe.revisitSeconds)) throw new Error('invalid-revisitSeconds');
+    copyNumber(safe, metadata, 'trainingTimeRate', 1, 10);
+    if (safe.trainingTimeRate != null && ![1, 5, 10].includes(safe.trainingTimeRate)) throw new Error('invalid-trainingTimeRate');
     copyNumber(safe, metadata, 'parRefreshHz', 1, 5);
     if (safe.parRefreshHz != null && ![1, 5].includes(safe.parRefreshHz)) throw new Error('invalid-parRefreshHz');
     copyNumber(safe, metadata, 'historyCount', 0, 5);
@@ -708,13 +734,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     // recreating the local session or exposing instructor truth.  This message
     // is separate from an observation so the student can discard the previous
     // sensor shape before it renders the next one.
-    function updatePublicMetadata(metadata, time = simulationTime) {
-      if (!admitted || !['running', 'paused'].includes(state)) return false;
+    function updatePublicMetadata(metadata, time = simulationTime, {allowPending = false} = {}) {
+      if (!(allowPending ? ['waiting','admitted','ready','running','paused'] : ['running','paused']).includes(state) || (!admitted && !allowPending)) return false;
       advanceTime(time);
       const nextMetadata = sanitizePublicMetadata(metadata);
       if (nextMetadata.mode !== publicMetadata.mode || nextMetadata.radarProfile !== publicMetadata.radarProfile) latestObservation = null;
       publicMetadata = nextMetadata;
-      send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
+      if (admitted) send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
       return publicMetadata;
     }
 

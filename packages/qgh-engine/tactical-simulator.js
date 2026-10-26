@@ -493,7 +493,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       record.transmit.setAttribute('aria-label', 'Transmit ' + aircraft.callsign + ' for D/F');
       record.name.textContent = aircraft.callsign;
       record.level.textContent = levelLabel(aircraft);
-      record.status.textContent = formationStatus(aircraft) + ' · ' + phaseLabel(aircraft) + ' · ' + Tactical.rangeFor(aircraft).toFixed(1) + ' NM';
+      record.status.textContent = formationStatus(aircraft) + ' · ' + phaseLabel(aircraft);
       const role = formationRole(aircraft);
       record.role.textContent = role === 'LEAD' ? 'LEADER' : role === 'FORMATION' ? 'FOLLOWING' : 'INDEPENDENT';
     });
@@ -579,7 +579,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const bearing = Tactical.bearingFor(aircraft);
     const detail = bearing.overhead
       ? 'Overhead / no-bearing indication.'
-      : 'QDM ' + padHeading(bearing.qdm) + '°M · QTE ' + padHeading(bearing.qte) + '°T · ' + bearing.range.toFixed(1) + ' NM.';
+      : 'QDM ' + padHeading(bearing.qdm) + '°M · QTE ' + padHeading(bearing.qte) + '°T.';
     logCommand(id, 'TRANSMIT FOR D/F', detail);
     if (!window.QGHVoiceWorkspace?.isDispatchingRadioCommand()) {
       window.QGHRadioWorkspace?.interrupt();

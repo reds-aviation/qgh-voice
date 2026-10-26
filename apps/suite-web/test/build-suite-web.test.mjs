@@ -59,6 +59,12 @@ const expectedFiles = [
   'workspace-shell.css',
   'simulator-core.js',
   'scope-visuals.js',
+  'published-boundaries.js',
+  'published-airspace.js',
+  'published-airspace.css',
+  'india-airbase-lfa-catalogue.json',
+  'india-airspace.json',
+  'india-aip-enroute.json',
   'procedure-core.js',
   'fonts/ibm-plex-mono-500.ttf',
   'fonts/ibm-plex-sans-400.ttf',
@@ -122,7 +128,8 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
 
   for (const page of ['index.html', 'instructor.html', 'student.html', 'training-guide.html']) {
     const html = readFileSync(resolve(outputRoot, page), 'utf8');
-    assert.match(html, /ATS SIM BOX · Version 1/, `${page}: common public product and version`);
+    assert.match(html, /ATS SIM BOX/, `${page}: common public product`);
+    if (page !== 'training-guide.html') assert.doesNotMatch(html.replace(/<[^>]+>/g, ' '), /Version 1/, `${page}: no version tag in exercise flow`);
     assert.equal((html.match(/class="license-footer"/g) || []).length, 1, `${page}: one normal-flow copyright footer`);
     assert.ok(html.includes('© 2026 Balaram Reddy'));
     assert.doesNotMatch(html.replace(/<[^>]+>/g, ' '), /\bBETA\b|UNDER DEVELOPMENT|USER TRIALS/i, `${page}: no old release-stage labels`);
@@ -137,13 +144,13 @@ test('suite build creates only the isolated allowlisted PWA package', () => {
       if (/^(?:[a-z]+:|#)/i.test(reference)) continue;
       // The parent route is deliberately resolved only when this isolated
       // package is mounted at /instructor-led/ by the GitHub Pages builder.
-      if (reference === '../index.html') continue;
+      if (['../index.html', '../training-centre.html'].includes(reference.split('#')[0])) continue;
       const localPath = reference.split(/[?#]/, 1)[0];
       assert.equal(existsSync(resolve(outputRoot, localPath)), true, `${page} reference exists: ${localPath}`);
     }
   }
   const entry = readFileSync(resolve(outputRoot, 'index.html'), 'utf8');
-  assert.match(entry, /ATS SIM BOX · Version 1/);
+  assert.match(entry, /ATS SIM BOX/);
   assert.ok(entry.includes(`suite-entry.js?v=${version}`), 'entry navigation is bundled and versioned');
   for (const page of ['index.html','student.html']) {
     assert.ok(readFileSync(resolve(outputRoot,page),'utf8').includes(`suite-entry.css?v=${version}`), `${page} uses shared entry layout`);

@@ -678,6 +678,36 @@ test('single callsigns route Normal and U/S commands while unknown callsigns can
   assert.equal(workspace.dispatchTranscript('Raven turn right 230').ok, false, 'U/S does not gain heading controls');
 });
 
+test('heading variants execute once through existing controls while non-instructions leave controls untouched', () => {
+  for (const tactical of [false, true]) {
+    const h = tactical ? createTacticalHarness() : createSingleHarness();
+    setActive(h.screens, h.consoleScreen);
+    const prefix = tactical ? 'Raven 21 ' : '';
+    for (const phrase of ['turn right heading260', 'turn right to heading two six zero', 'turn right heading two hundred and sixty']) {
+      const before = h.controls.turnHeadingRight.clickCount;
+      assert.equal(h.workspace.dispatchTranscript(prefix + phrase).ok, true, prefix + phrase);
+      assert.equal(h.controls.turnHeadingRight.clickCount, before + 1, 'One utterance invokes the manual control once');
+      assert.equal(h.controls.headingInput.value, '260');
+    }
+    const before = h.controls.turnHeadingRight.clickCount, heading = h.controls.headingInput.value;
+    for (const phrase of [
+      'can you turn right heading270', "don't turn right heading270", 'turn right heading270?',
+      'turn right heading270 or 280', 'the phrase turn right heading270', 'turn right heading270 yesterday'
+    ]) assert.equal(h.workspace.dispatchTranscript(prefix + phrase).ok, false, prefix + phrase);
+    assert.equal(h.controls.turnHeadingRight.clickCount, before);
+    assert.equal(h.controls.headingInput.value, heading, 'Rejected speech cannot even alter the heading input');
+    if (tactical) assert.equal(h.workspace.dispatchTranscript('turn right heading270').ok, false, 'Tactical still requires a callsign');
+    else {
+      h.controls.turnHeadingRight.hidden = h.controls.turnHeadingLeft.hidden = true;
+      h.controls.turnRight.hidden = h.controls.turnLeft.hidden = h.controls.turnStop.hidden = false;
+      for (const phrase of ['Raven 21 turn right heading270', 'Raven 21 turn right heading270 or 280']) {
+        assert.equal(h.workspace.dispatchTranscript(phrase).ok, false, 'Heading calls cannot fall back to an untimed U/S turn');
+      }
+      assert.equal(h.controls.turnRight.clickCount, 0);
+    }
+  }
+});
+
 test('voice turn replies distinguish target headings and retain the active continuation direction', () => {
   const harness = createSingleHarness();
   const { workspace, screens, consoleScreen, controls } = harness;

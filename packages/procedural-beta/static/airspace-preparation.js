@@ -325,7 +325,8 @@ export function createAirspacePreparation(host) {
             const reason = placementBlockReason(); if (reason) throw new Error(reason);
             if (!point || ![point.xNm, point.yNm].every(value => Number.isFinite(value) && Math.abs(value) <= 2000)) throw new Error('Place the ARP within ±2,000 NM.');
             if ((state.environment.chartOrigin || state.environment.drawnARP || hasFeatureDraft()) && !await ask('Place the ARP here? Range rings and D/F will use this dot. Traffic and saved chart geometry stay in place. Unsaved route / area points and the geographic ARP reference are cleared.', 'Place ARP')) return;
-            await host.command('environment', { drawnARP: true, chartOrigin: null, stationXNm: point.xNm, stationYNm: point.yNm, stationName: 'ARP', stationType: 'df', aerodromeName: arpName.value.trim() || 'Custom airspace', chartReference: 'Instructor-drawn chart', effectiveInfo: 'Instructor-defined local NM geometry' }, undefined, exerciseId);
+            const referenceChanged = !state.environment.drawnARP || !!state.environment.chartOrigin || (state.environment.stationXNm || 0) !== point.xNm || (state.environment.stationYNm || 0) !== point.yNm;
+            await host.command('environment', { drawnARP: true, chartOrigin: null, stationXNm: point.xNm, stationYNm: point.yNm, stationName: 'ARP', stationType: 'df', aerodromeName: arpName.value.trim() || 'Custom airspace', chartReference: 'Instructor-drawn chart', effectiveInfo: 'Instructor-defined local NM geometry', ...(referenceChanged ? { publishedAirspace: null, referenceBoundaries: [], briefing: 'Custom ARP: retained routes and areas are local training geometry until published airspace is loaded again.' } : {}) }, undefined, exerciseId);
             dirtyARP = false; clearBoundary(); status.textContent = 'ARP placed. Choose a route or area and draw its points.'; host.changed?.(); drawPreview(); host.scope?.drawChanged?.();
             if (onScope) document.querySelector('[data-tab="build"]')?.click();
         } catch (error) { showDrawingError(error); }
@@ -412,7 +413,8 @@ export function createAirspacePreparation(host) {
         const changed = state.environment.drawnARP === true || JSON.stringify(origin) !== JSON.stringify(state.environment.chartOrigin || null);
         if (changed && hasFeatureDraft() && !await ask('Changing the ARP discards the unsaved route or boundary entries. Continue?', 'Discard points')) return;
         if (changed && (state.environment.chartOrigin || state.environment.drawnARP) && !await ask('Change the ARP? Existing traffic and chart points keep their local positions. The aligned image is removed.', 'Change ARP')) return;
-        await host.command('environment', { drawnARP: false, chartOrigin: origin, stationXNm: 0, stationYNm: 0, stationName: 'ARP', aerodromeName: arpName.value.trim() || 'Custom airspace', chartReference: reference.value.trim() || 'Instructor-defined custom coordinates', effectiveInfo: date.value.trim() || 'Instructor-defined training geometry', ...(changed ? { map: { ...state.environment.map, imageId: '' } } : {}) }, undefined, state.exerciseId);
+        const referenceChanged = changed || !!state.environment.stationXNm || !!state.environment.stationYNm;
+        await host.command('environment', { drawnARP: false, chartOrigin: origin, stationXNm: 0, stationYNm: 0, stationName: 'ARP', aerodromeName: arpName.value.trim() || 'Custom airspace', chartReference: reference.value.trim() || 'Instructor-defined custom coordinates', effectiveInfo: date.value.trim() || 'Instructor-defined training geometry', ...(changed ? { map: { ...state.environment.map, imageId: '' } } : {}), ...(referenceChanged ? { publishedAirspace: null, referenceBoundaries: [], briefing: 'Custom ARP: retained routes and areas are local training geometry until published airspace is loaded again.' } : {}) }, undefined, state.exerciseId);
         dirtyARP = false; if (changed) clearBoundary(); status.textContent = 'ARP saved. Add routes or areas below.'; host.changed?.(); drawPreview();
     }, saveArp); });
     boundaryForm.addEventListener('submit', e => { e.preventDefault(); void perform(async () => {
@@ -450,6 +452,7 @@ export function createAirspacePreparation(host) {
         existingSummary.textContent = `Routes and areas · ${count}`;
         list.replaceChildren(...(state.areas || []).map(area => {
             const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${area.name} · ${kinds.find(k => k[0] === area.kind)?.[1] || area.kind}`), element('span', `${area.floorLabel || 'GND'} / ${area.ceilingLabel || '—'}`, 'airspace-feature-limits'));
+            if (state.environment.publishedAirspace?.areas?.some(record => record.id === area.id)) { row.append(element('small','Published reference · read-only. Use Declutter to hide.')); return row; }
             const edit = button('Edit area', () => void perform(async () => {
                 requireEditing(state);
                 if (hasDraft() && !await ask('Discard unsaved entries and edit this area?', 'Edit area')) return;
@@ -462,6 +465,7 @@ export function createAirspacePreparation(host) {
         }));
         routeList.replaceChildren(...(state.routes || []).map(route => {
             const row = element('div', '', 'airspace-boundary-row'); row.append(element('strong', `${route.name} · ${route.chartDirection === 'both' ? 'Bidirectional' : route.chartDirection === 'forward' ? 'Unidirectional' : 'Chart direction not specified'}`), element('span', route.levelLimits || `FL${route.minAltitudeFt / 100}/FL${route.maxAltitudeFt / 100}`, 'airspace-feature-limits'));
+            if (state.environment.publishedAirspace?.routes?.some(record => record.id === route.id)) { row.append(element('small','Published reference · read-only. Use Declutter to hide.')); return row; }
             const edit = button('Edit route', () => void perform(async () => {
                 requireEditing(state);
                 const fixes = (route.fixIds || []).map(id => (state.fixes || []).find(fix => fix.id === id));

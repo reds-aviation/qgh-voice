@@ -14,9 +14,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const Sensors = globalThis.ATCSuiteSensors;
   const Session = globalThis.ATCSuiteSession;
   const Display = globalThis.ATCSuiteDisplay;
+  const Published = globalThis.ATSPublishedAirspace;
   if (!Core || !Sensors || !Session) return;
 
   const byId = id => document.getElementById(id);
+  let publishedBoundaryControls = null;
   const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function enterWorkspace(element) {
     if (!element) return;
@@ -28,7 +30,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const TRAINING_TIME_RATES = Object.freeze([1, 5, 10]);
   const DEFAULT_TRAINING_TIME_RATE = 1;
   const state = {
-    simulation: null, session: null, sensor: null, review: null, sra: null, cloudTransport: null, creating: false,
+    simulation: null, session: null, sensor: null, radioDfSensor: null, radioDfOwner: null, review: null, sra: null, cloudTransport: null, creating: false,
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
@@ -39,6 +41,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     heartbeatTimer: null, runtimeTimer: null, animationFrame: null
   };
   let attemptGeneration = 0;
+  let publishedPicker = null, restoringPublishedPicker = false;
 
   const radioNow = () => performance.now() / 1000;
   const RECOVERY_KEY = 'atc-suite.instructor-attempt.v1';
@@ -228,6 +231,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       localLfaRadius: environment.lfaBoundary?.[0]?.rangeNm ?? 20
     };
     const setup = Object.entries(fields).map(([id, value]) => ({id, value: String(value)}));
+    setup.push({id:'publishedAirspaceData',value:environment.publishedAirspace ? JSON.stringify(environment.publishedAirspace) : ''});
     for (const [id, checked] of Object.entries({extendedCentreline: environment.extendedCentreline === true,
       localLfaEnabled: !!environment.lfaBoundary?.length, sraDescentProfile: environment.sraDescentProfile === true})) {
       setup.push({id, value:'on', checked});
@@ -287,6 +291,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function restoreSetup(saved) {
     if (!Array.isArray(saved)) return;
+    if (byId('publishedAirspaceData')) byId('publishedAirspaceData').value = '';
     const savedFamily = saved.find(item => item.id === 'exerciseFamily');
     if (savedFamily && ['qgh', 'surveillance', 'sra'].includes(savedFamily.value)) family.value = savedFamily.value;
     const count = saved.find(item => item.id === 'aircraftCount');
@@ -301,6 +306,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (item.id === 'radarReturn' || /^radarReturn-\d+$/.test(item.id)) node.dataset.radarReturnAuto = item.radarAuto === 'true' ? 'true' : 'false';
     }
     configureFields();
+    syncPublishedPicker();
     saveSetup();
   }
 
@@ -396,6 +402,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     byId('reviewScreen').hidden = true;
     document.body.classList.remove('exercise-console');
     byId('consoleNavigation').open = true;
+    configurePublishedControls();
     checkpoint();
     enterWorkspace(byId('setupPanel'));
     byId('returnToExercise').focus?.({ preventScroll: true });
@@ -577,6 +584,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     state.trainingTimeRate = rate;
     byId('trainingTimeRate').value = String(rate);
     byId('trainingRateStatus').textContent = `SIMULATION · ${rate}×`;
+    if (state.simulation && state.session) {
+      state.session.updatePublicMetadata?.(publicMetadataForSimulation(), state.simulation.simulationSeconds);
+    }
     return rate;
   }
 
@@ -616,6 +626,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       byId(id).hidden = !radarMode;
     }
     byId('sraDescentProfileField').hidden = mode !== 'sra';
+    configurePublishedControls();
     syncRoster();
     for (const row of byId('aircraftRoster').children) {
       const controls = [...row.querySelectorAll('input, select')], radarReturn = controls[2];
@@ -693,12 +704,76 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
   }
 
-  // The training representation uses no real location or aerodrome data.
-  // When enabled, the LFA is an instructor-defined regular local boundary
-  // around the simulated station, not a published airspace boundary.
+  function publishedInput() {
+    const value = byId('publishedAirspaceData')?.value;
+    return value ? Published.normalizePublishedAirspace(JSON.parse(value)) : null;
+  }
+
+  function configurePublishedControls() {
+    const section = byId('suitePublishedSection'); if (!section) return;
+    section.hidden = !['surveillance','sra'].includes(family.value);
+    byId('applyPublishedAirspace').hidden = !state.session || !state.simulation || !['surveillance','sra'].includes(state.simulation.scenario.exerciseFamily) || ['review','ended'].includes(state.simulation.lifecycle);
+    if (byId('publishedAirspaceData').value) {
+      byId('localLfaEnabled').checked = false;
+      byId('localLfaEnabled').disabled = true;
+      byId('localLfaRadius').disabled = true;
+    } else {
+      byId('localLfaEnabled').disabled = false;
+      byId('localLfaRadius').disabled = false;
+    }
+  }
+
+  function syncPublishedPicker() {
+    if (!publishedPicker) return;
+    const saved = publishedInput();
+    // Restoring an offline file must preserve its source snapshot, not rebuild it
+    // from a newer catalogue. A deliberate picker change replaces that snapshot.
+    restoringPublishedPicker = true;
+    try { publishedPicker.set(saved?.baseId || '',saved?.selectionId || '',saved?.layerVisibility || {}); }
+    finally { restoringPublishedPicker = false; }
+    if (saved) byId('suitePublishedStatus').textContent = `Saved chart retained: ${saved.baseName} · ${saved.lfaName}. Select a different LFA to replace its source snapshot.`;
+  }
+
+  async function initialisePublishedPicker() {
+    if (!Published || !byId('suitePublishedPicker')) return;
+    try {
+      const data = await Published.loadData();
+      publishedPicker = Published.createPicker(byId('suitePublishedPicker'),{data,idPrefix:'suite-published',onChange:selected=>{
+        if (!publishedPicker || restoringPublishedPicker) return;
+        try {
+          byId('publishedAirspaceData').value = selected ? JSON.stringify(Published.publicChart(selected)) : '';
+          byId('suitePublishedStatus').textContent = selected ? 'Selected airspace will be included when you create the session. Apply to current exercise updates only its chart.' : 'Select a usable published LFA, or use the local training boundary.';
+          configurePublishedControls();saveSetup();
+        } catch(error) { byId('publishedAirspaceData').value='';byId('suitePublishedStatus').textContent=error.message;configurePublishedControls(); }
+      }});
+      syncPublishedPicker();
+    } catch(error) {byId('suitePublishedStatus').textContent=error.message;}
+  }
+
+  function applyPublishedToExercise() {
+    try {
+      if (!state.session || !state.simulation || !['surveillance','sra'].includes(state.simulation.scenario.exerciseFamily)) throw new Error('Open an SRA or vectoring exercise first.');
+      const publishedAirspace = publishedInput();
+      if (!publishedAirspace) throw new Error('Select an airbase and usable LFA first.');
+      if (state.running) suspendExercise('Exercise paused to load published airspace.');
+      const environment={...state.simulation.scenario.radarEnvironment,publishedAirspace,lfaBoundary:[]};
+      const next=Core.withRadarEnvironment(state.simulation,environment);
+      const metadata=publicMetadataForSimulation(next);
+      if (!state.session.updatePublicMetadata(metadata,next.simulationSeconds,{allowPending:true})) throw new Error('The current exercise no longer accepts chart changes.');
+      state.simulation=next;
+      if(state.initialScenario) state.initialScenario={...state.initialScenario,radarEnvironment:structuredClone(environment)};
+      if(Array.isArray(state.initialSetup)) state.initialSetup=[...state.initialSetup.filter(item=>item.id!=='publishedAirspaceData'),{id:'publishedAirspaceData',value:JSON.stringify(publishedAirspace)}];
+      state.dirty=true;checkpoint();updateAll();
+      byId('suitePublishedStatus').textContent='Published airspace shared with the controller. Aircraft, clearances, runway in use and elapsed time are kept. Return to exercise to continue.';
+    } catch(error) {byId('suitePublishedStatus').textContent=error.message;}
+  }
+
+  // A local training boundary remains available; published geometry is a
+  // separate, read-only chart referenced to its verified aerodrome ARP.
   function radarEnvironmentInput(mode) {
     if (!['surveillance', 'sra'].includes(mode)) return null;
-    const localBoundary = byId('localLfaEnabled').checked === true
+    const publishedAirspace = publishedInput();
+    const localBoundary = !publishedAirspace && byId('localLfaEnabled').checked === true
       ? Array.from({ length: 8 }, (_, index) => ({ bearingDeg: index * 45, rangeNm: number('localLfaRadius') }))
       : [];
     return {
@@ -707,7 +782,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       extendedCentrelineNm: number('extendedCentrelineNm'),
       centrelineTickNm: number('centrelineTickNm'),
       lfaBoundary: localBoundary,
-      sraDescentProfile: mode === 'sra' && byId('sraDescentProfile').checked === true
+      sraDescentProfile: mode === 'sra' && byId('sraDescentProfile').checked === true,
+      ...(publishedAirspace ? {publishedAirspace} : {})
     };
   }
 
@@ -779,6 +855,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const approachAircraft = input.aircraft.find(aircraft => aircraft.aircraftId === input.approachAircraft);
     return {
       mode: input.exerciseFamily,
+      trainingTimeRate: state.trainingTimeRate,
       procedure: input.qghProcedure,
       callsign: input.callsign,
       aircraftCount: input.aircraft.length,
@@ -806,6 +883,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const mode = scenario.exerciseFamily;
     const metadata = {
       mode,
+      trainingTimeRate: state.trainingTimeRate,
       procedure: scenario.qghProcedure,
       callsign: simulation.aircraft.callsign,
       aircraftCount: simulation.aircraftList.length,
@@ -861,7 +939,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     byId('normalCommands').hidden = us; byId('usCommands').hidden = !us;
     byId('continueHeading').hidden = us;
     byId('reportHeading').hidden = us;
-    byId('radarApproachCommands').hidden = !radarMode;
+    byId('radarApproachCommands').hidden = !approachMode;
+    byId('reportPosition').hidden = !radarMode;
     byId('transmitDf').hidden = radarMode;
     byId('continueApproach').hidden = !approachMode;
     byId('reportRunwayVisual').hidden = !approachMode;
@@ -871,7 +950,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       : mode === 'sra' ? 'SRA APPROACH ACTIONS' : 'SURVEILLANCE ACTIONS';
     byId('approachControlHint').textContent = approachMode
       ? 'Heading, descent, visual acquisition and missed-approach training controls.'
-      : 'Position reports remain tied to the discrete surveillance picture.';
+      : 'Position report sends the selected aircraft’s current bearing and range.';
   }
 
   function onSessionEvent(event) {
@@ -1003,8 +1082,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     let observation;
     if (mode === 'qgh') observation = state.sensor.studentObservation('qdm', radioNow(), truthForSensor());
     else if (mode === 'par') observation = state.sensor.studentObservation();
-    else observation = state.sensor.studentObservation(state.sra);
+    else observation = { ...state.sensor.studentObservation(state.sra),
+      homing: directionFindingSensor().studentObservation('qdm', radioNow(), truthForSensor()) };
     state.session.publishObservation({ mode, ...observation }, state.simulation.simulationSeconds);
+    if (observation.homing && JSON.stringify(observation.homing) !== JSON.stringify(state.latestObservation?.homing)) state.dirty = true;
     state.latestObservation = observation;
     const signature = mode === 'qgh'
       ? `${state.simulation.simulationSeconds}:${observation.status}:${observation.callsign ?? ''}:${observation.bearingDeg ?? ''}`
@@ -1150,15 +1231,28 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const captionSeconds = Math.max(3, Math.min(15, result.outcome.readback.text.split(/\s+/).length * 60 / 130 + 1));
     state.transmission = { id: result.outcome.readback.id, aircraftId: result.outcome.readback.aircraftId,
       text: result.outcome.readback.text, expiresAt: radioNow() + (state.radioAudio ? 30 : captionSeconds), captionSeconds, controlId };
-    if (state.simulation.scenario.exerciseFamily === 'qgh') beginDfTransmission(result.outcome.readback.id, result.outcome.readback.aircraftId);
+    if (['qgh', 'surveillance', 'sra'].includes(state.simulation.scenario.exerciseFamily)) beginDfTransmission(result.outcome.readback.id, result.outcome.readback.aircraftId);
     state.session.publishCaption(result.outcome.readback.text, state.simulation.simulationSeconds, state.transmission.id);
     updateAll();
     return result;
   }
 
+  function directionFindingSensor() {
+    const mode = state.simulation?.scenario.exerciseFamily;
+    if (mode === 'qgh') return state.sensor;
+    if (!state.sensor || !['surveillance', 'sra'].includes(mode)) return null;
+    // Radar and radio observations have separate clocks. Replacing a radar
+    // sensor (new exercise, restore or handover) also discards old radio state.
+    if (state.radioDfOwner !== state.sensor) {
+      state.radioDfSensor = Sensors.createDfSensor({ holdSeconds: 2, startSeconds: radioNow() });
+      state.radioDfOwner = state.sensor;
+    }
+    return state.radioDfSensor;
+  }
+
   function beginDfTransmission(readbackId, aircraftId) {
     clearTimeout(state.dfTimer);
-    state.sensor.beginTransmission({ transmissionId: readbackId, source: aircraftId }, truthForSensor(), radioNow());
+    directionFindingSensor()?.beginTransmission({ transmissionId: readbackId, source: aircraftId }, truthForSensor(), radioNow());
     publishCurrentObservation();
   }
 
@@ -1172,8 +1266,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function endDfTransmission() {
-    if (!state.sensor || state.simulation?.scenario.exerciseFamily !== 'qgh') return;
-    state.sensor.endTransmission(truthForSensor(), radioNow());
+    const sensor = directionFindingSensor();
+    if (!sensor) return;
+    sensor.endTransmission(truthForSensor(), radioNow());
     publishCurrentObservation();
   }
 
@@ -1182,6 +1277,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (!requireStartup()) return false;
     if (!state.session.start(state.simulation.simulationSeconds)) { byId('commandStatus').textContent = 'Controller position must be admitted and Ready.'; return false; }
     state.simulation = Core.setLifecycle(state.simulation, 'running'); state.running = true; state.previousFrame = null; state.previousTick = performance.now();
+    // Rate changes made while waiting must reach the admitted display before
+    // its first animated radar observation.
+    state.session.updatePublicMetadata?.(publicMetadataForSimulation(), state.simulation.simulationSeconds);
     byId('startExercise').disabled = true; byId('pauseExercise').disabled = false; byId('terminateExercise').disabled = false;
     byId('pauseExercise').textContent = 'PAUSE';
     setPhase('running'); updateAll();
@@ -1247,6 +1345,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function updateAll() {
     renderMeeting();
     if (!state.simulation) return;
+    const scopeRange = displayRange();
+    const rangeText = `${byId('scopeRange').value === 'auto' ? 'Auto · ' : ''}${Number(scopeRange.toFixed(1))} NM`;
+    if (byId('instructorRangeReadout').textContent !== rangeText) byId('instructorRangeReadout').textContent = rangeText;
+    byId('instructorZoomIn').disabled = scopeRange <= 5;
+    byId('instructorZoomOut').disabled = scopeRange >= 100;
     const snapshot = Core.truthSnapshot(state.simulation), a = snapshot.aircraft, b = snapshot.bearing;
     focusMode?.setPhase(snapshot.lifecycle);
     byId('truthCallsign').textContent = a.callsign;
@@ -1302,13 +1405,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     byId('sessionPin').textContent = (state.session?.pin || '—').replace(/(\d{3})(\d{3})/, '$1 $2');
     byId('compactConnection').textContent = byId('studentStatus').textContent || 'Waiting';
     byId('quickAircraftStatus').textContent = `${a.callsign} · ${pad(a.headingDeg)}°M · ${Math.round(a.altitudeFt)} FT · ${Math.round(a.speedKt)} KT`;
-    byId('instructorHoming').hidden = snapshot.scenario.exerciseFamily !== 'qgh';
+    byId('instructorHoming').hidden = !['qgh', 'surveillance', 'sra'].includes(snapshot.scenario.exerciseFamily);
+    byId('quickTransmit').textContent = snapshot.scenario.exerciseFamily === 'qgh' ? 'Transmit for D/F' : 'Position report';
+    byId('quickTransmit').title = snapshot.scenario.exerciseFamily === 'qgh'
+      ? 'Selected aircraft transmits for direction finding.'
+      : 'Selected aircraft reports its current bearing and range to the controller.';
     document.querySelectorAll('.quick-aircraft-controls button, .quick-aircraft-controls input, #quickTransmit').forEach(control => { control.disabled = !controllable; });
     const us = isUsCompass();
     byId('quickHeadingLeft').hidden = us; byId('quickHeadingRight').hidden = us; byId('quickHeading').parentElement && (byId('quickHeading').parentElement.hidden = us);
     byId('instructorPilotCaption').textContent = state.transmission?.text || snapshot.readbacks?.at(-1)?.text || 'Awaiting a transmission.';
-    if (snapshot.scenario.exerciseFamily === 'qgh') {
-      const signal = state.sensor.read(radioNow(), truthForSensor());
+    if (['qgh', 'surveillance', 'sra'].includes(snapshot.scenario.exerciseFamily)) {
+      const signal = directionFindingSensor().read(radioNow(), truthForSensor());
       const bearing = byId('instructorDfReference').value === 'qte' ? signal.qte : signal.qdm;
       byId('instructorDfBearing').textContent = Number.isFinite(bearing) ? `${pad(bearing)}°` : '—';
       byId('instructorDfPhase').textContent = signal.phase === 'blank' ? 'No transmission' : String(signal.phase || 'idle').toUpperCase();
@@ -1352,15 +1459,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     const cx = width / 2 + (canvas.id === 'instructorScope' ? state.scopePan.x : 0), cy = height / 2 + (canvas.id === 'instructorScope' ? state.scopePan.y : 0);
     const scale = Math.min(width, height) * .44 / maxRange;
-    const ringSpacing = Number(byId('ringSpacing')?.value) === 5 ? 5 : 10;
+    const ringSpacing = Number(byId('ringSpacing')?.value) === 5 ? 5 : 10, ringLabelBoxes = [];
     context.clearRect(0, 0, width, height); context.fillStyle = '#0e1319'; context.fillRect(0, 0, width, height);
     context.strokeStyle = '#1d5551'; context.lineWidth = 1; context.fillStyle = '#79aaa4'; context.font = '16px IBM Plex Mono';
     if (visuals) visuals.drawRangeRings(context, { rangeNm: maxRange, spacingNm: ringSpacing, scale, cx, cy, width, height,
-      font: '11px IBM Plex Mono', strokeStyle: '#1d5551', fillStyle: '#79aaa4',
+      font: '11px IBM Plex Mono', strokeStyle: '#1d5551', fillStyle: '#79aaa4', labelBoxes: ringLabelBoxes,
       obstacles: visuals.overlayObstacles(canvas, { document, width, height }) });
     else for (let range = ringSpacing; range <= maxRange + ringSpacing; range += ringSpacing) {
       const distance = Math.min(range, maxRange), radius = distance * scale;
       context.beginPath(); context.arc(cx, cy, radius, 0, Math.PI * 2); context.stroke(); context.fillText(`${distance} NM`, cx + 4, cy - radius + 17);
+      ringLabelBoxes.push({ x: cx + 4, y: cy - radius + 5, width: context.measureText?.(`${distance} NM`)?.width || 40, height: 14 });
       if (distance === maxRange) break;
     }
     context.beginPath(); context.moveTo(cx, 22); context.lineTo(cx, height - 22); context.moveTo(22, cy); context.lineTo(width - 22, cy); context.stroke();
@@ -1369,9 +1477,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const threshold = state.simulation?.scenario.exerciseFamily === 'sra' && runwayGeometry ? runwayGeometry.threshold : { xNm: 0, yNm: 0 };
     const referenceX = cx + threshold.xNm * scale, referenceY = cy - threshold.yNm * scale;
     const finalAngle = finalTrack * Math.PI / 180, length = Math.min(width, height) * .42;
-    context.strokeStyle = '#758f82'; context.lineWidth = 1; context.setLineDash([7, 8]);
-    context.beginPath(); context.moveTo(referenceX - Math.sin(finalAngle) * length, referenceY + Math.cos(finalAngle) * length);
-    context.lineTo(referenceX + Math.sin(finalAngle) * length, referenceY - Math.cos(finalAngle) * length); context.stroke(); context.setLineDash([]);
+    if (!['sra', 'surveillance'].includes(state.simulation?.scenario.exerciseFamily)) {
+      context.strokeStyle = '#758f82'; context.lineWidth = 1; context.setLineDash([7, 8]);
+      context.beginPath(); context.moveTo(referenceX - Math.sin(finalAngle) * length, referenceY + Math.cos(finalAngle) * length);
+      context.lineTo(referenceX + Math.sin(finalAngle) * length, referenceY - Math.cos(finalAngle) * length); context.stroke(); context.setLineDash([]);
+    }
     if (visuals?.drawRunwayStrip) visuals.drawRunwayStrip(context, environment, (x, y) => [cx + x * scale, cy - y * scale], scale);
     else {
       const angle = runway * Math.PI / 180, halfLength = scale * (3 / 1.852) / 2;
@@ -1379,16 +1489,19 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       context.moveTo(cx - Math.sin(angle) * halfLength, cy + Math.cos(angle) * halfLength);
       context.lineTo(cx + Math.sin(angle) * halfLength, cy - Math.cos(angle) * halfLength); context.stroke();
     }
-    context.fillStyle = '#b8d1ca'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
-    context.font = '11px IBM Plex Mono'; context.fillText('ARP / D/F', cx + 8, cy - 9);
-    context.fillText(`RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
-    return { cx, cy, scale, width, height, pixelRatio };
+    context.fillStyle = '#b8d1ca'; context.font = '11px IBM Plex Mono';
+    if (environment.publishedAirspace?.layerVisibility?.arp !== false) {
+      context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+      context.fillText('ARP / D/F', cx + 8, cy - 9);
+    }
+    context.fillText(`${environment.publishedAirspace ? 'EXERCISE ' : ''}RWY ${pad(runway)} / ${pad(runway + 180)}`, cx + 12, cy + 22);
+    return { cx, cy, scale, width, height, pixelRatio, ringLabelBoxes };
   }
 
   function displayRange() {
     const simulation = state.simulation;
     const selected = Number(byId('scopeRange').value);
-    if (selected >= 10) return selected;
+    if (selected >= 5) return selected;
     return Math.max(30, ...simulation.aircraftList.map(a => Math.hypot(a.position.xNm, a.position.yNm) * 1.3),
       ...Object.values(simulation.truthTrails).map(trail => Math.hypot(trail[0].xNm, trail[0].yNm) * 1.3));
   }
@@ -1440,6 +1553,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const context = canvas.getContext('2d');
     const transform = drawBase(context, canvas, displayRange(), simulation.scenario.runwayOrientationDeg, simulation.scenario.finalTrackDeg);
     state.scopeTransform = transform;
+    drawInstructorChart(context, transform, simulation);
+    if (!reducedMotion() && ['surveillance', 'sra'].includes(simulation.scenario.exerciseFamily)) {
+      const elapsed = state.previousTick == null ? 0 : Math.max(0, (performance.now() - state.previousTick) / 1000);
+      const sampledAngle = state.sensor?.beamAngleAt?.(simulation.simulationSeconds);
+      const angleDeg = Display?.radarSweepAngle?.({ angleDeg: sampledAngle,
+        elapsedSeconds: elapsed + (state.accumulator || 0) / state.trainingTimeRate,
+        rpm: state.sensor?.rpm, timeRate: state.trainingTimeRate, running: state.running });
+      Display?.drawRadarSweep?.(context, { cx: transform.cx, cy: transform.cy,
+        radius: Math.min(transform.width, transform.height) * .44, angleDeg });
+    }
     const labels = [];
     for (const aircraft of simulation.aircraftList) {
       const selected = aircraft.id === simulation.selectedAircraftId, trail = simulation.truthTrails[aircraft.id];
@@ -1467,32 +1590,48 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       }
     }
     drawPlots(context, transform, observation);
-    if (simulation.scenario.exerciseFamily !== 'qgh') {
-      if (!reducedMotion()) {
-        const scanTime = simulation.simulationSeconds + (state.running ? Math.max(0, (performance.now() - state.previousTick) / 1000) * state.trainingTimeRate : 0);
-        const angle = (scanTime * 90 - 90) * Math.PI / 180;
-        const radius = Math.min(transform.width, transform.height) * .44;
-        context.strokeStyle = 'rgba(90,210,164,.5)'; context.lineWidth = 1; context.beginPath(); context.moveTo(transform.cx, transform.cy);
-        context.lineTo(transform.cx + Math.cos(angle) * radius, transform.cy + Math.sin(angle) * radius); context.stroke();
-      }
-      if (simulation.scenario.exerciseFamily === 'sra') drawInstructorSra(context, transform, simulation);
-    }
     drawTruthLabels(context, canvas, transform, labels);
   }
 
-  function drawInstructorSra(context, transform, simulation) {
-    const angle = (simulation.scenario.finalTrackDeg + 180) * Math.PI / 180;
-    const feetPerNm = Math.tan(3 * Math.PI / 180) * 6076.12;
-    context.strokeStyle = '#d8c780'; context.fillStyle = '#d8c780'; context.font = '11px IBM Plex Mono';
-    let lastLabel = null;
-    for (let distance = .5; distance <= Math.min(20, displayRange()); distance += distance < 5 ? .5 : 1) {
-      const x = transform.cx + Math.sin(angle) * distance * transform.scale, y = transform.cy - Math.cos(angle) * distance * transform.scale;
-      const dx = Math.cos(angle) * (distance % 1 ? 4 : 7), dy = Math.sin(angle) * (distance % 1 ? 4 : 7);
-      context.beginPath(); context.moveTo(x - dx, y - dy); context.lineTo(x + dx, y + dy); context.stroke();
-      if (!lastLabel || Math.hypot(x - lastLabel.x, y - lastLabel.y) >= 32) {
-        context.fillText(`${distance} NM · ${Math.round(feetPerNm * distance / 10) * 10} FT AAL`, x + 10, y + 4); lastLabel = { x, y };
+  function drawInstructorChart(context, transform, simulation) {
+    const metadata = publicMetadataForSimulation(simulation);
+    const radar = ['sra', 'surveillance'].includes(metadata.mode);
+    const environment = Display.radarChartEnvironment(metadata);
+    const available = { Lfa: radar && (environment.publishedAirspace
+      ? environment.publishedAirspace.layerVisibility?.lfa !== false && environment.publishedAirspace.areas?.some(area => area.id === environment.publishedAirspace.lfaId)
+      : environment.lfaBoundary.length >= 3),
+      Centreline: radar && environment.extendedCentreline, Descent: radar && environment.sraDescentProfile };
+    const enabled = {};
+    for (const [name, allowed] of Object.entries(available)) {
+      const control = byId(`instructorOverlay${name}`), label = byId(`instructorOverlay${name}Control`);
+      if (label) label.hidden = !radar || name === 'Descent' && metadata.mode !== 'sra';
+      if (control) control.disabled = !allowed;
+      enabled[name] = allowed && control?.checked !== false;
+    }
+    const summary = byId('instructorChartSummary');
+    if (summary) {
+      const lines = radar ? Display.radarChartSummary?.({ environment, metadata,
+        overlays: metadata.mode === 'sra' ? state.sra || createSraReferences(simulation.scenario) : undefined,
+        showLfa: enabled.Lfa, showExtendedCentreline: enabled.Centreline, showDescentProfile: enabled.Descent }) || [] : [];
+      summary.textContent = lines.join(' · '); summary.hidden = !lines.length;
+      const reference = byId('instructorChartReference'), label = byId('instructorChartLabel');
+      if (reference) reference.hidden = !lines.length;
+      if (label) {
+        label.textContent = environment.publishedAirspace ? `${environment.publishedAirspace.baseName} · ${environment.publishedAirspace.lfaName}` : 'Exercise chart references';
+        label.hidden = !lines.length;
       }
     }
+    if (!radar) return;
+    if (!publishedBoundaryControls) publishedBoundaryControls = globalThis.ATSPublishedBoundaries?.createBoundaryControls(byId('instructorChartReference'));
+    publishedBoundaryControls?.update(environment.publishedAirspace?.referenceBoundaries, { enabled: environment.publishedAirspace?.layerVisibility?.internationalBoundary !== false });
+    const options = { ...transform, rangeNm: displayRange(), environment, metadata,
+      runway: globalThis.ATCScopeVisuals?.runwayGeometry(environment),
+      obstacles: [...(transform.ringLabelBoxes || []), ...(globalThis.ATCScopeVisuals?.overlayObstacles(byId('instructorScope'), { document, width: transform.width, height: transform.height }) || [])] };
+    const chartLabels = Display.drawRadarEnvironment(context, { ...options, showLfa: enabled.Lfa, showExtendedCentreline: enabled.Centreline });
+    Display.drawPublishedAirspace(context, { ...options, publishedAirspace: environment.publishedAirspace,
+      layerVisibility: { lfa: enabled.Lfa }, boundaryVisibleIds: publishedBoundaryControls?.visibleIds(), chartLabels });
+    if (metadata.mode === 'sra') Display.drawSraReferences(context, { ...options,
+      overlays: state.sra || createSraReferences(simulation.scenario), showDescentProfile: enabled.Descent, chartLabels });
   }
 
   function inspectScope(event, select = false) {
@@ -1577,6 +1716,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (state.scopeDrag?.pointerId !== event.pointerId) return;
     byId('instructorScope').releasePointerCapture?.(event.pointerId); state.scopeDrag = null;
   }
+
+  const scopeZoom = Display.bindScopeZoom(byId('instructorScope'), {
+    getRange: displayRange,
+    setRange(range) { byId('scopeRange').value = String(range); updateAll(); },
+    isEnabled: () => !!state.simulation && !byId('activeWorkspace').hidden
+  });
+  byId('instructorZoomIn').addEventListener('click', () => scopeZoom.zoom('in'));
+  byId('instructorZoomOut').addEventListener('click', () => scopeZoom.zoom('out'));
 
   const middleMouseStop = Display?.bindMiddleMouseStop?.(byId('instructorScope'), {
     isAllowed: id => !!state.simulation && ['running', 'paused'].includes(state.simulation.lifecycle)
@@ -1950,6 +2097,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   byId('scopeRange').addEventListener('change', updateAll);
   byId('truthTrailCount').addEventListener('change', updateAll);
   byId('ringSpacing')?.addEventListener('change', updateAll);
+  ['Lfa', 'Centreline', 'Descent'].forEach(name => byId(`instructorOverlay${name}`)?.addEventListener('change', updateAll));
   byId('truthLabelMode')?.addEventListener('change', updateAll);
   byId('instructorDfReference').addEventListener('change', updateAll);
   byId('resetScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; updateAll(); });
@@ -1972,6 +2120,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     state.reviewPlaying = !state.reviewPlaying; drawReview(state.review.snapshot());
   });
   byId('newScenario').addEventListener('click', openTrafficSetup);
+  byId('applyPublishedAirspace')?.addEventListener('click',applyPublishedToExercise);
+  byId('clearPublishedAirspace')?.addEventListener('click',()=>{
+    byId('publishedAirspaceData').value='';publishedPicker?.set('','');configurePublishedControls();saveSetup();
+    byId('suitePublishedStatus').textContent='Local training airspace selected for the next session. An active exercise keeps its current published chart.';
+  });
   byId('returnToExercise').addEventListener('click', returnToExercise);
   byId('restartExercise').addEventListener('click', retryScenario);
   byId('downloadReviewSetup').addEventListener('click', downloadReviewSetup);
@@ -1979,5 +2132,5 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   window.addEventListener('pagehide', () => { if (state.loggingOut) return; saveSetup(); checkpoint(); state.session?.detach?.(); });
   state.heartbeatTimer = setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
   state.runtimeTimer = setInterval(runtimeTick, 100);
-  configureFields(); refreshPresets(); void restoreAttempt(); state.animationFrame = requestAnimationFrame(frame);
+  configureFields(); refreshPresets(); void restoreAttempt(); void initialisePublishedPicker(); state.animationFrame = requestAnimationFrame(frame);
 })();

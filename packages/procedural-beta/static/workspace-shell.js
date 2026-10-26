@@ -38,6 +38,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if(heading&&!heading.querySelector('.ats-workspace-role')){
         const role=root.ownerDocument.createElement('span');role.className='ats-workspace-role';role.textContent='Controller';heading.prepend(role);
       }
+      installStudentConsole(root);
     }
     // Procedural moves its existing fleet into the toolbar later in the same
     // module. Attach after that move so the track keeps the correct home.
@@ -49,6 +50,63 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       installFloatingInstruments(root,shelf);
       installOverlaySurfaces(root);
     });
+  }
+  function installStudentConsole(root) {
+    if(root.dataset.atsLayout)return;
+    root.dataset.atsLayout='student';
+    const doc=root.ownerDocument,byId=id=>doc.getElementById(id);
+    const make=(tag,text,className)=>{const node=doc.createElement(tag);if(text)node.textContent=text;if(className)node.className=className;return node;};
+    // Reuse the existing sensor views and their controls. No aircraft truth or
+    // instructor commands enter the controller's presentation shell.
+    const stage=make('div',null,'student-console');root.append(stage);
+    for(const id of ['studentEstimateScopePanel','radarStudentView','parStudentView'])if(byId(id))stage.append(byId(id));
+    const radio=make('aside',null,'ats-student-radio');radio.id='studentRadioPanel';radio.setAttribute('aria-label','Homing and pilot transmission');
+    const radioHead=make('header',null,'ats-overlay-header');radioHead.append(make('strong','Homing & radio'));
+    const minimize=make('button','−','ats-overlay-collapse ats-panel-icon');minimize.type='button';minimize.setAttribute('aria-label','Minimize homing and radio');minimize.setAttribute('aria-expanded','true');
+    const radioBody=make('div',null,'ats-student-radio-body');radioBody.id='studentRadioBody';minimize.setAttribute('aria-controls',radioBody.id);
+    minimize.addEventListener('click',()=>{const closed=radioBody.hidden=!radioBody.hidden;minimize.textContent=closed?'+':'−';minimize.setAttribute('aria-expanded',String(!closed));minimize.setAttribute('aria-label',closed?'Restore homing and radio':'Minimize homing and radio');});
+    radioHead.append(minimize);radio.append(radioHead,radioBody);stage.append(radio);
+    for(const id of ['qghStudentView','studentCaption'])if(byId(id))radioBody.append(byId(id));
+    const rail=make('nav',null,'ats-tool-rail');rail.id='studentTools';rail.setAttribute('aria-label','Scope tools');stage.append(rail);
+    const drawers=['studentNavigation','student-estimate-panel'].map(byId).filter(Boolean);
+    let active=null,returnFocus=null;
+    const triggers=new Map();
+    const update=()=>{for(const [drawer,button]of triggers)button.setAttribute('aria-expanded',String(drawer.open));};
+    const close=()=>{if(active)active.open=false;active=null;update();returnFocus?.focus?.({preventScroll:true});};
+    const open=(drawer,trigger)=>{for(const other of drawers)if(other!==drawer)other.open=false;returnFocus=trigger;active=drawer;drawer.open=true;update();drawer.querySelector('.ats-drawer-close')?.focus?.({preventScroll:true});};
+    for(const drawer of drawers){
+      drawer.classList.add('ats-student-drawer');
+      const summary=drawer.querySelector('summary'),button=make('button','×','ats-drawer-close ats-panel-icon');button.type='button';button.setAttribute('aria-label','Close panel');button.title='Close panel';
+      button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();drawer.open=false;if(active===drawer)active=null;update();returnFocus?.focus?.({preventScroll:true});});summary?.append(button);
+      drawer.addEventListener('toggle',()=>{if(doc.body.classList.contains('exercise-console')&&drawer.open){for(const other of drawers)if(other!==drawer)other.open=false;active=drawer;}else if(active===drawer&&!drawer.open)active=null;update();});
+      const trigger=make('button',drawer.id==='studentNavigation'?'Session & help':'Plot estimates','ats-tool-button');trigger.type='button';trigger.setAttribute('aria-controls',drawer.id);trigger.setAttribute('aria-expanded','false');
+      trigger.addEventListener('click',()=>active===drawer&&drawer.open?close():open(drawer,trigger));rail.append(trigger);triggers.set(drawer,trigger);
+    }
+    const options=make('button','Options','ats-options-toggle');options.id='studentOptionsToggle';options.type='button';options.setAttribute('aria-expanded','true');
+    const settings=make('button','Scope settings','ats-tool-button');settings.type='button';settings.setAttribute('aria-expanded','true');
+    const toggle=()=>{const expanded=!root.classList.toggle('ats-student-focus');for(const button of [options,settings])button.setAttribute('aria-expanded',String(expanded));};
+    options.addEventListener('click',toggle);settings.addEventListener('click',toggle);rail.append(settings);root.querySelector('.student-head')?.append(options);
+    const radioToggle=make('button','Radio','ats-tool-button');radioToggle.type='button';radioToggle.setAttribute('aria-controls',radio.id);radioToggle.setAttribute('aria-expanded','true');radioToggle.addEventListener('click',()=>{radio.hidden=!radio.hidden;radioToggle.setAttribute('aria-expanded',String(!radio.hidden));});rail.append(radioToggle);
+    const clock=byId('studentClock');if(clock){clock.before(make('span','Exercise time','ats-clock-label'));clock.title='Elapsed simulated exercise time';}
+    installMovableOverlay(radio,{header:radioHead,label:'Homing and radio',desktopOnly:true});
+    for(const drawer of drawers)installMovableOverlay(drawer,{header:drawer.querySelector('summary'),label:drawer.id==='studentNavigation'?'Session and help':'Plot estimates',preserveHeight:true});
+    const aids=byId('radarScopeControls');if(aids)installMovableOverlay(aids.querySelector('.scope-control-panel'),{label:'Radar display settings',desktopOnly:true});
+    let entered=false;
+    const syncStage=()=>{
+      const visible=!root.hidden&&doc.body.classList.contains('exercise-console');
+      if(visible&&!entered){for(const drawer of drawers)drawer.open=false;active=null;update();}
+      if(!visible){for(const drawer of drawers)movableOverlays.get(drawer)?.reset();}
+      entered=visible;
+      const canvas=[byId('studentEstimateScope'),byId('radarScope')].find(node=>node&&!node.closest('[hidden]'));
+      if(canvas){const top=canvas.getBoundingClientRect().top-stage.getBoundingClientRect().top;stage.style.setProperty('--student-plot-top',`${Math.max(0,top)}px`);}
+    };
+    if(typeof MutationObserver==='function'){
+      new MutationObserver(syncStage).observe(doc.body,{attributes:true,attributeFilter:['class']});
+      new MutationObserver(syncStage).observe(root,{attributes:true,attributeFilter:['class','hidden']});
+    }
+    if(typeof ResizeObserver==='function')for(const canvas of [byId('radarScope'),byId('studentEstimateScope')])if(canvas)new ResizeObserver(syncStage).observe(canvas);
+    syncStage();
+    doc.addEventListener('keydown',event=>{if(!active?.open||root.hidden||event.target?.closest?.('dialog[open]'))return;if(event.key==='Escape'){event.preventDefault();close();}else containPhoneDrawerFocus(event,active);});
   }
   function installFloatingInstruments(root,shelf) {
     const parent=root.querySelector('.instructor-console, .scope-panel');

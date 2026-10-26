@@ -35,7 +35,7 @@ function harness(options = {}) {
   let source = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
   source = source.slice(0, source.indexOf("  family.addEventListener('change'")) +
     '\n globalThis.fixture = { state, parseKeyboardCommand, performInstructorAction, executeKeyboardCommand, handleShortcut, selectAircraft };})();';
-  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
+  const context = { document, ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteDisplay: require('../suite-display.js'), ATCSuiteSession: {}, ATCSuiteCommandReference: require('../suite-command-reference.js'),
     setTimeout() { return 1; }, clearTimeout() {}, performance: { now: () => 0 }, console };
   vm.runInNewContext(source, context);
   const aircraft = [

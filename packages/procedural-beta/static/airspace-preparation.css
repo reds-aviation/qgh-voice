@@ -32,3 +32,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 .airspace-feature-choices{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.airspace-feature-choices button{flex:1 1 110px;min-height:44px}.airspace-feature-choices button[aria-pressed="true"]{border-color:var(--accent,#83c8d5);background:var(--panel,#19252d);outline:2px solid var(--accent,#83c8d5);outline-offset:1px}.airspace-existing-features>h3{font-size:1rem;margin:4px 0 12px}.airspace-existing-features[hidden]{display:none!important}#prepare-chart-settings>details{margin:12px 0}#prepare-chart-settings>details>summary{min-height:44px;box-sizing:border-box;padding:8px 0;cursor:pointer}
 .airspace-existing-features>.airspace-preparation-actions>h3{flex:1 1 180px;font-size:1rem;margin:4px 0 12px}.airspace-existing-features>.airspace-preparation-actions button{min-height:44px}
 @media(max-width:600px){.airspace-route-point-names{grid-template-columns:1fr;max-height:300px}.airspace-boundary-row strong,.airspace-feature-limits{flex-basis:100%}.airspace-boundary-row button{flex:1 1 120px}.airspace-method-hint{padding:10px;font-size:.9rem}}
+
+/* One typeface for every published entry and its controls. */
+#aerodrome-form,#aerodrome-form :is(select,option,optgroup,label,summary,button,.record,.record strong,.record small,.record a,.aerodrome-selection-list span,.aerodrome-selection-list small){font-family:"Suite Sans",Arial,sans-serif;letter-spacing:normal;text-transform:none}
+#aerodrome-select,#aerodrome-select :is(option,optgroup){font-size:14px;font-weight:400}
+#aerodrome-form .aerodrome-selection-list label{font-size:14px;line-height:1.45;font-weight:400}

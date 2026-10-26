@@ -14,6 +14,25 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const Sensors = require('../suite-sensors.js');
 const Session = require('../suite-session.js');
+const Display = require('../suite-display.js');
+
+test('SRA and vectoring scan display follows beam crossings after restoring at nonzero elapsed time', () => {
+  for (const sra of [false, true]) {
+    const sensor = Sensors.createSurveillanceSensor({ rpm: 15, startSeconds: 17, sra });
+    const target = () => ({ id: 'A1', position: { xNm: 20, yNm: 0 }, altitudeFt: 7000 });
+    sensor.advance(17.75, target);
+    assert.equal(sensor.studentObservation().plots.length, 0);
+    sensor.advance(18, target);
+    const observation = sensor.studentObservation();
+    assert.equal(observation.scanAngleDeg, 90);
+    assert.equal(observation.plots[0].azimuthDeg, 90);
+    assert.equal(observation.plots[0].timestamp, 18);
+    assert.equal(Display.radarSweepAngle({ angleDeg: sensor.beamAngleAt(18) }), observation.scanAngleDeg);
+    assert.equal(sensor.studentObservation().scanAngleDeg, 90, 'a paused clock must not move the beam');
+    sensor.advance(22, target);
+    assert.equal(sensor.studentObservation().plots[0].timestamp, 22, 'the revisit remains four simulation seconds');
+  }
+});
 
 const stationary = () => ({ id: 'A1', callsign: '430', position: { xNm: 0, yNm: -20 }, altitudeFt: 7000,
   headingDeg: 225, speedKt: 240, surveillance: { secondary: true, modeS: true, squawk: '4301', modeSId: 'A1B2C3' } });

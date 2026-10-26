@@ -62,6 +62,15 @@ test('instructor roster exposes a per-aircraft primary, Mode A and Mode S return
   assert.match(page, /<option value="mode-s">MODE S · □<\/option>/);
 });
 
+test('Position report is a primary aircraft action outside the approach-only section', () => {
+  const page = html();
+  const actions = page.match(/class="command-grid command-grid--actions"([\s\S]*?)<\/div>/)?.[1];
+  assert.match(actions, /id="reportPosition"/);
+  assert.match(actions, /POSITION REPORT/);
+  assert.equal((page.match(/id="reportPosition"/g) || []).length, 1, 'A single button retains the existing report handler');
+  assert.ok(page.indexOf('id="reportPosition"') < page.indexOf('id="radarApproachCommands"'));
+});
+
 test('instructor keeps aircraft selection, lifecycle and command controls beside the truth scope', () => {
   const page = html();
   assert.match(page, /class="console-toolbar"[\s\S]*id="aircraftRosterTabs"[\s\S]*id="startExercise"[\s\S]*id="pauseExercise"[\s\S]*id="terminateExercise"/);

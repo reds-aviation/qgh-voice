@@ -15,32 +15,88 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
 const Visuals = require('../../qgh-engine/scope-visuals.js');
+const Display = require('../suite-display.js');
 const source = readFileSync(join(__dirname, '..', 'suite-student.js'), 'utf8');
 const page = readFileSync(join(__dirname, '..', 'student.html'), 'utf8');
 
 function harness(mode = 'surveillance', options = {}) {
   const { metadata: metadataOverrides = {}, reducedMotion = false, ...speech } = options;
-  const playback = [], snapshotOverrides = {};
+  const playback = [], preferences = [], snapshotOverrides = {};
   const elements = new Map(), windowEvents = {};
   let onEvent, portrait = false;
   const context = () => new Proxy({ marks: [], labels: [], textDraws: [], strokes: [], path: [], dash: [], beginPath() { this.path = []; }, moveTo(x, y) { this.path.push({ x, y }); }, lineTo(x, y) { this.path.push({ x, y }); }, setLineDash(dash) { this.dash = [...dash]; }, stroke() { this.strokes.push({ path: [...this.path], dash: [...this.dash], colour: this.strokeStyle }); }, arc(x, y, r) { this.marks.push({ x, y, r, alpha: this.globalAlpha }); }, fillText(text, x, y) { this.labels.push(text); this.textDraws.push({ text, x, y, width: this.measureText(text).width }); }, clearRect() { this.marks = []; this.labels = []; this.textDraws = []; this.strokes = []; }, measureText(text) { return { width: text.length * 8.4 }; } }, { get: (target, key) => key in target ? target[key] : () => {} });
   const node = id => {
-    if (!elements.has(id)) elements.set(id, { id, value: ({ joinPin: '123456', radarHistory: '3', radarRange: '40', parRangeScale: '10', parHistory: '3' })[id] || '', hidden: id === 'radarInspection', checked: false, width: id === 'radarScope' ? 1000 : 1000, height: id === 'radarScope' ? 800 : 300, offsetWidth: id === 'radarInspection' ? 270 : 1000, offsetHeight: id === 'radarInspection' ? 180 : 300, textContent: '', style: {}, events: {}, attributes: {}, ctx: context(), addEventListener(type, fn) { this.events[type] = fn; }, setAttribute(name, value) { this.attributes[name] = value; }, getContext() { return this.ctx; }, getBoundingClientRect() { return { left: 0, top: 0, width: this.width, height: this.height }; }, querySelector() { return node(`${id}-strong`); } });
+    if (!elements.has(id)) elements.set(id, { id, value: ({ joinPin: '123456', radarHistory: '3', radarRange: '40', parRangeScale: '10', parHistory: '3' })[id] || '', hidden: id === 'radarInspection', checked: false, width: id === 'radarScope' ? 1000 : 1000, height: id === 'radarScope' ? 800 : 300, offsetWidth: id === 'radarInspection' ? 270 : 1000, offsetHeight: id === 'radarInspection' ? 180 : 300, textContent: '', style: {}, events: {}, eventOptions: {}, attributes: {}, ctx: context(), addEventListener(type, fn, options) { this.events[type] = fn; this.eventOptions[type] = options; }, setAttribute(name, value) { this.attributes[name] = value; }, getContext() { return this.ctx; }, getBoundingClientRect() { return { left: 0, top: 0, width: this.width, height: this.height }; }, querySelector() { return node(`${id}-strong`); } });
     return elements.get(id);
   };
   const metadata = { mode, callsign: '101', approachCallsign: '202', runwayOrientation: 230, finalTrack: 230, glidepathDeg: 3, scanRpm: 12, revisitSeconds: 5, ...metadataOverrides };
-  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: query => ({ matches: query === '(prefers-reduced-motion: reduce)' ? reducedMotion : portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences() {}, pilotPlayback: (id, phase) => playback.push({id,phase}), snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running', ...snapshotOverrides }) }; } } };
+  const sandbox = { document: { getElementById: node, body: { classList: { toggle() {} } } }, localStorage: {}, innerWidth: 1000, innerHeight: 800, matchMedia: query => ({ matches: query === '(prefers-reduced-motion: reduce)' ? reducedMotion : portrait }), addEventListener: (name, fn) => { windowEvents[name] = fn; }, setInterval() {}, setTimeout: fn => fn(), ...speech, ATCSuiteSession: { createLocalSessionTransport() {}, createStudentSession(options) { onEvent = options.onEvent; return { requestJoin: () => true, preferences: value => preferences.push(value), pilotPlayback: (id, phase) => playback.push({id,phase}), snapshot: () => ({ publicMetadata: metadata, simulationTime: 20, state: 'running', ...snapshotOverrides }) }; } } };
+  sandbox.ATCSuiteDisplay = Display;
   vm.runInNewContext(source, sandbox);
   node('joinSession').events.click();
   const emit = observation => onEvent({ kind: 'observation', observation });
   const start = () => onEvent({ kind: 'lifecycle' });
-  return { node, emit, start, playback, rawEvent: onEvent, snapshot: snapshotOverrides, event: kind => onEvent({ kind }), caption: (caption, transmissionId) => onEvent({ kind: 'caption', caption, transmissionId }), windowEvent: (name, event) => windowEvents[name]?.(event), portrait: value => { portrait = value; windowEvents.resize(); } };
+  return { node, emit, start, playback, preferences, rawEvent: onEvent, snapshot: snapshotOverrides, event: kind => onEvent({ kind }), caption: (caption, transmissionId) => onEvent({ kind: 'caption', caption, transmissionId }), windowEvent: (name, event) => windowEvents[name]?.(event), portrait: value => { portrait = value; windowEvents.resize(); } };
 }
 const plot = (trackId, timestamp, rangeNm = 8) => ({ trackId, timestamp, rangeNm, azimuthDeg: 90 });
 const returns = h => h.node('radarScope').ctx.strokes.filter(stroke => (
   stroke.path.length === 5 || (stroke.path.length === 4
     && stroke.path[0].y === stroke.path[1].y && stroke.path[2].x === stroke.path[3].x)
 )).map(stroke => ({ ...stroke, x: (stroke.path[0].x + stroke.path[1].x) / 2, y: (stroke.path[0].y + stroke.path.at(-1).y) / 2 }));
+
+test('SRA and vectoring students can wheel zoom while running or paused without changing sampled data or sending controls', () => {
+  for (const mode of ['sra', 'surveillance']) for (const lifecycle of ['running', 'paused']) {
+    const h = harness(mode), observation = { timestamp: 20, scanAngleDeg: 90, plots: [plot('sample', 20)], history: [] };
+    const original = structuredClone(observation);
+    h.snapshot.state = lifecycle; h.start(); h.emit(observation);
+    const canvas = h.node('radarScope'), unpanned = returns(h)[0];
+    canvas.events.pointerdown({ button: 0, pointerId: 7, clientX: 200, clientY: 250 });
+    canvas.events.pointermove({ pointerId: 7, clientX: 250, clientY: 290, preventDefault() {} });
+    canvas.events.pointerup({ pointerId: 7 });
+    const before = returns(h)[0];
+    assert.equal(before.y - unpanned.y, 40, 'ordinary pan remains available before zoom');
+    let prevented = 0;
+    assert.equal(canvas.eventOptions.wheel?.passive, false);
+    canvas.events.wheel({ deltaY: -120, preventDefault() { prevented++; } });
+    assert.equal(h.node('radarRange').value, '20');
+    assert.equal(returns(h)[0].x - 550, (before.x - 550) * 2);
+    assert.equal(returns(h)[0].y, before.y, 'zoom retains the current pan centre');
+    assert.equal(h.node('studentRadarRangeReadout').textContent, '20 NM');
+    canvas.events.wheel({ deltaY: 120, ctrlKey: true, preventDefault() { prevented++; } });
+    assert.equal(h.node('radarRange').value, '40');
+    assert.equal(prevented, 2);
+    assert.deepEqual(observation, original);
+    assert.deepEqual(h.preferences, []);
+    assert.deepEqual(h.playback, []);
+    assert.equal(h.node('studentClock').textContent, '00:00:20');
+  }
+});
+
+test('student zoom buttons and Range selection stay synchronized at both limits', () => {
+  const h = harness('sra'); h.start(); h.emit({ plots: [plot('sample', 20)] });
+  const inward = h.node('studentRadarZoomIn'), outward = h.node('studentRadarZoomOut');
+  for (let i = 0; i < 8; i++) inward.events.click();
+  assert.equal(h.node('radarRange').value, '5'); assert.equal(inward.disabled, true); assert.equal(outward.disabled, false);
+  for (let i = 0; i < 8; i++) outward.events.click();
+  assert.equal(h.node('radarRange').value, '100'); assert.equal(outward.disabled, true); assert.equal(inward.disabled, false);
+  h.node('radarRange').value = '40'; h.node('radarRange').events.change();
+  assert.equal(h.node('studentRadarRangeReadout').textContent, '40 NM');
+  assert.equal(outward.disabled, false); assert.equal(inward.disabled, false);
+});
+
+test('radar zoom does not capture scrolling from hidden or non-radar student views', () => {
+  for (const mode of ['qgh', 'par', 'sra']) {
+    const h = harness(mode); h.start();
+    if (mode === 'sra') h.node('studentWorkspace').hidden = true;
+    let prevented = false;
+    h.node('radarScope').events.wheel({ deltaY: -120, preventDefault() { prevented = true; } });
+    h.node('studentRadarZoomIn').events.click();
+    assert.equal(h.node('radarRange').value, '40'); assert.equal(prevented, false);
+  }
+  const h = harness('sra'); h.start();
+  h.node('radarScope').events.wheel({ deltaY: 0, deltaX: 120, preventDefault() { assert.fail('horizontal wheel must keep normal scrolling'); } });
+  assert.equal(h.node('radarRange').value, '40');
+});
 
 test('student reduced-motion presentation hides only the sweep, keeping transmitted targets unchanged', () => {
   const normal = harness(), reduced = harness('surveillance', { reducedMotion: true });
@@ -50,6 +106,30 @@ test('student reduced-motion presentation hides only the sweep, keeping transmit
   assert.equal(reduced.node('radarScope').ctx.strokes.some(stroke => stroke.colour === '#389481'), false);
   assert.deepEqual(returns(reduced), returns(normal));
   assert.equal(observation.plots[0].rangeNm, 8);
+});
+
+test('student radar sweep stays smooth across duplicate packets and stops on pause and disconnect', () => {
+  let now = 1000;
+  const h = harness('sra', { Date: { now: () => now }, metadata: { scanRpm: 12, trainingTimeRate: 5 } });
+  const observation = { scanAngleDeg: 0, plots: [plot('a', 20)], history: [] };
+  const angle = () => {
+    const line = h.node('radarScope').ctx.strokes.find(stroke => stroke.colour === '#389481');
+    const [start, end] = line.path;
+    return (Math.atan2(end.x - start.x, start.y - end.y) * 180 / Math.PI + 360) % 360;
+  };
+  const repaint = () => h.node('radarHistory').events.change();
+  h.emit(observation);
+  now += 100; h.emit(observation);
+  assert.ok(Math.abs(angle() - 36) < 1e-8, 'duplicate receipt must not reset the beam to zero');
+  now += 900; repaint(); const frozen = angle();
+  now += 1000; repaint(); assert.equal(angle(), frozen, 'stale samples stop animating');
+  h.snapshot.state = 'paused'; h.start(); assert.equal(angle(), 0);
+  now += 1000; repaint(); assert.equal(angle(), 0);
+  h.snapshot.state = 'running'; h.start(); assert.equal(angle(), 0, 'resume waits for the host');
+  h.emit(observation); now += 100; repaint(); assert.ok(Math.abs(angle() - 36) < 1e-8);
+  h.snapshot.state = 'disconnected'; h.event('disconnected'); repaint(); assert.equal(angle(), 0);
+  assert.match(h.node('scanRate').textContent, /12 RPM.*5×/);
+  assert.equal(observation.plots[0].rangeNm, 8, 'the animation never moves target samples');
 });
 
 test('student workspace enters the active scope once after Start and retains scroll position during later lifecycle updates', () => {
@@ -91,6 +171,26 @@ test('DF mode toggle is safe before observation and labels the transmitting call
   assert.doesNotThrow(() => h.node('selectQte').events.click());
   h.emit({ bearingDeg: 40, bearingType: 'qte', callsign: '202', transmissionState: 'pilot', status: 'live' });
   assert.match(h.node('dfCallsign').textContent, /^202/);
+});
+
+test('SRA and vectoring retain radar while homing follows live, held and idle pilot transmissions', () => {
+  for (const mode of ['sra', 'surveillance']) {
+    const h = harness(mode); h.start();
+    assert.equal(h.node('qghStudentView').hidden, false);
+    assert.equal(h.node('radarStudentView').hidden, false);
+    assert.equal(h.node('studentEstimateScopePanel').hidden, true);
+    h.emit({ plots: [plot('a', 20)], homing: { status: 'live', transmissionState: 'pilot', bearingType: 'qdm', bearingDeg: 260, callsign: '202' } });
+    assert.equal(h.node('dfBearing').textContent, '260°');
+    assert.match(h.node('dfCallsign').textContent, /^202.*SIGNAL LIVE/);
+    h.node('selectQte').events.click(); assert.equal(h.node('dfBearing').textContent, '080°');
+    h.emit({ plots: [plot('a', 20)], homing: { status: 'held', transmissionState: 'held', bearingType: 'qdm', bearingDeg: 260, callsign: '202' } });
+    assert.equal(h.node('dfBearing').textContent, '080°');
+    assert.match(h.node('dfCallsign').textContent, /SIGNAL HELD/);
+    h.emit({ plots: [plot('a', 20)], homing: { status: 'idle', transmissionState: 'idle', bearingType: 'qdm' } });
+    assert.equal(h.node('dfBearing').textContent, '---');
+    assert.equal(h.node('dfSignalState').textContent, 'NO SIGNAL');
+    assert.equal(returns(h).length, 1, 'D/F must not replace the radar picture');
+  }
 });
 
 test('pilot playback reports lifecycle and ignores callbacks from cancelled replies', () => {
@@ -236,11 +336,11 @@ test('SRA dashed corridor uses total training width and scales to the selected r
     h.emit({ overlays, plots: [] });
     const ctx = h.node('radarScope').ctx, boundaries = ctx.strokes.filter(stroke => stroke.dash.join() === '5,7');
     assert.equal(boundaries.length, 2);
-    const halfWidthPx = (configuredWidth ?? 2) / 2 / 40 * 328;
+    const halfWidthPx = (configuredWidth ?? 2) / 2 / 40 * 352;
     assert.ok(Math.abs(boundaries[0].path[0].x - (500 - halfWidthPx)) < 1e-9);
     assert.ok(Math.abs(boundaries[1].path[0].x - (500 + halfWidthPx)) < 1e-9);
     assert.ok(boundaries.every(stroke => stroke.path[0].x === stroke.path[1].x && stroke.path[1].y < stroke.path[0].y));
-    assert.ok(ctx.labels.some(text => text.includes(`${configuredWidth ?? 2} NM TOTAL`) && text.includes('TRAINING')));
+    assert.match(h.node('studentChartSummary').textContent, new RegExp(`SRA training corridor ${configuredWidth ?? 2} NM total`));
     assert.match(h.node('radarGuideNote').textContent, /not safety limits/i);
   }
 });
@@ -248,7 +348,7 @@ test('SRA dashed corridor uses total training width and scales to the selected r
 test('student SRA distances start at the landing threshold while returns and ARP keep their original reference', () => {
   const h = harness('sra', { ATCScopeVisuals: Visuals, metadata: { runwayOrientation: 90, finalTrack: 90 } });
   h.emit({ overlays: { centrelineDeg: 270, terminationRangeNm: .5 }, plots: [plot('a', 20, 8)] });
-  const ctx = h.node('radarScope').ctx, scale = 328 / 40;
+  const ctx = h.node('radarScope').ctx, scale = 352 / 40;
   const strip = ctx.strokes.find(stroke => stroke.colour === '#91979c');
   const threshold = Visuals.runwayGeometry({ runwayHeadingDeg: 90 }).threshold;
   assert.ok(Math.abs(strip.path[0].x - (500 + threshold.xNm * scale)) < 1e-9);
@@ -271,8 +371,8 @@ test('radar environment overlays remain explicitly training-only and use the con
   const ctx = h.node('radarScope').ctx;
   assert.equal(ctx.strokes.filter(stroke => stroke.dash.join() === '9,6').length, 2);
   assert.equal(ctx.strokes.filter(stroke => stroke.dash.join() === '4,8').length, 1);
-  assert.ok(ctx.labels.includes('LFA · TRAINING BOUNDARY'));
-  assert.ok(ctx.labels.some(text => text.includes('EXTENDED RWY CENTRELINE · 230° / 050°')));
+  assert.ok(ctx.labels.includes('LFA'));
+  assert.match(h.node('studentChartSummary').textContent, /Extended runway centreline 230° \/ 050°/);
   assert.match(h.node('radarGuideNote').textContent, /local training reference only/i);
 });
 
@@ -281,9 +381,10 @@ test('SRA shows a calculated 3 degree descent training guide without changing ra
   h.node('radarRange').value = '10';
   h.emit({ overlays: { centrelineDeg: 0, terminationRangeNm: .5 }, plots: [] });
   const labels = h.node('radarScope').ctx.labels;
-  assert.ok(labels.includes('2 NM · 640 FT AAL'));
-  assert.ok(labels.some(text => text.includes('3.0° DESCENT TRAINING GUIDE')));
-  assert.ok(labels.some(text => text.includes('FIGHTER · 240 KT CONFIGURED · ≈ 1,270 FT/MIN')));
+  assert.ok(labels.includes('2 NM'));
+  assert.ok(labels.includes('640 FT AAL'));
+  assert.match(h.node('studentChartSummary').textContent, /3\.0° descent training guide/);
+  assert.match(h.node('studentChartSummary').textContent, /FIGHTER · 240 KT configured; ≈ 1,270 FT\/MIN/);
   assert.match(h.node('radarGuideNote').textContent, /not safety limits or clearances/i);
 });
 
@@ -292,7 +393,7 @@ test('SRA retains distance ticks while spacing long descent labels at wide range
   h.node('radarRange').value = '40';
   h.emit({ overlays: { centrelineDeg: 90 }, plots: [] });
   const context = h.node('radarScope').ctx;
-  const labels = context.textDraws.filter(draw => /\d+ NM · [\d,]+ FT AAL/.test(draw.text));
+  const labels = context.textDraws.filter(draw => /[\d,]+ FT AAL/.test(draw.text));
   assert.ok(labels.length >= 2, 'the 3° altitude reference remains available');
   for (let index = 0; index < labels.length; index += 1) {
     for (let other = index + 1; other < labels.length; other += 1) {
@@ -314,7 +415,7 @@ test('primary returns use plus symbols while correlated SSR squares open only th
   assert.ok(ctx.strokes.some(stroke => stroke.path.length === 5), 'SSR return is a square');
   assert.ok(ctx.strokes.some(stroke => stroke.path.length === 4 && stroke.path[0].y === stroke.path[1].y), 'primary return is a plus');
   assert.ok(!ctx.labels.some(text => /4301|A1B2C3|M-S/.test(text)), 'Mode A/Mode S data stays out of scope labels');
-  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 352, clientY: 400 });
   assert.equal(h.node('radarInspection').hidden, false);
   assert.match(h.node('inspectTrack').textContent, /RAVEN 21/);
   assert.match(h.node('inspectSquawk').textContent, /4301/);
@@ -337,7 +438,7 @@ test('student cooperative radar scope tags use H while inspection and heading av
   const ssr = { ...plot('T1', 20), headingDeg: 30, surveillance: { secondary: true, modeS: true, squawk: '4301' } };
   h.emit({ plots: [ssr], history: [] });
   assert.ok(h.node('radarScope').ctx.labels.includes('HDG 030 H'));
-  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 352, clientY: 400 });
   assert.equal(h.node('inspectHeading').textContent, '030°');
   const unavailable = { ...ssr }; delete unavailable.headingDeg;
   h.emit({ plots: [unavailable], history: [] });
@@ -358,7 +459,7 @@ test('Mode A returns remain selectable SSR squares without a Mode S identity', (
   h.emit({ plots: [modeA] });
   assert.ok(h.node('radarScope').ctx.strokes.some(stroke => stroke.path.length === 5), 'Mode A return is a square');
   assert.ok(h.node('radarScope').ctx.labels.some(text => /SSR MODE A/.test(text)));
-  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 352, clientY: 400 });
   assert.equal(h.node('radarInspection').hidden, false);
   assert.match(h.node('inspectSquawk').textContent, /4301/);
   assert.equal(h.node('inspectModeS').textContent, 'NOT FITTED');
@@ -368,7 +469,7 @@ test('a dragged secondary detail card stays inside the visible mobile viewport',
   const h = harness('surveillance', { metadata: { radarProfile: 'correlated-training' }, visualViewport: { width: 390, height: 640, offsetLeft: 0, offsetTop: 24 } });
   const ssr = { ...plot('T2', 20), callsign: 'RAVEN 21', altitudeFt: 12000, surveillance: { secondary: true, squawk: '4301' } };
   h.emit({ plots: [ssr] });
-  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 352, clientY: 400 });
   h.node('radarInspectionHandle').events.pointerdown({ button: 0, pointerId: 1, clientX: 100, clientY: 100, preventDefault() {} });
   h.windowEvent('pointermove', { pointerId: 1, clientX: 999, clientY: 999, preventDefault() {} });
   assert.equal(h.node('radarInspection').style.left, '112px');
@@ -405,13 +506,13 @@ test('student scope controls can hide only instructor-provided centreline and de
   h.emit({ overlays: { centrelineDeg: 0, terminationRangeNm: .5 }, plots: [] });
   let ctx = h.node('radarScope').ctx;
   assert.equal(ctx.strokes.filter(stroke => stroke.dash.join() === '9,6').length, 2);
-  assert.ok(ctx.labels.some(text => /DESCENT TRAINING GUIDE/.test(text)));
+  assert.match(h.node('studentChartSummary').textContent, /descent training guide/);
   h.node('radarOverlayCentreline').checked = false;
   h.node('radarOverlayDescent').checked = false;
   h.node('radarOverlayCentreline').events.change();
   ctx = h.node('radarScope').ctx;
   assert.equal(ctx.strokes.filter(stroke => stroke.dash.join() === '9,6').length, 0);
-  assert.ok(!ctx.labels.some(text => /DESCENT TRAINING GUIDE/.test(text)));
+  assert.doesNotMatch(h.node('studentChartSummary').textContent, /descent training guide/);
   assert.match(h.node('radarScopeControlStatus').textContent, /DECLUTTERED/);
 
   const unavailable = harness('surveillance', { metadata: { radarProfile: 'primary', radarEnvironment: {} } });
@@ -429,7 +530,7 @@ test('primary-only presentation refuses identity and SSR details even if a malfo
     groundSpeedKt: 260, headingDeg: 220, surveillance: { secondary: true, modeS: true, squawk: '4301', modeSId: 'A1B2C3' } }] });
   assert.ok(h.node('radarScope').ctx.strokes.some(stroke => stroke.path.length === 4 && stroke.path[0].y === stroke.path[1].y));
   assert.ok(!h.node('radarScope').ctx.labels.some(text => /MUST NOT DISPLAY|4301|A1B2C3/.test(text)));
-  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 328, clientY: 400 });
+  h.node('radarScope').events.pointerdown({ clientX: 500 + 8 / 40 * 352, clientY: 400 });
   assert.equal(h.node('radarInspection').hidden, true);
 });
 

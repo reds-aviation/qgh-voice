@@ -16,6 +16,7 @@ import { domHarness } from './testing/dom-harness.mjs';
 
 const source = name => readFileSync(new URL('./static/' + name, import.meta.url), 'utf8');
 const uri = text => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
+await import(uri(source('published-airspace.js')));
 const geometryURI = uri(source('chart-geometry.js'));
 const geometry = await import(geometryURI);
 const scopeNavigationURI = uri(source('scope-navigation.js'));
@@ -54,9 +55,11 @@ async function preparationHarness() {
     let scenario = startingScenario(), generation = 1, allowConfirmation = true;
     const commands = [], submissions = [], prompts = [], messages = [], requests = [], loads = [];
     Object.assign(h.context, geometry, calibration, navigation, routeChart, {
+        Event: h.Event,
         confirm: prompt => { prompts.push(prompt); return allowConfirmation; },
         fetch: async path => ({ ok: true, json: async () => JSON.parse(source(path)) }),
     });
+    vm.runInContext(source('published-airspace.js'), h.context);
     const loadModule = (name, exports) => vm.runInContext('(function(){\n' + source(name)
         .replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '')
         + '\n' + exports.map(name => `globalThis.${name}=${name};`).join('\n') + '\n})();', h.context);
@@ -121,6 +124,43 @@ test('suggested save name follows a new exercise and preserves typed names or se
     h.state().title = 'Latest live exercise'; h.workshop.render();
     assert.equal(h.get('template-select').value, savedID);
     assert.equal(h.get('template-name').value, 'Instructor chosen name', 'selected saved exercise identity controls its name');
+});
+
+test('a restored whole-base chart populates the original dropdown and individual visibility without overwriting drafts', async () => {
+    const h = await preparationHarness();
+    const bases=JSON.parse(source('india-airspace.json')),enroute=JSON.parse(source('india-aip-enroute.json'));
+    const base=bases.find(base=>base.id==='pune'),extra=enroute.aerodromes.pune;
+    const hiddenRoute=extra.routes[0].id,hiddenArea=base.areas[0].id||'pune-1';
+    const selector=h.get('aerodrome-select');assert.equal(selector.value,'');
+    // Recovery arrives after the asynchronous catalogue initialization.
+    Object.assign(h.state().environment,{aerodromeName:`${base.name} (${base.icao})`,chartOrigin:base.origin});
+    h.state().scopeDisplay={hiddenRouteIds:[hiddenRoute],hiddenAreaIds:[hiddenArea]};h.workshop.render();
+    assert.equal(selector.value,'pune');
+    assert.equal(h.document.querySelector(`input[data-route-id="${hiddenRoute}"]`).checked,false);
+    assert.equal(h.document.querySelector(`input[data-area-id="${hiddenArea}"]`).checked,false);
+    assert.equal([...h.document.querySelectorAll('input[data-route-id]')].filter(input=>input.checked).length,extra.routes.length-1);
+    const other=bases.find(base=>base.id!=='pune');
+    selector.value=other.id;selector.dispatchEvent(new h.Event('change'));
+    const draftCheckbox=h.document.querySelector('input[data-route-id]');draftCheckbox.checked=false;
+    h.state().elapsed=15;h.state().environment.qnhHpa=1004;h.workshop.render();
+    assert.equal(selector.value,other.id,'Ordinary state refresh preserves the instructor’s unsubmitted selection');
+    assert.equal(draftCheckbox.checked,false,'Ordinary state refresh preserves individual draft visibility');
+    assert.equal(h.state().environment.aerodromeName,`${base.name} (${base.icao})`);
+    assert.equal(h.commands.length,0,'Restoring or inspecting the picker cannot replace an exercise');
+    h.state().exerciseId='another-resumed-exercise';h.workshop.render();
+    assert.equal(selector.value,'pune','Changing exercises restores that exercise’s applied chart');
+});
+
+test('prior LFA-subset saves reopen in the original base dropdown while keeping routes hidden', async () => {
+    const h=await preparationHarness();
+    const data={catalogue:JSON.parse(source('india-airbase-lfa-catalogue.json')),airspace:JSON.parse(source('india-airspace.json')),enroute:JSON.parse(source('india-aip-enroute.json'))};
+    const published=h.context.ATSPublishedAirspace;
+    const saved=published.publicChart(published.buildSelection(data,'pune','var37',{atsRoutes:false}));
+    h.state().environment.publishedAirspace=saved;h.workshop.render();
+    assert.equal(h.get('aerodrome-select').value,'pune');
+    assert.ok([...h.document.querySelectorAll('input[data-route-id]')].every(input=>!input.checked));
+    assert.equal(h.state().environment.publishedAirspace,saved,'Opening the previous flow must not replace saved chart geometry');
+    assert.equal(h.commands.length,0);
 });
 
 test('existing route and area actions remain reachable from Published and Edit opens the chosen custom form', async () => {
@@ -320,6 +360,21 @@ test('custom ARP and boundary remain staged until saved and block saving an unfi
     assert.equal(h.readSaved().length, 1);
     assert.equal(h.readSaved()[0].bundle.scenario.areas[0].name, 'Training boundary');
     assert.equal(h.readSaved()[0].bundle.scenario.environment.aerodromeName, 'Custom training LFA');
+});
+
+test('legacy chart reference edits clear stale published alignment but keep aircraft and local navigation', async () => {
+    const h = await preparationHarness(), chart = h.get('chart-form');
+    const aircraft = copy(h.state().aircraft);
+    h.state().environment.publishedAirspace = { source: 'old snapshot' };
+    h.state().environment.referenceBoundaries = [{ id: 'old-boundary' }];
+    h.workshop.render();
+    h.edit(chart.elements.namedItem('stationXNm'), 8);
+    await h.submit('chart-form');
+    assert.equal(h.state().environment.publishedAirspace, null);
+    assert.deepEqual(h.state().environment.referenceBoundaries, []);
+    assert.deepEqual(h.state().aircraft, aircraft);
+    assert.match(h.state().environment.briefing, /local training geometry/);
+    assert.equal(h.commands.at(-1).name, 'environment');
 });
 
 test('saving an unchanged ARP retains boundary drafts and changing it requires explicit discard confirmation', async () => {

@@ -16,18 +16,20 @@ const path = require('node:path');
 const vm = require('node:vm');
 const Core = require('../simulator-core.js');
 const Tactical = require('../tactical-core.js');
+const Radio = require('../radio-session.js');
 
 function harness(tactical) {
-  const nodes = new Map(), intervals = new Map();
+  const nodes = new Map(), intervals = new Map(), requestedReports = [];
   let timer = 0, now = 0;
   const element = id => {
     if (!nodes.has(id)) nodes.set(id,{value:'0',textContent:'',hidden:true,attributes:{},dataset:{},
       setAttribute(key,value){this.attributes[key]=String(value);},
-      classList:{add(){},remove(){},contains(){return true;}}});
+      classList:{add(){},remove(){},toggle(){},contains(){return true;}},
+      style:{setProperty(){}},append(){},replaceChildren(){}});
     return nodes.get(id);
   };
-  const context = {document:{getElementById:element},QGHCore:Core,QGHTacticalCore:Tactical,
-    QGHRadioSession:{createReceiver:()=>({})},performance:{now:()=>now},
+  const context = {document:{getElementById:element,createElement:()=>element(Symbol()),createTextNode:text=>text},QGHCore:Core,QGHTacticalCore:Tactical,
+    QGHRadioSession:Radio,QGHRadioWorkspace:{manualCommand:command=>requestedReports.push(command),interrupt(){},resetExercise(){}},performance:{now:()=>now},
     QGHReview:{draw(){}},QGHTacticalReview:{draw(){}},
     setInterval:callback=>{const id=++timer;intervals.set(id,callback);return id;},clearInterval:id=>intervals.delete(id),
     setTimeout(){},clearTimeout(){}};
@@ -36,7 +38,8 @@ function harness(tactical) {
   const boundary = source.lastIndexOf('  bindEvents();');
   assert.ok(boundary>0);
   vm.runInNewContext(source.slice(0,boundary)+`
-    window.fixture={state,formatTime,padHeading,inputDegrees,updateClock,startClock,stopClock,resetClock,logCommand,drawReview};
+    window.fixture={state,formatTime,padHeading,inputDegrees,updateClock,startClock,stopClock,resetClock,logCommand,drawReview,
+      requestHeading,requestDistance,resetConsole,renderDF,transmit:${tactical?'transmitForDF':'transmit'}${tactical?',renderRail,selectAircraft,renderSelectedAircraft':''}};
   })();`,context);
   const fixture = context.fixture;
   const cfg = {runway:230,inbound:225,outbound:65,speed:240,rate:3,distance:15,type:'fighter',callsign:'430'};
@@ -44,10 +47,15 @@ function harness(tactical) {
     fixture.state.exercise = Tactical.createExercise({...cfg,procedure:'normal',randomizeInitial:false,random:()=>.3,
       aircraft:[{...cfg,id:'A',level:10000},{...cfg,id:'B',callsign:'431',level:11000}]});
     fixture.state.activeAircraftId = 'A';
+    const rail = element('tAircraftRail');
+    for (const aircraft of fixture.state.exercise.aircraft) {
+      const item = element(aircraft.id + '-item'); item.parentElement = rail;
+      fixture.state.railItems.set(aircraft.id, {item,...Object.fromEntries(['select','transmit','name','level','status','role'].map(key=>[key,element(aircraft.id+'-'+key)]))});
+    }
   } else {
     fixture.state.cfg = cfg;fixture.state.plane = {x:10,y:10,heading:359.6};fixture.state.path = [{...fixture.state.plane}];
   }
-  return {...fixture,element,intervals,tick(ms){now+=ms;for(const callback of intervals.values())callback();},
+  return {...fixture,element,intervals,requestedReports,adapter:context.QGHRadioAdapter,tick(ms){now+=ms;for(const callback of intervals.values())callback();},
     path(){return tactical?fixture.state.exercise.aircraft[0].path:fixture.state.path;},
     truth(){return JSON.stringify(tactical?fixture.state.exercise:fixture.state.plane);}};
 }
@@ -86,5 +94,36 @@ for (const tactical of [false,true]) {
     h.element('headingInput').value=' ';assert.throws(()=>h.inputDegrees('headingInput'),/000 to 359/);
     h.element('headingInput').value='0';assert.equal(h.inputDegrees('headingInput'),0);
     assert.equal(h.truth(),before);
+  });
+  test(`${name} D/F and other aircraft replies cannot populate or refresh an unrequested range`,()=>{
+    const h=harness(tactical), rangeId=tactical?'tDistanceReply':'distanceReply', headingId=tactical?'tHeadingReply':'headingReply';
+    h.resetConsole();
+    assert.equal(h.element(rangeId).textContent,'RANGE —');
+    h.transmit(tactical?'A':undefined);
+    assert.equal(h.element(rangeId).textContent,'RANGE —');
+    h.requestHeading(); h.renderDF();
+    assert.match(h.element(headingId).textContent,/^HEADING \d{3}°M$/);
+    assert.equal(h.element(rangeId).textContent,'RANGE —','a heading response is not a distance report');
+    h.requestDistance();
+    const report=h.element(rangeId).textContent;
+    assert.match(report,/^RANGE \d+\.\d NM$/);
+    assert.equal(h.requestedReports.at(-1).intent,'request-distance');
+    const plane=tactical?h.state.exercise.aircraft[0].plane:h.state.plane;
+    plane.x=30;plane.y=0; h.renderDF();
+    assert.equal(h.element(rangeId).textContent,report,'a requested report stays sampled rather than following flight truth');
+    h.transmit(tactical?'A':undefined);
+    assert.equal(h.element(rangeId).textContent,tactical?'RANGE —':report,'a later transmit cannot refresh range');
+    for(const event of h.state.commands.filter(item=>item.type==='TRANSMIT FOR D/F')) assert.doesNotMatch(event.detail,/\bNM\b|RANGE/);
+    if(tactical){
+      h.selectAircraft('B'); h.renderRail();
+      assert.equal(h.element(rangeId).textContent,'RANGE —','selection cannot disclose another aircraft range');
+      for(const record of h.state.railItems.values()) assert.doesNotMatch(record.status.textContent,/\bNM\b|RANGE/);
+      assert.equal(h.adapter.executeRadioCommand({intent:'normal-turn-heading',aircraft:'B',side:'right',heading:90}).ok,true);
+      assert.equal(h.element(rangeId).textContent,'RANGE —','a turn readback cannot reveal range');
+      assert.equal(h.adapter.executeRadioCommand({intent:'request-distance',aircraft:'A'}).ok,true);
+      assert.equal(h.state.activeAircraftId,'B');
+      assert.equal(h.element(rangeId).textContent,'RANGE —','an addressed report must not populate the selected aircraft range');
+    }
+    h.resetConsole(); assert.equal(h.element(rangeId).textContent,'RANGE —','new exercise clears the report');
   });
 }

@@ -10,23 +10,23 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.9",
+  "revision": "1.0.10",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "flow": [
     {
+      "title": "QGH",
+      "href": "qgh.html",
+      "text": "Single or Tactical practice. Set up, control the aircraft, then review the track."
+    },
+    {
+      "title": "Instructor",
+      "href": "instructor-led/",
+      "text": "Shared QGH, SRE/vectoring or SRA. Prepare traffic, admit the controller, then conduct the exercise."
+    },
+    {
       "title": "Procedural",
       "href": "procedural-beta/",
-      "text": "Set starting traffic and prepare optional airspace. Create the exercise, connect your controller when needed, then Run and debrief."
-    },
-    {
-      "title": "QGH & SRA · Single QGH",
-      "href": "qgh.html",
-      "text": "Configure Single or Tactical QGH, start individual practice, then terminate to review your track."
-    },
-    {
-      "title": "QGH & SRA · Instructor QGH + SRA",
-      "href": "instructor-led/",
-      "text": "Set traffic for QGH, SRE/vectoring or SRA. Create a session, admit a Ready controller, then Start and debrief."
+      "text": "Aerodrome, Approach or Area control. Set traffic, prepare the chart, run and debrief."
     }
   ],
   "entries": [
@@ -61,13 +61,25 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     {
       "id": "copyright-licence",
       "title": "Copyright, licence and source code",
-      "topics": ["suite", "qgh-individual", "qgh-instructor", "procedural", "sra"],
+      "topics": [
+        "suite",
+        "qgh-individual",
+        "qgh-instructor",
+        "procedural",
+        "sra"
+      ],
       "controls": [],
       "anchor": "licence",
       "priority": true,
       "match": "\\b(?:copyright|licen[cs]e|cpal|attribution|source code|original developer)\\b",
       "text": "Copyright © 2026 Balaram Reddy. Starting with version 1.0.7, the original application code and original project changes use CPAL 1.0. It requires the specified visible copyright attribution and covered source availability, including for external deployment. The page footer shows only the copyright line; licence and source links are in this guide's Licence and source section. Versions up to and including 1.0.6 retain their existing MIT permissions. Third-party libraries, fonts, runtimes, models and data retain their own terms. This notice is not a claim of copyright registration.",
-      "questions": ["Who owns ATS SIM BOX?", "What licence does the simulator use?", "Where is the source code?", "Is a licence link required in the footer?", "Can I remove the copyright credit?"]
+      "questions": [
+        "Who owns ATS SIM BOX?",
+        "What licence does the simulator use?",
+        "Where is the source code?",
+        "Is a licence link required in the footer?",
+        "Can I remove the copyright credit?"
+      ]
     },
     {
       "id": "youtube-tutorial",
@@ -97,6 +109,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "Are Gyani and guided tours updated with this app?",
         "What percentage of the video differs from the simulator?",
         "Will the tutorial video be updated for Version 2?"
+      ],
+      "pointers": [
+        "The YouTube tutorial is a fixed recording and does not update automatically.",
+        "Current controls and screens may differ; use this written Training guide for the current release.",
+        "A revised video is planned after the next stable set of changes, possibly Version 2.",
+        "YouTube needs internet and cannot be saved by Make available offline."
       ]
     },
     {
@@ -179,6 +197,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "airspace-delete",
         "airspace-backup",
         "airspace-library-status"
+      ],
+      "pointers": [
+        "Choose Airspace only to save or download chart configuration without traffic.",
+        "Save keeps a reusable copy on this device. Download keeps a portable file.",
+        "Import the file later in Prepare airspace. Review the chart before using it."
       ]
     },
     {
@@ -215,10 +238,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     },
     {
       "id": "public-lfa-samples",
-      "title": "Published airspace: routes and LFA / P / R / D areas",
+      "title": "Published airspace: choose an aerodrome and visible items",
       "topics": [
         "suite",
-        "procedural"
+        "procedural",
+        "qgh-instructor",
+        "sra"
       ],
       "controls": [
         "traffic-setup",
@@ -230,19 +255,61 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "airspace",
       "priority": true,
       "match": "\\b(?:lfa|ats route|airspace|aerodrome|public chart|real route|sample map|prohibited|danger area|restricted area|catalogue|unchecking)\\b",
-      "text": "Prepare airspace → Published airspace → choose Hindan, Pune, Jodhpur, Chandigarh, Gwalior, Agra or Bareilly. Load aerodrome airspace brings every available route, reporting fix and area from that base’s bundled snapshot. The route and area checkboxes start checked; unchecking hides chart items on both instructor and student scopes without deleting them or changing clearances. Declutter can restore hidden items later. P means prohibited, R restricted and D danger; LFA and CTR have separate boundary types. Chart briefing retains sources, level labels and omitted geometry notes. The bundled AIP AMDT 08/2026 snapshot is effective 3 September 2026, retrieved 27 September 2026. It includes parsed routes intersecting the 250 NM base region and retained nearby areas, and is not a complete operational chart or live NOTAM / activation service. SID/STARs, conventional J/V routes outside the source selection, ambiguous source points and unverified boundaries are omitted. Do not invent the missing geometry. Loading chart data keeps current traffic and elapsed time; referenced aircraft navigation must remain unchanged.",
+      "text": "In Procedural, open Prepare airspace → Published airspace and choose an Aerodrome from the original single list. The loadable bases are Hindan, Pune, Jodhpur, Chandigarh, Gwalior, Agra and Bareilly. The 17 verified LFA geometries already belong to these seven bases; they are not additional bases. Unavailable catalogue names are not added to this list. Expand ATS routes or LFA / prohibited / restricted / danger to choose individual items. Clear a tick to hide an item on both scopes; it is still loaded and remains available in Declutter. Select all and Clear selection apply to their own list. Read the overview and source records, then choose Load aerodrome airspace. This loads the full existing base snapshot and keeps traffic, elapsed time and assigned navigation; it pauses the exercise and removes the old chart image. In SRA and vectoring, the separate published-LFA picker and its available layers remain supported. Its nearby selection uses the selected LFA envelope plus 20 NM, retains complete source sections and may have coverage gaps. In compact scope windows, secondary published route annotations are hidden to keep the chart readable; full source and level details remain in Chart briefing or Chart reference & boundaries. P means prohibited, R restricted and D danger; an LFA published as a restricted area retains that category. Curves and arcs retain their sourced definitions or documented sampling; river or border segments without verified geometry remain unavailable. The AIP ENR source page at the v09-2026 address retains AMDT 08-26, effective 3 September 2026. Source dates are separate from verification dates. NOTAM, AUP and UUP activation is not live. Pune has published runway and threshold references in the SRA/vectoring selection; runway in use remains an exercise setting. No missing geometry is inferred. In Procedural, Save and Download preserve chart settings, sourced features and visibility for later use.",
       "questions": [
         "Where are sample LFAs?",
         "Are these real ATS routes?",
         "Can I hide only one ATS route?",
         "Where are prohibited and danger areas?",
         "Does unchecking a route delete it?",
-        "Is the published airspace catalogue complete?"
+        "Is the published airspace catalogue complete?",
+        "How do I select an LFA for an airbase?",
+        "Why are only seven aerodromes listed?",
+        "Where is the original published airspace list?",
+        "Does Pune include runway thresholds?",
+        "Can SRA and vectoring load published airspace?"
+      ],
+      "intro": "Choose an aerodrome, tick the routes and areas to show, then load the airspace.",
+      "pointers": [
+        "Procedural: open Prepare airspace → Published airspace and select an Aerodrome from the single list.",
+        "Expand ATS routes or LFA / prohibited / restricted / danger. Tick individual items to show them; unticked items remain available in Declutter.",
+        "Check the overview and source information, then select Load aerodrome airspace. The exercise pauses and your traffic is kept.",
+        "SRA / vectoring: choose a published LFA and its available layers in Prepare airspace & radar. Check source dates and gaps; activation is not live.",
+        "Save or Download the airspace for reuse. Loading preserves current traffic and exercise time."
+      ]
+    },
+    {
+      "id": "reference-boundaries",
+      "title": "IB and LoC: separate sourced boundary overlays",
+      "topics": [
+        "suite",
+        "procedural",
+        "qgh-instructor",
+        "sra"
+      ],
+      "controls": [
+        "prepare-published"
+      ],
+      "anchor": "airspace",
+      "match": "\\b(?:international boundary|border lfa|line of control|ib overlay|loc overlay|government map|survey of india)\\b",
+      "intro": "An International Boundary and a Line of Control are different chart features. Only verified, correctly classified source geometry can be drawn.",
+      "pointers": [
+        "Use the separate boundary visibility control and legend; boundaries are never merged into the LFA or restricted-area polygon.",
+        "Available lines use red with a contrasting halo and repeated source-correct labels such as IB or LoC.",
+        "Read the source, effective date and verification record before use. Unavailable means no verified usable geometry is bundled.",
+        "The downloaded Survey of India national outline is generalized and has no separate IB/LoC segments; it is not used to estimate a border-LFA line."
+      ],
+      "text": "The boundary overlay accepts verified open geographic line segments with an explicit IB, LoC or other source classification, source authority, coordinate reference system, effective date and verification record. It preserves the supplied vertices and clips only the screen drawing. It does not close lines into polygons, infer border segments from LFAs or trace screenshots. The official Survey of India outline download was checked on 25 October 2026: it is a single country polygon including coastline, generalized at national scale, without separate IB/LoC classifications. It is unsuitable as the requested local boundary layer. No verified detailed IB/LoC geometry is currently bundled, so boundary controls show unavailable. Survey of India sources remain the reference for the follow-up data check. A source citation does not mean the simulator itself is government approved.",
+      "questions": [
+        "Where is the IB overlay?",
+        "Why is the boundary unavailable?",
+        "Can IB and LoC be used interchangeably?",
+        "Which government map is used?"
       ]
     },
     {
       "id": "instructor-instrument-shelf",
-      "title": "One instructor workspace across the suite",
+      "title": "Matching instructor and student workspaces",
       "topics": [
         "suite",
         "qgh-instructor",
@@ -259,7 +326,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark)|same (?:screen|layout|workspace)|instructor (?:layout|interface|workspace)|scroll ?bar|scroll track|scroll.*(?:aircraft list|tools|legend)|(?:move|drag|reset) (?:the |a )?(?:box|panel|floating|aircraft controls)|floating (?:box|controls|panel))\\b",
-      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the compact move symbol and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Gyani, tour and same-screen confirmations also have Move/Reset controls. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session and Aircraft controls sit on the right tool rail. QGH/SRE/SRA Event history opens the running command/event list; Terminate opens the full debrief. Procedural retains its Review tool, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation. The compact live header identifies instructor role, mode, exercise time and actual session state. The startup explanation is inside Session, reachable with Startup steps. The selected aircraft summary stays above its quick controls; minimizing the panel retains selection and field values. Homing keeps the actual transmission/source status visible beneath its numerical readout. Help includes one seven-step instructor flow with the optional airspace and connection differences explained. Individual QGH readouts and voice settings use larger labels; unavailable offline voice still requires its existing one-time setup, while manual controls remain available.",
+      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the compact move symbol and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Gyani, tour and same-screen confirmations also have Move/Reset controls. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session and Aircraft controls sit on the right tool rail. QGH/SRE/SRA Event history opens the running command/event list; Terminate opens the full debrief. Procedural retains its Review tool, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation. The compact live header identifies instructor role, mode, exercise time and actual session state. The startup explanation is inside Session, reachable with Startup steps. The selected aircraft summary stays above its quick controls; minimizing the panel retains selection and field values. Homing keeps the actual transmission/source status visible beneath its numerical readout. Help includes one seven-step instructor flow with the optional airspace and connection differences explained. Individual QGH readouts and voice settings use larger labels; unavailable offline voice still requires its existing one-time setup, while manual controls remain available. Instructor-led QGH, SRE/vectoring and SRA students now use the same scope shell: local Options above, the mode instrument central, Homing & radio in a movable/collapsible left panel, and Session/Tools/Help on the right. Hiding the radio box is reversible from Tools. Session/Ready drawers close with × or Escape. The student receives only the permitted bearings or sampled radar observations and has no aircraft-command, Start or Pause authority.",
       "questions": [
         "Where is the homing display?",
         "Where are pilot messages now?",
@@ -277,6 +344,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "Why are flight controls grey before Start?",
         "Where is Event history?",
         "Does minimizing the panel reset my aircraft?"
+      ],
+      "intro": "The scope stays central, with homing and pilot captions on the left and tools on the right. Instructor flight controls remain instructor-only; student data stays appropriate to the mode.",
+      "pointers": [
+        "Centre: scope or QGH homing instrument. Left: homing and pilot transmission; instructor aircraft controls above.",
+        "Right: Session and display/help tools. Flight commands remain on the instructor position.",
+        "Drag an empty panel title; use the move handle with arrow keys when needed. × closes; − folds; reset restores position.",
+        "On phones the tools scroll and radio panel sits below the instrument. Hiding it is reversible.",
+        "Matching layout never reveals hidden instructor aircraft data."
       ]
     },
     {
@@ -314,6 +389,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "Can I run a local Procedural exercise without a controller?",
         "Can we start without Google Meet?",
         "Can different devices in the same room work without a meeting link?"
+      ],
+      "pointers": [
+        "Google Meet is optional for every connection mode.",
+        "For remote voice: create a meeting, share its link and check both participants can hear.",
+        "For different devices in the same room: choose Online room; a meeting link is not required."
       ]
     },
     {
@@ -537,6 +617,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "Is Supabase used for QGH and SRA?",
         "Where do I select the connection before joining?",
         "Will the QGH entry page keep my connection choice?"
+      ],
+      "pointers": [
+        "This device: one PC, the same browser profile and separate instructor/student windows.",
+        "Online room: different devices with internet on both, including devices in the same room.",
+        "Google Meet is optional; choose it when you need remote voice or screen sharing."
       ]
     },
     {
@@ -576,7 +661,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "help",
       "priority": true,
       "match": "\\b(?:embeddings?|rag|llm|artificial intelligence|limitations?|learning|trained|smart answers|update (?:the )?guides)\\b",
-      "text": "Look for the Gyani instructor portrait with a headset to open simulator help. Gyani searches the same versioned knowledge as the common training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
+      "text": "Look for the Gyani instructor portrait with a headset to open simulator help. Gyani searches the same versioned knowledge as the Training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
       "questions": [
         "Are you a real AI?",
         "Can you see my aircraft?",
@@ -691,13 +776,19 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "scope",
       "match": "\\b(?:radar sweep|sweep|scanning|rpm|revolutions?|rotation|scan speed)\\b",
-      "text": "SRE/SRA observations use a 4 simulated-second scan period (15 RPM at 1×). One revolution takes 4 real seconds at 1×, 0.8 real seconds at 5× and 0.4 real seconds at 10×. It pauses with the exercise. Choose trail length in scope options; range-aware spacing keeps movement visible. Instructor truth remains continuous; SRE/SRA controller returns update on beam crossing. A visual sweep does not reveal hidden aircraft on the Procedural student screen.",
+      "text": "SRE/SRA uses a 4 simulated-second scan period (15 RPM at 1×). One revolution takes 4 real seconds at 1×, 0.8 real seconds at 5× and 0.4 real seconds at 10×. The sweep rotates clockwise from the radar origin and pauses with the exercise. Its narrow beam and trailing glow are visual cues; they do not change radar detection or aircraft movement. Instructor truth remains continuous. Controller radar returns update on beam crossing and remain at their sampled position until the next observation. The same workspace layout therefore does not mean identical aircraft data. A pilot Position report is a separate transmission. Choose trail length in scope options; a visual sweep does not reveal hidden aircraft on the Procedural student screen.",
       "questions": [
         "How do I set radar RPM?",
         "The trail is not visible",
         "How many history dots?"
       ],
-      "intro": "SRE/SRA returns update on the 15 RPM radar scan. Use your own range and pan controls. The instructor picture and student observations are different views."
+      "intro": "The clockwise scan completes a revolution every 4 simulated seconds and pauses with the exercise. Student plots update at beam crossing; the matching instructor shell retains continuous truth.",
+      "pointers": [
+        "Clockwise scan: one revolution every 4 simulated seconds (15 RPM at 1×).",
+        "Pause freezes the scan. Exercise speed changes the real time per revolution.",
+        "Student radar plots update on beam crossing; instructor truth remains continuous.",
+        "Position report is a radio transmission, separate from sampled radar returns."
+      ]
     },
     {
       "id": "roster-mobile",
@@ -871,6 +962,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "How do I download current progress?",
         "Starting setup unavailable: what can I download?",
         "How do I download the original QGH exercise after termination?"
+      ],
+      "pointers": [
+        "Terminate first, then use Review to inspect the track, timing and recorded events.",
+        "Pause replay at a command and compare the instruction with the aircraft response.",
+        "Download the exercise setup for reuse; save current-progress records separately when offered.",
+        "Suite home returns to the application entrance."
       ]
     },
     {
@@ -940,14 +1037,19 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "start",
       "match": "\\b(?:which (?:simulator|exercise|mode)|choose (?:a |the )?simulator|what is (?:qgh|sra|sre|procedural)|atss)\\b",
-      "text": "Procedural trains Aerodrome, Approach and Area control in one exercise. QGH & SRA has Single QGH (single-aircraft or Tactical individual practice) and Instructor QGH + SRA (QGH cloud-breaking, SRE/vectoring and Surveillance Radar Approach).",
+      "text": "Choose QGH for Single or Tactical individual practice. Choose Instructor for shared QGH, SRE/vectoring or Surveillance Radar Approach (SRA). Choose Procedural for Aerodrome, Approach or Area control. The Training guide uses the same three choices as the suite home.",
       "questions": [
         "Which simulator should I choose?",
         "What is QGH?",
         "Where is vectoring?"
       ],
       "priority": true,
-      "controls": []
+      "controls": [],
+      "pointers": [
+        "QGH: Single or Tactical individual practice.",
+        "Instructor: shared QGH, SRE/vectoring or SRA.",
+        "Procedural: Aerodrome, Approach or Area control."
+      ]
     },
     {
       "id": "session",
@@ -1000,6 +1102,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "prepare-exercise-library",
         "prepare-sample-traffic",
         "preset-form"
+      ],
+      "pointers": [
+        "Enter the starting traffic, then Create exercise to open a paused scope.",
+        "Prepare airspace inside the workspace: Published airspace, Draw on chart or Enter coordinates.",
+        "Admit the controller and wait for Ready if using a paired session.",
+        "Run → work the exercise → Terminate → Review. Google Meet is optional."
       ]
     },
     {
@@ -1027,6 +1135,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "newScenario",
         "returnToExercise",
         "createSession"
+      ],
+      "pointers": [
+        "Set starting traffic and choose QGH, SRE/vectoring or SRA.",
+        "Create session → share PIN → admit controller → controller Ready.",
+        "Use optional Google Meet for voice; Start becomes available when session requirements are met.",
+        "Traffic setup keeps the current attempt; Return to exercise restores it without applying draft edits."
       ]
     },
     {
@@ -1069,7 +1183,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "priority": false,
       "controls": [],
-      "intro": "Check runway, procedure tracks, Normal or U/S Compass and aircraft settings. Start begins aircraft movement. Start the separate Stopwatch when you want to time your procedure. Use the controller controls, then Terminate to review your track."
+      "intro": "Check runway, procedure tracks, Normal or U/S Compass and aircraft settings. Start begins aircraft movement. Start the separate Stopwatch when you want to time your procedure. Use the controller controls, then Terminate to review your track.",
+      "pointers": [
+        "Choose Single or Tactical QGH, then Normal or U/S Compass.",
+        "Set callsigns, tracks, aircraft performance, levels and airfield values.",
+        "Start practice; use manual controls or prepare optional voice input.",
+        "Terminate to reveal the track and review."
+      ]
     },
     {
       "id": "approach-reference",
@@ -1124,33 +1244,54 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "individual",
       "match": "\\b(?:voice|audio|microphone|ptt|radio|accepted call|command)\\b",
-      "text": "Individual QGH provides manual controls and its own voice setup. Check installed pilot voice and microphone before enabling audible replies. The Training Centre contains the searchable accepted-call catalogue, prerequisites and simulator effects. Pilot captions remain the readable record. Instructor-led and Procedural use instructor-operated controls rather than microphone recognition.",
+      "text": "Individual QGH provides manual controls and optional local voice input. Press to talk (PTT) is the default: hold PTT, speak one complete call, then release and allow the final words to be recognised. There is no cloud speech fallback. Prepare the local voice resources and check microphone permission before practice. Pilot audio starts muted; test and confirm headphones before enabling audible replies. Continuous Listening is optional: finish the call with a natural pause; recognition pauses during pilot replies. Controller PTT takes priority when an interruption is needed. In Tactical, address the intended aircraft, for example Raven Twenty One turn right heading zero six zero. A unique designator can identify one aircraft; use the full callsign if two aircraft share a designator. The Training guide’s searchable Accepted RT calls catalogue is the source for supported commands, prerequisites and effects. Supported Normal QGH heading forms include turn right heading 260 and turn left heading two six zero. Use the catalogue for the supported to/onto forms and number wording. These are deterministic parser variants, not a claim of speech-recognition accuracy. Include an explicit direction for a turn instruction. Negated instructions (including don’t), questions, conversation and ambiguous calls must not command a manoeuvre. Check the accepted acknowledgement and use manual controls if recognition is unclear. Confirm termination in the dialog before ending an exercise. Instructor-led and Procedural use instructor-operated controls rather than microphone recognition.",
       "questions": [
         "Which radio calls work?",
         "How do I enable voice?",
         "What is PTT?"
       ],
       "priority": false,
-      "controls": []
+      "controls": [],
+      "pointers": [
+        "Press to talk (PTT) is the default; Continuous Listening is optional. Manual controls remain available.",
+        "Prepare local voice resources and check the microphone. There is no cloud speech fallback.",
+        "Pilot replies start muted. Test and confirm headphones before enabling audible replies.",
+        "In Tactical, address the intended aircraft; use the full callsign when a designator is shared.",
+        "Use the Accepted RT calls catalogue for phrase variants, state requirements and effects.",
+        "Check the acknowledgement. Negated, conversational, question or ambiguous input must not move an aircraft.",
+        "Parser support does not guarantee speech recognition. Confirm termination in its dialog."
+      ]
     },
     {
       "id": "instructor-transmit",
-      "title": "Instructor pilot transmission and D/F",
+      "title": "Pilot transmissions, position reports and homing",
       "topics": [
         "qgh-instructor",
         "sra"
       ],
       "anchor": "pilot",
-      "match": "\\b(?:transmit|transmission|talk|pilot readback|readback|bearing|homing|qdm|qte|df)\\b",
-      "text": "Click the aircraft or choose Transmit. QGH gives a pilot transmission with D/F; SRE/SRA sends the pilot position report. On desktop, homing and red pilot captions sit below the aircraft quick controls in the left floating Aircraft & radio box; on phones they remain below the scope. Controls hides or restores that box. QDM is magnetic homing and QTE is true bearing; QGH retains the last indication briefly after release. The controller’s SRE/SRA plots remain sensor observations.",
+      "match": "\\b(?:transmit|transmission|talk|pilot readback|readback|position report|report position|bearing|homing|qdm|qte|df)\\b",
+      "text": "Select the aircraft before using its controls. In SRE/vectoring and SRA, Aircraft controls → Position report (or P outside a text field) requests that aircraft’s current pilot bearing and range report. Quick Transmit and clicking the aircraft also request the mode-appropriate transmission. QGH uses Transmit for D/F. The homing indication follows the transmitting aircraft only while its transmission is active, holds the last value for 2 seconds after release, then goes blank. QDM is magnetic homing; QTE is true bearing. This transmission-bound homing and the pilot caption are available in the matching instructor and student workspace. The spoken/captioned position report is a pilot report: it does not replace or refresh the student’s sampled radar plot. SRE/SRA radar returns still update only when the simulated beam crosses the aircraft.",
       "questions": [
         "Does clicking an aircraft transmit?",
         "What does QDM mean?",
-        "Where are pilot messages?"
+        "Where are pilot messages?",
+        "Where is Position report in SRA?",
+        "How do I request the selected aircraft position in vectoring?",
+        "Why does the homing display disappear after a report?"
       ],
-      "controls": [],
+      "controls": [
+        "transmitDf",
+        "reportPosition"
+      ],
       "priority": false,
-      "intro": "Pilot captions and homing sit below the aircraft quick controls in the desktop left floating Aircraft & radio box and below the phone scope. Click or Transmit gives QGH D/F, or a position report in SRE/SRA. Controls hides or restores the floating box. The student sees the appropriate bearing or radar observation."
+      "intro": "Select the aircraft, then use Position report in SRE/vectoring or SRA. Homing is live during its transmission, holds for 2 seconds after release, then blanks; radar returns remain scan-based.",
+      "pointers": [
+        "Select the aircraft → Aircraft controls → Position report; P works when no text field is active.",
+        "SRE/vectoring and SRA report the selected aircraft’s current bearing and range. QGH uses Transmit for D/F.",
+        "Homing: transmitting → live indication → release → 2-second hold → blank.",
+        "A pilot position report does not refresh a radar return; the next beam crossing does."
+      ]
     },
     {
       "id": "instructor-speed-level",
@@ -1180,7 +1321,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "scope",
       "match": "\\b(?:pan|zoom|range rings|ring spacing|scope controls|scope layers|local picture|bearing range ruler|ruler|options dropdown|top controls|controls button|hide controls|show controls|control strip|hud|aircraft labels|selected labels|labels off|aircraft glyph|leader lines)\\b",
-      "text": "Drag blank scope to pan. Range or Ctrl + scroll changes the total displayed range; Centre/Home returns to the origin. Options opens secondary display controls and Start/Run collapses them. Under Options, use Ring spacing and Labels beside Range in the scope display settings. Ring spacing chooses a fixed 5 NM or 10 NM interval repeated throughout that total range. The outer range is marked even when it is not an exact multiple of the interval. At a dense scale, fewer distance labels are printed while the rings remain. Instructor aircraft use a common small glyph. Aircraft labels offers Selected (default), All or Off; Off hides text labels, not aircraft glyphs. Selected-aircraft information is placed away from aircraft and connected by leader lines. Controls hides or restores the left floating Aircraft & radio box containing aircraft controls, homing and readbacks; More controls opens the Aircraft controls drawer. Right-side drawers overlay the desktop scope without resizing it; Close or Escape restores focus to the opening control. The phone arrangement is preserved with sideways scroll tracks for long rows. Ring spacing and aircraft-label settings affect this position only. The instructor’s route / area visibility choices are shared with the controller. Display changes do not change aircraft motion or clearances.",
+      "text": "Drag blank scope to pan. Range or Ctrl + scroll changes the total displayed range; Centre/Home returns to the origin. Options opens secondary display controls and Start/Run collapses them. Under Options, use Ring spacing and Labels beside Range in the scope display settings. Ring spacing chooses a fixed 5 NM or 10 NM interval repeated throughout that total range. The outer range is marked even when it is not an exact multiple of the interval. At a dense scale, fewer distance labels are printed while the rings remain. Instructor aircraft use a common small glyph. Aircraft labels offers Selected (default), All or Off; Off hides text labels, not aircraft glyphs. Selected-aircraft information is placed away from aircraft and connected by leader lines. Controls hides or restores the left floating Aircraft & radio box containing aircraft controls, homing and readbacks; More controls opens the Aircraft controls drawer. Right-side drawers overlay the desktop scope without resizing it; Close or Escape restores focus to the opening control. The phone arrangement is preserved with sideways scroll tracks for long rows. Ring spacing and aircraft-label settings affect this position only. The instructor’s route / area visibility choices are shared with the controller. Display changes do not change aircraft motion or clearances. The Instructor QGH/SRE/SRA student position uses the same workspace arrangement: local display tools above the central instrument, homing and pilot transmissions on the left, and Session/Tools/Help on the right. Its Range, 5/10 NM Ring spacing, Centre, history and labels are local display settings. Student LFA, extended centreline and SRA descent-cue switches can hide only aids the instructor has provided. They cannot enable a withheld aid or expose instructor truth. QGH retains its homing instrument; SRE/SRA retains sampled radar. Student controls cannot issue aircraft manoeuvres or start/pause the instructor exercise.",
       "questions": [
         "How do I pan the scope?",
         "How do I minimise the top controls?",
@@ -1197,7 +1338,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "ring-spacing",
         "aircraft-labels"
       ],
-      "priority": false
+      "priority": false,
+      "pointers": [
+        "Pan on blank scope; use Range or Ctrl + scroll to zoom and Centre to reset.",
+        "Ring spacing is 5 NM or 10 NM; rings repeat to the selected total range.",
+        "Instructor and student share the layout, with local display settings and role-appropriate data.",
+        "Student chart switches hide only instructor-provided LFA, centreline or SRA descent cues.",
+        "Local display changes do not change aircraft motion, clearances or session authority."
+      ]
     },
     {
       "id": "custom-polygons",
@@ -1274,7 +1422,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "airspace-add-area",
         "airspace-add-route"
       ],
-      "priority": true
+      "priority": true,
+      "pointers": [
+        "Prepare airspace → Draw on chart. Place the ARP by clicking on the chart.",
+        "Choose the feature: LFA, ATS route, prohibited, restricted or danger area.",
+        "Routes remain open lines; areas close their boundary.",
+        "Add the route name, direction and lower/upper levels; Save applies the airspace."
+      ]
     },
     {
       "id": "saved-exercises",
@@ -1398,6 +1552,63 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "How many aircraft can I create?",
         "What is the QGH aircraft limit?",
         "Can Procedural use 20 aircraft?"
+      ]
+    },
+    {
+      "id": "individual-distance",
+      "title": "Request distance explicitly in QGH",
+      "topics": [
+        "qgh",
+        "qgh-individual"
+      ],
+      "controls": [],
+      "anchor": "qgh",
+      "priority": true,
+      "match": "\\b(?:request distance|report distance|distance report|range readout|range (?:report|display)|transmit.*(?:range|distance)|(?:range|distance).*transmit)\\b",
+      "text": "In Single and Tactical QGH, ordinary Transmit for D/F provides a bearing only; it does not reveal aircraft range or heading. Use Request Distance or the supported report distance call when you need the addressed aircraft’s distance. The returned range is a sampled report, like a heading report. It does not update continuously as the aircraft moves. A new exercise clears the report; Tactical selection or control refresh also clears its displayed report. Check the addressed callsign before interpreting the value.",
+      "pointers": [
+        "Transmit for D/F gives bearing only, without aircraft range or heading.",
+        "Use Request Distance / report distance for an explicit addressed-aircraft range report.",
+        "The reported value is sampled; it does not track live aircraft distance.",
+        "Resetting the exercise clears it. Tactical selection/control refresh also clears the displayed report."
+      ],
+      "questions": [
+        "Why does QGH Transmit no longer show range?",
+        "How do I request distance?",
+        "Does the QGH range report update continuously?",
+        "Why is distance missing from Tactical aircraft tabs?"
+      ]
+    },
+    {
+      "id": "instructor-student-scope-zoom",
+      "title": "Zoom the instructor and controller scopes",
+      "topics": [
+        "suite",
+        "qgh-instructor",
+        "sra"
+      ],
+      "controls": [
+        "scopeRange",
+        "instructorZoomIn",
+        "instructorZoomOut",
+        "radarRange",
+        "studentRadarZoomIn",
+        "studentRadarZoomOut"
+      ],
+      "anchor": "scope",
+      "match": "\\b(?:zoom|scope range|radar range|mouse wheel|scroll wheel)\\b",
+      "text": "In instructor-led exercises, scroll up over the instructor scope to zoom in, or down to zoom out. The SRE/vectoring and SRA controller radar supports the same action. The + and − buttons above each scope remain visible when Options is collapsed. Both methods work while running or paused. Range shows the outer ring distance, from 5 to 100 NM. Lower range means a closer view. Instructor Auto fits the traffic; using zoom selects a manual range. Each desk controls its own view. Zoom keeps the current pan position and changes neither aircraft movement nor the permitted student observations. Use Options → Centre to recenter the scope. On a touch screen use + or −. Ctrl + wheel over the scope also zooms the scope.",
+      "questions": [
+        "How do I zoom during an exercise?",
+        "The student scope will not zoom",
+        "Where are the zoom buttons when Options is closed?"
+      ],
+      "intro": "Scroll up to zoom in and down to zoom out. The +/− buttons stay above the scope while running or paused. Each desk zooms independently.",
+      "pointers": [
+        "Scroll over the scope, or use + / − above it.",
+        "5 NM gives the closest view; 100 NM gives the widest manual view.",
+        "Zoom remains available with Options collapsed, during running and paused exercises.",
+        "Zoom changes your view only; traffic, exercise time and student data are unchanged."
       ]
     }
   ],
@@ -1906,7 +2117,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "selector": "#instructorHoming",
       "title": "Pilot transmission and D/F",
-      "entry": "instructor-transmit"
+      "entry": "instructor-transmit",
+      "brief": true
     },
     {
       "pages": [
@@ -2062,6 +2274,43 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "selector": "#airspace-add-route",
       "title": "Add or edit routes and areas",
       "entry": "custom-polygons"
+    },
+    {
+      "pages": [
+        "instructor"
+      ],
+      "selector": "#reportPosition",
+      "title": "Selected aircraft position",
+      "entry": "instructor-transmit",
+      "brief": true
+    },
+    {
+      "pages": [
+        "student"
+      ],
+      "selector": "#studentRadioPanel",
+      "title": "Homing and pilot transmissions",
+      "entry": "instructor-transmit",
+      "brief": true
+    },
+    {
+      "pages": [
+        "student"
+      ],
+      "selector": "#radarRingSpacing",
+      "title": "Your scope display",
+      "entry": "scope-tools",
+      "brief": true
+    },
+    {
+      "pages": [
+        "instructor",
+        "student"
+      ],
+      "selector": ".ats-scope-zoom",
+      "title": "Zoom your scope",
+      "entry": "instructor-student-scope-zoom",
+      "brief": true
     }
   ],
   "startHint": {
@@ -2148,6 +2397,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "selector": "#tSetup",
       "title": "Prepare Tactical QGH",
       "entry": "individual-start"
+    },
+    {
+      "pages": [
+        "instructor",
+        "student"
+      ],
+      "selector": ".ats-scope-zoom",
+      "title": "Zoom your scope",
+      "entry": "instructor-student-scope-zoom",
+      "brief": true
     }
   ]
 };

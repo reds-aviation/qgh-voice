@@ -86,6 +86,18 @@ test('Primary Only surveillance removes identity and level even from nested plot
   assertNoTruthLeak(envelope);
 });
 
+test('radar homing projects a transmission bearing without aircraft truth or silent bearings', () => {
+  for (const mode of ['surveillance', 'sra']) {
+    const envelope = Suite.studentEnvelope(state(mode), {
+      homing: { status: 'live', transmissionState: 'pilot', bearingType: 'qdm', bearingDeg: 255, callsign: '430', headingDeg: 240, rangeNm: 18, position: { xNm: 10 } }
+    });
+    assert.deepEqual(envelope.observation.homing, { status: 'live', transmissionState: 'pilot', bearingType: 'qdm', bearingDeg: 255, callsign: '430' });
+    assertNoTruthLeak(envelope);
+    const idle = Suite.studentEnvelope(state(mode), { homing: { status: 'idle', transmissionState: 'idle', bearingType: 'qdm', bearingDeg: 255, callsign: '430' } });
+    assert.deepEqual(idle.observation.homing, { status: 'idle', transmissionState: 'idle', bearingType: 'qdm' });
+  }
+});
+
 test('Correlated Training surveillance exposes labels only as declared training correlation', () => {
   const envelope = Suite.studentEnvelope(state('sra', { surveillanceProfile: 'correlated' }), {
     scanAngleDeg: 120,
