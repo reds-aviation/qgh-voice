@@ -25,13 +25,21 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   if (isStandalone) return;
 
+  const installLabel = installButton.textContent;
+  const supportsWebInstall = typeof navigator.install === 'function';
+  let deferredInstallPrompt;
+  let installInProgress = false;
+  let lastFocusedElement;
+  const hasNativePrompt = () => supportsWebInstall || Boolean(deferredInstallPrompt);
+  const updateInstallLabel = () => {
+    installButton.textContent = hasNativePrompt() ? installLabel : 'Install help';
+  };
+  updateInstallLabel();
   installButton.hidden = false;
   if (distribution) distribution.hidden = false;
 
   const appleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  let deferredInstallPrompt;
-  let lastFocusedElement;
 
   const releaseUrl = value => {
     if (typeof value !== 'string' || value.trim() === '') return null;
@@ -85,6 +93,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    updateInstallLabel();
+    // A first visit can become installable while the help dialog is open.
+    // Return focus to Install so the browser can prompt on the next click.
+    if (!installInProgress) hideSheet();
   });
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = undefined;
@@ -92,17 +104,30 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   });
 
   installButton.addEventListener('click', async () => {
-    if (deferredInstallPrompt) {
+    if (installInProgress) return;
+    if (hasNativePrompt()) {
       const prompt = deferredInstallPrompt;
       deferredInstallPrompt = undefined;
+      const setInstallBusy = busy => {
+        installInProgress = busy;
+        if (busy) installButton.setAttribute('aria-disabled', 'true');
+        else installButton.removeAttribute('aria-disabled');
+      };
+      setInstallBusy(true);
       try {
-        await prompt.prompt();
-        const outcome = await prompt.userChoice;
-        if (outcome.outcome === 'accepted') return;
-      } catch {
-        // The browser may withdraw an install prompt before the user can use it.
+        if (supportsWebInstall) {
+          await navigator.install();
+          installButton.hidden = true;
+        } else {
+          await prompt.prompt();
+          if ((await prompt.userChoice).outcome === 'accepted') installButton.hidden = true;
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') showSheet(['Open this page in your regular browser and use its Install app or Add to Home screen option.']);
+      } finally {
+        setInstallBusy(false);
+        updateInstallLabel();
       }
-      showSheet(['Installation was not completed. You can try again from your browser menu.']);
       return;
     }
 

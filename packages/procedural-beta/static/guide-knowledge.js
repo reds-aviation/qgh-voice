@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Saarthi and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.11",
+  "revision": "1.0.12",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "examples": {
     "paired-controller-voice": "With aircraft 101 in a running exercise, hold to talk and say One zero one, turn right heading two six zero. Release and check the outcome.",
@@ -93,8 +93,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "answer-install-web-app",
       "priority": true,
       "match": "\\b(?:install(?:ing)? (?:ats sim box|(?:the |this |a )?(?:web app|app|website|simulator))|add to home screen|where (?:is|s) (?:the )?install(?:ation)? (?:button|option))\\b",
-      "text": "Select Install web app at the top of the ATS SIM BOX home page. Accept your browser’s prompt if offered. On iPhone or iPad, open the home page in Safari, tap Share, then choose Add to Home Screen. Enable Open as Web App if shown, then tap Add. For local training without internet, use Prepare for offline use on the home page.",
-      "intro": "Select Install web app at the top of the ATS SIM BOX home page and follow your browser’s steps.",
+      "text": "Select Install web app at the top of the ATS SIM BOX home page. Confirm in the browser prompt to add the app. If the button says Install help, the browser has not made a prompt available for that page. On iPhone or iPad, open the home page in Safari, tap Share, then choose Add to Home Screen. Enable Open as Web App if shown, then tap Add. For local training without internet, use Prepare for offline use on the home page.",
+      "intro": "Select Install web app at the top of the ATS SIM BOX home page and confirm in your browser.",
       "questions": [
         "Where is the install button?",
         "How do I install ATS SIM BOX?",

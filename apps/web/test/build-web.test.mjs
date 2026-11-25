@@ -12,11 +12,62 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { runInContext } from 'node:vm';
 import test from 'node:test';
+import { domHarness } from '../../../packages/procedural-beta/testing/dom-harness.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '..', '..', '..');
 const outputRoot = resolve(repositoryRoot, 'apps', 'web', 'dist');
 const staticProbe = resolve(repositoryRoot, 'apps', 'web', 'static', '__qgh-web-build-probe__.txt');
+
+function installHarness(navigator) {
+  const {context, document, window, Event} = domHarness(readFileSync(resolve(repositoryRoot, 'packages/site-landing/index.html'), 'utf8'));
+  const events = new EventTarget();
+  window.addEventListener = events.addEventListener.bind(events);
+  window.QGH_WEB_ENVIRONMENT = {isHostedBrowser: () => true};
+  context.navigator = navigator;
+  const button = document.getElementById('installWebApp');
+  const sheet = document.getElementById('pwaInstallSheet');
+  sheet.showModal = () => { sheet.open = true; };
+  sheet.close = () => { sheet.open = false; sheet.dispatchEvent(new Event('close')); };
+  runInContext(readFileSync(resolve(repositoryRoot,'apps/web/static/web-distribution.js'),'utf8'), context);
+  return {button, sheet, events, click: () => button.dispatchEvent(new Event('click'))};
+}
+
+test('home install requests the browser prompt on the first click without waiting for the legacy event', async () => {
+  let calls = 0;
+  let finish;
+  const {button, sheet, click} = installHarness({install: () => {
+    calls++;
+    return new Promise(resolve => { finish = resolve; });
+  }});
+  assert.equal(button.textContent, 'Install web app');
+  click();
+  click();
+  assert.equal(calls, 1);
+  assert.equal(sheet.open, undefined);
+  finish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(button.hidden, true);
+});
+
+test('legacy install help gives way to the direct install action once its event arrives', async () => {
+  const {button, sheet, events, click} = installHarness({userAgent:''});
+  assert.equal(button.textContent, 'Install help');
+  click();
+  assert.equal(sheet.open, true);
+  const prompt = new Event('beforeinstallprompt', {cancelable:true});
+  let calls = 0;
+  prompt.prompt = async () => { calls++; };
+  prompt.userChoice = Promise.resolve({outcome:'accepted'});
+  assert.equal(events.dispatchEvent(prompt), false);
+  assert.equal(sheet.open, false);
+  assert.equal(button.textContent, 'Install web app');
+  click();
+  assert.equal(calls, 1);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(button.hidden, true);
+});
 
 const absoluteFiles = directory => readdirSync(directory, { withFileTypes: true })
   .flatMap(entry => {
