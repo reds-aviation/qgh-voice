@@ -97,6 +97,29 @@ test('shared aircraft glyph has a constant CSS footprint with heading rotation',
   }
 });
 
+test('mixed-traffic aircraft have distinct silhouettes at the same scope size', () => {
+  const categories = new Map([
+    ['fighter',['Su-30MKI','Tejas']],
+    ['transport',['An-32','C-130J','C-17']],
+    ['helicopter',['ALH Dhruv','Mi-17V-5']],
+    ['generic',['TRAINER',undefined]],
+  ]);
+  const silhouettes = new Set();
+  for (const [kind, types] of categories) {
+    let silhouette;
+    for (const aircraftType of types) {
+      assert.equal(Visuals.aircraftGlyphKind(aircraftType),kind);
+      const ctx=drawingContext();
+      assert.deepEqual(Visuals.drawAircraftGlyph(ctx,{x:25,y:25,headingDeg:180,aircraftType,selected:true}),{x:15,y:15,width:20,height:20});
+      const geometry=ctx.calls.filter(call=>['moveTo','lineTo'].includes(call[0]));
+      if (silhouette) assert.deepEqual(geometry,silhouette);
+      silhouette=geometry;
+    }
+    silhouettes.add(JSON.stringify(silhouette));
+  }
+  assert.equal(silhouettes.size,categories.size);
+});
+
 test('Selected mode shows full details only for selected aircraft; All/Off work explicitly', () => {
   const aircraft=[{id:'a',callsign:'101',selected:false,details:['10000 FT 240 KT','090°M']},{id:'b',callsign:'102',selected:true,details:['11000 FT 260 KT','180°M']}];
   assert.deepEqual(Visuals.aircraftLabels(aircraft).map(item=>item.lines.length),[1,3]);

@@ -133,16 +133,39 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return rings;
   }
 
+  function aircraftGlyphKind(type) {
+    const key = typeof type === 'string' ? type.toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+    if (/^(HEL(?:I|ICOPTER)?|ROTORCRAFT|ALH|DHRUV|LUH|LCH|PRACHAND|RUDRA|CHINOOK|APACHE|CH47|AH64|MI(?:8|17|24|25|26|35)|UH60|H(?:135|145|160|175|225)|AW(?:109|139|169|189)|SA315|SA316|CHEETAH|CHETAK)/.test(key)) return 'helicopter';
+    if (/^(TRANSPORT|AIRLIFT|AIRLINER|C(?:17|27|130|295)|AN(?:12|26|32|72|124)|IL(?:76|78)|DORNIER|DO228|A(?:220|300|310|318|319|320|321|330|340|350|380|400)|B(?:707|717|727|737|738|739|747|757|767|777|787)|ATR|CRJ|DH8|E(?:170|175|190|195))/.test(key)) return 'transport';
+    if (/^(FIGHTER|LCA|TEJAS|SU(?:27|30|33|35|57)|MIG|RAFALE|MIRAGE|JAGUAR|F(?:15|16|18|22|35)|TYPHOON)/.test(key)) return 'fighter';
+    return 'generic';
+  }
+
+  const aircraftOutlines = {
+    generic: [[0, -6], [1.2, -1.5], [6, 1.7], [6, 3], [1.1, 1.1], [1.1, 4.7], [3, 5.8], [3, 6.5],
+      [0, 5.7], [-3, 6.5], [-3, 5.8], [-1.1, 4.7], [-1.1, 1.1], [-6, 3], [-6, 1.7], [-1.2, -1.5]],
+    fighter: [[0, -7], [1.5, -2], [6.5, 4.5], [2, 3.8], [1.1, 6], [-1.1, 6], [-2, 3.8], [-6.5, 4.5], [-1.5, -2]],
+    transport: [[0, -6.5], [1.6, -5.2], [1.6, -1.6], [7.4, -.4], [7.4, 1.6], [1.6, .8], [1.3, 4], [3.8, 4.5],
+      [3.8, 6], [0, 5.5], [-3.8, 6], [-3.8, 4.5], [-1.3, 4], [-1.6, .8], [-7.4, 1.6], [-7.4, -.4], [-1.6, -1.6], [-1.6, -5.2]],
+    helicopter: [[0, -5.5], [2.2, -4.4], [2.8, -1.4], [2, 1.5], [1, 2.6], [.8, 5.9], [2.2, 5.9], [2.2, 7],
+      [-2.2, 7], [-2.2, 5.9], [-.8, 5.9], [-1, 2.6], [-2, 1.5], [-2.8, -1.4], [-2.2, -4.4]],
+  };
   function drawAircraftGlyph(context, options) {
     const x = number(options.x, 0), y = number(options.y, 0), size = Math.max(1, number(options.size, GLYPH_SIZE));
     const scale = size / GLYPH_SIZE, color = options.color || '#7ee8fa';
     context.save(); context.translate(x, y); context.rotate(number(options.headingDeg, 0) * Math.PI / 180);
     context.fillStyle = color; context.strokeStyle = options.outline || color; context.lineWidth = .75 * scale;
+    const kind = aircraftGlyphKind(options.aircraftType);
     context.beginPath();
-    [[0, -6], [1.2, -1.5], [6, 1.7], [6, 3], [1.1, 1.1], [1.1, 4.7], [3, 5.8], [3, 6.5],
-      [0, 5.7], [-3, 6.5], [-3, 5.8], [-1.1, 4.7], [-1.1, 1.1], [-6, 3], [-6, 1.7], [-1.2, -1.5]]
+    aircraftOutlines[kind]
       .forEach(([px, py], index) => index ? context.lineTo(px * scale, py * scale) : context.moveTo(px * scale, py * scale));
-    context.closePath(); context.fill(); context.stroke(); context.restore();
+    context.closePath(); context.fill(); context.stroke();
+    if (kind === 'helicopter') {
+      context.lineWidth = 1.25 * scale;
+      context.beginPath(); context.moveTo(-7.6 * scale, -.6 * scale);
+      context.lineTo(7.6 * scale, -.6 * scale); context.stroke();
+    }
+    context.restore();
     if (options.selected) {
       context.save(); context.strokeStyle = options.selectionColor || color; context.lineWidth = 1;
       context.beginPath(); context.arc(x, y, 10 * scale, 0, Math.PI * 2); context.stroke(); context.restore();
@@ -253,6 +276,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     context.restore();
   }
 
-  return Object.freeze({ GLYPH_SIZE, reviewInk, runwayGeometry, approachPoint, drawRunwayStrip, canvasMetrics, rangeRings, drawRangeRings, drawAircraftGlyph,
+  return Object.freeze({ GLYPH_SIZE, reviewInk, runwayGeometry, approachPoint, drawRunwayStrip, canvasMetrics, rangeRings, drawRangeRings, aircraftGlyphKind, drawAircraftGlyph,
     overlayObstacles, labelMode, minuteVectorNm, aircraftLabels, placeAircraftLabels, drawAircraftLabels, overlaps });
 });

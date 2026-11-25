@@ -1446,7 +1446,7 @@ function draw() {
                 ctx.globalAlpha = 1;
             }
             symbols.push({ x, y });
-            if (globalThis.ATCScopeVisuals) globalThis.ATCScopeVisuals.drawAircraftGlyph(ctx, { x, y, headingDeg: a.headingDeg, color, selected: active });
+            if (globalThis.ATCScopeVisuals) globalThis.ATCScopeVisuals.drawAircraftGlyph(ctx, { x, y, headingDeg: a.headingDeg, aircraftType: a.type, color, selected: active });
             else {
                 ctx.save(); ctx.translate(x, y); ctx.rotate(a.headingDeg * Math.PI / 180);
                 ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(5, 5); ctx.lineTo(0, 3); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill(); ctx.restore();

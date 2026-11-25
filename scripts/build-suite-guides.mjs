@@ -49,6 +49,7 @@ const pilotExercises = '<section class="section" id="published-traffic-exercises
     '201–202: A Mi-17V-5 and Su-30MKI operate in separate training sectors about 30 NM from the ARP.',
     '301–302: Two transports track published ATS legs. Keep them in your picture while working the circuit.',
     '401–402: A Su-30MKI and an An-32 return on a separate ATS route. Build their arrival sequence from reports.',
+    'On the instructor scope, a rotor bar marks helicopters, broad wings mark transports, and a delta wing marks fighters. A selection ring still identifies the active aircraft.',
     'Each exercise starts with 10 aircraft. The editable pilot roster is capped at 12. Callsigns, circuits, sectors and mission activity are training examples.'
   ])+[
     {id:'pune',name:'Pune (VAPO) · VAR37',text:'W28 (LUKTI–PPN) carries both en-route aircraft through VAR37. Returning aircraft follow W134 (MUBKU–PPN). The two sectors are northeast and southeast of the ARP.',source:'https://aim-india.aai.aero.in/eaip/eaip-v2-09-2026/eAIP/IN-AD%202.1VAPO-en-GB.html'},

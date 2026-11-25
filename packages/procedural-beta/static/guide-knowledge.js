@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Saarthi and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.13",
+  "revision": "1.0.14",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "examples": {
     "paired-controller-voice": "With aircraft 101 in a running exercise, hold to talk and say One zero one, turn right heading two six zero. Release and check the outcome.",
@@ -111,7 +111,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "match": "\\b(?:bagdogra|pune|vap[o0]|vebd|published (?:training |traffic )?scenarios?|mixed.traffic (?:exercise|scenario))\\b",
       "text": "In Procedural starting traffic, expand Start from a training scenario. Choose one of five Pune exercises or five Bagdogra exercises and select Prepare this exercise. Review the roster and choose Create exercise to load the published chart and start paused. Each roster starts with ten aircraft: four in the circuit, two in separate sectors about 30 NM from the ARP, two en route and two returning on a separate ATS route. The pilot exercise roster is capped at 12. Pune uses W28 and W134. Bagdogra uses W105 and Q18 for overflights and W137 for recovery. Bagdogra en-route tracks cross VER 82 laterally above its published ceiling. The poses, callsigns, circuit and sector sorties are fictional training examples.",
       "intro": "Choose a Pune or Bagdogra exercise under Start from a training scenario, then select Prepare this exercise. The ten-aircraft roster includes circuit, sector, en-route and returning traffic.",
-      "questions": ["Where are the Pune and Bagdogra exercises?", "What traffic is in the published mixed-traffic scenario?", "Which ATS routes does the Bagdogra exercise use?"]
+      "pointers": ["On the instructor scope, a rotor bar marks helicopters, broad wings mark transports, and a delta wing marks fighters.", "Select the callsign to confirm its type and see the active selection ring."],
+      "questions": ["Where are the Pune and Bagdogra exercises?", "What traffic is in the published mixed-traffic scenario?", "Which ATS routes does the Bagdogra exercise use?", "What do the helicopter, transport and fighter symbols mean on the instructor scope?"]
     },
     {
       "id": "app-logo",

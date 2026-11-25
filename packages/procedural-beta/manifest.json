@@ -1,5 +1,5 @@
 {
-  "version": "1.0.13",
+  "version": "1.0.14",
   "go": "1.27.1",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": "static/procedural.js",
-      "bytes": 146257,
-      "sha256": "a784c390f0cf85c42ccede1958b6d98417f8a53cca1b121de1117486e8cc87f3"
+      "bytes": 146279,
+      "sha256": "29652989cc66bb2360eb4b129469af395b20751ed8f9338018bfb7648af3482e"
     },
     {
       "path": "static/procedural.css",
@@ -219,8 +219,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 146659,
-      "sha256": "3c09f236df8bfc6cdd9863f44093dbf887f88f13b530cd1808d5f797319521f7"
+      "bytes": 146965,
+      "sha256": "f02c61f01c8c75eed7b8d50f3801835a47ab1b580ff425d66cab0f539aff9530"
     },
     {
       "path": "static/gyani-instructor.png",
@@ -339,8 +339,8 @@
     },
     {
       "path": "static/scope-visuals.js",
-      "bytes": 17056,
-      "sha256": "154e6be8c24c50c044d0440d944cb094307b0003f4cf39c4f4bf0f1809029ce2"
+      "bytes": 18774,
+      "sha256": "8e0286279f21f8d6831941b939d370b44826bd741d0dfcc64165fcca6154e44c"
     },
     {
       "path": "static/suite-entry.css",
