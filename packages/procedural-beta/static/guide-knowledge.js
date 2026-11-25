@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Saarthi and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.15",
+  "revision": "1.0.16",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "examples": {
     "paired-controller-voice": "With aircraft 101 in a running exercise, hold to talk and say One zero one, turn right heading two six zero. Release and check the outcome.",
@@ -59,9 +59,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "title": "Pause the homepage radar animation",
       "topics": ["suite"],
       "anchor": "start",
-      "controls": [],
+      "controls": ["heroMotionToggle"],
       "match": "\\b(?:home(?:page)? radar|radar animation|banner animation|animated banner)\\b",
-      "text": "Use the pause button beside the homepage illustration to hold the aircraft and radar sweep. Select it again to resume. With reduced motion enabled on your device, the homepage displays the original still illustration.",
+      "text": "The homepage aircraft and radar sweep move automatically. Select Pause radar animation to hold the illustration, then select Resume radar animation. With reduced motion enabled on your device, the homepage displays the still illustration.",
       "questions": ["How do I pause the homepage radar animation?"]
     },
     {
@@ -1392,15 +1392,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "individual",
       "match": "\\b(?:voice|audio|microphone|ptt|radio|accepted call|command)\\b",
-      "text": "Individual QGH provides manual controls and optional local voice input. Press to talk (PTT) is the default: hold PTT, speak one complete call, then release and allow the final words to be recognised. There is no cloud speech fallback. Prepare the local voice resources and check microphone permission before practice. For a short offline rehearsal, select Rehearse a radio call on the setup screen or in Voice settings. Hold PTT to try “turn right heading two six zero”, “report heading” or “report distance”. The panel displays the recognized words and an example readback. Exit rehearsal to send normal commands. Pilot audio starts muted; test and confirm headphones before enabling audible replies. Continuous Listening is optional: finish the call with a natural pause; recognition pauses during pilot replies. Controller PTT takes priority when an interruption is needed. In Tactical, address the intended aircraft, for example Raven Twenty One turn right heading zero six zero. A unique designator can identify one aircraft; use the full callsign if two aircraft share a designator. The Training guide’s searchable Accepted RT calls catalogue is the source for supported commands, prerequisites and effects. Supported Normal QGH heading forms include turn right heading 260 and turn left heading two six zero. Use the catalogue for the supported to/onto forms and number wording. These are deterministic parser variants, not a claim of speech-recognition accuracy. Include an explicit direction for a turn instruction. Negated instructions (including don’t), questions, conversation and ambiguous calls must not command a manoeuvre. Check the accepted acknowledgement and use manual controls if recognition is unclear. Confirm termination in the dialog before ending an exercise. Paired exercises have a separate controller push-to-talk setting. The instructor can enable Automatic pilot in Session.",
+      "text": "Individual QGH provides manual controls and optional local voice input. Press to talk (PTT) is the default: hold PTT, speak one complete call, then release and allow the final words to be recognised. There is no cloud speech fallback. On the QGH opening page, use Voice in the header to open the controls beneath it. Prepare the local voice resources and check microphone permission before practice. For a short offline rehearsal, select Rehearse a radio call on the setup screen or in Voice settings. Hold PTT to try “turn right heading two six zero”, “report heading” or “report distance”. The panel displays the recognized words and an example readback. Exit rehearsal to send normal commands. Pilot audio starts muted; test and confirm headphones before enabling audible replies. Continuous Listening is optional: finish the call with a natural pause; recognition pauses during pilot replies. Controller PTT takes priority when an interruption is needed. In Tactical, address the intended aircraft, for example Raven Twenty One turn right heading zero six zero. A unique designator can identify one aircraft; use the full callsign if two aircraft share a designator. The Training guide’s searchable Accepted RT calls catalogue is the source for supported commands, prerequisites and effects. Supported Normal QGH heading forms include turn right heading 260 and turn left heading two six zero. Use the catalogue for the supported to/onto forms and number wording. These are deterministic parser variants, not a claim of speech-recognition accuracy. Include an explicit direction for a turn instruction. Negated instructions (including don’t), questions, conversation and ambiguous calls must not command a manoeuvre. Check the accepted acknowledgement and use manual controls if recognition is unclear. Confirm termination in the dialog before ending an exercise. Paired exercises have a separate controller push-to-talk setting. The instructor can enable Automatic pilot in Session.",
       "questions": [
         "Which radio calls work?",
         "How do I enable voice?",
+        "Where is Voice on the QGH opening page?",
         "What is PTT?"
       ],
       "priority": false,
-      "controls": [],
+      "controls": ["entryVoiceToggle"],
       "pointers": [
+        "On the QGH opening page, select Voice in the header to open the voice controls.",
         "Press to talk (PTT) is the default; Continuous Listening is optional. Manual controls remain available.",
         "Use Rehearse a radio call on the setup screen to check your microphone and practise a call.",
         "Pilot replies start muted. Test and confirm headphones before enabling audible replies.",

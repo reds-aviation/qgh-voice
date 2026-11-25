@@ -123,7 +123,7 @@ export function legacyGuide(prefix = '', anchor = '') {
 
 export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   if (version !== knowledge.revision) throw new Error('Guide knowledge revision must match the Procedural release');
-  const paths={home:'packages/site-landing/index.html',procedural:'packages/procedural-beta/static/procedural.html',single:'packages/qgh-engine/single.html',tactical:'packages/qgh-engine/tactical.html','instructor-entry':'packages/atc-suite/index.html',instructor:'packages/atc-suite/instructor.html',student:'packages/atc-suite/student.html','training-centre':'packages/qgh-engine/training-centre.html'};
+  const paths={home:'packages/site-landing/index.html',qgh:'packages/qgh-engine/index.html',procedural:'packages/procedural-beta/static/procedural.html',single:'packages/qgh-engine/single.html',tactical:'packages/qgh-engine/tactical.html','instructor-entry':'packages/atc-suite/index.html',instructor:'packages/atc-suite/instructor.html',student:'packages/atc-suite/student.html','training-centre':'packages/qgh-engine/training-centre.html'};
   const sources={};
   for(const [page,path] of Object.entries(paths))sources[page]=await readFile(resolve(sourceRoot,path),'utf8');
   sources['training-centre'] = populateGuide(sources['training-centre'], version);

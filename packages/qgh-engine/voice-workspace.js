@@ -22,6 +22,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const VOICE_DOCK_POSITION_KEY = 'qgh-voice-dock-position-v2';
   const nativeVoiceDocumentId = root.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const $ = id => documentRef.getElementById(id);
+  const entryVoicePanel = $('entryVoicePanel');
   const voiceEffectTimers = new WeakMap();
   const state = {
     engine: null,
@@ -392,6 +393,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function syncVoiceDockCompactness() {
     if (!state.dock || !state.compactToggle) return;
     const quiet = !state.continuous && !state.listening && !state.starting && !state.pressHeld;
+    if (entryVoicePanel) {
+      const expanded = state.compactExpanded || !quiet;
+      entryVoicePanel.hidden = !expanded;
+      state.compactToggle.setAttribute('aria-expanded', String(expanded));
+      state.compactToggle.disabled = !quiet;
+      return;
+    }
     const mayCompact = beforeExercise() && quiet;
     const compact = mayCompact && !state.compactExpanded;
     const changed = state.dock.dataset.compact !== String(compact);
@@ -415,6 +423,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function positionVoicePopovers() {
+    if (entryVoicePanel) return;
     if ([state.settings, state.confirmationPanel].every(panel => !panel || panel.hidden)) return;
     const rect = state.dock?.getBoundingClientRect?.();
     if (!rect) return;
@@ -471,7 +480,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function restoreVoiceDockPosition() {
-    if (!state.dock) return;
+    if (!state.dock || entryVoicePanel) return;
     state.dock.dataset.phone = String(phoneDock());
     ['left', 'top', 'right', 'bottom'].forEach(property => { state.dock.style[property] = ''; });
     const saved = storedDockPosition();
@@ -1958,12 +1967,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     dock.className = 'voice-dock';
     dock.setAttribute('aria-label', 'Offline voice controls');
 
-    const compactToggle = documentRef.createElement('button');
-    compactToggle.type = 'button';
-    compactToggle.className = 'voice-compact-toggle';
-    compactToggle.textContent = 'VOICE';
-    compactToggle.setAttribute('aria-label', 'Open voice controls');
-    compactToggle.setAttribute('aria-expanded', 'false');
+    const compactToggle = $('entryVoiceToggle') || documentRef.createElement('button');
+    if (!entryVoicePanel) {
+      compactToggle.type = 'button';
+      compactToggle.className = 'voice-compact-toggle';
+      compactToggle.textContent = 'VOICE';
+      compactToggle.setAttribute('aria-label', 'Open voice controls');
+      compactToggle.setAttribute('aria-expanded', 'false');
+      dock.append(compactToggle);
+    }
 
     const dragHandle = documentRef.createElement('div');
     dragHandle.className = 'voice-drag-handle';
@@ -1982,7 +1994,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const settingsToggle = documentRef.createElement('button');
     settingsToggle.type = 'button';
     settingsToggle.className = 'voice-settings-toggle';
-    settingsToggle.textContent = 'VOICE';
+    settingsToggle.textContent = entryVoicePanel ? 'Settings' : 'VOICE';
     settingsToggle.setAttribute('aria-expanded', 'false');
     settingsToggle.setAttribute('aria-label', 'Voice settings');
 
@@ -2166,14 +2178,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     cancellationButton.textContent = 'CANCEL';
     confirmationActions.append(confirmationButton, cancellationButton);
     confirmation.append(confirmationTitle, confirmationDetail, confirmationActions);
-    dock.append(compactToggle, dragHandle, mic, listeningIndicator, status, settingsToggle, feedback, settings, confirmation);
+    if (!entryVoicePanel) dock.append(dragHandle);
+    dock.append(mic, listeningIndicator, status, settingsToggle, feedback, settings, confirmation);
     const announcement = documentRef.createElement('div');
     announcement.className = 'voice-announcement voice-command-only';
     announcement.setAttribute('role', 'status');
     announcement.setAttribute('aria-live', 'polite');
     announcement.setAttribute('aria-atomic', 'true');
     dock.append(announcement);
-    documentRef.body.appendChild(dock);
+    (entryVoicePanel || documentRef.body).appendChild(dock);
 
     Object.assign(state, {
       dock, compactToggle, dragHandle, mic, status, feedback, settings, settingsToggle, continuousInput, prepareButton: prepare,
@@ -2186,10 +2199,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         state.suppressCompactClick = false;
         return;
       }
-      state.compactExpanded = state.dock.dataset.compact === 'true';
+      state.compactExpanded = entryVoicePanel ? entryVoicePanel.hidden : state.dock.dataset.compact === 'true';
       syncVoiceDockCompactness();
-      if (state.compactExpanded) state.mic?.focus();
-      else state.compactToggle?.focus();
+      if (state.compactExpanded) {
+        (entryVoicePanel && mic.disabled ? settingsToggle : mic).focus();
+      } else {
+        if (entryVoicePanel) setSettingsOpen(false);
+        compactToggle.focus();
+      }
     });
     settingsToggle.addEventListener('click', () => {
       const opening = settings.hidden;
@@ -2205,18 +2222,31 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         mic.focus({ preventScroll: true });
       }
     });
-    resetPosition.addEventListener('click', resetVoiceDockPosition);
+    if (!entryVoicePanel) resetPosition.addEventListener('click', resetVoiceDockPosition);
+    else {
+      resetPosition.remove();
+      compactToggle.hidden = false;
+      entryVoicePanel.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !event.defaultPrevented) compactToggle.click();
+      });
+    }
     settings.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { setSettingsOpen(false); settingsToggle.focus(); }
+      if (event.key === 'Escape') {
+        if (entryVoicePanel) event.preventDefault();
+        setSettingsOpen(false);
+        settingsToggle.focus();
+      }
     });
     lastCall.addEventListener('toggle', positionVoicePopovers);
     continuousInput.addEventListener('change', () => setListeningMode(continuousInput.checked ? 'continuous' : 'push-to-talk'));
     confirmationButton.addEventListener('click', confirmPendingVoiceCommand);
     cancellationButton.addEventListener('click', cancelPendingVoiceCommand);
-    dock.addEventListener('pointerdown', beginDockDrag);
-    dock.addEventListener('lostpointercapture', endDockDrag);
-    dragHandle.addEventListener('keydown', moveDockByKeyboard);
-    compactToggle.addEventListener('keydown', moveDockByKeyboard);
+    if (!entryVoicePanel) {
+      dock.addEventListener('pointerdown', beginDockDrag);
+      dock.addEventListener('lostpointercapture', endDockDrag);
+      dragHandle.addEventListener('keydown', moveDockByKeyboard);
+      compactToggle.addEventListener('keydown', moveDockByKeyboard);
+    }
 
     const beginPressToTalk = event => {
       if (state.continuous || state.pressHeld || mic.disabled || (event.button !== undefined && event.button !== 0)) return;

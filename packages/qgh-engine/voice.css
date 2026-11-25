@@ -379,7 +379,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   --qgh-voice-dock-height: 0px;
   --qgh-browser-bottom-inset: 0px;
 }
-body:has(.voice-dock) { padding-right: 110px; }
+body:has(> .voice-dock, #setupVoiceMount .voice-dock) { padding-right: 110px; }
 .voice-dock {
   --voice-safe-top: env(safe-area-inset-top, 0px);
   --voice-safe-right: env(safe-area-inset-right, 0px);
@@ -412,7 +412,7 @@ body:has(.voice-dock) { padding-right: 110px; }
 .voice-mic, .voice-compact-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .voice-dock[data-compact='true'] .voice-compact-toggle { cursor: grab; }
 .voice-dock[data-dragging='true'] .voice-compact-toggle { cursor: grabbing; }
-.voice-mic::before, .voice-dock[data-compact='true'] .voice-compact-toggle::before {
+.entry-voice-toggle::before, .voice-mic::before, .voice-dock[data-compact='true'] .voice-compact-toggle::before {
   content: '';
   display: inline-block;
   flex: none;
@@ -459,14 +459,14 @@ body:has(.voice-dock) { padding-right: 110px; }
   }
   /* Keep the browser as the single scroll surface.  A fixed-height inner app made
      setup and exercise content look clipped on phones and was awkward to scroll. */
-  body:has(.voice-dock) {
+  body:has(> .voice-dock, #setupVoiceMount .voice-dock) {
     padding: 0;
     min-height: 100dvh;
     height: auto;
     overflow-x: clip;
     overflow-y: visible;
   }
-  body:has(.voice-dock) :is(.app, .tactical-app, .entry-app) {
+  body:has(> .voice-dock, #setupVoiceMount .voice-dock) :is(.app, .tactical-app, .entry-app) {
     min-height: 100dvh;
     height: auto;
     overflow: visible;
@@ -480,8 +480,8 @@ body:has(.voice-dock) { padding-right: 110px; }
     max-width: none;
     scroll-padding-block: 12px;
   }
-  body:has(.voice-dock) :is(.review-toolbar, .tactical-review-toolbar) { bottom: auto; }
-  body:has(.voice-dock[data-edge='top']) :is(.app, .tactical-app, .entry-app) {
+  body:has(> .voice-dock, #setupVoiceMount .voice-dock) :is(.review-toolbar, .tactical-review-toolbar) { bottom: auto; }
+  body:has(> .voice-dock[data-edge='top']) :is(.app, .tactical-app, .entry-app) {
     padding-top: calc(120px + env(safe-area-inset-top, 0px) + 20px);
   }
   .voice-dock {
@@ -578,3 +578,46 @@ html[data-theme="dark"] .voice-dock .voice-rehearsal { color:var(--tab-text); ba
   font:500 14px/1.45 'IBM Plex Sans',Arial,sans-serif; letter-spacing:normal; text-transform:none;
 }
 .voice-rehearsal-output[hidden] { display:none; }
+
+/* The landing page uses a header button and a panel in normal page flow. */
+.entry-voice-toggle[hidden], .entry-voice-panel[hidden] { display: none; }
+.entry-voice-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--iaf-header-edge, var(--entry-line));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--iaf-header-ink, var(--entry-ink));
+  font: 400 13px/1.3 'IBM Plex Sans', Arial, sans-serif;
+  cursor: pointer;
+}
+.entry-voice-toggle:not(:disabled):is(:hover, [aria-expanded="true"]) {
+  background: var(--iaf-header-hover, var(--entry-card));
+}
+.entry-voice-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.entry-voice-panel { margin-block: 12px; }
+.entry-voice-panel .voice-dock {
+  position: static;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  width: auto;
+  min-height: 0;
+  padding: 8px 12px;
+  cursor: auto;
+  touch-action: auto;
+}
+.entry-voice-panel .voice-mic { min-height: 44px !important; padding-inline: 12px; }
+.entry-voice-panel .voice-settings-toggle { padding-inline: 12px; }
+.entry-voice-panel .voice-status { min-height: 0; margin: 0; }
+.entry-voice-panel :is(.voice-settings, .voice-confirmation) {
+  position: static;
+  flex: 1 0 100%;
+  width: auto;
+  max-height: none;
+}

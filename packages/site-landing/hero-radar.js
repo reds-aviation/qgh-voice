@@ -8,7 +8,7 @@ Contributor(s): None designated in this initial notice.
 No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
 */
 
-// Homepage illustration. Coordinates are artwork pixels in the original 2172 × 724 PNG.
+// Homepage illustration. Coordinates use the original 2172 × 724 artwork grid.
 (() => {
   'use strict';
   const hero = document.querySelector('.suite-hero');
@@ -19,15 +19,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const artURL = new URL(compactArt ? 'hero-airspace-760.webp' : 'hero-airspace.webp', document.currentScript.src);
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   const width = 2172, height = 724, radius = 280, cx = 1433, cy = 307;
-  const tau = 2 * Math.PI;
+  const tau = 2 * Math.PI, sweepSeconds = 9;
 
   // Follow the dashed lines already on the chart. Each track includes its printed starting position.
   const tracks = [
-    {origin: 1, speed: 12, points: [[1300,241],[1265,215],[1210,178],[1155,139],[1104,112],[1053,82],[1023,65]]},
-    {origin: 2, speed: 9, points: [[1302,242],[1316,254],[1334,268],[1354,281]]},
-    {origin: 2, speed: 18, points: [[1518,245],[1555,217],[1614,186],[1677,162],[1755,132],[1850,94],[1918,69],[1974,42],[2020,6]]},
-    {origin: 3, speed: 15, points: [[1343,341],[1297,363],[1259,388],[1230,402],[1185,420],[1145,435],[1105,449],[1081,465],[1013,501],[943,540],[864,585],[820,612]]},
-    {origin: 3, speed: 14, points: [[1567,672],[1542,610],[1515,544],[1495,494],[1478,454],[1463,412]]}
+    {origin: 1, speed: 20, points: [[1300,241],[1265,215],[1210,178],[1155,139],[1104,112],[1053,82],[1023,65]]},
+    {origin: 2, speed: 15, points: [[1302,242],[1316,254],[1334,268],[1354,281]]},
+    {origin: 2, speed: 30, points: [[1518,245],[1555,217],[1614,186],[1677,162],[1755,132],[1850,94],[1918,69],[1974,42],[2020,6]]},
+    {origin: 3, speed: 25, points: [[1343,341],[1297,363],[1259,388],[1230,402],[1185,420],[1145,435],[1105,449],[1081,465],[1013,501],[943,540],[864,585],[820,612]]},
+    {origin: 3, speed: 23, points: [[1567,672],[1542,610],[1515,544],[1495,494],[1478,454],[1463,412]]}
   ];
 
   function surface(w, h) {
@@ -127,15 +127,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       pen.moveTo(0, 0);
       pen.arc(0, 0, radius, -arc + i * arc / slices, -arc + (i + 1) * arc / slices);
       pen.closePath();
-      pen.fillStyle = 'rgba(24,111,151,' + (.11 * (i + 1) / slices) + ')';
+      pen.fillStyle = 'rgba(24,111,151,' + (.18 * (i + 1) / slices) + ')';
       pen.fill();
     }
     const beam = pen.createLinearGradient(0, 0, radius, 0);
     beam.addColorStop(0, 'rgba(23,99,139,.06)');
-    beam.addColorStop(.68, 'rgba(23,99,139,.44)');
-    beam.addColorStop(1, 'rgba(23,99,139,.28)');
+    beam.addColorStop(.68, 'rgba(23,99,139,.65)');
+    beam.addColorStop(1, 'rgba(23,99,139,.44)');
     pen.strokeStyle = beam;
-    pen.lineWidth = 1.7;
+    pen.lineWidth = 2.5;
     pen.beginPath(); pen.moveTo(0, 0); pen.lineTo(radius, 0); pen.stroke();
     return tile;
   }
@@ -168,11 +168,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     loading = true;
     const art = new Image();
     art.onload = () => {
-      if (art.naturalWidth !== width || art.naturalHeight !== height) return;
+      if (Math.abs(art.naturalHeight - art.naturalWidth * height / width) > 1) return;
       const background = surface(width, height), backdrop = background.getContext('2d', {willReadFrequently: true});
       const pen = canvas.getContext('2d');
       if (!pen || !backdrop) return;
-      backdrop.drawImage(art, 0, 0);
+      /* Match the original grid even when the browser loads a smaller artwork file. */
+      backdrop.drawImage(art, 0, 0, width, height);
       const aircraft = tracks.map(config => makeTrack(config, backdrop));
       const sweep = makeSweep(), padding = radius + 3;
       canvas.width = width; canvas.height = height;
@@ -187,7 +188,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         }
         pen.save();
         pen.translate(cx, cy);
-        pen.rotate(-Math.PI / 2 + seconds * tau / 13);
+        pen.rotate(-Math.PI / 2 + seconds * tau / sweepSeconds);
         pen.drawImage(sweep, -sweep.width / 2, -sweep.height / 2);
         pen.restore();
         previous = aircraft.map(plane => {

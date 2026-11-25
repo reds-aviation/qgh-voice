@@ -90,6 +90,9 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.ok(homeDocument.querySelector('#offline-welcome[hidden] a[href="training-centre.html#offline-preparation"]'));
   assert.equal(homeDocument.querySelector('#offline-preparation, #offline-prepare-core, #offline-prepare-voice'),null);
   assert.ok(homeDocument.getElementById('installWebApp'));
+  const {document:qghLanding}=parseHTML(readFileSync(resolve(dist,'qgh.html'),'utf8'));
+  assert.ok(qghLanding.querySelector('.entry-header button#entryVoiceToggle[aria-expanded="false"][aria-controls="entryVoicePanel"]'));
+  assert.ok(qghLanding.querySelector('.entry-app > #entryVoicePanel[hidden]'));
   assert.ok(guideDocument.querySelector('.section-nav a[href="#offline-preparation"]'));
   assert.ok(guideDocument.querySelector('#offline-preparation #offline-prepare-core'));
   assert.ok(guideDocument.querySelector('#offline-preparation #offline-prepare-voice'));
