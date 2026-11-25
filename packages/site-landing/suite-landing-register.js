@@ -35,6 +35,137 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     button.hidden = active();
   };
+  const offlineSetup = document.getElementById('offline-preparation');
+  if (offlineSetup && window.isSecureContext) {
+    const coreButton = document.getElementById('offline-prepare-core');
+    const voiceButton = document.getElementById('offline-prepare-voice');
+    const mainStatus = document.getElementById('offline-main-status');
+    const instructorStatus = document.getElementById('offline-instructor-status');
+    const voiceStatus = document.getElementById('offline-voice-status');
+    const notice = document.getElementById('offline-preparation-status');
+    const instructorRoot = new URL('instructor-led/', root);
+    let preparingCore = false;
+    let preparingVoice = false;
+    let voiceReady = false;
+    const voiceAdapter = async () => {
+      await import(new URL('offline-voice-engine.js', root).href);
+      return globalThis.QGHOfflineVoiceEngine;
+    };
+
+    function activeWorker(record) {
+      if (record?.active?.state === 'activated') return Promise.resolve(record.active);
+      const worker = record?.installing || record?.active;
+      if (!worker) return Promise.reject(new Error('Offline installer unavailable'));
+      return new Promise((resolve, reject) => {
+        const finish = (callback, result) => {
+          clearTimeout(timer);
+          worker.removeEventListener('statechange', check);
+          callback(result);
+        };
+        const check = () => {
+          if (worker.state === 'activated') finish(resolve, worker);
+          if (worker.state === 'redundant') finish(reject, new Error('Offline installer did not complete'));
+        };
+        const timer = setTimeout(() => finish(reject, new Error('Offline installer timed out')), 180000);
+        worker.addEventListener('statechange', check);
+        check();
+      });
+    }
+
+    function shellStatus(worker, repair = false) {
+      return new Promise(resolve => {
+        const channel = new MessageChannel();
+        const finish = ready => {
+          clearTimeout(timer);
+          channel.port1.close();
+          resolve(ready);
+        };
+        const timer = setTimeout(() => finish(false), repair ? 180000 : 4000);
+        channel.port1.onmessage = event => finish(event.data?.ready === true);
+        try { worker.postMessage({type:'OFFLINE_SHELL_STATUS', repair}, [channel.port2]); }
+        catch { finish(false); }
+      });
+    }
+
+    async function isShellReady(url) {
+      try {
+        const record = await navigator.serviceWorker.getRegistration(url.href);
+        return record?.scope === url.href && record.active && await shellStatus(record.active);
+      } catch { return false; }
+    }
+
+    async function refreshCore() {
+      const [mainReady, instructorReady] = await Promise.all([isShellReady(root), isShellReady(instructorRoot)]);
+      if (preparingCore) return;
+      mainStatus.textContent = mainReady ? 'Ready on this device' : 'Needs preparation';
+      instructorStatus.textContent = instructorReady ? 'Ready on this device' : 'Needs preparation';
+    }
+    async function refreshVoice() {
+      try {
+        if (!preparingVoice && await caches.has('qgh-offline-voice-pack-v1')) {
+          voiceReady = await (await voiceAdapter()).hasCachedArchive();
+          voiceStatus.textContent = voiceReady ? 'Ready on this device' : 'Optional';
+          voiceButton.disabled = voiceReady;
+        }
+      } catch { voiceStatus.textContent = 'Optional'; }
+    }
+
+    coreButton.disabled = false;
+    voiceButton.disabled = !window.caches;
+    notice.textContent = 'Choose Prepare exercises before going offline.';
+    void refreshCore();
+    if (window.caches) void refreshVoice();
+
+    coreButton.addEventListener('click', async () => {
+      if (preparingCore) return;
+      preparingCore = coreButton.disabled = true;
+      notice.textContent = 'Checking and saving exercises…';
+      mainStatus.textContent = instructorStatus.textContent = 'Preparing…';
+      try {
+        const [main, instructor] = await Promise.all([
+          navigator.serviceWorker.register(workerURL.href, {scope:root.pathname}),
+          navigator.serviceWorker.register(new URL('service-worker.js', instructorRoot).href, {scope:instructorRoot.pathname})
+        ]);
+        const workers = await Promise.all([activeWorker(main), activeWorker(instructor)]);
+        const ready = await Promise.all(workers.map(worker => shellStatus(worker, true)));
+        if (ready.every(Boolean)) notice.textContent = 'Exercises and the written guide are ready on this device.';
+        else throw new Error('Some offline exercises are missing');
+      } catch {
+        notice.textContent = 'Preparation did not finish. Check your connection and storage, then try again.';
+      } finally {
+        preparingCore = false;
+        await refreshCore();
+        coreButton.disabled = false;
+      }
+    });
+
+    voiceButton.addEventListener('click', async () => {
+      if (preparingVoice || voiceReady) return;
+      preparingVoice = voiceButton.disabled = true;
+      voiceStatus.textContent = 'Downloading…';
+      let lastProgress = 0;
+      try {
+        const installed = await (await voiceAdapter()).downloadOfflineVoicePack(progress => {
+          if (progress.phase === 'downloading' && progress.total > 0) {
+            const percent = Math.min(99, Math.floor(100 * progress.loaded / progress.total));
+            if (percent - lastProgress >= 10) {
+              lastProgress = percent;
+              voiceStatus.textContent = 'Downloading · ' + percent + '%';
+            }
+          }
+        });
+        if (!installed) throw new Error('Offline storage unavailable');
+        voiceReady = true;
+        voiceStatus.textContent = 'Ready on this device';
+      } catch {
+        voiceStatus.textContent = 'Download incomplete. Check your connection and storage, then try again.';
+      } finally {
+        preparingVoice = false;
+        voiceButton.disabled = voiceReady;
+      }
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (!preparingCore) void refreshCore(); });
+  }
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (approved) location.reload(); });
   new MutationObserver(offer).observe(document.body, {attributes:true,attributeFilter:['class']});
   window.addEventListener('load', async () => {

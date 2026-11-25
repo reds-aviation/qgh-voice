@@ -14,6 +14,23 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   root.ATCScopeVisuals = api;
 })(typeof globalThis === 'undefined' ? this : globalThis, function createScopeVisuals() {
   'use strict';
+  // The review plot is painted into a canvas, so it cannot inherit the page colours.
+  // Keep course colours and track identities distinguishable on the navy chart.
+  const darkReviewColors = Object.freeze({
+    '#fffefa': '#102435', '#17262b': '#edf5fa', '#d1d8d4': '#56748a',
+    '#617177': '#b4c9d7', '#d7dfdb': '#48677b', '#6b7a7d': '#b4c9d7',
+    '#a0aaa8': '#9eb6c6', '#a0adaa': '#9eb6c6', '#52646a': '#d3e4ed',
+    '#2d7b79': '#66c9c1', '#286967': '#93e0d8', '#6b4b96': '#ba98e7',
+    '#5b427f': '#d6bcf5', '#007d7d': '#6dd9d0', '#16875f': '#6bdca6'
+  });
+
+  function reviewInk(color, theme) {
+    if (theme !== 'dark') return color;
+    if (darkReviewColors[color]) return darkReviewColors[color];
+    // Custom aircraft labels keep their hue; actual track stroke colours stay as assigned.
+    return /^#[a-f\d]{6}$/i.test(color) ? `color-mix(in srgb, ${color} 58%, white)` : color;
+  }
+
   const GLYPH_SIZE = 12;
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -236,6 +253,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     context.restore();
   }
 
-  return Object.freeze({ GLYPH_SIZE, runwayGeometry, approachPoint, drawRunwayStrip, canvasMetrics, rangeRings, drawRangeRings, drawAircraftGlyph,
+  return Object.freeze({ GLYPH_SIZE, reviewInk, runwayGeometry, approachPoint, drawRunwayStrip, canvasMetrics, rangeRings, drawRangeRings, drawAircraftGlyph,
     overlayObstacles, labelMode, minuteVectorNm, aircraftLabels, placeAircraftLabels, drawAircraftLabels, overlaps });
 });

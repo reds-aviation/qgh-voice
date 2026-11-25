@@ -31,6 +31,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     STUDENT_HEARTBEAT: 'student-heartbeat',
     PREFERENCES: 'preferences',
     PILOT_PLAYBACK: 'pilot-playback',
+    CONTROLLER_VOICE: 'controller-voice',
+    CONTROLLER_VOICE_RESULT: 'controller-voice-result',
     ADMISSION_GRANTED: 'admission-granted',
     ADMISSION_REJECTED: 'admission-rejected',
     LIFECYCLE: 'lifecycle',
@@ -44,11 +46,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   const STUDENT_TYPES = new Set([
     TYPES.JOIN_REQUEST, TYPES.REJOIN_REQUEST, TYPES.READY,
-    TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK
+    TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK, TYPES.CONTROLLER_VOICE
   ]);
   const INSTRUCTOR_TYPES = new Set([
     TYPES.ADMISSION_GRANTED, TYPES.ADMISSION_REJECTED, TYPES.LIFECYCLE,
-    TYPES.PUBLIC_METADATA, TYPES.OBSERVATION, TYPES.CAPTION,
+    TYPES.PUBLIC_METADATA, TYPES.OBSERVATION, TYPES.CAPTION, TYPES.CONTROLLER_VOICE_RESULT,
     TYPES.HOST_HEARTBEAT, TYPES.STUDENT_DISCONNECTED, TYPES.TERMINATED
   ]);
   const ALL_TYPES = new Set([...STUDENT_TYPES, ...INSTRUCTOR_TYPES]);
@@ -58,7 +60,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     [TYPES.READY]: ['clientId', 'seatToken', 'audioMode'],
     [TYPES.STUDENT_HEARTBEAT]: ['clientId', 'seatToken'],
     [TYPES.PREFERENCES]: ['clientId', 'seatToken', 'captions', 'audioEnabled'],
-    [TYPES.PILOT_PLAYBACK]: ['clientId', 'seatToken', 'transmissionId', 'phase']
+    [TYPES.PILOT_PLAYBACK]: ['clientId', 'seatToken', 'transmissionId', 'phase'],
+    [TYPES.CONTROLLER_VOICE]: ['clientId', 'seatToken', 'requestId', 'transcript', 'voiceWindowId', 'mode', 'modelIntent']
   });
   const INSTRUCTOR_PAYLOAD_KEYS = Object.freeze({
     [TYPES.ADMISSION_GRANTED]: ['seatToken', 'rejoined', 'publicMetadata'],
@@ -67,6 +70,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     [TYPES.PUBLIC_METADATA]: ['publicMetadata'],
     [TYPES.OBSERVATION]: ['observation'],
     [TYPES.CAPTION]: ['caption', 'transmissionId'],
+    [TYPES.CONTROLLER_VOICE_RESULT]: ['requestId', 'status', 'message'],
     [TYPES.HOST_HEARTBEAT]: ['state'],
     [TYPES.STUDENT_DISCONNECTED]: ['reason'],
     [TYPES.TERMINATED]: ['reason']
@@ -262,13 +266,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return { ok: false, reason: 'invalid-pin' };
     }
     if (message.type === TYPES.JOIN_REQUEST && message.payload.seat !== 'controller') return { ok: false, reason: 'invalid-seat' };
-    if ([TYPES.REJOIN_REQUEST, TYPES.READY, TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK].includes(message.type)
+    if ([TYPES.REJOIN_REQUEST, TYPES.READY, TYPES.STUDENT_HEARTBEAT, TYPES.PREFERENCES, TYPES.PILOT_PLAYBACK, TYPES.CONTROLLER_VOICE].includes(message.type)
       && !text(message.payload.seatToken, 64)) return { ok: false, reason: 'invalid-seat-token' };
     if (message.type === TYPES.READY && !['audio', 'captions'].includes(message.payload.audioMode)) {
       return { ok: false, reason: 'invalid-audio-mode' };
     }
     if (message.type === TYPES.PILOT_PLAYBACK && (!text(message.payload.transmissionId, 120)
       || !['started', 'ended', 'unavailable'].includes(message.payload.phase))) return { ok: false, reason: 'invalid-playback' };
+    if (message.type === TYPES.CONTROLLER_VOICE && (!safeId(message.payload.requestId) || !safeId(message.payload.voiceWindowId)
+      || (message.payload.modelIntent !== undefined && !['heading-turn','heading-report','range-report','df-transmission','standby','other'].includes(message.payload.modelIntent))
+      || !text(message.payload.transcript, 240)?.trim() || !['human', 'automatic'].includes(message.payload.mode))) {
+      return { ok: false, reason: 'invalid-controller-call' };
+    }
     if (message.type === TYPES.PREFERENCES
       && (typeof message.payload.captions !== 'boolean' || typeof message.payload.audioEnabled !== 'boolean')) {
       return { ok: false, reason: 'invalid-preferences' };
@@ -282,6 +291,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (containsForbiddenTruth(message.payload)) return { ok: false, reason: 'truth-shaped-payload' };
     if (!hasOnlyKeys(message.payload, INSTRUCTOR_PAYLOAD_KEYS[message.type])) {
       return { ok: false, reason: 'invalid-instructor-payload' };
+    }
+    if (message.type === TYPES.CONTROLLER_VOICE_RESULT && (!message.targetClientId || !safeId(message.payload.requestId)
+      || !['sent', 'applied', 'rejected'].includes(message.payload.status) || !text(message.payload.message, 240))) {
+      return { ok: false, reason: 'invalid-controller-call-result' };
     }
     if (message.payload.publicMetadata?.meetingUrl != null) {
       try { Meeting.normalizeMeetUrl(message.payload.publicMetadata.meetingUrl); }
@@ -463,6 +476,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const safe = {};
     copyText(safe, metadata, 'mode', 16, ['qgh', 'surveillance', 'sra', 'par']);
     copyText(safe, metadata, 'procedure', 16, ['normal', 'us']);
+    copyText(safe, metadata, 'controllerVoiceMode', 16, ['human', 'automatic']);
+    if (metadata.voiceWindowId != null) {
+      if (!safeId(metadata.voiceWindowId)) throw new Error('invalid-controller-call-window');
+      safe.voiceWindowId = metadata.voiceWindowId;
+    }
     copyText(safe, metadata, 'callsign', 32);
     copyText(safe, metadata, 'approachCallsign', 32);
     copyNumber(safe, metadata, 'aircraftCount', 1, 24);
@@ -586,6 +604,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     let latestObservation = null;
     let unsubscribe;
     const inboundRevision = new Map();
+    let voiceWindowId = null;
+    const voiceResults = new Map();
     writeDiscovery(options.storage, { pin, sessionId, channelName, createdAt, expiresAt: admitted ? Number.MAX_SAFE_INTEGER : expiresAt });
 
     // Private host recovery is stored only in the instructor tab. It is never
@@ -668,7 +688,25 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         return { ok: false, reason: 'not-admitted' };
       }
       admitted.lastSeenAt = now();
-      if (message.type === TYPES.READY) {
+      if (message.type === TYPES.CONTROLLER_VOICE) {
+        const { requestId, transcript, mode } = message.payload;
+        const expectedMode = publicMetadata.controllerVoiceMode || 'human';
+        let reply = { status: 'rejected', message: 'Exercise or voice mode changed. Make a new call when running.' };
+        if (state === 'running' && admitted.ready && !admitted.disconnected && voiceWindowId === message.payload.voiceWindowId
+          && expectedMode === mode && ['qgh', 'sra', 'surveillance'].includes(publicMetadata.mode)) {
+          if (voiceResults.has(requestId)) reply = voiceResults.get(requestId);
+          else {
+            reply = { status: 'rejected', message: 'The instructor could not process the call.' };
+            voiceResults.set(requestId, reply);
+            try {
+              const outcome = options.onControllerVoice?.({ requestId, transcript, mode, ...(message.payload.modelIntent ? { modelIntent: message.payload.modelIntent } : {}) });
+              if (outcome && ['sent', 'applied', 'rejected'].includes(outcome.status) && text(outcome.message, 240)) reply = outcome;
+            } catch (_) { /* Keep the request consumed if its handler failed after applying it. */ }
+            voiceResults.set(requestId, reply);
+          }
+        }
+        send(TYPES.CONTROLLER_VOICE_RESULT, { requestId, status: reply.status, message: reply.message }, admitted.clientId);
+      } else if (message.type === TYPES.READY) {
         admitted.ready = true;
         admitted.audioMode = ['audio', 'captions'].includes(message.payload.audioMode) ? message.payload.audioMode : 'captions';
         if (state === 'admitted') state = 'ready';
@@ -709,6 +747,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (!allowed.includes(state)) return false;
       advanceTime(time);
       state = next;
+      voiceWindowId = next === 'running' ? generateHex(16, cryptoSource) : null;
+      voiceResults.clear();
+      publicMetadata = sanitizePublicMetadata({ ...publicMetadata, voiceWindowId });
+      if (voiceWindowId) send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
       send(TYPES.LIFECYCLE, { state }, admitted && admitted.clientId);
       event('lifecycle', { state });
       return true;
@@ -737,7 +779,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     function updatePublicMetadata(metadata, time = simulationTime, {allowPending = false} = {}) {
       if (!(allowPending ? ['waiting','admitted','ready','running','paused'] : ['running','paused']).includes(state) || (!admitted && !allowPending)) return false;
       advanceTime(time);
-      const nextMetadata = sanitizePublicMetadata(metadata);
+      const nextMetadata = sanitizePublicMetadata({ ...metadata, voiceWindowId });
       if (nextMetadata.mode !== publicMetadata.mode || nextMetadata.radarProfile !== publicMetadata.radarProfile) latestObservation = null;
       publicMetadata = nextMetadata;
       if (admitted) send(TYPES.PUBLIC_METADATA, { publicMetadata }, admitted.clientId);
@@ -847,6 +889,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     let publicMetadata = null;
     let observation = null;
     let caption = null;
+    let voiceWindowId = null;
     let reason = discovery ? null : 'unable-to-join';
     let unsubscribe;
     const sessionId = discovery && discovery.sessionId;
@@ -854,7 +897,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (!transport && discovery) transport = transportFrom(options.transportFactory, channelName);
 
     function snapshot() {
-      return deepFreeze({ clientId, sessionId, channelName, state, simulationTime, publicMetadata,
+      return deepFreeze({ clientId, sessionId, channelName, state, simulationTime, publicMetadata, voiceWindowId,
         observation, caption, reason, admitted: Boolean(seatToken), lastHostSeenAt, lastObservationAt, lastProgressAt });
     }
     function event(kind, details = {}) { onEvent(deepFreeze({ kind, ...details, snapshot: snapshot() })); }
@@ -911,6 +954,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         if (!seatToken) return { ok: false, reason: 'state-before-admission' };
         if (message.payload.state === 'running' && state !== 'running') lastProgressAt = now();
         state = message.payload.state;
+        voiceWindowId = state === 'running' ? publicMetadata?.voiceWindowId || null : null;
         event('lifecycle', { state });
       } else if (message.type === TYPES.OBSERVATION) {
         if (!seatToken) return { ok: false, reason: 'state-before-admission' };
@@ -925,6 +969,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         if (!seatToken || !text(message.payload.caption, 240)) return { ok: false, reason: 'invalid-caption' };
         caption = message.payload.caption;
         event('caption', { caption, transmissionId: message.payload.transmissionId });
+      } else if (message.type === TYPES.CONTROLLER_VOICE_RESULT) {
+        if (!seatToken) return { ok: false, reason: 'state-before-admission' };
+        event('controller-voice-result', message.payload);
       } else if (message.type === TYPES.STUDENT_DISCONNECTED) {
         state = 'disconnected'; reason = message.payload.reason || 'disconnected'; event('disconnected', { reason });
       } else if (message.type === TYPES.TERMINATED) {
@@ -949,6 +996,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return send(TYPES.READY, { seatToken, audioMode: audioMode === 'audio' ? 'audio' : 'captions' });
     }
     function heartbeat() { return seatToken ? send(TYPES.STUDENT_HEARTBEAT, { seatToken }) : false; }
+    function controllerVoice({ requestId, transcript, modelIntent } = {}) {
+      if (!seatToken || state !== 'running' || transport?.controllerVoiceSupported === false
+        || !voiceWindowId || !safeId(requestId) || !text(transcript, 240)?.trim()) return false;
+      return send(TYPES.CONTROLLER_VOICE, { seatToken, requestId, transcript, voiceWindowId, ...(!transport?.controllerVoiceSupported && modelIntent ? { modelIntent } : {}), mode: publicMetadata?.controllerVoiceMode || 'human' });
+    }
     function preferences(values = {}) {
       return seatToken ? send(TYPES.PREFERENCES, { seatToken, captions: values.captions !== false,
         audioEnabled: values.audioEnabled === true }) : false;
@@ -967,7 +1019,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     function close() { if (unsubscribe) unsubscribe(); transport?.close?.(); }
     if (transport) unsubscribe = transport.subscribe(receive);
     return Object.freeze({ clientId, sessionId, channelName, requestJoin, ready, heartbeat,
-      preferences, rejoin, pilotPlayback, receive, tick, close, snapshot });
+      preferences, rejoin, pilotPlayback, controllerVoice, receive, tick, close, snapshot });
   }
 
   return Object.freeze({

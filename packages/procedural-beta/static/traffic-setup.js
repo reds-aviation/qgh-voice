@@ -35,10 +35,37 @@ function numberInput(name, min, max, value) {
     input.required = true;
     return input;
 }
+const trainingScenarios = {
+    crossing: {
+        title: 'Crossing traffic', mode: 'area',
+        goal: 'Compare two reports and plan separation before the aircraft cross.',
+        aircraft: [
+            { qteDeg: 270, rangeNm: 32, headingDeg: 90, speedKt: 300, altitudeFt: 12000 },
+            { qteDeg: 0, rangeNm: 28, headingDeg: 180, speedKt: 270, altitudeFt: 12000 },
+        ],
+    },
+    sequencing: {
+        title: 'Arrival sequencing', mode: 'approach',
+        goal: 'Sequence two arrivals and plan when each should report.',
+        aircraft: [
+            { qteDeg: 270, rangeNm: 18, headingDeg: 90, speedKt: 180, altitudeFt: 4500 },
+            { qteDeg: 320, rangeNm: 26, headingDeg: 135, speedKt: 220, altitudeFt: 6500 },
+        ],
+    },
+    circuit: {
+        title: 'Circuit traffic', mode: 'aerodrome',
+        goal: 'Coordinate two aircraft approaching the circuit.',
+        aircraft: [
+            { qteDeg: 270, rangeNm: 7, headingDeg: 90, speedKt: 110, altitudeFt: 1800 },
+            { qteDeg: 160, rangeNm: 10, headingDeg: 340, speedKt: 115, altitudeFt: 2200, spawnTime: 60 },
+        ],
+    },
+};
+
 export function createTrafficSetup(host) {
     const panel = element('section', 'setup-panel');
     const heading = element('div', 'section-title');
-    heading.append(element('h2', '', 'Set up starting traffic'), element('p', '', 'Set your aircraft here first. Airspace can be loaded or edited separately; your traffic entries stay available.'));
+    heading.append(element('h2', '', 'Set up starting traffic'), element('p', '', 'Create the exercise with this traffic, or edit the aircraft below.'));
     const returnExercise = element('button', 'secondary', 'Return to exercise →');
     returnExercise.id = 'traffic-return-exercise';
     returnExercise.type = 'button';
@@ -75,11 +102,53 @@ export function createTrafficSetup(host) {
     const airspaceLabel = element('p', 'setup-airspace-label');
     airspaceLabel.setAttribute('aria-live', 'polite');
     const airspaceButton = element('button', 'secondary', 'Prepare airspace');
+    airspaceButton.id = 'traffic-prepare-airspace';
     airspaceButton.type = 'button';
     airspaceRow.append(airspaceLabel, airspaceButton);
+    const scenarios = element('details', 'traffic-scenarios');
+    scenarios.append(element('summary', '', 'Start from a training scenario'));
+    const scenarioSelect = element('select');
+    const scenarioLabel = element('label', 'setup-field', 'Training scenario');
+    for (const [id, scenario] of Object.entries(trainingScenarios)) {
+        const option = element('option', '', scenario.title); option.value = id;
+        scenarioSelect.append(option);
+    }
+    scenarioSelect.value = 'crossing';
+    scenarioLabel.append(scenarioSelect);
+    const objective = element('p', 'hint');
+    objective.setAttribute('aria-live','polite');
+    const useScenario = element('button', 'secondary', 'Replace draft with this traffic');
+    useScenario.type = 'button';
+    function describeScenario() {
+        const scenario = trainingScenarios[scenarioSelect.value];
+        objective.textContent = scenario.aircraft.length + ' aircraft. ' + scenario.goal;
+    }
+    scenarioSelect.addEventListener('change', describeScenario);
+    useScenario.addEventListener('click', () => {
+        const scenario = trainingScenarios[scenarioSelect.value];
+        title.value = scenario.title;
+        mode.value = scenario.mode;
+        count.value = String(scenario.aircraft.length);
+        visibleCount = scenario.aircraft.length;
+        syncControls();
+        scenario.aircraft.forEach((aircraft,index) => {
+            const row = rows[index];
+            row.navigation = {};
+            row.inputs.callsign.value = String(101 + index);
+            row.inputs.type.value = 'TRAINER';
+            row.inputs.compassUnserviceable.checked = false;
+            for (const field of numericFields) row.inputs[field.key].value = String(aircraft[field.key] ?? field.initial(index));
+        });
+        dirty = true;
+        error.hidden = true;
+        syncControls();
+    });
+    describeScenario();
+    scenarios.append(scenarioLabel, objective, useScenario);
     const roster = element('details', 'roster-editor optional-traffic');
     roster.append(element('summary', 'roster-editor-head', 'Initial aircraft · positions and performance'));
-    roster.open = true;
+    const trafficSummary = element('p', 'starting-traffic-summary');
+    trafficSummary.setAttribute('aria-live', 'polite');
     const navigator = element('label', 'roster-navigator', 'Jump to aircraft');
     const jump = element('select'); jump.setAttribute('aria-label', 'Jump to aircraft in roster'); navigator.append(jump); roster.append(navigator);
     jump.onchange = () => {
@@ -114,7 +183,7 @@ export function createTrafficSetup(host) {
     const cancel = element('button', 'secondary', 'Cancel');
     cancel.type = 'button';
     actions.append(create, cancel);
-    form.append(settings, airspaceRow, roster, error, actions);
+    form.append(trafficSummary, actions, error, scenarios, settings, roster, airspaceRow);
     panel.append(heading, form);
     host.container.replaceChildren(panel);
     host.container.hidden = true;
@@ -168,6 +237,13 @@ export function createTrafficSetup(host) {
         body.append(row);
         return { element: row, inputs, navigation: {} };
     }
+    function updateSummary() {
+        const family = Array.from(mode.options).find(option => option.value === mode.value)?.textContent || 'Area control';
+        const callsigns = rows.slice(0, Math.min(visibleCount, 3)).map(row => row.inputs.callsign.value.trim() || '—');
+        const more = visibleCount > 3 ? ` +${visibleCount - 3} more` : '';
+        const value = `${family} · ${visibleCount} aircraft · ${callsigns.join(', ')}${more}`;
+        if (trafficSummary.textContent !== value) trafficSummary.textContent = value;
+    }
     function syncControls() {
         const canReturn = !!host.returnToExercise && !!host.canReturn?.();
         returnExercise.hidden = returnStatus.hidden = !canReturn;
@@ -192,6 +268,7 @@ export function createTrafficSetup(host) {
         }));
         jump.value = chosen && Number(chosen) < visibleCount ? chosen : '0';
         navigator.hidden = visibleCount < 2;
+        updateSummary();
         create.textContent = pending ? 'Creating exercise…' : 'Create exercise';
         form.setAttribute('aria-busy', String(pending));
     }
@@ -230,10 +307,6 @@ export function createTrafficSetup(host) {
         const sessionTitle = readText(title, 'Session title', 100, true);
         if (!['area', 'approach', 'aerodrome'].includes(mode.value))
             fail(mode, 'Choose an exercise family.');
-        const environment = {
-            runwayHeadingDeg: host.view()?.environment.runwayHeadingDeg ?? 90,
-            qnhHpa: host.view()?.environment.qnhHpa ?? 1013.25,
-        };
         const currentEnvironment = host.view()?.environment || {};
         const callsigns = new Set();
         const aircraft = rows.slice(0, size).map((row, index) => {
@@ -262,7 +335,7 @@ export function createTrafficSetup(host) {
                 compassUnserviceable: row.inputs.compassUnserviceable.checked,
             };
         });
-        return { title: sessionTitle, mode: mode.value, aircraft, environment: { ...environment, dfHoldSeconds: currentEnvironment.dfHoldSeconds ?? 10, ...(currentEnvironment.magneticVariationKnown === false && currentEnvironment.trainingMagneticVariationDeg == null ? { trainingMagneticVariationDeg: 0 } : {}) } };
+        return { title: sessionTitle, mode: mode.value, aircraft, environment: { dfHoldSeconds: currentEnvironment.dfHoldSeconds ?? 10, ...(currentEnvironment.magneticVariationKnown === false && currentEnvironment.trainingMagneticVariationDeg == null ? { trainingMagneticVariationDeg: 0 } : {}) } };
     }
     function close() {
         epoch++;
@@ -297,6 +370,7 @@ export function createTrafficSetup(host) {
     form.addEventListener('change', event => { dirty = true; if (event.target.dataset.field === 'callsign') syncControls(); });
     form.addEventListener('input', event => {
         dirty = true;
+        if (event.target === mode || event.target.dataset.field === 'callsign') updateSummary();
         if (event.target instanceof HTMLElement)
             event.target.removeAttribute('aria-invalid');
         error.hidden = true;

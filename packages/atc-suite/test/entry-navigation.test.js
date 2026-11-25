@@ -29,7 +29,7 @@ function entry(search = '') {
   return { node, navigations };
 }
 
-test('entry keeps connection selection on both direct role links, including a late change', () => {
+test('entry keeps the connection on the instructor link and offers a single controller join action', () => {
   const h = entry();
   for (const mode of ['online', 'local']) {
     h.node('exerciseConnection').value = mode;
@@ -40,15 +40,12 @@ test('entry keeps connection selection on both direct role links, including a la
       assert.equal(url.searchParams.get('connection'), mode);
       assert.equal(url.searchParams.has('join'), false, 'opening the controller manually must not request admission');
     }
-    assert.equal(h.node('openControllerPosition').href,'#entryJoinPin');
+    assert.doesNotMatch(readFileSync(join(__dirname,'../index.html'),'utf8'), /openControllerPosition/);
   }
   h.node('exerciseConnection').value = 'online';
   h.node('openInstructorSetup').events.click();
   assert.equal(new URL(h.node('openInstructorSetup').href).searchParams.get('connection'), 'online');
   for(const event of ['contextmenu','auxclick']){
-    h.node('exerciseConnection').value='local';
-    h.node('openControllerPosition').events[event]();
-    assert.equal(h.node('openControllerPosition').href,'#entryJoinPin');
     h.node('exerciseConnection').value='online';
     h.node('openInstructorSetup').events[event]();
     assert.equal(new URL(h.node('openInstructorSetup').href).searchParams.get('connection'),'online');

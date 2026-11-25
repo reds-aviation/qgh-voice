@@ -1,0 +1,42 @@
+/* ATS SIM BOX · Copyright 2026 Balaram Reddy. Common Public Attribution License 1.0. */
+.suite-controller-voice {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem .75rem;
+  padding: .4rem .65rem;
+  margin: 0;
+  color: #e9f4fa;
+  background: #172a35;
+  border: 1px solid #506e80;
+  border-radius: .45rem;
+  line-height: 1.35;
+}
+.suite-controller-voice[hidden], .suite-controller-voice [hidden] { display: none !important; }
+.suite-controller-voice .scv-label { font-size: .9rem; }
+.suite-controller-voice button {
+  min-height: 40px; padding: .25rem .65rem; width: auto;
+  background: #234355; color: #fff; border: 1px solid #86aaba;
+  border-radius: .35rem; font: inherit; font-size: .9rem; cursor: pointer;
+}
+.suite-controller-voice button:focus-visible { outline: 3px solid #ffda74; outline-offset: 2px; }
+.suite-controller-voice .scv-talk {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  touch-action: none; user-select: none;
+}
+.suite-controller-voice .scv-talk::before {
+  content: '';
+  display: inline-block;
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round'%3E%3Crect x='9' y='2' width='6' height='13' rx='3'/%3E%3Cpath d='M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.suite-controller-voice .scv-talk[aria-pressed="true"] { background: #ae540d; color: #fff; }
+.suite-controller-voice button:disabled { opacity: .6; cursor: default; }
+.suite-controller-voice .scv-status, .suite-controller-voice .scv-heard {
+  font-size: .84rem; color: #d7eaf4; overflow-wrap: anywhere;
+}
+.suite-controller-voice .scv-heard { flex-basis: 100%; color: #ffe19c; }

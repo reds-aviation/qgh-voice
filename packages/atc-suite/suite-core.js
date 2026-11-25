@@ -529,6 +529,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
             ? 'DESCENDING TO ALTITUDE '
             : 'MAINTAINING ALTITUDE ')
           + Math.round(command.altitudeFt) + ' FEET' + suffix;
+      case 'standby':
+        return 'STANDING BY' + suffix;
+      case 'report-range':
+        return 'RANGE ' + report.rangeNm.toFixed(1) + ' NAUTICAL MILES' + suffix;
       case 'report-heading':
         return 'HEADING ' + padHeading(aircraft.headingDeg) + suffix;
       case 'report-position':
@@ -602,13 +606,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (!['sra', 'par'].includes(state.scenario.exerciseFamily)) {
         throw new Error('Runway visual reports are available only in SRA or PAR.');
       }
-    } else if (type !== 'transmit') {
+    } else if (!['transmit','standby','report-range'].includes(type)) {
       throw new Error('Unsupported suite command.');
     }
     return command;
   }
 
   function reportFor(state, command) {
+    if (command.type === 'report-range') return { kind: 'range', rangeNm: bearingFromPosition(state.aircraft.position).rangeNm };
     if (command.type === 'report-position') {
       const bearing = bearingFromPosition(state.aircraft.position);
       return {

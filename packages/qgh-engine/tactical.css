@@ -1196,6 +1196,7 @@ select:focus-visible {
 }
 
 .tactical-review-toolbar {
+  flex-wrap: wrap;
   position: relative;
   bottom: auto;
   z-index: auto;
@@ -1207,6 +1208,7 @@ select:focus-visible {
   box-shadow: 0 -3px 14px rgba(23, 38, 43, .05);
 }
 
+.tactical-review-toolbar > * { flex-shrink: 0; }
 .tactical-review-actions > button { min-height: 38px; }
 .tactical-replay-group {
   border: 1px solid #c7d0cb;
@@ -1579,3 +1581,31 @@ select:focus-visible {
 }
 
 .product-version{font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;white-space:nowrap}
+
+html[data-theme="light"] #tConsole .tactical-rail-select small {
+  color: inherit;
+}
+/* These labels belong to the button, including on a light selected surface
+   inside the dark review. Override the panel's separate heading/caption inks. */
+html[data-theme="dark"] #tAnalysis .tactical-legend-item :is(strong, small) {
+  color: inherit !important;
+}
+html[data-theme="dark"] #tSetup .tactical-formation-options {
+  background: var(--night-field);
+  border-color: var(--night-line);
+}
+#tConsole #tControls button:disabled {
+  color: #52626b;
+  background: #e9eef0;
+  border-color: #aab7bd;
+  opacity: 1;
+}
+html[data-theme="dark"] #tConsole #tControls button:disabled {
+  color: #adbdc8;
+  background: #20303c;
+  border-color: #526676;
+}
+html[data-theme="dark"] body[data-suite-surface="tactical"] #tConsole.active :is(.tactical-df-mode button, .tactical-rail-select)[aria-pressed="true"]:enabled {
+  background: var(--tab-selected);
+  color: var(--tab-selected-text);
+}

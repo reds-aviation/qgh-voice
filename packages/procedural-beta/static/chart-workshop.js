@@ -113,7 +113,8 @@ export function createChartWorkshop(context) {
     const savedKind = document.createElement('select'); savedKind.id = 'prepare-save-kind'; savedKind.setAttribute('aria-describedby', savedHint.id);
     savedKind.append(new Option('Airspace only (chart)', 'airspace'), new Option('Complete exercise (aircraft + chart)', 'exercise')); savedKind.value = 'airspace'; savedKindLabel.append(savedKind); saved.append(savedHint,savedKindLabel);
     const currentAirspace = document.createElement('p'); currentAirspace.id = 'prepare-airspace-current'; currentAirspace.className = 'hint'; airspace.append(currentAirspace);
-    const choices = document.createElement('div'); choices.className = 'airspace-preparation-actions';
+    const choices = document.createElement('div'); choices.className = 'airspace-preparation-actions airspace-source-methods';
+    choices.setAttribute('role', 'group'); choices.setAttribute('aria-label', 'Airspace entry method');
     const published = document.createElement('div'); published.id = 'prepare-published';
     const custom = document.createElement('div'); custom.id = 'prepare-custom';
     const existing = document.createElement('div'); existing.id = 'prepare-existing';
@@ -134,20 +135,47 @@ export function createChartWorkshop(context) {
     $('tab-pilot').append(additionalTraffic);
     additionalTraffic.append(sample);
     const progress = $('import').closest('details'); progress.open = false; progress.querySelector('summary').textContent = 'Progress file · includes exercise records'; $('tab-debrief').append(progress);
-    for (const heading of container.querySelectorAll(':scope > h2')) heading.textContent = 'Prepare airspace';
-    container.querySelector(':scope > .eyebrow').textContent = 'PUBLISHED · DRAW · COORDINATES';
+    // The drawer's persistent heading already names this panel.
+    container.querySelector(':scope > h2')?.remove();
+    container.querySelector(':scope > .eyebrow')?.remove();
+    container.setAttribute('aria-labelledby', 'drawer-title');
+    const shortcuts = document.createElement('nav');
+    shortcuts.className = 'airspace-section-links';
+    shortcuts.setAttribute('aria-label', 'Airspace sections');
+    for (const [target, label] of [[existing, 'Routes and areas'], [saved, 'Save or load']]) {
+        const link = document.createElement('a');
+        link.href = '#' + target.id;
+        link.textContent = label;
+        link.addEventListener('click', event => {
+            event.preventDefault();
+            if (target === saved) saved.open = true;
+            const heading = target.querySelector(target === saved ? ':scope > summary' : 'h3');
+            if (heading) {
+                if (target !== saved) heading.tabIndex = -1;
+                heading.focus({ preventScroll: true });
+            }
+            target.scrollIntoView?.({ block: 'start' });
+        });
+        shortcuts.append(link);
+    }
+    airspace.append(shortcuts);
     const openStep = id => { if (id === 'prepare-traffic-step') { context.openTraffic?.(); return; } for (const [key, panel] of steps) panel.open = key === id || key === 'prepare-save-load'; };
     const chooseSource = mode => {
         if (mode === 'published') preparation?.cancelSketch?.();
         published.hidden = mode !== 'published'; custom.hidden = mode === 'published';
         preparation?.setMethod?.(mode === 'draw' ? 'draw' : 'coordinates');
-        choices.querySelectorAll('button').forEach(button => button.setAttribute('aria-expanded', String(button.dataset.source === mode)));
+        choices.querySelectorAll('button').forEach(button => {
+            const selected = String(button.dataset.source === mode);
+            button.setAttribute('aria-expanded', selected);
+            button.setAttribute('aria-pressed', selected);
+        });
     };
     for (const [mode,label] of [['published','Published airspace'],['draw','Draw on chart'],['coordinates','Enter coordinates']]) {
         const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.dataset.source = mode;
+        if (mode === 'draw') button.id = 'prepare-draw-chart';
         button.setAttribute('aria-controls', mode === 'published' ? published.id : custom.id); button.onclick = () => chooseSource(mode); choices.append(button);
     }
-    airspace.append(choices,published,custom,existing);
+    airspace.append(choices,published,custom,$('exercise-runway-settings'),existing);
     const footer = document.createElement('div'); footer.className = 'airspace-preparation-actions'; footer.id = 'prepare-airspace-actions';
     const continueButton = document.createElement('button'); continueButton.type = 'button'; continueButton.id = 'prepare-traffic-next'; continueButton.textContent = 'Back to traffic setup'; continueButton.onclick = () => context.openTraffic?.(); footer.append(continueButton);
     container.append(airspace, saved, chartSettings, footer);
@@ -211,7 +239,20 @@ export function createChartWorkshop(context) {
             context.message(e.message, true);
         }
     };
-    function bind(id, action) { form(id).addEventListener('submit', e => { e.preventDefault(); const button = form(id).querySelector('button'); button.disabled = true; void run(action)().finally(() => button.disabled = false); }); }
+    function bind(id, action, canSubmit = () => true) {
+        const target = form(id);
+        const button = target.querySelector('button[type="submit"],button:not([type])');
+        let pending = false;
+        const syncButton = () => { button.disabled = pending || !canSubmit(); };
+        target.addEventListener('submit', event => {
+            event.preventDefault();
+            if (pending || !canSubmit()) return;
+            pending = true; syncButton();
+            void run(action)().finally(() => { pending = false; syncButton(); });
+        });
+        syncButton();
+        return syncButton;
+    }
     function element(tag, text) { const e = document.createElement(tag); e.textContent = text; return e; }
     function record(title, body, reference = '') {
         const article = element('article', '');
@@ -360,6 +401,7 @@ export function createChartWorkshop(context) {
     }
     const preview = () => {
         const item = catalogue.find(a => a.id === value('aerodrome-form', 'aerodrome')), extra = item && enroute?.aerodromes[item.id];
+        syncPublishedSubmit();
         $('aerodrome-preview').textContent = item && extra ? 'Load all available routes and areas from this published snapshot. Clear a tick to hide an item on both scopes; it remains available in Declutter.' : '';
         selection.replaceChildren();
         $('aerodrome-layout').hidden = !item;
@@ -394,7 +436,7 @@ export function createChartWorkshop(context) {
         for (const chart of extra.charts || []) list.append(record(chart.title, `Official chart · edition effective ${chart.editionEffectiveDate}`, chart.url));
     };
     field('aerodrome-form', 'aerodrome').addEventListener('change', preview);
-    bind('aerodrome-form', async () => {
+    const syncPublishedSubmit = bind('aerodrome-form', async () => {
         const item = catalogue.find(a => a.id === value('aerodrome-form', 'aerodrome'));
         if (!item)
             throw new Error('Select an aerodrome.');
@@ -434,7 +476,7 @@ export function createChartWorkshop(context) {
         dirtyFields.clear(); preparation.discardDraft?.(); signature = '';
         context.changed();
         context.message(`${item.name}: ${chosen.routes.length} routes and ${areas.length} areas loaded. ${visible.routes.length} routes and ${visible.areas.length} areas visible; traffic kept.`);
-    });
+    }, () => !!enroute?.aerodromes[value('aerodrome-form', 'aerodrome')]);
     void Promise.all(['india-airspace.json', 'india-aip-enroute.json'].map(async (path) => {
         const r = await fetch(path);
         if (!r.ok)
@@ -497,6 +539,7 @@ export function createChartWorkshop(context) {
             if (next === signature)
                 return;
             signature = next;
+            $('exercise-runway-course').textContent = Number.isFinite(env.runwayHeadingDeg) ? `· ${String(Math.round(env.runwayHeadingDeg)).padStart(3, '0')}°T` : '';
             $('chart-name').textContent = env.aerodromeName || 'Custom airspace';
             $('chart-info').replaceChildren(record(`${env.stationName || 'NAV0'} · ${(env.stationType || 'df').toUpperCase()} ${env.stationFrequency || ''}`, `QNH ${env.qnhHpa} hPa · wind ${env.windDirectionDeg}°T / ${env.windSpeedKt} kt\n${env.magneticVariationKnown === false ? `Training magnetic reference ${env.trainingMagneticVariationDeg ?? 0}°E · exercise assumption` : `Configured magnetic reference ${env.magneticVariationDeg}°E`}\n${env.effectiveInfo || 'Instructor-defined exercise'}\n${env.briefing || 'Instructor briefing not yet entered.'}`, env.chartReference));
             const base = catalogue.find(a => env.aerodromeName === a.name + (a.icao ? ` (${a.icao})` : '') && env.chartOrigin && Math.abs(a.origin.latitude - env.chartOrigin.latitude) < 1e-8 && Math.abs(a.origin.longitude - env.chartOrigin.longitude) < 1e-8);

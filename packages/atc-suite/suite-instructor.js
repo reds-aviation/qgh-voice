@@ -34,11 +34,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     running: false, accumulator: 0, trainingTimeRate: DEFAULT_TRAINING_TIME_RATE, previousFrame: null, readbackTimer: null,
     dfTimer: null, latestObservation: null, pendingClient: null, lastRenderedEvent: 0,
     lastRecordedObservation: null, rosterRows: [], transmission: null, scopeTransform: null,
-    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false, clickTimer: null,
+    inspectedAircraftId: null, guideStep: 0, reviewTime: 0, reviewPlaying: false, reviewBookmark: null, clickTimer: null,
     studentWindow: null, studentWindowSessionId: null, previousTick: null, radioAudio: false, runtimeError: null, dirty: false,
     scopePan: { x: 0, y: 0 }, scopeDrag: null, lastRightClick: null, suppressClickUntil: 0,
     initialScenario: null, initialSetup: null, restoreMessage: '', lastCheckpoint: 0, meetingUrl: '', loggingOut: false,
-    heartbeatTimer: null, runtimeTimer: null, animationFrame: null
+    heartbeatTimer: null, runtimeTimer: null, animationFrame: null, controllerVoiceMode: 'human'
   };
   let attemptGeneration = 0;
   let publishedPicker = null, restoringPublishedPicker = false;
@@ -63,6 +63,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   meetingPanel?.addShortcut(byId('activeWorkspace')?.querySelector('.status-stack'));
   meetingPanel?.addShortcut(byId('reviewScreen')?.querySelector('.workspace-head'));
   const startupChecklist = globalThis.ATCSuiteMeeting?.createStartupChecklist({container:byId('sessionDrawer')?.querySelector('.session-rail')});
+  if (startupChecklist?.element) byId('studentCard').after?.(startupChecklist.element);
   function startupOptions() {
     const protocol = state.session?.snapshot?.(), admission = state.session?.recoverySnapshot?.()?.admitted;
     return {online:!!state.cloudTransport,connected:!state.cloudTransport || state.cloudTransport.connected,
@@ -71,8 +72,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ready:admission ? admission.ready === true : protocol ? ['ready','running','paused'].includes(protocol.state) : !!state.session,
       disconnected:admission?.disconnected === true};
   }
-  function startupStatus() {
-    const options = startupOptions();
+  function startupStatus(options = startupOptions()) {
     return globalThis.ATCSuiteMeeting?.startupReadiness?.(options) || {allowed:(!options.online || options.connected) && options.admitted && options.ready && !options.disconnected,reason:'Open Session: check the exercise connection, share the PIN, admit the controller and wait for Ready.'};
   }
   function openStartSetup() {
@@ -195,7 +195,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function loadPreset() {
     try {
       const item = selectedPreset(); checkPresetCapacity(item.setup);
-      restoreSetup(item.setup); byId('savedExerciseName').value = item.name;
+      restoreSetup(item.setup, { restoreConnection: false }); byId('savedExerciseName').value = item.name;
       byId('presetStatus').textContent = 'Loaded the original starting traffic. Create a session when ready.';
     } catch (error) { byId('presetStatus').textContent = error.message; }
   }
@@ -272,7 +272,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       let name = String(data.name || 'Imported exercise').trim().slice(0, 48) || 'Imported exercise', suffix = 2;
       const base = name;
       while (presets().some(item => item.name?.toLowerCase() === name.toLowerCase())) name = `${base} imported ${suffix++}`;
-      changed = true; restoreSetup(data.setup); Core.createState(scenarioInput()); byId('savedExerciseName').value = name;
+      changed = true; restoreSetup(data.setup, { restoreConnection: false }); Core.createState(scenarioInput()); byId('savedExerciseName').value = name;
       persistPreset({ id: crypto.randomUUID(), name: presetName(), version: 1, setup: captureSetup() }, { add: true });
       byId('presetStatus').textContent = 'Imported as an independent saved exercise. Original entries are unchanged.';
     } catch (error) {
@@ -289,7 +289,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     })).filter(item => item.id);
   }
 
-  function restoreSetup(saved) {
+  function restoreSetup(saved, { restoreConnection = true } = {}) {
     if (!Array.isArray(saved)) return;
     if (byId('publishedAirspaceData')) byId('publishedAirspaceData').value = '';
     const savedFamily = saved.find(item => item.id === 'exerciseFamily');
@@ -298,12 +298,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (count) byId('aircraftCount').value = String(Math.max(1, Math.min(maxNewAircraft(), Number(count.value) || 1)));
     syncRoster();
     for (const item of saved) {
+      if (item.id === 'exerciseConnection' && !restoreConnection) continue;
       const node = byId(item.id);
       if (!node || !node.closest?.('#scenarioForm')) continue;
       if (item.id === 'exerciseFamily' && item.value === 'par') continue;
       node.value = item.id === 'scanPreset' ? '15' : String(item.value);
       if (node.type === 'checkbox') node.checked = item.checked === true;
       if (item.id === 'radarReturn' || /^radarReturn-\d+$/.test(item.id)) node.dataset.radarReturnAuto = item.radarAuto === 'true' ? 'true' : 'false';
+    }
+    if (!saved.some(item => item.id === 'customFinalTrack')) {
+      const runway = saved.find(item => item.id === 'runwayOrientation');
+      const final = saved.find(item => item.id === 'finalTrack');
+      byId('customFinalTrack').checked = final != null && final.value !== '' && Number(final.value) !== Number(runway?.value ?? byId('runwayOrientation').value);
     }
     configureFields();
     syncPublishedPicker();
@@ -324,9 +330,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       const simulation = structuredClone(state.simulation);
       for (const id of Object.keys(simulation.truthTrails)) simulation.truthTrails[id] = simulation.truthTrails[id].filter((item, index, rows) => index === rows.length - 1 || index === 0 || Math.floor(item.timestamp) !== Math.floor(rows[index - 1].timestamp));
       sessionStorage.setItem(RECOVERY_KEY, JSON.stringify({ version: 1, savedAt: Date.now(), setup: captureSetup(),
-        simulation, initialScenario: state.initialScenario, initialSetup: state.initialSetup, review,
+        simulation, initialScenario: state.initialScenario, initialSetup: state.initialSetup, review, reviewBookmark: state.reviewBookmark,
         protocol: state.session?.recoverySnapshot?.(), cloud: state.cloudTransport?.recoverySnapshot?.(),
-        trainingTimeRate: state.trainingTimeRate, meetingUrl: state.meetingUrl }));
+        trainingTimeRate: state.trainingTimeRate, meetingUrl: state.meetingUrl, controllerVoiceMode: state.controllerVoiceMode }));
       state.lastCheckpoint = performance.now();
     } catch (_) { byId('recoveryStatus').textContent = 'Recovery storage full · save/export the scenario before leaving.'; }
   }
@@ -354,7 +360,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (generation !== attemptGeneration) { cloud?.transport?.close(); return; }
       state.initialScenario = saved.initialScenario;
       state.initialSetup = saved.initialSetup || null;
+      state.controllerVoiceMode = saved.controllerVoiceMode === 'automatic' ? 'automatic' : 'human';
       state.simulation = simulation; state.running = false;
+      state.reviewBookmark = review && Number.isFinite(saved.reviewBookmark) && saved.reviewBookmark >= 0 && saved.reviewBookmark <= simulation.simulationSeconds ? saved.reviewBookmark : null;
       state.sensor = createSensor({ ...simulation.scenario, startSeconds: simulation.simulationSeconds });
       state.sra = createSraReferences(simulation.scenario);
       state.review = Sensors.createReviewTimeline();
@@ -365,7 +373,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       state.meetingUrl = cloud ? globalThis.ATCSuiteMeeting.normalizeMeetUrl(saved.meetingUrl || '') : '';
       state.session = Session.createInstructorSession({ ...saved.protocol, recovery: saved.protocol,
         publicMetadata: publicMetadataForSimulation(), storage: cloud ? undefined : localStorage, ...(cloud || {}),
-        transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent });
+        transportFactory: channelName => Session.createLocalSessionTransport({ channelName }), onEvent: onSessionEvent, onControllerVoice: handleControllerVoice });
       if (review) state.session.terminate('exercise-terminated', state.simulation.simulationSeconds);
       setTrainingTimeRate(saved.trainingTimeRate);
       byId('setupPanel').hidden = true; byId('activeWorkspace').hidden = review; byId('reviewScreen').hidden = !review;
@@ -616,6 +624,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function configureFields() {
     const mode = family.value;
     const radarMode = ['surveillance', 'sra'].includes(mode);
+    const customFinal = byId('customFinalTrack').checked === true;
+    byId('finalTrackField').hidden = !customFinal;
+    byId('finalTrack').disabled = !customFinal;
+    if (!customFinal) byId('finalTrack').value = byId('runwayOrientation').value;
     byId('procedureField').hidden = mode !== 'qgh';
     byId('scanPresetField').hidden = !radarMode;
     byId('radarProfileField').hidden = !radarMode;
@@ -638,7 +650,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       radarReturn.disabled = !radarMode;
       radarReturn.setAttribute('aria-disabled', String(!radarMode));
     }
-    byId('setupPreview').textContent = `QTE ${pad(number('initialBearing'))} · ${number('initialRange')} NM · HDG ${pad(number('initialHeading'))}`;
+    const setupBearing = id => byId(id).value === '' ? '—' : `${pad(number(id))}°M`;
+    const typeLabel = { qgh: 'QGH', sra: 'SRA', surveillance: 'Vectoring', par: 'PAR' }[mode] || 'Starting traffic';
+    byId('setupTrafficType').textContent = `${typeLabel} · ${number('aircraftCount')} aircraft`;
+    const callsign = byId('callsign').value.trim() || 'First aircraft';
+    byId('setupPreview').textContent = `${callsign} · QTE ${pad(number('initialBearing'))} · ${number('initialRange')} NM · HDG ${pad(number('initialHeading'))} · RWY ${setupBearing('runwayOrientation')}` +
+      (customFinal ? ` · FINAL ${setupBearing('finalTrack')}` : '');
   }
 
   function syncRoster() {
@@ -647,7 +664,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const maximum = maxNewAircraft();
     const count = Math.max(1, Math.min(maximum, Math.trunc(number('aircraftCount')) || 1));
     byId('aircraftCount').max = String(maximum); byId('aircraftCount').value = String(count);
-    byId('aircraftCountLabel').textContent = `AIRCRAFT COUNT · 1–${maximum}`;
+    byId('aircraftCountLabel').textContent = `Aircraft count · 1–${maximum}`;
     const fields = [
       ['callsign', 'callsign', '101'], ['squawk', 'four digit octal squawk', '4300'], ['radarReturn', 'radar return', 'primary'], ['aircraftType', 'type', 'fighter'], ['initialBearing', 'initial QTE', '65'],
       ['initialRange', 'initial range', '25'], ['initialHeading', 'initial heading', '225'],
@@ -809,6 +826,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function scenarioInput() {
     const mode = family.value;
+    const finalTrackSource = byId('customFinalTrack').checked === true ? 'finalTrack' : 'runwayOrientation';
+    if (byId('runwayOrientation').value === '') throw new Error('Enter the runway orientation.');
+    if (byId(finalTrackSource).value === '') throw new Error('Enter the final approach track or use the runway orientation.');
     const profile = byId('radarProfile').value;
     const radarEnvironment = radarEnvironmentInput(mode);
     const squawks = new Set();
@@ -843,7 +863,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       initialHeadingDeg: number('initialHeading'), altitudeFt: number('initialAltitude'),
       speedKt: number('initialSpeed'), rateDegPerSecond: number('turnRate'),
       verticalRateFpm: 1000, runwayOrientationDeg: number('runwayOrientation'),
-      finalTrackDeg: number('finalTrack'), surveillanceProfile,
+      finalTrackDeg: number(finalTrackSource), surveillanceProfile,
       sensorProfile: mode === 'par' ? `${byId('parRefresh').value}hz` : '15rpm',
       parRefreshHz: Number(byId('parRefresh').value), parTransferGateNm: number('parTransferGate'),
       ...(radarEnvironment ? { radarEnvironment } : {})
@@ -855,6 +875,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const approachAircraft = input.aircraft.find(aircraft => aircraft.aircraftId === input.approachAircraft);
     return {
       mode: input.exerciseFamily,
+      controllerVoiceMode: 'human',
       trainingTimeRate: state.trainingTimeRate,
       procedure: input.qghProcedure,
       callsign: input.callsign,
@@ -884,6 +905,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const metadata = {
       mode,
       trainingTimeRate: state.trainingTimeRate,
+      controllerVoiceMode: state.controllerVoiceMode,
       procedure: scenario.qghProcedure,
       callsign: simulation.aircraft.callsign,
       aircraftCount: simulation.aircraftList.length,
@@ -951,6 +973,35 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     byId('approachControlHint').textContent = approachMode
       ? 'Heading, descent, visual acquisition and missed-approach training controls.'
       : 'Position report sends the selected aircraft’s current bearing and range.';
+  }
+
+  function handleControllerVoice({ transcript, mode, modelIntent }) {
+    const simulation = state.simulation;
+    if (!simulation || simulation.lifecycle !== 'running' || !['qgh', 'sra', 'surveillance'].includes(simulation.scenario.exerciseFamily)) {
+      return { status: 'rejected', message: 'Controller calls require a running exercise.' };
+    }
+    const heard = byId('controllerVoiceHeard');
+    heard.textContent = 'Controller: ' + transcript;
+    heard.hidden = false;
+    if (mode === 'human') return { status: 'sent', message: 'Call delivered to the instructor.' };
+    if (mode !== 'automatic' || state.controllerVoiceMode !== 'automatic') return { status: 'rejected', message: 'Voice mode changed. Make a new call.' };
+    const voice = globalThis.ATSControllerVoice;
+    const roster = simulation.aircraftList.map(aircraft => aircraft.callsign);
+    const turn = voice?.interpretHeading(transcript, roster);
+    const request = voice?.interpretRequest?.(transcript, roster, modelIntent);
+    const reportTypes = { 'heading-report': 'report-heading', 'range-report': 'report-range', 'df-transmission': 'transmit', standby: 'standby' };
+    const target = turn ? { callsign: turn.callsign, command: { type: 'turn-to-heading', side: turn.side, headingDeg: turn.heading % 360 } }
+      : request ? { callsign: request.callsign, command: { type: reportTypes[request.intent] } }
+      : voice?.interpretClearance?.(transcript, roster);
+    const aircraft = target && simulation.aircraftList.find(item => item.callsign === target.callsign);
+    if (!aircraft) return { status: 'rejected', message: 'Say again. Use the full callsign and one instruction or request.' };
+    const { speedDirection, ...input } = target.command;
+    if ((speedDirection === 'reduce' && input.speedKt >= aircraft.speedKt) || (speedDirection === 'increase' && input.speedKt <= aircraft.speedKt)) {
+      return { status: 'rejected', message: 'Check the requested speed and direction of change.' };
+    }
+    const { outcome } = command({ ...input, aircraftId: aircraft.id }, turn ? (turn.side === 'left' ? 'quickHeadingLeft' : 'quickHeadingRight') : 'controllerVoiceHeard');
+    return outcome.accepted ? { status: 'applied', message: outcome.readback.text }
+      : { status: 'rejected', message: outcome.error };
   }
 
   function onSessionEvent(event) {
@@ -1021,7 +1072,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         publicMetadata: publicMetadata(input), storage: online ? undefined : localStorage,
         ...(cloud || {}),
         transportFactory: channelName => Session.createLocalSessionTransport({ channelName }),
-        onEvent: onSessionEvent
+        onEvent: onSessionEvent, onControllerVoice: handleControllerVoice
       });
       finishTransmission(); state.session?.close(); state.cloudTransport?.close();
       state.cloudTransport = cloud?.transport || null; state.meetingUrl = '';
@@ -1030,7 +1081,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       state.latestObservation = null; state.lastRecordedObservation = null; state.lastRenderedEvent = 0;
       byId('eventLog').replaceChildren();
       state.review = Sensors.createReviewTimeline(); state.review.recordTruth(truthForReview());
+      state.reviewBookmark = null;
+      byId('reviewPerspective').value = 'compare';
       state.session = nextSession; committed = true;
+      state.controllerVoiceMode = 'human';
+      byId('controllerVoiceHeard').hidden = true;
       resetTrainingTimeRate(input.exerciseFamily);
       state.pendingClient = null; state.radioAudio = false;
       state.running = false; state.accumulator = 0; state.previousFrame = null; state.previousTick = null; state.runtimeError = null;
@@ -1051,6 +1106,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       byId('startExercise').disabled = true;
       updateAll(); renderMeeting();
       enterWorkspace(byId('activeWorkspace'));
+      openStartSetup();
       checkpoint();
       state.cloudTransport?.start();
       setStudentDisplayStatus(online
@@ -1351,6 +1407,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     byId('instructorZoomIn').disabled = scopeRange <= 5;
     byId('instructorZoomOut').disabled = scopeRange >= 100;
     const snapshot = Core.truthSnapshot(state.simulation), a = snapshot.aircraft, b = snapshot.bearing;
+    const voiceSettings = byId('controllerVoiceSettings');
+    voiceSettings.hidden = !['qgh', 'sra', 'surveillance'].includes(snapshot.scenario.exerciseFamily)
+      || Boolean(state.cloudTransport && !state.cloudTransport.controllerVoiceSupported);
+    const voiceMode = byId('controllerVoiceMode');
+    if (voiceMode.value !== state.controllerVoiceMode) voiceMode.value = state.controllerVoiceMode;
+    const noHeading = snapshot.scenario.exerciseFamily === 'qgh' && snapshot.scenario.qghProcedure === 'us';
+    voiceMode.disabled = noHeading;
+    const help = noHeading ? 'The instructor handles timed turns in U/S Compass.'
+      : state.controllerVoiceMode === 'automatic' ? 'Say the full callsign and one instruction. The pilot can turn, change speed or altitude, and answer heading, range and position requests supported in this exercise.'
+      : 'Read the controller’s call in Aircraft & radio and operate the aircraft.';
+    if (byId('controllerVoiceHelp').textContent !== help) byId('controllerVoiceHelp').textContent = help;
     focusMode?.setPhase(snapshot.lifecycle);
     byId('truthCallsign').textContent = a.callsign;
     for (const button of byId('aircraftRosterTabs').children) {
@@ -1361,13 +1428,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     // A restored paused attempt resumes through the Pause/Resume control.
     // Start is only for a newly prepared attempt, never a second resume action.
     byId('startExercise').hidden = ['running', 'paused', 'review'].includes(snapshot.lifecycle);
-    const startup = startupStatus();
+    const sessionOptions = startupOptions();
+    const startup = startupStatus(sessionOptions);
+    byId('releaseStudent').hidden = !sessionOptions.admitted;
     byId('startExercise').disabled = snapshot.lifecycle !== 'ready' || !startup.allowed;
     byId('startExercise').setAttribute('aria-describedby','startSetupStatus');
     const startupAction = snapshot.lifecycle === 'paused' ? 'Resume' : 'Start';
     byId('startSetupStatus').textContent = startup.allowed ? `Controller Ready. Select ${startupAction} to ${snapshot.lifecycle === 'paused' ? 'continue' : 'begin'} aircraft movement.` : startup.reason;
     byId('startSetupStatus').hidden = !['ready','paused'].includes(snapshot.lifecycle);
     byId('openStartSetup').hidden = !['ready','paused'].includes(snapshot.lifecycle);
+    byId('openStartSetup').textContent = startup.allowed ? 'Session details' :
+      !byId('admitStudent').hidden ? 'Review join request' : 'Joining steps';
     document.querySelectorAll('.command-grid button, .command-grid input, .command-grid select').forEach(control => { control.disabled = !controllable; });
     byId('pauseExercise').disabled = !controllable; byId('terminateExercise').disabled = !controllable;
     if (snapshot.lifecycle === 'paused' && !startup.allowed) byId('pauseExercise').disabled = true;
@@ -1737,11 +1808,22 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const record = state.review.snapshot(), simulation = state.simulation;
     byId('reviewMode').textContent = modeLabel(simulation.scenario.exerciseFamily);
     byId('reviewDuration').textContent = clock(simulation.simulationSeconds);
-    byId('reviewCommandCount').textContent = String(record.events.length);
+    byId('reviewCommandCount').textContent = String(record.events.filter(event => event.kind === 'command').length);
+    byId('reviewAircraftCount').textContent = String(simulation.aircraftList.length);
+    showReviewBookmark();
+    byId('reviewPlay').disabled = byId('reviewScrub').disabled = byId('reviewSpeed').disabled = simulation.simulationSeconds <= 0;
+    delete byId('reviewEvents').dataset.visibleCount;
     byId('reviewObservationCount').textContent = String(record.observations.length);
     const bearing = Core.bearingFromPosition(simulation.aircraft.position);
-    byId('reviewEndState').textContent = `${simulation.aircraftList.length} AIRCRAFT · ${simulation.aircraft.callsign}: ${bearing.rangeNm.toFixed(1)} NM`;
+    byId('reviewEndState').textContent = `${simulation.aircraft.callsign} · ${bearing.rangeNm.toFixed(1)} NM`;
     drawReview(record);
+  }
+
+  function showReviewBookmark() {
+    const saved = state.reviewBookmark;
+    byId('returnToReviewBookmark').hidden = saved == null;
+    byId('returnToReviewBookmark').textContent = saved == null ? 'Go to bookmark' : 'Go to ' + clock(saved);
+    byId('reviewBookmarkStatus').textContent = saved == null ? '' : 'Bookmarked ' + clock(saved);
   }
 
   function drawReview(record) {
@@ -1750,7 +1832,19 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const enabled = Object.fromEntries([...document.querySelectorAll('[data-review-layer]')].map(control => [control.dataset.reviewLayer, control.checked]));
     const truth = record.truth.filter(item => item.timestamp <= state.reviewTime);
     const events = record.events.filter(item => item.timestamp <= state.reviewTime);
-    if (enabled.truth) {
+    const perspective = byId('reviewPerspective').value;
+    const showTruth = perspective !== 'controller', showObservations = perspective !== 'instructor';
+    byId('reviewKeyTrack').hidden = !showTruth;
+    const observationKey = byId('reviewKeyObservation');
+    observationKey.hidden = !showObservations;
+    const df = state.simulation.scenario.exerciseFamily === 'qgh';
+    observationKey.dataset.symbol = df ? 'bearing' : 'plot';
+    observationKey.textContent = df ? 'Controller D/F bearing' : 'Controller radar return';
+    const commandKey = byId('reviewKeyCommand');
+    commandKey.hidden = !enabled.events;
+    commandKey.dataset.symbol = showTruth ? 'event' : 'tick';
+    commandKey.textContent = showTruth ? 'Command location' : 'Command time';
+    if (showTruth) {
       const labels = [];
       const tracks = new Map();
       for (const sample of truth) for (const aircraft of sample.aircraft || []) {
@@ -1766,7 +1860,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       }
       drawTruthLabels(context, canvas, transform, labels);
     }
-    if (enabled.observations) {
+    if (showObservations) {
       const observations = record.observations.filter(item => item.timestamp <= state.reviewTime);
       for (const item of observations) drawPlots(context, transform, item);
       const last = observations[observations.length - 1];
@@ -1782,15 +1876,48 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         context.fillText(`AZ ${az == null ? '—' : az.toFixed(2) + '°'} · ELEV ${el == null ? '—' : el.toFixed(2) + '°'}`, 25, 52);
       }
     }
-    const list = byId('reviewEvents'); list.replaceChildren();
-    if (enabled.events) for (const event of events.slice().reverse()) {
-      const item = document.createElement('li'); item.textContent = `${clock(event.timestamp)} · ${event.readback || event.kind}`; list.append(item);
+    const observationHint = byId('reviewObservationHint');
+    observationHint.hidden = !showObservations || record.observations.some(item => item.timestamp <= state.reviewTime);
+    if (!observationHint.hidden) observationHint.textContent = record.observations.length
+      ? 'The first student observation occurs later in the replay.'
+      : 'No student observations were recorded during this exercise.';
+    const list = byId('reviewEvents');
+    if (list.dataset.visibleCount !== String(events.length)) {
+      list.dataset.visibleCount = String(events.length);
+      list.replaceChildren();
+      for (let index = events.length - 1; index >= 0; index--) {
+        const event = events[index];
+        const row = document.createElement('li'), time = document.createElement('time'), description = document.createElement('span');
+        time.textContent = clock(event.timestamp);
+        time.dateTime = `PT${event.timestamp}S`;
+        description.textContent = event.readback || event.kind;
+        row.append(time, description);
+        list.append(row);
+      }
+      const hint = byId('reviewEventHint');
+      hint.hidden = events.length > 0;
+      if (!events.length) hint.textContent = record.events.length
+        ? 'The first event occurs later in the replay.'
+        : 'No commands or events were recorded during this exercise.';
+    }
+    if (enabled.events && showTruth) for (const event of events) {
       if (Number.isFinite(event.xNm) && Number.isFinite(event.yNm)) {
         context.fillStyle = '#ffb9a5'; context.fillRect(transform.cx + event.xNm * transform.scale - 4, transform.cy + event.yNm * transform.scale - 4, 8, 8);
       }
     }
+    // In the controller view, mark commands in time without adding unsampled aircraft positions.
+    if (enabled.events && !showTruth && events.length) {
+      context.fillStyle = '#ffb9a5'; context.font = '13px Arial';
+      context.fillText('Commands on replay timeline', 18, canvas.height - 23);
+      for (const event of events) {
+        const fraction = event.timestamp / Math.max(1, state.simulation.simulationSeconds);
+        context.fillRect(18 + fraction * (canvas.width - 36), canvas.height - 17, 2, 8);
+      }
+    }
     byId('reviewScrub').value = String(state.reviewTime); byId('reviewTime').textContent = clock(state.reviewTime);
-    byId('reviewPlay').textContent = state.reviewPlaying ? 'PAUSE' : 'PLAY';
+    byId('reviewScrub').setAttribute('aria-valuetext', clock(state.reviewTime));
+    byId('reviewPlay').textContent = state.reviewPlaying ? 'Pause' : 'Play';
+    byId('reviewPlay').setAttribute('aria-pressed', String(state.reviewPlaying));
   }
 
   function isEditableKeyboardTarget(target) {
@@ -2029,6 +2156,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   family.addEventListener('change', () => { if (!state.simulation) resetTrainingTimeRate(family.value); configureFields(); }); byId('scenarioForm').addEventListener('input', handleSetupInput); byId('scenarioForm').addEventListener('change', handleSetupInput); byId('scenarioForm').addEventListener('submit', createSession);
+  byId('controllerVoiceMode').addEventListener('change', () => {
+    if (!state.simulation || !state.session || byId('controllerVoiceMode').disabled) return;
+    state.controllerVoiceMode = byId('controllerVoiceMode').value === 'automatic' ? 'automatic' : 'human';
+    state.session.updatePublicMetadata(publicMetadataForSimulation(), state.simulation.simulationSeconds, { allowPending: true });
+    checkpoint(); updateAll();
+  });
   byId('saveExercisePreset').addEventListener('click', saveCurrentSetup);
   byId('renameExercisePreset').addEventListener('click', renamePreset);
   byId('removeExercisePreset').addEventListener('click', removePreset);
@@ -2115,6 +2248,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   byId('instructorScope').addEventListener('pointerleave', () => { state.inspectedAircraftId = null; if (state.simulation) updateInspection(); });
   document.addEventListener('keydown', handleShortcut);
   byId('reviewScrub').addEventListener('input', () => { state.reviewPlaying = false; state.reviewTime = number('reviewScrub'); drawReview(state.review.snapshot()); });
+  byId('reviewPerspective').addEventListener('change', () => drawReview(state.review.snapshot()));
+  byId('bookmarkReviewTime').addEventListener('click', () => {
+    state.reviewBookmark = state.reviewTime;
+    showReviewBookmark(); checkpoint();
+  });
+  byId('returnToReviewBookmark').addEventListener('click', () => {
+    if (state.reviewBookmark == null) return;
+    state.reviewPlaying = false; state.reviewTime = state.reviewBookmark;
+    drawReview(state.review.snapshot());
+  });
   byId('reviewPlay').addEventListener('click', () => {
     if (state.reviewTime >= state.simulation.simulationSeconds) state.reviewTime = 0;
     state.reviewPlaying = !state.reviewPlaying; drawReview(state.review.snapshot());
@@ -2133,4 +2276,5 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   state.heartbeatTimer = setInterval(() => { state.session?.tick(); if (state.session && state.simulation) state.session.heartbeat(state.simulation.simulationSeconds); }, 4000);
   state.runtimeTimer = setInterval(runtimeTick, 100);
   configureFields(); refreshPresets(); void restoreAttempt(); void initialisePublishedPicker(); state.animationFrame = requestAnimationFrame(frame);
+  byId('scenarioForm').setAttribute('data-setup-ready', '');
 })();

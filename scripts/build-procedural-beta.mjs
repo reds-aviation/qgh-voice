@@ -41,7 +41,7 @@ export async function buildProceduralBeta(outputRoot) {
   await copyFile(resolve(outputRoot,'procedural-beta/procedural.html'),resolve(outputRoot,'procedural-beta/index.html'));
   const landingRoot = resolve(root,'packages/site-landing');
   await copyFile(resolve(source,'static/remote-config.js'), resolve(outputRoot,'instructor-led/remote-config.js'));
-  const landingAssets = ['suite-landing.css','suite-landing-register.js','hero-airspace.png','qgh-towers.png','procedural-airspace.png','aircraft-icon.png','instructor-icon.png','iaf-roundel.png'];
+  const landingAssets = ['suite-landing.css','suite-landing-register.js','hero-radar.js','hero-airspace.webp','hero-airspace-760.webp','qgh-towers.webp','procedural-airspace.webp','aircraft-icon.webp','instructor-icon.webp','iaf-roundel.png'];
   for (const asset of landingAssets) await copyFile(resolve(landingRoot,asset),resolve(outputRoot,asset));
 
   // Keep the already-built QGH exercise picker at a stable hosted-suite URL.
@@ -51,9 +51,7 @@ export async function buildProceduralBeta(outputRoot) {
   const individualTab = '<a class="entry-program-tab entry-program-tab--active" href="index.html" aria-current="page">INDIVIDUAL PRACTICE</a>';
   if (!qgh.includes(individualTab)) throw new Error('Missing QGH navigation tab');
   qgh = qgh.replace(individualTab,'<a class="entry-program-tab" href="index.html">SUITE HOME</a>');
-  qgh = qgh.replaceAll('Reds QGH Simulator','ATS SIM BOX').replaceAll('Reds QGH','ATS SIM BOX')
-    .replace('INSTALL QGH ON THIS DEVICE','INSTALL ATS SIM BOX ON THIS DEVICE')
-    .replace('Install QGH Simulator','Install ATS SIM BOX');
+  qgh = qgh.replaceAll('Reds QGH Simulator','ATS SIM BOX').replaceAll('Reds QGH','ATS SIM BOX');
   await writeFile(resolve(outputRoot,'qgh.html'),qgh);
   const landingHTML = await readFile(resolve(landingRoot,'index.html'),'utf8');
   await writeFile(homePath, landingHTML.replace('src="suite-landing-register.js"',`src="suite-landing-register.js?release=${manifest.version}"`));
@@ -105,7 +103,7 @@ export async function buildProceduralBeta(outputRoot) {
     ...['index.html','instructor.html','student.html','training-guide.html'].map(page => ['instructor-led/' + page, '../procedural-beta/']),
   ]) {
     const path = resolve(outputRoot,page); let html = await readFile(path,'utf8');
-    if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}guide-search.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
+    if (!html.includes('suite-guide-chat.js')) html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-guide-chat.css"><script defer src="${prefix}guide-knowledge.js"></script><script defer src="${prefix}guide-search.js"></script><script defer src="${prefix}guide-context.js"></script><script defer src="${prefix}suite-guide-chat.js"></script></head>`);
     await writeFile(path,html);
   }
   for (const page of ['single.html','tactical.html','training-centre.html','instructor-led/index.html','instructor-led/instructor.html','instructor-led/student.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
@@ -121,10 +119,6 @@ export async function buildProceduralBeta(outputRoot) {
   qghManifest.short_name = 'ATS SIM BOX';
   qghManifest.start_url = './index.html';
   await writeFile(manifestPath,JSON.stringify(qghManifest,null,2)+'\n');
-  const distributionPath = resolve(outputRoot,'web-distribution.js');
-  const distribution = await readFile(distributionPath,'utf8');
-  if (!distribution.includes('INSTALL ATS SIM BOX ON THIS DEVICE')) throw new Error('Missing ATS SIM BOX install label');
-
   const swPath = resolve(outputRoot,'service-worker.js');
   let sw = await readFile(swPath,'utf8');
   // A new cache version must revalidate its files instead of copying the
@@ -135,7 +129,7 @@ export async function buildProceduralBeta(outputRoot) {
   };
   sw = freshPrecache(sw);
   sw = sw.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-suite-${manifest.version}$2`);
-  sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.png',\n  './qgh-towers.png',\n  './procedural-airspace.png',\n  './aircraft-icon.png',\n  './instructor-icon.png',\n  './iaf-roundel.png',");
+  sw = sw.replace("  './index.html',","  './index.html',\n  './qgh.html',\n  './suite-landing.css',\n  './suite-landing-register.js',\n  './hero-airspace.webp',\n  './hero-airspace-760.webp',\n  './hero-radar.js',\n  './qgh-towers.webp',\n  './procedural-airspace.webp',\n  './aircraft-icon.webp',\n  './instructor-icon.webp',\n  './iaf-roundel.png',");
   sw = sw.replace("['./', './index.html', './user-guide.html'","['./', './index.html', './qgh.html', './user-guide.html'");
   if (!sw.includes("'./qgh.html'") || !sw.includes("'./suite-landing.css'")) throw new Error('QGH offline suite shell was not updated');
   // The assistant assets are shared, cacheable and never fetch an AI service.
@@ -143,7 +137,7 @@ export async function buildProceduralBeta(outputRoot) {
   const proceduralShell = [...manifest.files.filter(file => file.path.startsWith('static/')).map(file => './procedural-beta/' + file.path.slice(7)), './procedural-beta/index.html', './procedural-beta/'];
   const uncached = proceduralShell.filter(path => !sw.includes(`'${path}'`));
   sw = sw.replace('const APP_SHELL = [', 'const APP_SHELL = [\n' + uncached.map(path => `  '${path}',`).join('\n'));
-  sw = sw.replace('const APP_SHELL = [', "const APP_SHELL = [\n  './flow-theme.css',\n  './iaf-theme.css',\n  './qgh-cloudbreak.png',");
+  sw = sw.replace('const APP_SHELL = [', "const APP_SHELL = [\n  './flow-theme.css',\n  './iaf-theme.css',\n  './exercise-motion.js',\n  './suite-appearance.js',\n  './suite-appearance.css',\n  './appearance-dark.css',\n  './qgh-cloudbreak.webp',");
   if (uncached.length && !sw.includes(`'${uncached[0]}'`)) throw new Error('Procedural offline shell was not updated');
   sw = sw.replace("['./', './index.html', './qgh.html'", "['./procedural-beta/', './procedural-beta/index.html', './procedural-beta/procedural.html', './procedural-beta/procedural-guide.html', './', './index.html', './qgh.html'");
   sw = sw.replace('  if (requestUrl.search) {', `  const proceduralRoot = new URL('./procedural-beta/', self.registration.scope).pathname;
@@ -159,12 +153,12 @@ export async function buildProceduralBeta(outputRoot) {
   await writeFile(swPath,sw);
   const instructorSWPath = resolve(outputRoot,'instructor-led/service-worker.js');
   let instructorSW = await readFile(instructorSWPath,'utf8');
-  instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../iaf-theme.css',\n  '../iaf-roundel.png',\n  '../qgh-cloudbreak.png',\n  '../qgh-towers.png',\n  '../hero-airspace.png',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
+  instructorSW = instructorSW.replace('const APP_SHELL = [', "const APP_SHELL = [\n  '../flow-theme.css',\n  '../iaf-theme.css',\n  '../exercise-motion.js',\n  '../suite-appearance.js',\n  '../suite-appearance.css',\n  '../appearance-dark.css',\n  '../iaf-roundel.png',\n  '../qgh-cloudbreak.webp',\n  '../qgh-towers.webp',\n  '../hero-airspace.webp',\n  '../fonts/ibm-plex-sans-400.ttf',\n  '../fonts/ibm-plex-sans-600.ttf',\n  '../fonts/ibm-plex-mono-500.ttf',\n  '../suite-landing-register.js',");
   instructorSW = instructorSW.replace('  if (requestUrl.search) {', `  ${releaseQueryGuard(manifest.version)}
   if (requestUrl.search && !isSuiteAsset) {`);
   instructorSW = freshPrecache(instructorSW);
   instructorSW = instructorSW.replace(/(const CACHE_NAME = `[^`]+)(`;)/, `$1-guide-${manifest.version}$2`)
-    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-instructor.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
+    .replace("  './suite.css',", "  './suite.css',\n  '../procedural-beta/guide-knowledge.js',\n  '../procedural-beta/guide-search.js',\n  '../procedural-beta/guide-context.js',\n  '../procedural-beta/current-flow-guide.css',\n  '../procedural-beta/suite-guide-chat.js',\n  '../procedural-beta/suite-guide-chat.css',\n  '../procedural-beta/gyani-instructor.png',\n  '../procedural-beta/suite-tour.js',\n  '../procedural-beta/suite-tour.css',");
   await writeFile(instructorSWPath,instructorSW);
   await buildInstalledBrand(outputRoot, root);
   // The hosted suite replaces its entry and generated guides after the

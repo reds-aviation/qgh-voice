@@ -16,6 +16,7 @@ const APP_VERSION = '__QGH_VERSION__';
 const CACHE_NAME = `${CACHE_PREFIX}v__QGH_VERSION__`;
 const VOICE_CACHE_NAME = 'qgh-offline-voice-pack-v1';
 const VOICE_MODEL_URL = new URL('./voice-models/qgh-vosk-en-us-small-0.15.tar.gz', self.registration.scope).href;
+const VOICE_LIBRARY_URL = new URL('./vendor/vosk-browser-0.0.8.js', self.registration.scope).href;
 const PILOT_CACHE_PREFIX = `qgh-pilot-voices-${cacheScope}-`;
 const PILOT_MANIFEST_URL = new URL('./pilot-voices/manifest.json', self.registration.scope).href;
 // A manifest may list only safe relative paths within the bundled pilot pack.
@@ -44,6 +45,9 @@ const APP_SHELL = [
   './tutorial-video.json',
   './rt-reference.md',
   './single.html',
+  './setup-loading.js',
+  './setup-loading.css',
+  './suryakiran-formation.webp',
   './simulator-core.js',
   './scope-visuals.js',
   './procedure-core.js',
@@ -54,6 +58,9 @@ const APP_SHELL = [
   './radio-workspace.js',
   './simulator.js',
   './voice-control.js',
+  './rt-intent-model.js',
+  './instructor-led/suite-controller-voice.js',
+  './instructor-led/suite-controller-voice.css',
   './voice-workspace.js',
   './offline-voice-engine.js',
   './pilot-voice-engine.js',
@@ -80,7 +87,6 @@ const APP_SHELL = [
   './pwa-register.js',
   './web-distribution.js',
   './release-links.js',
-  './vendor/vosk-browser-0.0.8.js',
   './vendor/Apache-2.0.txt',
   './voice-models/NOTICE.txt',
   './icons/icon-192.png',
@@ -125,14 +131,8 @@ async function cachedShell(cacheKey) {
   return (await openCache()).match(cacheKey);
 }
 
-function isVoiceModelRequest(request) {
-  if (request.method !== 'GET') return false;
-  const url = new URL(request.url);
-  return url.href === VOICE_MODEL_URL;
-}
-
-async function cachedVoiceModel() {
-  return (await caches.open(VOICE_CACHE_NAME)).match(VOICE_MODEL_URL);
+function isVoicePackRequest(request) {
+  return request.method === 'GET' && [VOICE_LIBRARY_URL, VOICE_MODEL_URL].includes(request.url);
 }
 
 function pilotAssetUrl(request) {
@@ -326,6 +326,25 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('message', event => {
+  if (event.data?.type === 'OFFLINE_SHELL_STATUS' && event.ports?.length) {
+    const clientURL = event.source?.url;
+    const suiteHome = new URL('../', self.registration.scope).href;
+    if (!clientURL || !clientURL.startsWith(self.registration.scope)
+      && clientURL !== suiteHome && clientURL !== new URL('index.html', suiteHome).href) return;
+    const reply = event.ports[0];
+    event.waitUntil((async () => {
+      try {
+        const cache = await openCache();
+        const requests = APP_SHELL.map(asset => new Request(new URL(asset, self.registration.scope), { cache: 'reload' }));
+        const contents = await Promise.all(requests.map(request => cache.match(request)));
+        const missing = requests.filter((_, i) => !contents[i]);
+        if (event.data.repair === true && missing.length) await cache.addAll(missing);
+        reply.postMessage({ ready: !missing.length || event.data.repair === true });
+      } catch {
+        reply.postMessage({ ready: false });
+      }
+    })());
+  }
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
   if (event.data?.type === 'CACHE_PILOT_PACK' && event.source?.url?.startsWith(self.registration.scope)) {
     event.waitUntil(cachePilotPack());
@@ -351,9 +370,9 @@ self.addEventListener('fetch', event => {
     })());
     return;
   }
-  if (isVoiceModelRequest(request)) {
+  if (isVoicePackRequest(request)) {
     event.respondWith((async () => {
-      const cachedResponse = await cachedVoiceModel();
+      const cachedResponse = await (await caches.open(VOICE_CACHE_NAME)).match(request);
       if (cachedResponse) return cachedResponse;
       try {
         return await fetch(request);

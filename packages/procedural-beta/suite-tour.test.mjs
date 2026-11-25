@@ -59,26 +59,14 @@ function studentTour({ready=false,workspace=false,phase='READY',compactStatus=fa
   return {...h,panel:h.document.getElementById('suite-tour'),button:h.document.getElementById('suite-tour-open')};
 }
 
-test('release knowledge introduces the student at admission and Position ready before workspace controls are visible',()=>{
+test('paired admission leaves Ready exposed and retains an on-demand, dismissible tour',async()=>{
   const h=studentTour({ready:true,phase:'RUNNING',releaseKnowledge:true});
+  assert.equal(h.panel.hidden,true,'admission does not auto-open a tour');
+  h.button.click();
   assert.equal(h.panel.hidden,false);
-  assert.match(h.panel.textContent,/same PC|connection mode|PIN/i);
-  assert.equal(h.document.querySelector('.suite-tour-target').id,'readyPanel');
   h.panel.querySelectorAll('button')[1].click();
-  assert.equal(h.document.querySelector('.suite-tour-target').id,'studentReady');
-  assert.match(h.panel.textContent,/Ready.*instructor|instructor.*Ready/i);
-  assert.equal(h.document.getElementById('studentWorkspace').hidden,true);
-});
-
-test('student introduction opens before Position ready and closes without changing the exercise clock',async()=>{
-  const h=studentTour({ready:true,phase:'RUNNING'});
-  assert.equal(h.panel.hidden,false,'a hidden initial RUNNING label does not suppress admission guidance');
-  assert.match(h.panel.textContent,/Quick introduction/);
-  h.document.getElementById('studentReady').click();
-  assert.equal(h.panel.hidden,true,'Ready dismisses onboarding before its async session delivery');
-  h.document.getElementById('readyPanel').hidden=true;
-  h.document.getElementById('studentWorkspace').hidden=false;
-  await tick();
+  assert.equal(h.panel.querySelector('.suite-tour-close').textContent,'Close tour');
+  h.panel.querySelector('.suite-tour-close').click();
   assert.equal(h.panel.hidden,true);
   assert.equal(h.document.getElementById('studentClock').textContent,'00:00');
 });
@@ -138,8 +126,8 @@ test('instructor and procedural onboarding cannot reappear after their first Run
   }
 });
 
-test('Procedural introduction opens at the zero-time clock and skips progressed recovery',()=>{
-  for(const [clockText,shown] of [['00:00:00',true],['00:00:01',false]]) {
+test('Procedural playback and initial readiness never auto-open a tour',()=>{
+  for(const [clockText,shown] of [['00:00:00',false],['00:00:01',false]]) {
     const h=domHarness(`<html><body><header></header><section id="desk"><b id="clock-state">PAUSED</b><canvas id="introScope"></canvas><time id="clock">${clockText}</time></section></body></html>`,'/qgh-voice/procedural-beta/procedural.html');
     h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=800;
     h.context.ATCGuideKnowledge={revision:'zero-time-regression',firstUse:[{pages:['procedural'],selector:'#introScope',title:'Before Run',text:'Prepare starting traffic.'}]};
@@ -149,7 +137,7 @@ test('Procedural introduction opens at the zero-time clock and skips progressed 
   }
 });
 
-test('automatic introduction closes when recovery returns its workspace to entry without changing the clock',async()=>{
+test('an opened tour closes when the highlighted workspace returns to entry',async()=>{
   for(const [page,path,workspace] of [
     ['procedural','/qgh-voice/procedural-beta/procedural.html','desk'],
     ['instructor','/qgh-voice/instructor-led/instructor.html','activeWorkspace'],
@@ -160,7 +148,9 @@ test('automatic introduction closes when recovery returns its workspace to entry
     h.context.ATCGuideKnowledge={revision:'entry-recovery-regression',firstUse:[{pages:[page],selector:'#introScope',title:'First workspace',text:'Essential controls before Run.'}],tours:[{pages:[page],selector:'#introScope',title:'Manual tour',text:'User-requested controls.'}]};
     vm.runInContext(source,h.context);
     const panel=h.document.getElementById('suite-tour');
-    assert.equal(panel.hidden,false,`${page}: the ready workspace initially opens its introduction`);
+    assert.equal(panel.hidden,true);
+    h.document.getElementById('suite-tour-open').click();
+    assert.equal(panel.hidden,false);
     assert.equal(h.document.querySelector('.suite-tour-target').id,'introScope');
     h.document.getElementById(workspace).hidden=true;
     h.document.getElementById('entry').hidden=false;

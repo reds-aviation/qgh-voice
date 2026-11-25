@@ -37,3 +37,20 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 #aerodrome-form,#aerodrome-form :is(select,option,optgroup,label,summary,button,.record,.record strong,.record small,.record a,.aerodrome-selection-list span,.aerodrome-selection-list small){font-family:"Suite Sans",Arial,sans-serif;letter-spacing:normal;text-transform:none}
 #aerodrome-select,#aerodrome-select :is(option,optgroup){font-size:14px;font-weight:400}
 #aerodrome-form .aerodrome-selection-list label{font-size:14px;line-height:1.45;font-weight:400}
+#prepare-airspace .airspace-section-links {
+  display: flex; flex-wrap: wrap; gap: 0 1rem; margin: 0 0 .5rem;
+}
+#work-panel #prepare-airspace .airspace-section-links a {
+  display: inline-flex; align-items: center; min-height: 36px;
+  color: inherit; font-size: .9rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: .2em;
+}
+#prepare-airspace-current { margin: 0; font-weight: 600; }
+#aerodrome-form :is(#aerodrome-preview, #aerodrome-selection, #aerodrome-source-list):empty { display: none; }
+#prepare-airspace > .airspace-source-methods {
+  display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; margin: .25rem 0 1rem;
+}
+#prepare-airspace > .airspace-source-methods button {
+  min-width: 0; padding: 6px 4px; white-space: normal; line-height: 1.2;
+}
+#prepare-existing, #prepare-save-load { scroll-margin-block-start: .5rem; }

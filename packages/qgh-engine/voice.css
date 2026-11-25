@@ -153,16 +153,23 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 }
 
 .voice-drag-handle {
+  display: grid;
+  place-items: center;
+  min-height: 16px;
   width: 100%;
-  min-height: 44px !important;
-  border-color: rgba(255, 254, 250, .42) !important;
-  color: rgba(255, 254, 250, .8) !important;
-  cursor: grab !important;
-  touch-action: none;
-  user-select: none;
+  border-radius: 4px;
+  color: #edf9f8;
+  cursor: grab;
 }
-
-.voice-drag-handle:active { cursor: grabbing !important; }
+.voice-drag-handle::before {
+  content: '';
+  width: 26px;
+  height: 3px;
+  background: currentColor;
+  border-radius: 8px;
+}
+.voice-drag-handle:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+.voice-dock[data-dragging='true'] .voice-drag-handle { cursor: grabbing; }
 
 .voice-mic {
   min-height: 57px !important;
@@ -399,6 +406,21 @@ body:has(.voice-dock) { padding-right: 110px; }
 }
 .voice-dock[data-compact='true'] > :not(.voice-compact-toggle) { display: none !important; }
 .voice-dock[data-compact='true'] .voice-compact-toggle { width: 100%; min-width: 0; min-height: 48px; }
+.voice-dock { cursor: grab; }
+.voice-dock, .voice-compact-toggle { touch-action: none; user-select: none; }
+.voice-settings, .voice-confirmation { cursor: auto; touch-action: pan-y; user-select: text; }
+.voice-mic, .voice-compact-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.voice-dock[data-compact='true'] .voice-compact-toggle { cursor: grab; }
+.voice-dock[data-dragging='true'] .voice-compact-toggle { cursor: grabbing; }
+.voice-mic::before, .voice-dock[data-compact='true'] .voice-compact-toggle::before {
+  content: '';
+  display: inline-block;
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round'%3E%3Crect x='9' y='2' width='6' height='13' rx='3'/%3E%3Cpath d='M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 .voice-mic { touch-action: none; user-select: none; -webkit-user-select: none; }
 .voice-mic[aria-pressed='true'] { background: #064d50 !important; color: white !important; outline: 2px solid #fffefa; outline-offset: 2px; }
 .voice-mic[data-processing='true'] { border-style: dashed !important; }
@@ -477,7 +499,7 @@ body:has(.voice-dock) { padding-right: 110px; }
     border-radius: 16px;
   }
   .voice-dock[data-edge='top'] { top: max(8px, env(safe-area-inset-top, 0px)); bottom: auto; }
-  .voice-drag-handle { grid-area: drag; }
+  .voice-drag-handle { grid-area: drag; min-height: 44px; }
   .voice-mic { grid-area: mic; min-height: 56px !important; font-size: 15px !important; letter-spacing: .16em; }
   .voice-settings-toggle { grid-area: settings; }
   .voice-status { grid-area: status; min-height: 20px; font-size: 12px; -webkit-line-clamp: 2; }
@@ -490,8 +512,9 @@ body:has(.voice-dock) { padding-right: 110px; }
     right: max(8px, env(safe-area-inset-right, 0px));
     bottom: max(8px, var(--qgh-phone-bottom-inset));
     left: auto;
-    width: 80px;
+    width: 88px;
   }
+  .voice-dock[data-compact='true'][data-edge='top'] { top: max(8px, env(safe-area-inset-top, 0px)); bottom: auto; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
@@ -533,7 +556,7 @@ body:has(.voice-dock) { padding-right: 110px; }
 .headphone-dialog .headphone-rate[aria-pressed='true'] { border-color: #007d7d; background: #007d7d; color: #fff; }
 .headphone-help { color: #485b60; font-size: 13px; }
 .headphone-dialog button { width: 100%; min-height: 48px; padding: 12px; border: 1px solid #9cadaa; border-radius: 8px; background: #fffefa; color: #075e60; font: 600 12px/1.35 'IBM Plex Sans', sans-serif; cursor: pointer; }
-.headphone-dialog button:disabled { color: #647776; background: #eceeea; cursor: not-allowed; }
+.headphone-dialog button:disabled { opacity: 1; color: #495c5b; background: #eceeea; border-style: dashed; cursor: not-allowed; }
 .headphone-dialog :is(button,input):focus-visible { outline: 3px solid #b97416; outline-offset: 3px; }
 .headphone-test-status { min-height: 2.8em; color: #485b60; font-size: 13px; }
 .headphone-check { display: flex; align-items: flex-start; gap: 12px; margin: 18px 0; cursor: pointer; }
@@ -542,3 +565,16 @@ body:has(.voice-dock) { padding-right: 110px; }
 .headphone-dialog .headphone-enable:not(:disabled) { background: #007d7d; color: #fff; border-color: #007d7d; }
 .voice-mute-pilot { color: #a52831 !important; border-color: #b95b62 !important; }
 @media (max-width: 360px) { .headphone-actions { grid-template-columns: 1fr; } }
+
+.voice-dock[data-rehearsal="true"] .voice-drag-handle::before {
+  content:'REHEARSAL'; font:600 10px/1.25 'IBM Plex Sans',sans-serif; color:inherit;
+}
+.voice-dock .voice-rehearsal { color:#24485f; background:#edf4f8; border-color:#708999; }
+html[data-theme="dark"] .voice-dock .voice-rehearsal { color:var(--tab-text); background:var(--tab-surface); border-color:var(--tab-edge); }
+
+.voice-rehearsal-output {
+  display:block; margin-top:10px; padding:10px 12px; border:1px solid var(--tab-edge,#708999);
+  border-radius:8px; background:var(--tab-surface,#edf4f8); color:var(--tab-text,#24485f);
+  font:500 14px/1.45 'IBM Plex Sans',Arial,sans-serif; letter-spacing:normal; text-transform:none;
+}
+.voice-rehearsal-output[hidden] { display:none; }

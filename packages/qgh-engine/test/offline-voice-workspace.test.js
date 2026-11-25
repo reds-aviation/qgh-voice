@@ -173,7 +173,7 @@ function makeOfflineEngine(options) {
     triggerStarted() { this.lastStart?.onStarted?.(); },
     triggerResult(transcript) { this.lastStart?.onResult?.(transcript); },
     triggerNoResult() { this.lastStart?.onNoResult?.(); },
-    triggerEnd() { hooks?.onEnded?.(); }
+    triggerEnd(details) { hooks?.onEnded?.(details); }
   };
   return {
     engine,
@@ -618,6 +618,53 @@ test('PTT radio release waits for delayed finalization and pilot audio invalidat
   assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /HEARD · report heading/, 'old speech cannot self-execute during pilot playback');
 });
 
+test('an uncertain digit or an incomplete drain discards the entire spoken instruction', async () => {
+  const runtime = makeOfflineEngine({cachedArchive: true, deferStop: true});
+  const env = createEnvironment({offlineVoice: runtime.api});
+  await flush();
+  const mic = env.document.querySelector('.voice-mic');
+  for (const reason of ['unknown', 'incomplete']) {
+    mic.dispatchEvent(new FakeEvent('pointerdown', {pointerId:1})); await flush();
+    const capture = runtime.engine.lastStart;
+    capture.onResult('turn right heading two six zero');
+    if (reason === 'unknown') capture.onUnrecognizedSegment();
+    mic.dispatchEvent(new FakeEvent('pointerup', {pointerId:1}));
+    runtime.engine.triggerEnd({finalDrained: reason !== 'incomplete'});
+    assert.match(env.document.querySelector('.voice-last-call').children[1].textContent, /NOT RECOGNISED · CALL UNCLEAR/);
+  }
+});
+
+test('exact desktop radio requests complete immediately and a new press expires a slow interpretation', async () => {
+  const runtime = makeOfflineEngine({cachedArchive:true, deferStop:true});
+  const env = createEnvironment({offlineVoice:runtime.api});
+  await flush();
+  const setup=env.document.createElement('section'), scope=env.document.createElement('section');
+  setup.id='setup'; scope.id='console'; scope.className='screen active';
+  const commands=[];
+  for (const id of ['requestHeading','requestDistance','transmit']) {
+    const control=env.document.createElement('button');
+    control.id=id; control.addEventListener('click',()=>commands.push(id)); scope.append(control);
+  }
+  env.document.body.append(setup,scope);
+  let prediction, requests=0;
+  env.sandbox.atsRadioPilot={understand(){requests++;return new Promise(resolve=>{prediction=resolve;});}};
+  const mic=env.document.querySelector('.voice-mic');
+  async function speak(text) {
+    mic.dispatchEvent(new FakeEvent('pointerdown',{pointerId:1}));await flush();
+    runtime.engine.lastStart.onResult(text);
+    mic.dispatchEvent(new FakeEvent('pointerup',{pointerId:1}));
+    runtime.engine.triggerEnd({finalDrained:true});
+  }
+  await speak('report heading');await speak('report distance');await speak('transmit for df');
+  assert.deepEqual(commands,['requestHeading','requestDistance','transmit']);
+  assert.equal(requests,0);
+  await speak('could you tell me what heading you are on right now');
+  assert.equal(requests,1);
+  mic.dispatchEvent(new FakeEvent('pointerdown',{pointerId:2}));
+  prediction({intent:'heading-report'});await flush();
+  assert.deepEqual(commands,['requestHeading','requestDistance','transmit']);
+});
+
 test('continuous radio waits for a quiet boundary and stopping it prevents microphone restart after pilot speech', async () => {
   const calls = [];
   const runtime = makeOfflineEngine({ cachedArchive: true });
@@ -1014,11 +1061,11 @@ test('the dock explains an empty final result and includes a movable control han
   assert.match(feedback.getAttribute('aria-label'), /NO SPEECH DETECTED/i);
   const dragHandle = environment.document.querySelector('.voice-drag-handle');
   assert.ok(dragHandle);
-  assert.equal(dragHandle.textContent, 'DRAG');
-  assert.match(dragHandle.getAttribute('aria-label'), /hold and drag/i);
+  assert.equal(dragHandle.textContent, '');
+  assert.match(dragHandle.getAttribute('aria-label'), /arrow keys/i);
 });
 
-test('the DRAG grip clamps, persists, and keyboard-moves the complete voice dock', async () => {
+test('dragging the panel background clamps and saves position; arrow keys move the voice dock', async () => {
   const runtime = makeOfflineEngine();
   const environment = createEnvironment({ offlineVoice: runtime.api, viewportWidth: 320, viewportHeight: 420 });
   await flush();
@@ -1032,7 +1079,7 @@ test('the DRAG grip clamps, persists, and keyboard-moves the complete voice dock
     height: 196
   });
 
-  dragHandle.dispatchEvent(new FakeEvent('pointerdown', {
+  dock.dispatchEvent(new FakeEvent('pointerdown', {
     button: 0,
     pointerId: 9,
     clientX: 112,
@@ -1054,9 +1101,9 @@ test('the DRAG grip clamps, persists, and keyboard-moves the complete voice dock
   assert.equal(dock.style.right, 'auto');
   assert.equal(dock.style.bottom, 'auto');
   assert.equal(dock.dataset.dragging, undefined);
-  assert.deepEqual(JSON.parse(environment.storage.get('qgh-voice-dock-position-v2')), { left: 244, top: 216 });
+  assert.deepEqual(JSON.parse(environment.storage.get('qgh-voice-dock-position-v2-setup')), { left: 244, top: 216 });
 
-  dragHandle.dispatchEvent(new FakeEvent('pointerdown', {
+  dock.dispatchEvent(new FakeEvent('pointerdown', {
     button: 0,
     pointerId: 10,
     clientX: 250,
@@ -1067,7 +1114,7 @@ test('the DRAG grip clamps, persists, and keyboard-moves the complete voice dock
     clientX: -99,
     clientY: -99
   }));
-  dragHandle.dispatchEvent(new FakeEvent('lostpointercapture', { pointerId: 10 }));
+  dock.dispatchEvent(new FakeEvent('lostpointercapture', { pointerId: 10 }));
   assert.equal(dock.style.left, '8px', 'left edge clamps to an 8 px viewport margin');
   assert.equal(dock.style.top, '8px', 'top edge clamps to an 8 px viewport margin');
   assert.equal(dock.dataset.dragging, undefined, 'lost pointer capture completes the drag safely');
@@ -1077,7 +1124,29 @@ test('the DRAG grip clamps, persists, and keyboard-moves the complete voice dock
   assert.equal(right.defaultPrevented, true);
   assert.equal(dock.style.left, '24px');
   assert.equal(dock.style.top, '8px');
-  assert.deepEqual(JSON.parse(environment.storage.get('qgh-voice-dock-position-v2')), { left: 24, top: 8 });
+  assert.deepEqual(JSON.parse(environment.storage.get('qgh-voice-dock-position-v2-setup')), { left: 24, top: 8 });
+});
+
+test('a collapsed microphone tab opens on a tap and stays collapsed after a drag', async () => {
+  const env = createEnvironment({ viewportWidth: 900, viewportHeight: 600 });
+  await flush();
+  const dock = env.document.querySelector('.voice-dock');
+  const tab = env.document.querySelector('.voice-compact-toggle');
+  dock.getBoundingClientRect = () => ({ left: 700, top: 300, width: 85, height: 60 });
+  const gesture = delta => {
+    const down = new FakeEvent('pointerdown', { target: tab, button: 0, pointerId: 7, clientX: 720, clientY: 320 });
+    // The fake DOM lacks bubbling. Forward the tab event to its panel.
+    for (const handle of dock.listeners.get('pointerdown')) handle(down);
+    env.listeners.get('pointermove')(new FakeEvent('pointermove', { pointerId: 7, clientX: 720 + delta, clientY: 320 }));
+    env.listeners.get('pointerup')(new FakeEvent('pointerup', { pointerId: 7 }));
+    tab.dispatchEvent(new FakeEvent('click', { detail: 1 }));
+  };
+  gesture(50);
+  assert.equal(dock.dataset.compact, 'true');
+  assert.equal(dock.style.left, '750px');
+  gesture(2);
+  assert.equal(dock.dataset.compact, 'false');
+  assert.equal(tab.getAttribute('aria-expanded'), 'true');
 });
 
 test('Android native bridge can report a preparing offline pack until it is ready', async () => {

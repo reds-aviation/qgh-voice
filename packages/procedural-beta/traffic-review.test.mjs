@@ -88,3 +88,45 @@ test('stable measured cues record at scan spacing, while threshold transitions a
   const interval=module.recordedCueDuration([{t:0,alerts:[]},{t:1,alerts:[cue]},{t:2,alerts:[{...cue,measured:700}]},{t:3,alerts:[]}],cue,2);
   assert.deepEqual(interval,{start:1,end:3,duration:2,complete:true},'cue interval retains onset and clearance from samples, not changing measurement text');
 });
+
+test('completed review summarizes the recording and groups closely spaced markers without losing events', () => {
+  const h = domHarness('<html><body><section id="review"></section><div id="review-record-downloads"></div></body></html>');
+  vm.runInContext(source.replace(/^export /gm, '') + '\nglobalThis.makeReview=createTrafficReview;', h.context);
+  const review = h.context.makeReview(h.document.getElementById('review'));
+  const first = {
+    exerciseId: 'debrief', elapsed: 0,
+    aircraft: [{id: 'a', callsign: '101', xNm: 0, yNm: 0, altitudeFt: 10000}], alerts: [],
+    events: [
+      {id: 'setup', elapsed: 0, kind: 'setup', text: 'Traffic prepared'},
+      {id: 'start', elapsed: 0, kind: 'clock', text: 'Exercise running'}
+    ]
+  };
+  review.record({...first, role: 'student'});
+  assert.equal(h.context.sessionStorage.getItem('ats-procedural-replay'), null);
+  review.open(first);
+  assert.equal(h.document.querySelector('.traffic-review-toolbar button').disabled, true);
+  const ended = {...first, elapsed: 60, terminated: true, reports: [{id:'reported', aircraftId:'a', elapsed:59, text:'101 reports 10 miles'}],
+    events: [...first.events, {id: 'end', elapsed: 60, kind: 'clock', text: 'Exercise ended'}]};
+  review.open(ended);
+  const values = [...h.document.querySelectorAll('.procedural-review-metrics dd')].map(item => item.textContent);
+  assert.deepEqual(values, ['00:01:00', '1', '3', '1']);
+  const markers = h.document.querySelectorAll('.traffic-review-markers button');
+  assert.equal(markers.length, 2);
+  assert.equal(markers[0].textContent, '2');
+  assert.equal(h.document.querySelectorAll('.traffic-review-events button').length, 3);
+  assert.equal(h.document.querySelector('#review-record-downloads button').textContent, 'Download replay');
+  const [controllerReports, bookmarks] = h.document.querySelectorAll('.procedural-review-evidence > details');
+  const scrub = h.document.querySelector('.traffic-review-toolbar input');
+  controllerReports.open = true;
+  scrub.value = '58'; scrub.oninput();
+  assert.match(controllerReports.querySelector('ol').textContent, /No pilot reports/);
+  scrub.value = '60'; scrub.oninput();
+  assert.match(controllerReports.querySelector('ol').textContent, /101 reports 10 miles/);
+  bookmarks.querySelector('input').value = 'Check position report';
+  bookmarks.querySelector('form').onsubmit({preventDefault(){}});
+  assert.deepEqual(JSON.parse(h.context.sessionStorage.getItem('ats-procedural-replay')).bookmarks, [{t:60,label:'Check position report'}]);
+  scrub.value = '0'; scrub.oninput();
+  bookmarks.querySelector('li button').onclick();
+  assert.equal(scrub.value, '60');
+
+});

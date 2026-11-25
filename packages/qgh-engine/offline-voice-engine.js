@@ -19,12 +19,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   // exposes final text to the workspace; the local voice command parser remains the
   // authority that decides whether a simulator control may be activated.
   const MODEL_FILE = 'voice-models/qgh-vosk-en-us-small-0.15.tar.gz';
+  const LIBRARY_FILE = 'vendor/vosk-browser-0.0.8.js';
+  let libraryPromise;
+  // Nested controller desks share the same model URL and offline cache as QGH.
+  const engineSource = root.document?.currentScript?.src || root.location?.href || '';
   const MODEL_CACHE = 'qgh-offline-voice-pack-v1';
   const MODEL_SIZE_BYTES = 41160778;
   // Vosk returns the last decoded phrase asynchronously after PTT is released.
   // Keep the recognizer alive until that result arrives; this is only a failsafe
   // for a device or worker that never replies, not the normal completion path.
   const FINAL_RESULT_TIMEOUT_MS = 5000;
+  const MAX_CAPTURE_BLOCK_SECONDS = 0.032;
+  const MIN_WORD_CONFIDENCE = 0.50;
   const MAX_ANDROID_GRAMMAR_PHRASES = 11_999;
   const MAX_ANDROID_GRAMMAR_BYTES = 490_000;
   const AVIATION_DIGITS = ['zero', 'one', 'two', 'tree', 'four', 'fife', 'six', 'seven', 'eight', 'niner'];
@@ -51,14 +57,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const recognitionPlanCache = new Map();
   const MAX_RECOGNITION_PLANS = 16;
 
-  function documentRef() {
-    return root.document || null;
-  }
-
   function assetUrl(relativePath) {
-    const currentScript = documentRef()?.currentScript;
-    const source = currentScript?.src || root.location?.href || '';
-    try { return new URL(relativePath, source).href; } catch { return relativePath; }
+    try { return new URL(relativePath, engineSource).href; } catch { return relativePath; }
   }
 
   function modelUrl() {
@@ -408,11 +408,33 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function supportsOfflineVoice() {
     const AudioContext = root.AudioContext || root.webkitAudioContext;
     return Boolean(
-      root.Vosk && typeof root.Vosk.createModel === 'function'
+      (hasLibrary() || root.document?.createElement)
       && root.navigator?.mediaDevices?.getUserMedia
       && typeof AudioContext === 'function'
       && typeof root.Worker === 'function'
     );
+  }
+
+  function hasLibrary() {
+    return typeof root.Vosk?.createModel === 'function';
+  }
+
+  async function loadLibrary() {
+    if (hasLibrary()) return;
+    libraryPromise ??= new Promise((resolve, reject) => {
+      const script = root.document.createElement('script');
+      script.src = assetUrl(LIBRARY_FILE);
+      script.addEventListener('load', () => {
+        if (hasLibrary()) resolve();
+        else reject(new Error('offline speech engine could not start'));
+      }, { once: true });
+      script.addEventListener('error', () => reject(new Error('offline speech engine could not load')), { once: true });
+      root.document.head.append(script);
+    }).catch(error => {
+      libraryPromise = null;
+      throw error;
+    });
+    await libraryPromise;
   }
 
   function canCacheArchive() {
@@ -438,34 +460,68 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const reader = response.body.getReader();
     const chunks = [];
     let loaded = 0;
-    while (true) {
-      const part = await reader.read();
-      if (part.done) break;
-      chunks.push(part.value);
-      loaded += part.value.byteLength;
-      onProgress?.({ phase: 'downloading', loaded, total });
+    try {
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        loaded += part.value.byteLength;
+        if (loaded > MODEL_SIZE_BYTES) throw new Error('offline voice pack size mismatch');
+        chunks.push(part.value);
+        onProgress?.({ phase: 'downloading', loaded, total });
+      }
+    } catch (error) {
+      await reader.cancel().catch(() => {});
+      throw error;
+    } finally {
+      reader.releaseLock();
     }
+    if (loaded !== MODEL_SIZE_BYTES) throw new Error('offline voice pack download incomplete');
     const headers = new Headers(response.headers);
+    headers.delete('content-encoding');
     headers.set('content-type', 'application/gzip');
+    headers.set('content-length', String(loaded));
     await cache.put(request, new Response(new Blob(chunks, { type: 'application/gzip' }), { headers }));
     onProgress?.({ phase: 'cached', loaded: total, total });
     return true;
   }
 
+  async function cacheLibrary() {
+    const cache = await root.caches.open(MODEL_CACHE);
+    const request = new Request(assetUrl(LIBRARY_FILE), { credentials: 'same-origin' });
+    if (await cache.match(request)) return;
+    const response = await root.fetch(request, { cache: 'no-store' });
+    if (!response.ok) throw new Error('offline speech engine could not be downloaded');
+    await cache.put(request, response);
+  }
+
+  async function downloadOfflineVoicePack(onProgress) {
+    if (!canCacheArchive()) return false;
+    await cacheLibrary();
+    return cacheArchive(onProgress);
+  }
+
   async function hasCachedArchive() {
     if (!canCacheArchive()) return false;
     try {
+      if (root.caches.has && !await root.caches.has(MODEL_CACHE)) return false;
       const cache = await root.caches.open(MODEL_CACHE);
       const request = new Request(modelUrl(), { credentials: 'same-origin' });
-      return Boolean(await cache.match(request));
+      return Boolean(await cache.match(request)
+        && await cache.match(assetUrl(LIBRARY_FILE)));
     } catch {
       return false;
     }
   }
 
-  function transcriptFrom(result) {
-    const text = result?.result?.text;
-    return typeof text === 'string' && text.trim() && text.trim() !== '[unk]' ? text.trim() : '';
+  function captureBlockSize(sampleRate) {
+    // ScriptProcessor accepts powers of two. Bound the last buffered syllable
+    // on both speech-rate microphones and 44.1/48 kHz desktop devices.
+    return 2 ** Math.max(8, Math.min(14, Math.floor(Math.log2(sampleRate * MAX_CAPTURE_BLOCK_SECONDS))));
+  }
+
+  function uncertainSegment(text, words) {
+    return /\[unk\]/i.test(text) || (Array.isArray(words) &&
+      words.some(word => Number.isFinite(word.conf) && word.conf < MIN_WORD_CONFIDENCE));
   }
 
   class OfflineVoiceSession {
@@ -476,6 +532,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       this.stream = null;
       this.audioContext = null;
       this.source = null;
+      this.speechFilter = null;
       this.processor = null;
       this.silentGain = null;
       this.recognizer = null;
@@ -483,6 +540,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       this.ending = false;
       this.ended = false;
       this.finalizeTimer = null;
+      this.tailTimer = null;
       this.audioUnlockPromise = null;
       this.audioReleaseTasks = new Set();
       this.closedAudioContexts = new WeakSet();
@@ -507,7 +565,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (!supportsOfflineVoice()) throw new Error('offline voice is not supported in this runtime');
       const task = (async () => {
         onProgress?.({ phase: 'preparing', loaded: 0, total: MODEL_SIZE_BYTES });
-        await cacheArchive(onProgress);
+        if (root.navigator?.serviceWorker?.controller) await downloadOfflineVoicePack(onProgress);
+        else await cacheArchive(onProgress);
+        await loadLibrary();
         this.model = await root.Vosk.createModel(modelUrl());
         onProgress?.({ phase: 'ready', loaded: MODEL_SIZE_BYTES, total: MODEL_SIZE_BYTES });
         return this.model;
@@ -526,7 +586,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
       let audioContext;
       try {
-        audioContext = new AudioContext();
+        audioContext = new AudioContext({ latencyHint: 'interactive' });
       } catch (error) {
         return Promise.reject(error);
       }
@@ -622,12 +682,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       }
 
       const grammar = Array.isArray(settings.grammar) && settings.grammar.length
-        ? JSON.stringify(settings.grammar)
+        ? settings.grammarJson || JSON.stringify(settings.grammar)
         : undefined;
       let recognizer;
       try {
         recognizer = new model.KaldiRecognizer(audioContext.sampleRate, grammar);
+        recognizer.setWords(true);
       } catch (error) {
+        recognizer?.remove();
         stream.getTracks().forEach(track => track.stop());
         this.discardAudioContext(audioContext);
         settings.onError?.('unavailable');
@@ -644,14 +706,20 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       this.awaitingFinalResult = false;
       this.hasFinalResult = false;
       this.noResultReported = false;
+      // Vosk answers every submitted audio chunk (partial or result), then
+      // answers retrieveFinalResult with another result of the same shape.
+      let unansweredChunks = 0;
       recognizer.on('result', message => {
         // A late worker message from a retired recognizer must never affect a
         // subsequent PTT press on the same session object.
         if (this.recognizer !== recognizer) return;
-        const shouldFinish = this.ending;
+        const shouldFinish = this.awaitingFinalResult && unansweredChunks === 0;
+        if (unansweredChunks > 0) unansweredChunks--;
         try {
-          const transcript = transcriptFrom(message);
-          if (transcript) {
+          const transcript = typeof message?.result?.text === 'string' ? message.result.text.trim() : '';
+          if (uncertainSegment(transcript, message?.result?.result)) {
+            settings.onUnrecognizedSegment?.();
+          } else if (transcript) {
             this.hasFinalResult = true;
             settings.onResult?.(transcript);
           } else if (shouldFinish) {
@@ -660,33 +728,50 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         } finally {
           // `retrieveFinalResult()` delivers through this same event channel.
           // Do not remove the recognizer before the worker has posted it.
-          if (shouldFinish) this.finish();
+          if (shouldFinish) this.finish({ finalDrained: true });
         }
       });
       recognizer.on('partialresult', message => {
+        if (this.recognizer !== recognizer) return;
+        if (unansweredChunks > 0) unansweredChunks--;
         if (!this.ending) settings.onPartial?.(String(message?.result?.partial || '').trim());
+      });
+      recognizer.on('error', () => {
+        if (this.recognizer !== recognizer) return;
+        settings.onError?.('unavailable');
+        this.finish();
       });
 
       const source = audioContext.createMediaStreamSource(stream);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+      const processor = audioContext.createScriptProcessor(captureBlockSize(audioContext.sampleRate), 1, 1);
+      const speechFilter = audioContext.createBiquadFilter();
+      speechFilter.type = 'highpass';
+      speechFilter.frequency.value = 75;
+      speechFilter.Q.value = Math.SQRT1_2;
       const silentGain = audioContext.createGain();
       silentGain.gain.value = 0;
       processor.onaudioprocess = event => {
-        if (!this.listening || this.ending) return;
+        if (!this.listening || this.awaitingFinalResult || this.recognizer !== recognizer) return;
         try {
+          unansweredChunks++;
           recognizer.acceptWaveform(event.inputBuffer);
+          if (this.ending) this.drainRecognizer();
         } catch {
           settings.onError?.('unavailable');
           this.finish();
         }
       };
-      source.connect(processor);
+      source.connect(speechFilter);
+      speechFilter.connect(processor);
       processor.connect(silentGain);
       silentGain.connect(audioContext.destination);
       this.source = source;
+      this.speechFilter = speechFilter;
       this.processor = processor;
       this.silentGain = silentGain;
-      stream.getTracks().forEach(track => track.addEventListener?.('ended', () => this.finish(), { once: true }));
+      stream.getTracks().forEach(track => track.addEventListener?.('ended', () => {
+        if (this.recognizer === recognizer) this.finish();
+      }, { once: true }));
       settings.onStarted?.();
       return Object.freeze({ started: true, replacedPendingFinalResult });
     }
@@ -699,6 +784,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
     disconnectAudioInput() {
       try { this.processor?.disconnect(); } catch { /* Best effort. */ }
+      try { this.speechFilter?.disconnect(); } catch { /* Best effort. */ }
       try { this.source?.disconnect(); } catch { /* Best effort. */ }
       try { this.silentGain?.disconnect(); } catch { /* Best effort. */ }
     }
@@ -712,13 +798,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       this.ending = false;
       this.awaitingFinalResult = false;
       root.clearTimeout(this.finalizeTimer);
+      root.clearTimeout(this.tailTimer);
       this.finalizeTimer = null;
+      this.tailTimer = null;
       this.disconnectAudioInput();
       this.stream?.getTracks().forEach(track => track.stop());
       try { this.recognizer?.remove(); } catch { /* The worker may already be gone. */ }
       const context = this.audioContext;
       this.stream = null;
       this.source = null;
+      this.speechFilter = null;
       this.processor = null;
       this.silentGain = null;
       this.recognizer = null;
@@ -726,7 +815,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       this.audioUnlockPromise = null;
       this.callbacks = null;
       this.discardAudioContext(context);
-      if (!suppressCallbacks) this.options.onEnded?.();
+      if (!suppressCallbacks) this.options.onEnded?.({ finalDrained: options?.finalDrained === true });
     }
 
     stop(options) {
@@ -740,15 +829,29 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       }
       if (!this.listening) return;
       this.ending = true;
-      this.awaitingFinalResult = !cancel;
-      this.disconnectAudioInput();
       this.stream?.getTracks().forEach(track => track.stop());
       if (cancel) {
         this.finish();
         return;
       }
-      try { this.recognizer?.retrieveFinalResult(); } catch { /* Final text is optional on an interrupted device stream. */ }
+      // A stopped track supplies silence, but its last pre-release samples may
+      // still be queued in Web Audio. Forward that block before asking Vosk for
+      // the final text. Some devices stop callbacks immediately when tracks end.
+      const recognizer = this.recognizer;
+      const tailWait = Math.ceil(2000 * this.processor.bufferSize / this.audioContext.sampleRate) + 16;
+      this.tailTimer = root.setTimeout(() => {
+        if (this.recognizer === recognizer) this.drainRecognizer();
+      }, tailWait);
+    }
+
+    drainRecognizer() {
+      if (!this.ending || this.awaitingFinalResult) return;
+      root.clearTimeout(this.tailTimer);
+      this.tailTimer = null;
+      this.disconnectAudioInput();
+      this.awaitingFinalResult = true;
       this.finalizeTimer = root.setTimeout(() => this.finish(), FINAL_RESULT_TIMEOUT_MS);
+      try { this.recognizer.retrieveFinalResult(); } catch { this.finish(); }
     }
 
     cancel() {
@@ -771,6 +874,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     MODEL_CACHE,
     supportsOfflineVoice,
     hasCachedArchive,
+    downloadOfflineVoicePack,
     buildRecognitionPlan,
     buildQghGrammar,
     create

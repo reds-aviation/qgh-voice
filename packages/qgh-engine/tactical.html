@@ -17,11 +17,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>ATS SIM BOX · Tactical QGH</title>
+  <link rel="stylesheet" href="setup-loading.css">
   <link rel="stylesheet" href="tactical.css?v=4.2.0">
   <link rel="stylesheet" href="voice.css?v=4.2.0">
   <link rel="stylesheet" href="guided-familiarisation.css?v=4.2.0">
-  <script defer src="vendor/vosk-browser-0.0.8.js?v=4.2.0"></script>
   <script defer src="offline-voice-engine.js?v=4.2.0"></script>
+  <script defer src="rt-intent-model.js?v=4.2.0"></script>
   <script defer src="voice-control.js?v=4.2.0"></script>
   <script defer src="simulator-core.js?v=4.2.0"></script>
   <link rel="stylesheet" href="procedure.css">
@@ -36,13 +37,24 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <script defer src="radio-workspace.js?v=4.2.0"></script>
   <script defer src="headphone-consent.js?v=4.4.2"></script>
   <script defer src="procedure-workspace.js"></script>
+  <script defer src="setup-loading.js"></script>
   <script defer src="voice-workspace.js?v=4.2.0"></script>
   <script defer src="guided-familiarisation.js?v=4.2.0"></script>
 <link rel="stylesheet" href="license-footer.css"></head>
 <body>
-  <main class="tactical-app">
+  <section class="ats-setup-loader" id="setupLoader" aria-labelledby="setupLoadingTitle">
+    <div class="ats-setup-loader__content">
+      <span class="ats-setup-loader__brand">ATS SIM BOX</span>
+      <h1 id="setupLoadingTitle" data-setup-title role="status">Loading exercise setup…</h1>
+      <p class="ats-setup-loader__caption">IAF Surya Kiran Aerobatic Team</p>
+      <noscript><p>Enable JavaScript to open exercise setup.</p></noscript>
+      <button id="setupRetry" type="button" hidden>Retry setup</button>
+      <a href="index.html">Back to exercise selection</a>
+    </div>
+  </section>
+  <main class="tactical-app" inert>
     <header class="tactical-app-header">
-      <div class="tactical-brand"><h1>ATS SIM BOX</h1><a class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="training-centre.html#qgh" target="_blank" rel="noopener">Training guide</a></div>
+      <div class="tactical-brand"><h1>ATS SIM BOX</h1><a id="qghTypeSelection" class="tactical-mode-home" href="index.html">CHANGE QGH TYPE</a><a class="tactical-mode-home" href="training-centre.html#qgh" target="_blank" rel="noopener">Training guide</a></div>
       <div class="tactical-credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
@@ -51,35 +63,38 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         <header class="tactical-setup-intro">
           <span>INDIVIDUAL PRACTICE · TACTICAL</span>
           <h2>Build your tactical exercise</h2>
-          <p>Set the procedure and tracks, then prepare two to four aircraft below.</p>
+          <p>Set the aircraft count or use the defaults.</p>
         </header>
-        <div class="tactical-setup-fields">
-          <div class="tactical-field">
-            <label for="tRunway">RUNWAY ORIENTATION · °M</label>
-            <div class="tactical-unit" data-unit="°"><input id="tRunway" type="number" inputmode="numeric" min="0" max="359" value="230"></div>
+        <fieldset class="exercise-procedure-picker">
+          <legend>Procedure</legend>
+          <div class="tactical-choice">
+            <button id="tProcedureNormal" type="button" aria-pressed="true">Normal QGH</button>
+            <button id="tProcedureUs" type="button" aria-pressed="false">U/S Compass</button>
           </div>
-          <div class="tactical-field">
-            <label for="tInbound">INBOUND / FINAL TRACK · °M</label>
-            <div class="tactical-unit" data-unit="°"><input id="tInbound" type="number" inputmode="numeric" min="0" max="359" value="225"></div>
-          </div>
-          <div class="tactical-field">
-            <label for="tOutbound">OUTBOUND TRACK · °M</label>
-            <div class="tactical-unit" data-unit="°"><input id="tOutbound" type="number" inputmode="numeric" min="0" max="359" value="065"></div>
-          </div>
-          <div class="tactical-field tactical-procedure-field">
-            <label>PROCEDURE</label>
-            <div class="tactical-choice" role="group" aria-label="Tactical procedure selection">
-              <button id="tProcedureNormal" type="button" aria-pressed="true">NORMAL QGH</button>
-              <button id="tProcedureUs" type="button" aria-pressed="false">U/S COMPASS</button>
+        </fieldset>
+        <details class="exercise-setup-disclosure" id="setupTracks">
+          <summary><span>Runway and tracks</span><small id="setupTrackSummary"></small></summary>
+          <div class="tactical-setup-fields exercise-track-fields">
+            <div class="tactical-field">
+              <label for="tRunway">Runway orientation · °M</label>
+              <div class="tactical-unit" data-unit="°"><input id="tRunway" type="number" inputmode="numeric" min="0" max="359" value="230"></div>
+            </div>
+            <div class="tactical-field">
+              <label for="tInbound">Inbound / final track · °M</label>
+              <div class="tactical-unit" data-unit="°"><input id="tInbound" type="number" inputmode="numeric" min="0" max="359" value="225"></div>
+            </div>
+            <div class="tactical-field">
+              <label for="tOutbound">Outbound track · °M</label>
+              <div class="tactical-unit" data-unit="°"><input id="tOutbound" type="number" inputmode="numeric" min="0" max="359" value="065"></div>
             </div>
           </div>
-        </div>
+        </details>
+
 
         <section class="tactical-fleet-builder" aria-label="Tactical aircraft configuration">
           <header>
             <div>
-              <span>TACTICAL FLIGHT</span>
-              <h2>AIRCRAFT PARTICIPATING</h2>
+              <h3>Aircraft in this exercise</h3>
             </div>
             <div class="tactical-count" role="group" aria-label="Number of aircraft">
               <button id="tFleet2" type="button" aria-pressed="false">02</button>
@@ -87,36 +102,41 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
               <button id="tFleet4" type="button" aria-pressed="false">04</button>
             </div>
           </header>
-          <div class="tactical-aircraft-heading" aria-hidden="true">
-            <span>CALLSIGN</span><span>PROFILE</span><span>LEVEL · FT</span><span>SPEED</span><span>TURN RATE</span><span>RANGE</span>
+          <div class="tactical-setup-actions exercise-launch" id="exerciseLaunch">
+            <button class="tactical-start" id="tStart" type="button">Start Tactical exercise</button>
+            <div class="exercise-audio-tools" role="group" aria-label="Optional radio practice and audio">
+              <button class="exercise-rehearsal" id="setupRehearsal" type="button" aria-pressed="false">Rehearse a radio call</button>
+              <button class="tactical-pilot-readback-setup" id="setupPilotReadbacks" type="button">Test headphones</button>
+              <div id="setupVoiceMount"></div>
+            </div>
           </div>
-          <div id="tAircraftRows" class="tactical-aircraft-rows"></div>
-          <section class="tactical-formation-setup" aria-label="Formation flight setup">
-            <div class="tactical-formation-toggle">
-              <span>FORMATION FLIGHT</span>
-              <div class="tactical-choice" role="group" aria-label="Formation flight selection">
-                <button id="tFormationOff" type="button" aria-pressed="true">OFF</button>
-                <button id="tFormationOn" type="button" aria-pressed="false">ON</button>
-              </div>
+          <details class="exercise-setup-disclosure" id="setupFleetDetails">
+            <summary>Aircraft details and formation</summary>
+            <div class="tactical-aircraft-heading" aria-hidden="true">
+              <span>CALLSIGN</span><span>PROFILE</span><span>LEVEL · FT</span><span>SPEED</span><span>TURN RATE</span><span>RANGE</span>
             </div>
-            <div class="tactical-formation-options" id="tFormationOptions" hidden>
-              <div class="tactical-field">
-                <label for="tFormationLeader">FORMATION LEADER</label>
-                <select id="tFormationLeader" aria-label="Formation leader"></select>
+            <div id="tAircraftRows" class="tactical-aircraft-rows"></div>
+            <section class="tactical-formation-setup" aria-label="Formation flight setup">
+              <div class="tactical-formation-toggle">
+                <span>Formation flight</span>
+                <div class="tactical-choice" role="group" aria-label="Formation flight selection">
+                  <button id="tFormationOff" type="button" aria-pressed="true">Off</button>
+                  <button id="tFormationOn" type="button" aria-pressed="false">On</button>
+                </div>
               </div>
-              <div class="tactical-formation-members">
-                <label>FORMATION MEMBERS</label>
-                <div id="tFormationMembers" class="tactical-member-chips" role="group" aria-label="Formation members"></div>
+              <div class="tactical-formation-options" id="tFormationOptions" hidden>
+                <div class="tactical-field">
+                  <label for="tFormationLeader">FORMATION LEADER</label>
+                  <select id="tFormationLeader" aria-label="Formation leader"></select>
+                </div>
+                <div class="tactical-formation-members">
+                  <label>FORMATION MEMBERS</label>
+                  <div id="tFormationMembers" class="tactical-member-chips" role="group" aria-label="Formation members"></div>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </details>
         </section>
-
-        <div class="tactical-setup-actions">
-          <p><strong>Ready to practise?</strong><span>Pilot readbacks are optional; test headphones first if you want audio.</span></p>
-          <button class="tactical-pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
-          <button class="tactical-start" id="tStart" type="button">START TACTICAL EXERCISE</button>
-        </div>
       </div>
     </section>
 

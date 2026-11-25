@@ -48,12 +48,82 @@ const make = (tag, content, className) => {
     return e;
 };
 const key = 'qgh-procedural-browser-session-v1';
+const controllerInvitation = new URLSearchParams(location.search).get('position') === 'student';
+function focusControllerEntry() {
+    const target = matchMedia('(max-width: 700px)').matches ? $('controller-entry-title') : $('student-name');
+    (target || $('student-name')).focus();
+}
+if (controllerInvitation) {
+    const entry = $('entry'), card = $('controller-entry');
+    entry.classList.add('controller-invitation');
+    entry.setAttribute('aria-labelledby', 'controller-entry-title');
+    const title = make('h1', 'Join the Procedural exercise');
+    title.id = 'controller-entry-title';
+    title.tabIndex = -1;
+    card.querySelector('h2').replaceWith(title);
+    title.after($('return-desk'));
+    const settings = make('details', undefined, 'invite-connection');
+    const connectionLabel = make('summary');
+    const showConnection = () => { connectionLabel.textContent = $('session-mode').value === 'online' ? 'Connection · Online room' : 'Connection · This device'; };
+    settings.append(connectionLabel, entry.querySelector('.session-connection'));
+    card.append(settings);
+    $('session-mode').addEventListener('change', showConnection);
+    showConnection();
+}
 let stage = 'entry';
 let room = null;
 let drawerReturn = null;
 let session = null, view = null, selected = '', generation = 0, pollTimer = 0, loginBusy = false, commandBusy = false;
 let loginGeneration = 0;
 let exerciseConnectionAvailable = false;
+let controllerMic = null, voiceModeBusy = false;
+function voiceContext() {
+    const enabled = session?.role === 'student' && stage === 'desk' && room?.status === 'ready';
+    return { enabled, running: enabled && exerciseConnectionAvailable && !!view?.running && !view.terminated && !!view.controllerVoice?.runKey,
+        mode: view?.controllerVoice?.automatic ? 'automatic' : 'human',
+        callsigns: (view?.roster || []).filter(a => a.status !== 'scheduled').map(a => a.callsign),
+        exerciseId: view?.exerciseId || '', runKey: view?.controllerVoice?.runKey || '' };
+}
+async function deliverSpokenCall({transcript, requestId, modelIntent}) {
+    const context = voiceContext();
+    if (!context.running) return false;
+    const heading = globalThis.ATSControllerVoice?.interpretHeading(transcript, context.callsigns);
+    const addressed = heading || globalThis.ATSControllerVoice?.interpretRequest?.(transcript, context.callsigns, modelIntent)
+        || globalThis.ATSControllerVoice?.interpretClearance?.(transcript, context.callsigns);
+    const target = view.roster.find(a => a.callsign === addressed?.callsign) || view.roster.find(a => a.id === selected);
+    if (!target) throw new Error('Select the aircraft before transmitting.');
+    const result = await command('controller-call', {text:transcript, source:'voice', candidateIntent:modelIntent, runKey:context.runKey,
+        issuedAt:view.controllerVoice.issuedAt}, target.id, context.exerciseId, requestId);
+    controllerMic?.acknowledge({requestId, text:result.voiceOutcome || 'Call delivered to the instructor.'});
+    return true;
+}
+function refreshControllerVoice() {
+    const container = $('procedural-controller-voice');
+    const isController = session?.role === 'student';
+    container.hidden = !isController;
+    const onScope = isController && ($('work-panel').hidden || $('tab-strip').hidden);
+    const scopeSlot = $('scope-voice-slot');
+    scopeSlot.hidden = !onScope;
+    const slot = onScope ? scopeSlot : $('calls-voice-slot');
+    if (container.parentElement !== slot) slot.append(container);
+    if (isController && !controllerMic) {
+        controllerMic = globalThis.SuiteControllerVoice?.mount(container, {context:voiceContext, send:deliverSpokenCall, onPress:clearAudio});
+    }
+    controllerMic?.refresh();
+    const control = $('auto-voice-headings');
+    if (!voiceModeBusy) control.checked = !!view?.controllerVoice?.automatic;
+    control.disabled = voiceModeBusy || !view?.controllerVoice || !!view.terminated;
+}
+$('auto-voice-headings').addEventListener('change', safe(async () => {
+    const exerciseId = view?.exerciseId, currentSession = session;
+    const automatic = $('auto-voice-headings').checked;
+    voiceModeBusy = true;
+    refreshControllerVoice();
+    try {
+        const setting = await request('/api/procedural/voice-mode', {exerciseId, automatic});
+        if (currentSession === session && view?.exerciseId === exerciseId) view.controllerVoice = setting;
+    } finally { voiceModeBusy = false; refreshControllerVoice(); }
+}));
 const exerciseSetupArchive = createExerciseSetupArchive({view: () => view, generation: () => generation, request: (...args) => request(...args)});
 let audioParticipants = '';
 const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: $('tab-session'),
@@ -73,6 +143,7 @@ const meetingPanel = globalThis.ATCSuiteMeeting?.createPanel({ container: $('tab
 });
 meetingPanel?.addShortcut($('clock-controls').parentElement);
 const startupChecklist = globalThis.ATCSuiteMeeting?.createStartupChecklist({container:$('tab-session')});
+if (startupChecklist) $('instructor-room').after(startupChecklist.element);
 function startupOptions() {
     const admitted = (room?.students || []).filter(student => ['admitted','ready'].includes(student.status));
     return {online:!!session?.cloud,connected:exerciseConnectionAvailable && view?.available !== false,
@@ -115,10 +186,11 @@ function renderMeeting() {
 let range = 60, showMap = false, mapId = '', mapURL = '', mapImage = null, mapLoading = '', mapGeneration = 0, receivedAt = 0, lastAudio = '', messageTimer = 0;
 let settingsLoaded = false, chartIdentity = '';
 const environmentDirty = new Set();
+const environmentForms = ['runway-form', 'environment-form', 'threshold-form'];
 function syncEnvironmentInputs() {
     if (!view)
         return;
-    for (const form of ['environment-form', 'threshold-form'])
+    for (const form of environmentForms)
         $(form).querySelectorAll('input[name]').forEach(input => {
             if (view?.environment[input.name] == null)
                 return;
@@ -191,7 +263,7 @@ async function request(path, body, method) {
     }
     return response.json();
 }
-async function command(type, payload = {}, aircraftId, expectedExerciseId = view?.exerciseId) {
+async function command(type, payload = {}, aircraftId, expectedExerciseId = view?.exerciseId, requestId = crypto.randomUUID()) {
     if (!session)
         throw new Error('Open a session first.');
     if (expectedExerciseId && view?.exerciseId !== expectedExerciseId)
@@ -202,7 +274,7 @@ async function command(type, payload = {}, aircraftId, expectedExerciseId = view
     pendingClock = type === 'clock' ? String(payload.action || '') : '';
     renderClockControls();
     const stamp = generation, auth = session;
-    const cmd = { id: crypto.randomUUID(), exerciseId: expectedExerciseId, type, payload, ...(aircraftId ? { aircraftId } : {}) };
+    const cmd = { id: requestId, exerciseId: expectedExerciseId, type, payload, ...(aircraftId ? { aircraftId } : {}) };
     try {
         // One retry retains the same identifier. A lost acknowledgement never duplicates the clearance.
         let result;
@@ -298,6 +370,7 @@ function tab(name, open = true) {
     $('work-panel').hidden = !open;
     document.body.classList.toggle('drawer-open', open);
     document.body.classList.toggle('review-open', open && name === 'debrief');
+    refreshControllerVoice();
     if (open && name === 'debrief') trafficReview.open(view);
     else trafficReview.close();
     if (open) {
@@ -305,11 +378,12 @@ function tab(name, open = true) {
         $('drawer-close').focus({ preventScroll: true });
     }
 }
-function closeDrawer(restoreFocus = true) { $('work-panel').hidden = true; document.body.classList.remove('drawer-open', 'review-open'); document.querySelectorAll('[data-tab]:not([role="tab"])').forEach(b => b.setAttribute('aria-expanded', 'false')); $('quick-more').setAttribute('aria-expanded', 'false'); trafficReview.close(); if (restoreFocus !== false) drawerReturn?.focus(); }
+function closeDrawer(restoreFocus = true) { $('work-panel').hidden = true; refreshControllerVoice(); document.body.classList.remove('drawer-open', 'review-open'); document.querySelectorAll('[data-tab]:not([role="tab"])').forEach(b => b.setAttribute('aria-expanded', 'false')); $('quick-more').setAttribute('aria-expanded', 'false'); trafficReview.close(); if (restoreFocus !== false) drawerReturn?.focus(); }
 function setStage(next) {
     const changed = stage !== next;
     if (next !== 'desk') resetScopePointer();
     stage = next;
+    refreshControllerVoice();
     for (const id of ['entry', 'setup', 'waiting', 'desk'])
         $(id).hidden = id !== next;
     document.body.classList.toggle('desk-open', next === 'desk');
@@ -325,9 +399,16 @@ function setStage(next) {
     $('back-flow').hidden = !session || next === 'entry';
     $('return-desk').hidden = !session || next !== 'entry';
     renderMeeting();
-    if (changed && next === 'desk') globalThis.ATCSuiteWorkspace?.enter($('desk'));
+    if (changed && next === 'desk') {
+        globalThis.ATCSuiteWorkspace?.enter($('desk'));
+        if (session?.role === 'student') $('exercise-title').focus({ preventScroll: true });
+    }
+    if (changed && next === 'waiting') $('join-title').focus();
+    if (changed && next === 'entry' && controllerInvitation) focusControllerEntry();
 }
 function leave() {
+    controllerMic?.destroy();
+    controllerMic = null;
     trafficReview.clear();
     gestures.reset();
     ++generation;
@@ -420,6 +501,7 @@ function enter(s, startPolling = true) {
     $('scenario-library-open').hidden = true;
     $('incoming-calls-open').hidden = !instructor;
     $('instructor-room').hidden = !instructor;
+    $('room-students').hidden = true;
     document.querySelectorAll('[data-instructor-tool]').forEach(el => el.hidden = !instructor);
     document.querySelectorAll('[data-prepare-secondary]').forEach(el => el.hidden = true);
     $('criterion-form').hidden = !instructor;
@@ -540,6 +622,7 @@ async function poll(stamp) {
     catch (e) {
         if (stamp === generation) {
             exerciseConnectionAvailable = false;
+            refreshControllerVoice();
             meetingPanel?.resetVoice?.();
             text('connection', 'RECONNECTING');
             $('scope-wrap').classList.add('stale');
@@ -576,7 +659,10 @@ function renderRoom() {
         if (participants !== audioParticipants) { audioParticipants = participants; meetingPanel?.resetVoice?.(); }
         const waiting = students.filter((s) => s.status === 'waiting').length;
         const ready = students.filter(s => s.status === 'ready').length;
-        text('session-link-status', `${session.cloud ? 'ONLINE · different devices' : 'THIS DEVICE · same browser'} → ${waiting ? `${waiting} waiting for admission` : ready ? `${ready} controller ready` : students.length ? 'Waiting for controller Ready' : 'Share PIN → Admit → Ready → Run'}`);
+        const nextStep = waiting ? `${waiting} waiting for admission` : ready ? `${ready} controller ready` : students.some(s => s.status === 'admitted') ? 'Waiting for controller Ready' : session.cloud ? 'Share the PIN and admit your controller' : 'Run now or share the PIN to train with a controller';
+        const progress = `${session.cloud ? 'Online room' : 'This device'} · ${nextStep}`;
+        if ($('session-link-status').textContent !== progress) text('session-link-status', progress);
+        $('room-students').hidden = !students.length;
         text('session-pin', room.pin);
         text('edge-pin', `${room.pin}${waiting ? ` · ${waiting} waiting` : ''}`);
         changeList('room-students', students, () => students.length ? students.map((s) => {
@@ -593,7 +679,9 @@ function renderRoom() {
         text('session-link-status', `${session.cloud ? 'Online room' : 'This device'} · ${room.status || 'connecting'}`);
         text('join-status', room.status === 'admitted' ? session.cloud ? 'Press Ready to open your display. Google Meet is optional: speak in the same room or use another voice connection. If you use the shared Meet link, join and check audio together.' : 'Press Ready to open your controller scope.' : room.status === 'rejected' ? 'Return to entry and request the current session PIN.' : 'Your request has been sent. The instructor will admit you.');
         text('student-ready',session.cloud ? 'Ready — open my display' : 'Ready — open my scope');
+        const newlyAdmitted = $('student-ready').hidden && room.status === 'admitted';
         $('student-ready').hidden = room.status !== 'admitted';
+        if (newlyAdmitted && stage === 'waiting') $('student-ready').focus();
         text('student-room-status', `${room.name || session.name || 'Controller'} · ${room.status}`);
     }
     renderClockControls();
@@ -609,6 +697,11 @@ function renderClockControls() {
     $('open-start-setup').hidden = !instructor || running || ended;
     $('resume').setAttribute('aria-describedby','start-setup-status');
     $('resume').disabled = unavailable || busy || ended || running || waiting > 0 || startupBlocked;
+    const sessionRun = $('session-run');
+    sessionRun.hidden = !instructor || ended || running || !startup.allowed;
+    sessionRun.disabled = $('resume').disabled;
+    const runLabel = view?.elapsed > 0 ? 'Resume exercise' : 'Run exercise';
+    if (sessionRun.textContent !== runLabel) sessionRun.textContent = runLabel;
     $('pause').disabled = unavailable || busy || ended || !running;
     $('step').disabled = unavailable || busy || ended || running || startupBlocked;
     for (const id of ['terminate', 'terminate-quick']) {
@@ -869,6 +962,7 @@ function syncAssignmentTargets() {
 function render() {
     if (!view)
         return;
+    refreshControllerVoice();
     // The server's initial sample supplies chart settings, but is not the
     // instructor's starting traffic until Create or Load finishes successfully.
     const preparing = startingTrafficPending(), v = preparing ? { ...view, roster: [], aircraft: [] } : view;
@@ -1042,7 +1136,7 @@ function renderRadio() {
 }
 function localVoice() { return window.speechSynthesis?.getVoices().find(v => v.localService && /^en[-_]/i.test(v.lang)); }
 function speak(caption, duration = 6) {
-    if (document.hidden || !('speechSynthesis' in window))
+    if (document.hidden || controllerMic?.isCapturing() || !('speechSynthesis' in window))
         return;
     window.speechSynthesis.cancel();
     const voice = localVoice();
@@ -1793,10 +1887,46 @@ $('map-toggle').onclick = () => { showMap = !showMap; $('map-toggle').setAttribu
 $('bearing-type').onchange = () => draw();
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => tab(b.dataset.tab));
 bindForm('student-join', () => openSession('student'));
-bindForm('instructor-login', () => openSession('instructor'));
+const setupLoader = $('procedural-setup-loader');
+setupLoader.addEventListener('cancel', event => event.preventDefault());
+$('instructor-login').addEventListener('submit', event => {
+    event.preventDefault();
+    if (loginBusy || setupLoader.open) return;
+    void safe(openInstructorSetup)();
+});
+// The browser client imports this module after the entry page has rendered.
+$('instructor-login').querySelector('button[type="submit"]').disabled = false;
+async function openInstructorSetup() {
+    setupLoader.showModal();
+    $('setup').setAttribute('aria-busy', 'true');
+    try {
+        // A session may already exist if its first state request failed.
+        if (session?.role === 'instructor' && !view) {
+            const stamp = generation;
+            await refresh(stamp);
+            if (stamp !== generation) return;
+        }
+        await openSession('instructor');
+    }
+    catch (error) {
+        if (session?.startingTrafficRequired && !view) setStage('entry');
+        throw error;
+    }
+    finally {
+        $('setup').removeAttribute('aria-busy');
+        setupLoader.close();
+        if (stage === 'setup') $('setup').focus();
+        else if (stage === 'entry') $('instructor-login').querySelector('button').focus();
+    }
+}
 $('resume-local-exercise').onclick = safe(() => openSession('instructor', true));
 $('signout').onclick = leave;
 $('resume').onclick = safe(startExercise);
+$('session-run').onclick = safe(async () => {
+    await startExercise();
+    closeDrawer(false);
+    $('pause').focus({ preventScroll: true });
+});
 $('pause').onclick = safe(() => command('clock', { action: 'pause' }));
 $('step').onclick = safe(advanceMinute);
 $('open-start-setup').onclick = openStartSetup;
@@ -2043,7 +2173,7 @@ bindForm('route-form', async () => {
     delete $('route-form').dataset.exerciseId;
     message('Route saved.');
 });
-for (const form of ['environment-form', 'threshold-form']) {
+for (const form of environmentForms) {
     $(form).addEventListener('input', event => {
         const input = event.target;
         if (input.name)
@@ -2227,7 +2357,7 @@ const trafficSetup = createTrafficSetup({
         const stamp = generation;
         if (chartWorkshop.hasDraft?.() || environmentDirty.size) throw new Error('Save or discard your airspace entries before creating traffic. Your entries are kept.');
         const exerciseId = view?.exerciseId;
-        if (!await (globalThis.ATCSuiteWorkspace?.confirmAction?.('Create this exercise and replace the current traffic? The session will open paused with a new PIN.', {confirmLabel:'Create exercise'}) ?? confirm('Create this exercise and replace the current traffic? The session will open paused with a new PIN.')))
+        if (!startingTrafficPending() && !await (globalThis.ATCSuiteWorkspace?.confirmAction?.('Create this exercise and replace the current traffic? The session will open paused with a new PIN.', {confirmLabel:'Create exercise'}) ?? confirm('Create this exercise and replace the current traffic? The session will open paused with a new PIN.')))
             throw new Error('Creation cancelled. Your traffic entries are still available.');
         if (stamp !== generation || exerciseId !== view?.exerciseId || !isCurrent()) throw new Error('The exercise changed. Review your traffic and create again.');
         await command('scenario-setup', payload);
@@ -2241,7 +2371,7 @@ const trafficSetup = createTrafficSetup({
         setStage('desk');
         render();
         tab('session');
-        message('Exercise created. Share the PIN and admit your controller.');
+        $('work-panel').querySelector('.tab-content:not([hidden])')?.scrollIntoView?.({ block: 'nearest' });
     },
     cancel: () => { trafficSetup.close(); setStage('entry'); closeDrawer(false); },
     airspace: () => { trafficSetup.close(); setStage('desk'); tab('build'); chartWorkshop.openStep?.('airspace'); }
@@ -2391,8 +2521,7 @@ try {
     const saved = sessionStorage.getItem(key);
     if (saved) {
         const s = JSON.parse(saved);
-        const studentEntry = new URLSearchParams(location.search).get('position') === 'student';
-        if (studentEntry && s.role !== 'student') {
+        if (controllerInvitation && s.role !== 'student') {
             sessionStorage.removeItem(key);
             sessionStorage.removeItem('reds-procedural-drafts');
             sessionStorage.removeItem('reds-procedural-draft-exercise');
@@ -2408,3 +2537,4 @@ try {
 catch {
     sessionStorage.removeItem(key);
 }
+if (controllerInvitation && !session) focusControllerEntry();

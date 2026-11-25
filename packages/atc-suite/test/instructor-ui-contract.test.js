@@ -28,9 +28,9 @@ test('instructor setup contains all manual scenario inputs and lifecycle control
 test('instructor offers optional controller entry and second-display placement', () => {
   const page = html();
   assert.match(page, /same PC and browser profile/);
-  assert.match(page, /OPEN CONTROLLER ENTRY/);
+  assert.match(page, /Open controller entry/);
   assert.doesNotMatch(page, /CREATE SESSION &amp; OPEN STUDENT DISPLAY/);
-  assert.match(page, /MOVE TO SECOND DISPLAY/);
+  assert.match(page, /Move to second display/);
   assert.match(page, /aria-live="polite"/);
   assert.doesNotMatch(page, /Same-browser tabs only/);
 });
@@ -48,18 +48,18 @@ test('surveillance, SRA and PAR controls include position and approach actions',
     'sraDescentProfile']) {
     assert.match(page, new RegExp(`id="${id}"`));
   }
-  assert.match(page, /PAR TRANSFER GATE · NM/);
+  assert.match(page, /PAR transfer gate · NM/);
   assert.match(page, /TRANSFER SELECTED AIRCRAFT TO PAR/);
-  assert.match(page, /LOCAL TRAINING LFA BOUNDARY/);
-  assert.match(page, /SRA 3° DESCENT TRAINING GUIDE/);
+  assert.match(page, /Local training LFA boundary/);
+  assert.match(page, /SRA 3° descent training guide/);
 });
 
 test('instructor roster exposes a per-aircraft primary, Mode A and Mode S return selector', () => {
   const page = html();
   assert.match(page, /id="radarReturn"[^>]*data-radar-return-auto="true"/);
-  assert.match(page, /<option value="primary">PRIMARY · \+<\/option>/);
-  assert.match(page, /<option value="mode-a">MODE A · □<\/option>/);
-  assert.match(page, /<option value="mode-s">MODE S · □<\/option>/);
+  assert.match(page, /<option value="primary">Primary · \+<\/option>/);
+  assert.match(page, /<option value="mode-a">Mode A · □<\/option>/);
+  assert.match(page, /<option value="mode-s">Mode S · □<\/option>/);
 });
 
 test('Position report is a primary aircraft action outside the approach-only section', () => {

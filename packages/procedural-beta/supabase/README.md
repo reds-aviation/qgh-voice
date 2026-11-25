@@ -31,6 +31,6 @@ No original uploaded reference photographs are included in this package. A map d
 
 ## Guides and maintenance
 
-`static/guide-knowledge.js` is shared by Gyani and the generated current-flow sections in all four guides. The build verifies its release revision and control IDs. Update an explanation in this source when behaviour changes; builds regenerate all affected sections. They cannot infer a new procedure from arbitrary code changes. The original detailed guides still need editorial updates when those sections change.
+`static/guide-knowledge.js` is shared by Saarthi and the generated current-flow sections in all four guides. The build verifies its release revision and control IDs. Update an explanation in this source when behaviour changes; builds regenerate all affected sections. They cannot infer a new procedure from arbitrary code changes. The original detailed guides still need editorial updates when those sections change.
 
 References: [Supabase Auth](https://supabase.com/docs/guides/auth/auth-anonymous), [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Free plan quotas](https://supabase.com/docs/guides/platform/billing-on-supabase).

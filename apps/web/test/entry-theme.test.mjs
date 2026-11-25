@@ -26,11 +26,18 @@ test('shared entry rules follow the generated Pages theme on both training famil
     await mkdir(resolve(source,'packages/site-landing'),{recursive:true});
     await writeFile(resolve(source,'packages/site-landing/flow-theme.css'),'/* generated theme */');
     await writeFile(resolve(source,'packages/site-landing/iaf-theme.css'),'/* IAF theme */');
-    await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.png'),'fixture');
+    await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.webp'),'fixture');
+    for (const asset of ['exercise-motion.js','suite-appearance.js','suite-appearance.css','appearance-dark.css']) {
+      await writeFile(resolve(source,'packages/site-landing',asset),'fixture');
+    }
     for (const page of [...entryPages,...otherPages]) {
       await mkdir(dirname(resolve(output,page)),{recursive:true});
       const entryStyle = entryPages.includes(page) ? '<link rel="stylesheet" href="suite-entry.css?v=0.2.13-beta.1">' : '';
-      await writeFile(resolve(output,page),`<html><head>${entryStyle}<link rel="stylesheet" href="workspace.css"></head><body><main>Fixture</main></body></html>`);
+      const legacyChrome = page==='single.html' ? '<meta name="theme-color" content="#007d7d">' : '';
+      const homeTarget = page.includes('/') ? '../index.html' : './';
+      const homeLabel = page.includes('/') ? 'ATS suite Home' : 'ATC Suite';
+      const navigation = `<a id="home" href="${homeTarget}">${homeLabel}</a><a href="qgh.html">Change QGH type</a>`;
+      await writeFile(resolve(output,page),`<html><head>${legacyChrome}${entryStyle}<link rel="stylesheet" href="workspace.css"></head><body><main>${navigation}</main></body></html>`);
     }
     await buildEntryTheme(output,source,'2026.10.07.1');
     for (const page of entryPages) {
@@ -42,6 +49,18 @@ test('shared entry rules follow the generated Pages theme on both training famil
     }
     const single = await readFile(resolve(output,'single.html'),'utf8');
     assert.ok(!single.includes('suite-entry.css'),'individual exercise has no entry overrides');
+    for (const page of [...entryPages, ...otherPages]) {
+      const html = await readFile(resolve(output,page),'utf8');
+      for (const asset of ['suite-appearance.js', 'suite-appearance.css', 'appearance-dark.css']) {
+        assert.equal(html.split(asset).length - 1, 1, `${page}: one copy of ${asset}`);
+      }
+      assert.ok(html.indexOf('appearance-dark.css') > html.indexOf('iaf-theme.css'), page);
+      const homeTarget = page.includes('/') ? '../index.html' : './';
+      assert.ok(html.includes(`<a id="home" href="${homeTarget}" data-suite-home`), page);
+      assert.match(html, /data-suite-home[^>]*><svg aria-hidden="true"[^>]*>.*?<\/svg>Home<\/a>/);
+      assert.ok(html.includes('<a href="qgh.html">Change QGH type</a>'), page);
+      assert.deepEqual(html.match(/<meta name="theme-color"[^>]*>/g),['<meta name="theme-color" content="#64b4e6">'],page);
+    }
   } finally { await rm(fixture,{recursive:true,force:true}); }
 });
 
@@ -75,7 +94,10 @@ test('built entry pages keep one Prepare your position label in shared and legac
     await mkdir(resolve(source,'packages/site-landing'),{recursive:true});
     await writeFile(resolve(source,'packages/site-landing/flow-theme.css'),'/* generated theme */');
     await writeFile(resolve(source,'packages/site-landing/iaf-theme.css'),'/* IAF theme */');
-    await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.png'),'fixture');
+    await writeFile(resolve(source,'packages/site-landing/qgh-cloudbreak.webp'),'fixture');
+    for (const asset of ['exercise-motion.js','suite-appearance.js','suite-appearance.css','appearance-dark.css']) {
+      await writeFile(resolve(source,'packages/site-landing',asset),'fixture');
+    }
     const procedural = await readFile(resolve(repositoryRoot,'packages/procedural-beta/static/procedural.html'),'utf8');
     const qgh = await readFile(resolve(repositoryRoot,'packages/atc-suite/index.html'),'utf8');
     for (const page of [...entryPages,...otherPages]) {
@@ -90,7 +112,19 @@ test('built entry pages keep one Prepare your position label in shared and legac
     await buildEntryTheme(output,source,'2026.10.07.1');
     for (const page of ['instructor-led/index.html','procedural-beta/index.html','procedural-beta/procedural.html']) {
       const html = await readFile(resolve(output,page),'utf8');
-      assert.equal((html.match(/PREPARE YOUR POSITION/g)||[]).length,1,`${page}: one role-card introduction`);
+      assert.equal((html.match(/PREPARE YOUR POSITION/gi)||[]).length,1,`${page}: one role-card introduction`);
     }
   } finally { await rm(fixture,{recursive:true,force:true}); }
+});
+
+test('hosted entry artwork stays within the startup transfer budget', async () => {
+  const artwork = [
+    'hero-airspace.webp', 'hero-airspace-760.webp', 'qgh-towers.webp',
+    'procedural-airspace.webp', 'qgh-cloudbreak.webp', 'aircraft-icon.webp', 'instructor-icon.webp',
+  ];
+  const sizes = await Promise.all(artwork.map(async name =>
+    (await readFile(new URL('../../../packages/site-landing/' + name, import.meta.url))).length));
+  assert.ok(sizes[1] <= 12 * 1024, 'compact hero stays below 12 KiB');
+  assert.ok(sizes.reduce((total, bytes) => total + bytes, 0) <= 100 * 1024,
+    'both hero sizes and all entry card art together stay below 100 KiB');
 });

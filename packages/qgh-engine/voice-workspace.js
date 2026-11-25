@@ -31,6 +31,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     pressPointerId: null,
     processing: false,
     continuous: false,
+    rehearsal: false,
+    rehearsalButton: null,
+    rehearsalLaunch: null,
+    rehearsalOutput: null,
     pilotSpeaking: false,
     dispatchingRadioCommand: false,
     manuallyStopped: false,
@@ -40,7 +44,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     statusTimer: null,
     feedbackTimer: null,
     commandAcknowledgementTimer: null,
-    acknowledgementStageTimer: null,
     feedbackSequence: 0,
     lastCall: null,
     currentOutcome: null,
@@ -49,6 +52,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     effectBatch: null,
     callTranscripts: new Set(),
     transactionSegments: [],
+    uncertainTransaction: false,
     restartTimer: null,
     radioQuietTimer: null,
     readinessTimer: null,
@@ -66,6 +70,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     compactToggle: null,
     compactExpanded: false,
     dragHandle: null,
+    suppressCompactClick: false,
     dockDrag: null,
     settings: null,
     settingsToggle: null,
@@ -186,6 +191,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function setVoiceFeedback(transcript, message, tone) {
     if (!state.feedback) return;
     const heard = String(transcript || '').trim();
+    if (state.rehearsal && state.rehearsalOutput) {
+      state.rehearsalOutput.textContent = heard ? 'Heard: ' + heard + '. ' + message : message;
+      return;
+    }
+
     const compactMessage = heard
       ? `HEARD\n${tone === 'success' ? 'APPLIED' : message.startsWith('CONFIRM REQUIRED') ? 'CONFIRM' : 'CHECK CALL'}`
       : 'NO SPEECH\nTRY AGAIN';
@@ -275,7 +285,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     setStatus(phase, applied ? 'success' : pending ? 'active' : 'error');
     if (state.lastCallDetail) state.lastCallDetail.textContent = `HEARD · ${state.lastCall.heard}\nINTERPRETED · ${description || '—'}\n${phase} · ${resultDetail}`;
     setVoiceFeedback(transcript, `${phase} · ${resultDetail}`, applied ? 'success' : pending ? 'neutral' : 'error');
-    root.clearTimeout(state.acknowledgementStageTimer);
     root.clearTimeout(state.commandAcknowledgementTimer);
     if (state.announcement) state.announcement.textContent = '';
     const acknowledgement = commandAcknowledgementTarget();
@@ -292,13 +301,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       if (wasActive) void acknowledgement.offsetWidth;
       acknowledgement.classList?.add('voice-command-ack-active');
     }
-    paint(`HEARD · ${description || '—'}`);
-    // Execution is immediate. Only the visual transition waits, never the command.
-    state.acknowledgementStageTimer = root.setTimeout(() => {
-      const message = `${phase} · ${applied ? appliedReply || description : pending ? description : outcome.message}`;
-      paint(message);
-      if (state.announcement) state.announcement.textContent = message;
-    }, 250);
+    const message = `${phase} · ${applied ? appliedReply || description : pending ? description : outcome.message}`;
+    paint(message);
+    if (state.announcement) state.announcement.textContent = message;
     state.commandAcknowledgementTimer = root.setTimeout(() => {
       if (acknowledgement) {
         acknowledgement.hidden = true;
@@ -310,7 +315,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function showPilotReply(reply) {
     const acknowledgement = commandAcknowledgementTarget();
     if (!acknowledgement || !reply?.text) return;
-    root.clearTimeout(state.acknowledgementStageTimer);
     root.clearTimeout(state.commandAcknowledgementTimer);
     acknowledgement.textContent = `PILOT · ${reply.text}`;
     acknowledgement.title = acknowledgement.textContent;
@@ -338,13 +342,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     state.mic.dataset.processing = String(state.processing);
     state.mic.disabled = ['unavailable', 'downloadable', 'downloading'].includes(state.localAvailability);
     state.mic.textContent = state.continuous && (state.listening || state.starting) ? 'STOP' : (state.continuous ? 'VOICE' : 'PTT');
-    state.mic.setAttribute('aria-label', state.continuous
-      ? 'Stop or resume continuous local voice listening'
-      : 'Press and hold to talk using local voice recognition');
+    const action = state.continuous
+      ? (state.listening || state.starting ? 'Stop continuous listening' : 'Start continuous listening')
+      : 'Press and hold to talk using local voice recognition';
+    state.mic.setAttribute('aria-label', action);
+    state.mic.title = action;
     if (state.continuousInput) {
       state.continuousInput.checked = state.continuous;
-      state.continuousInput.disabled = state.localAvailability !== 'ready';
+      state.continuousInput.disabled = state.localAvailability !== 'ready' || Boolean(state.rehearsal);
     }
+    if (state.rehearsalButton) state.rehearsalButton.hidden = !onRehearsalSetup();
     if (state.prepareButton) {
       state.prepareButton.disabled = state.localAvailability === 'downloading' || Boolean(state.preparePromise);
     }
@@ -352,7 +359,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ? 'MICROPHONE BLOCKED. Allow microphone access in browser site settings, then press PTT to retry. Manual controls remain available.'
       : state.localAvailability === 'ready' ? 'VOICE READY. Speech stays on this device. Hold PTT, speak, then release. Continuous mode is optional.'
       : nativeVoiceBridge() ? 'Preparing the bundled voice model on this device. Manual controls remain available.'
-      : 'One-time download: approximately 40 MB, only when you choose Setup. Speech is processed on this device, never uploaded. Manual controls always work.';
+      : 'One-time download: approximately 45 MB, only when you choose Setup. Speech is processed on this device, never uploaded. Manual controls always work.';
     if (state.listeningIndicator) state.listeningIndicator.hidden = !(state.continuous && state.listening && !state.processing);
     syncVoiceDockCompactness();
     positionVoicePopovers();
@@ -374,6 +381,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return Boolean(root.matchMedia?.('(max-width: 600px) and (orientation: portrait)').matches);
   }
 
+  function onRehearsalSetup() {
+    return activeScreen('setup') || activeScreen('tSetup');
+  }
+
   function beforeExercise() {
     return pageKind() === 'entry' || activeScreen('setup') || activeScreen('tSetup');
   }
@@ -385,10 +396,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const compact = mayCompact && !state.compactExpanded;
     const changed = state.dock.dataset.compact !== String(compact);
     state.dock.dataset.compact = String(compact);
+    const setupMount = compact && $('setupVoiceMount');
+    if (setupMount && state.dock.parentElement !== setupMount) setupMount.append(state.dock);
+    else if (!setupMount && state.dock.parentElement?.id === 'setupVoiceMount') documentRef.body.appendChild(state.dock);
     state.compactToggle.hidden = !mayCompact;
-    state.compactToggle.textContent = compact ? 'VOICE' : 'CLOSE';
+    state.compactToggle.textContent = compact ? 'Voice' : '−';
     state.compactToggle.setAttribute('aria-label', compact ? 'Open voice controls' : 'Minimise voice controls');
     state.compactToggle.setAttribute('aria-expanded', String(!compact));
+    state.compactToggle.title = compact ? 'Open voice controls. Drag or use arrow keys to move.' : 'Minimise voice controls';
     if (compact && changed) setSettingsOpen(false);
     if (changed) restoreVoiceDockPosition();
   }
@@ -415,9 +430,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     });
   }
 
+  function dockPositionKey() {
+    return VOICE_DOCK_POSITION_KEY + (beforeExercise() ? '-setup' : '') + (phoneDock() ? '-phone' : '');
+  }
+
   function storedDockPosition() {
     try {
-      const value = root.localStorage?.getItem(VOICE_DOCK_POSITION_KEY + (phoneDock() ? '-phone' : ''));
+      const value = root.localStorage?.getItem(dockPositionKey());
       const parsed = value ? JSON.parse(value) : null;
       if (phoneDock()) return parsed?.edge === 'top' || parsed?.edge === 'bottom' ? parsed : null;
       return Number.isFinite(parsed?.left) && Number.isFinite(parsed?.top) ? parsed : null;
@@ -448,24 +467,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     dock.dataset.popoverSide = safeLeft < popupWidth + margin ? 'right' : 'left';
     positionVoicePopovers();
     if (!persist) return;
-    try { root.localStorage?.setItem(VOICE_DOCK_POSITION_KEY, JSON.stringify({ left: safeLeft, top: safeTop })); } catch { /* Position persistence is optional. */ }
+    try { root.localStorage?.setItem(dockPositionKey(), JSON.stringify({ left: safeLeft, top: safeTop })); } catch { /* Position persistence is optional. */ }
   }
 
   function restoreVoiceDockPosition() {
     if (!state.dock) return;
     state.dock.dataset.phone = String(phoneDock());
     ['left', 'top', 'right', 'bottom'].forEach(property => { state.dock.style[property] = ''; });
-    if (state.dock.dataset.compact === 'true') {
-      state.dock.dataset.edge = 'bottom';
-      positionVoicePopovers();
-      return;
-    }
-    // Entry and setup never reuse a saved exercise position over their fields.
-    if (beforeExercise()) {
-      state.dock.dataset.edge = 'bottom';
-      positionVoicePopovers();
-      return;
-    }
     const saved = storedDockPosition();
     if (phoneDock()) {
       state.dock.dataset.edge = saved?.edge || 'bottom';
@@ -475,33 +483,40 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function resetVoiceDockPosition() {
     try {
-      root.localStorage?.removeItem(VOICE_DOCK_POSITION_KEY);
-      root.localStorage?.removeItem(VOICE_DOCK_POSITION_KEY + '-phone');
+      root.localStorage?.removeItem(dockPositionKey());
     } catch { /* A temporary position remains usable without storage. */ }
     restoreVoiceDockPosition();
-    state.dragHandle?.focus();
+    (state.dock.dataset.compact === 'true' ? state.compactToggle : state.dragHandle)?.focus();
   }
 
   function beginDockDrag(event) {
     const dock = state.dock;
-    if (!dock || (event?.button !== undefined && event.button !== 0)) return;
+    if (!dock || dock.parentElement?.id === 'setupVoiceMount' || state.dockDrag || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+    const target = event.target;
+    const compactTab = target === state.compactToggle && dock.dataset.compact === 'true';
+    if (!compactTab && target?.closest?.('button, input, label, select, textarea, a, .voice-settings, .voice-confirmation')) return;
     const rect = dock.getBoundingClientRect?.();
-    if (!rect) return;
+    if (!rect || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) return;
+    state.suppressCompactClick = false;
     state.dockDrag = {
-      pointerId: event?.pointerId,
-      offsetX: Number(event?.clientX) - rect.left,
-      offsetY: Number(event?.clientY) - rect.top
+      pointerId: event.pointerId, target, compactTab, moved: false,
+      startX: event.clientX, startY: event.clientY,
+      offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top
     };
-    dock.dataset.dragging = 'true';
-    try { state.dragHandle?.setPointerCapture?.(event?.pointerId); } catch { /* Pointer capture is optional. */ }
-    event?.preventDefault?.();
   }
 
   function moveDock(event) {
     const drag = state.dockDrag;
     if (!drag || (drag.pointerId !== undefined && event?.pointerId !== drag.pointerId)) return;
-    positionVoiceDock(Number(event?.clientX) - drag.offsetX, Number(event?.clientY) - drag.offsetY, false);
-    event?.preventDefault?.();
+    if (!drag.moved) {
+      if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+      drag.moved = true;
+      state.dock.dataset.dragging = 'true';
+      state.suppressCompactClick = drag.compactTab;
+      try { drag.target?.setPointerCapture?.(drag.pointerId); } catch { /* Window events also end the drag. */ }
+    }
+    positionVoiceDock(event.clientX - drag.offsetX, event.clientY - drag.offsetY, false);
+    event.preventDefault?.();
   }
 
   function endDockDrag(event) {
@@ -510,11 +525,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     state.dockDrag = null;
     const dock = state.dock;
     if (dock?.dataset) delete dock.dataset.dragging;
+    if (!drag.moved) return;
     const left = Number.parseFloat(dock?.style?.left);
     const top = Number.parseFloat(dock?.style?.top);
     if (phoneDock()) {
       const edge = top < root.innerHeight / 2 ? 'top' : 'bottom';
-      try { root.localStorage?.setItem(VOICE_DOCK_POSITION_KEY + '-phone', JSON.stringify({ edge })); } catch { /* Optional preference. */ }
+      try { root.localStorage?.setItem(dockPositionKey(), JSON.stringify({ edge })); } catch { /* Optional preference. */ }
       restoreVoiceDockPosition();
       dock.dataset.edge = edge;
       return;
@@ -531,7 +547,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     event.preventDefault?.();
     if (phoneDock()) {
       state.dock.dataset.edge = event.key === 'ArrowUp' ? 'top' : 'bottom';
-      try { root.localStorage?.setItem(VOICE_DOCK_POSITION_KEY + '-phone', JSON.stringify({ edge: state.dock.dataset.edge })); } catch { /* Optional preference. */ }
+      try { root.localStorage?.setItem(dockPositionKey(), JSON.stringify({ edge: state.dock.dataset.edge })); } catch { /* Optional preference. */ }
       restoreVoiceDockPosition();
       return;
     }
@@ -797,10 +813,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function runSingleCommand(command) {
     if (command.aircraft && command.aircraft !== 'single') return result(false, 'AIRCRAFT CALLSIGN DOES NOT MATCH THIS EXERCISE');
-    if (command.intent === 'return-to-mode-selection') {
-      root.location.assign('index.html');
-      return result(true, 'OPENING QGH TYPE SELECTION');
-    }
+    if (command.intent === 'return-to-mode-selection') return clickId('qghTypeSelection', 'OPENING QGH TYPE SELECTION');
     if (command.intent === 'set-listening-mode') return setListeningMode(command.mode);
     if (command.intent === 'set-procedure') {
       const required = requireActiveScreen('setup');
@@ -879,10 +892,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function runTacticalCommand(command) {
-    if (command.intent === 'return-to-mode-selection') {
-      root.location.assign('index.html');
-      return result(true, 'OPENING QGH TYPE SELECTION');
-    }
+    if (command.intent === 'return-to-mode-selection') return clickId('qghTypeSelection', 'OPENING QGH TYPE SELECTION');
     if (command.intent === 'set-listening-mode') return setListeningMode(command.mode);
     if (activeScreen('tAnalysis')) return runReviewCommand(command, true);
 
@@ -1201,7 +1211,36 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return outcome;
   }
 
-  function dispatchTranscript(transcript) {
+  function rehearseTranscript(transcript) {
+    const spoken = Voice.normalizeTranscript(transcript);
+    const turn = /^turn (left|right) (?:heading )?(.+)$/.exec(spoken);
+    const heading = turn && Voice.parseCommand(spoken);
+    let example = '';
+    if (heading?.accepted && Number.isFinite(heading.heading)) {
+      example = 'Turning ' + turn[1] + ', heading ' + String(heading.heading).padStart(3,'0') + '.';
+    } else if (spoken === 'report heading') {
+      example = 'Heading two six zero.';
+    } else if (spoken === 'report distance' || spoken === 'request distance') {
+      example = 'Two five miles from overhead.';
+    }
+    setVoiceFeedback(transcript, example ? 'Example readback · ' + example : 'Try “turn right heading two six zero”, “report heading” or “report distance”.', example ? 'success' : 'neutral');
+    return result(Boolean(example), example || 'Try a practice call.');
+  }
+
+  function setRehearsal(active) {
+    state.rehearsal = active;
+    for (const button of [state.rehearsalButton, state.rehearsalLaunch]) {
+      if (!button) continue;
+      button.setAttribute('aria-pressed', String(active));
+      button.textContent = active ? 'Exit radio rehearsal' : 'Rehearse a radio call';
+    }
+    state.dock.dataset.rehearsal = String(active);
+    if (state.rehearsalOutput) state.rehearsalOutput.hidden = !active;
+    updateMicState();
+  }
+
+  function dispatchTranscript(transcript, heard = transcript) {
+    if (state.rehearsal) return rehearseTranscript(transcript);
     if (pilotBlocksMicrophone()) return result(false, 'PILOT TRANSMITTING');
     const radioOptions = { callsigns: voiceCallsignOptions(), single: pageKind() === 'single' };
     const radio = activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console')
@@ -1215,7 +1254,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     state.dispatchingRadioCommand = true;
     try { outcome = routeTranscript(transcript, command); }
     finally { state.dispatchingRadioCommand = false; }
-    if (sequence === state.feedbackSequence) presentVoiceResult(command, outcome, transcript);
+    if (sequence === state.feedbackSequence) presentVoiceResult(command, outcome, heard);
     if (outcome.ok && !state.pendingCommand && command.intent !== 'procedure-command') root.QGHRadioWorkspace?.acknowledge(command);
     return outcome;
   }
@@ -1284,6 +1323,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function reconfigureRecognitionContext(signature) {
     if (!signature || signature === state.recognitionContext) return;
     state.recognitionContext = signature;
+    latestSpokenCall++;
+    state.uncertainTransaction = false;
     const resumeContinuous = state.continuous && !state.manuallyStopped && !pilotBlocksMicrophone();
     // A capture opened for another screen, procedure or callsign roster cannot
     // be allowed to finalize later against the new exercise context.
@@ -1312,6 +1353,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function currentRecognitionPlan() {
+    if (state.rehearsal) return { grammar: null, grammarJson: '' };
+    if (root.atsRadioPilot && activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console')) return { grammar: null, grammarJson: '' };
     if (typeof OfflineVoice?.buildRecognitionPlan === 'function') {
       return OfflineVoice.buildRecognitionPlan(grammarContext());
     }
@@ -1332,8 +1375,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function rememberTranscript(transcript) {
     if (pilotBlocksMicrophone()) return;
+    if (/\[unk\]/i.test(transcript)) { markUncertainSpeech(); return; }
     const normalized = Voice.normalizeTranscript(transcript);
     if (!normalized || state.callTranscripts.has(normalized)) return;
+    latestSpokenCall++;
     state.callTranscripts.add(normalized);
     state.lastTranscript = normalized;
     state.lastTranscriptAt = Date.now();
@@ -1344,8 +1389,64 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (state.continuous) scheduleRadioQuietEnd();
   }
 
+  function markUncertainSpeech() {
+    if (pilotBlocksMicrophone()) return;
+    latestSpokenCall++;
+    state.uncertainTransaction = true;
+    if (state.continuous) scheduleRadioQuietEnd();
+  }
+
+  let latestSpokenCall = 0;
+  async function dispatchSpokenCall(transcript) {
+    if (state.rehearsal) return rehearseTranscript(transcript);
+    const sequence = ++latestSpokenCall;
+    const desktop = root.atsRadioPilot;
+    const onScope = () => activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console');
+    if (desktop && onScope() && /\bheading (?:\w+ ){0,2}(?:to|too)\b/.test(transcript)) {
+      const roster = voiceCallsignOptions();
+      const single = pageKind() === 'single';
+      const turn = Voice.interpretHeading(transcript, roster)
+        || (single && roster.length === 1 && Voice.interpretHeading(roster[0].callsign + ' ' + transcript, roster));
+      if (turn) {
+        const prefix = single ? '' : turn.callsign + ' ';
+        return dispatchTranscript(prefix + 'turn ' + turn.side + ' heading ' + String(turn.heading).padStart(3,'0'), transcript);
+      }
+    }
+    if (!desktop || !onScope() || state.pendingCommand || !/\b(?:what|how|distance|range|report|say|transmit|can you|could you|tell me|give me|stand by|standby)\b/i.test(transcript)) {
+      return dispatchTranscript(transcript);
+    }
+    const roster = voiceCallsignOptions();
+    const single = pageKind() === 'single';
+    const matchRequest = intent => Voice.interpretRequest(transcript, roster, intent)
+      || (single && roster.length === 1 && Voice.interpretRequest(roster[0].callsign + ' ' + transcript, roster, intent));
+    const canonical = { 'heading-report': 'report heading', 'range-report': 'request distance', 'df-transmission': 'transmit for df' };
+    const dispatchRequest = request => dispatchTranscript((single ? '' : request.callsign + ' ') + canonical[request.intent], transcript);
+    const exact = matchRequest();
+    if (exact) return canonical[exact.intent] ? dispatchRequest(exact) : dispatchTranscript(transcript);
+    // Only an otherwise ambiguous, present-tense request for heading or distance
+    // can use the desktop model. Other standard calls go straight to their parser.
+    const eligible = matchRequest('heading-report') || matchRequest('range-report');
+    if (!eligible) return dispatchTranscript(transcript);
+    const signature = recognitionContextSignature();
+    const initialContext = state.recognitionContext;
+    let prediction;
+    try { prediction = (await desktop.understand(transcript))?.intent; } catch { /* Exact requests also work locally. */ }
+    if (sequence !== latestSpokenCall || initialContext !== state.recognitionContext || !onScope() || signature !== recognitionContextSignature() || pilotBlocksMicrophone() || state.pendingCommand) return;
+    if (prediction === eligible.intent) return dispatchRequest(eligible);
+    return dispatchTranscript(transcript);
+  }
+
   function commitControllerTransaction() {
-    if (state.pressHeld || !state.transactionSegments.length) return;
+    if (state.pressHeld) return;
+    if (state.uncertainTransaction) {
+      const heard = state.transactionSegments.join(' ');
+      state.uncertainTransaction = false;
+      state.transactionSegments = [];
+      state.callTranscripts.clear();
+      presentVoiceResult({ accepted: false }, result(false, 'CALL UNCLEAR · REPEAT THE WHOLE CALL'), heard);
+      return;
+    }
+    if (!state.transactionSegments.length) return;
     let transcript = state.transactionSegments.join(' ');
     state.transactionSegments = [];
     state.callTranscripts.clear();
@@ -1353,7 +1454,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     // A late condition/negation remains in the whole text for the parser to reject.
     const corrected = /^(.*?)\bturn (?:left|right)(?: heading)? [\w ]+ correction (turn (?:left|right)(?: heading)? [\w ]+)$/.exec(transcript);
     if (corrected && !/\b(?:if|unless|negative|not|don't)\b/.test(transcript)) transcript = corrected[1] + corrected[2];
-    dispatchTranscript(transcript);
+    void dispatchSpokenCall(transcript);
   }
 
   function scheduleRadioQuietEnd() {
@@ -1382,7 +1483,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (state.engine) return state.engine;
     if (!OfflineVoice || typeof OfflineVoice.create !== 'function') return null;
     state.engine = OfflineVoice.create({
-      onEnded: () => handleRecognitionEnd()
+      onEnded: details => handleRecognitionEnd(details)
     });
     return state.engine;
   }
@@ -1433,6 +1534,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function setPilotSpeaking(speaking) {
     state.pilotSpeaking = Boolean(speaking);
     if (pilotBlocksMicrophone()) {
+      latestSpokenCall++;
+      state.uncertainTransaction = false;
       state.startAttempt += 1;
       state.transactionSegments = [];
       state.callTranscripts.clear();
@@ -1454,6 +1557,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function handleTerminalRecognitionError(error) {
+    latestSpokenCall++;
+    state.uncertainTransaction = false;
     state.transactionSegments = [];
     state.callTranscripts.clear();
     state.nativeRequestId = null;
@@ -1489,7 +1594,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     handleTerminalRecognitionError(error);
   }
 
-  function handleRecognitionEnd() {
+  function handleRecognitionEnd(details) {
+    if (details?.finalDrained === false && state.transactionSegments.length) state.uncertainTransaction = true;
     state.nativeRequestId = null;
     state.processing = false;
     state.starting = false;
@@ -1681,6 +1787,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   async function startListening(continuous) {
     if (pilotBlocksMicrophone()) return false;
+    if (activeScreen(pageKind() === 'tactical' ? 'tConsole' : 'console')) root.atsRadioPilot?.warm?.().catch(() => {});
     // The engine owns final-result replacement. A finalizing session is allowed through
     // so `start()` can atomically replace it without the workspace duplicating lifecycle state.
     const pendingFinal = Boolean(state.listening && state.engine?.isFinalizing?.());
@@ -1744,7 +1851,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           setStatus(state.continuous ? 'VOICE ASSISTANT LISTENING' : 'LISTENING', 'active');
         },
         onResult: transcript => { if (attempt === state.startAttempt) rememberTranscript(transcript); },
-        onNoResult: rememberNoSpeech,
+        onUnrecognizedSegment: () => { if (attempt === state.startAttempt) markUncertainSpeech(); },
+        onNoResult: () => { if (attempt === state.startAttempt && !state.uncertainTransaction) rememberNoSpeech(); },
         onPartial: partial => {
           if (attempt !== state.startAttempt || pilotBlocksMicrophone()) return;
           if (state.continuous && partial) {
@@ -1772,7 +1880,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function stopListening(options) {
     const cancel = Boolean(options?.cancel);
-    if (cancel) { state.transactionSegments = []; state.callTranscripts.clear(); }
+    if (cancel) {
+      latestSpokenCall++;
+      state.uncertainTransaction = false;
+      state.transactionSegments = [];
+      state.callTranscripts.clear();
+    }
     root.clearTimeout(state.radioQuietTimer);
     state.radioQuietTimer = null;
     if (cancel) root.QGHRadioWorkspace?.reset();
@@ -1852,12 +1965,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     compactToggle.setAttribute('aria-label', 'Open voice controls');
     compactToggle.setAttribute('aria-expanded', 'false');
 
-    const dragHandle = documentRef.createElement('button');
-    dragHandle.type = 'button';
+    const dragHandle = documentRef.createElement('div');
     dragHandle.className = 'voice-drag-handle';
-    dragHandle.textContent = 'DRAG';
-    dragHandle.setAttribute('aria-label', 'Hold and drag to move voice controls');
-    dragHandle.title = 'Hold and drag to move voice controls';
+    dragHandle.tabIndex = 0;
+    dragHandle.setAttribute('role', 'group');
+    dragHandle.setAttribute('aria-label', 'Move voice controls with the arrow keys');
+    dragHandle.title = 'Drag the panel or use arrow keys to move';
 
     const mic = documentRef.createElement('button');
     mic.type = 'button';
@@ -1897,7 +2010,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const prepare = documentRef.createElement('button');
     prepare.type = 'button';
     prepare.className = 'voice-prepare';
-    prepare.textContent = 'SET UP OFFLINE VOICE · 40 MB';
+    prepare.textContent = 'SET UP OFFLINE VOICE · 45 MB';
     const engineNote = documentRef.createElement('small');
     engineNote.textContent = 'ON-DEVICE SPEECH ONLY';
     const resetPosition = documentRef.createElement('button');
@@ -1912,6 +2025,55 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     lastCallDetail.textContent = 'No voice call yet. Kept only until this page closes.';
     lastCall.append(lastCallTitle, lastCallDetail);
     settings.append(continuousLabel, prepare, engineNote, resetPosition, lastCall);
+    if (pageKind() === 'single' || pageKind() === 'tactical') {
+      const rehearsal = documentRef.createElement('button');
+      rehearsal.type = 'button';
+      rehearsal.className = 'voice-rehearsal';
+      rehearsal.textContent = 'Rehearse a radio call';
+      rehearsal.setAttribute('aria-pressed','false');
+      state.rehearsalButton = rehearsal;
+      const rehearsalOutput = documentRef.createElement('output');
+      rehearsalOutput.className = 'voice-rehearsal-output';
+      rehearsalOutput.setAttribute('role','status');
+      rehearsalOutput.hidden = true;
+      const setupLaunch = $('exerciseLaunch');
+      const rehearsalLaunch = $('setupRehearsal');
+      state.rehearsalLaunch = rehearsalLaunch;
+      (setupLaunch || dock).append(rehearsalOutput);
+      state.rehearsalOutput = rehearsalOutput;
+
+      function toggleRehearsal(event) {
+        if (!onRehearsalSetup()) return;
+        state.pressHeld = false;
+        state.continuous = false;
+        stopListening({cancel:true});
+        clearVoiceFeedback();
+        setRehearsal(!state.rehearsal);
+        if (state.rehearsal) {
+          state.compactExpanded = true;
+          syncVoiceDockCompactness();
+          const ready = state.localAvailability === 'ready';
+          setSettingsOpen(!ready);
+          if (ready) setStatus('REHEARSAL · HOLD PTT', 'neutral');
+          setVoiceFeedback('', 'Try “turn right heading two six zero”. Practice calls do not control aircraft.', 'neutral');
+          state.rehearsalOutput.scrollIntoView?.({ block: 'nearest' });
+          const focusTarget = ready ? mic : prepare.hidden || prepare.disabled ? settingsToggle : prepare;
+          focusTarget.focus({ preventScroll: true });
+        } else {
+          setSettingsOpen(false);
+          if (event.currentTarget === rehearsalLaunch) {
+            state.compactExpanded = false;
+            syncVoiceDockCompactness();
+          }
+          (event.currentTarget === rehearsalLaunch ? rehearsalLaunch : settingsToggle).focus({ preventScroll: true });
+          setStatus(state.localAvailability === 'ready' ? 'PTT READY' : 'SET UP OFFLINE VOICE', 'neutral');
+        }
+      }
+      rehearsal.addEventListener('click', toggleRehearsal);
+      rehearsalLaunch?.addEventListener('click', toggleRehearsal);
+      settings.append(rehearsal);
+    }
+
     let updatePilotNote = () => {};
     if (root.QGHRadioWorkspace) {
       const setupPilotReadbacks = $('setupPilotReadbacks');
@@ -2019,7 +2181,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       confirmationButton, cancellationButton, lastCallDetail, announcement
     });
     scheduleBrowserBottomInset();
-    compactToggle.addEventListener('click', () => {
+    compactToggle.addEventListener('click', event => {
+      if (state.suppressCompactClick && event.detail !== 0) {
+        state.suppressCompactClick = false;
+        return;
+      }
       state.compactExpanded = state.dock.dataset.compact === 'true';
       syncVoiceDockCompactness();
       if (state.compactExpanded) state.mic?.focus();
@@ -2033,7 +2199,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         checkLocalAvailability({ force: true });
       }
     });
-    prepare.addEventListener('click', prepareLocalVoice);
+    prepare.addEventListener('click', async () => {
+      if (await prepareLocalVoice() && state.rehearsal) {
+        setSettingsOpen(false);
+        mic.focus({ preventScroll: true });
+      }
+    });
     resetPosition.addEventListener('click', resetVoiceDockPosition);
     settings.addEventListener('keydown', event => {
       if (event.key === 'Escape') { setSettingsOpen(false); settingsToggle.focus(); }
@@ -2042,14 +2213,17 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     continuousInput.addEventListener('change', () => setListeningMode(continuousInput.checked ? 'continuous' : 'push-to-talk'));
     confirmationButton.addEventListener('click', confirmPendingVoiceCommand);
     cancellationButton.addEventListener('click', cancelPendingVoiceCommand);
-    dragHandle.addEventListener('pointerdown', beginDockDrag);
-    dragHandle.addEventListener('lostpointercapture', endDockDrag);
+    dock.addEventListener('pointerdown', beginDockDrag);
+    dock.addEventListener('lostpointercapture', endDockDrag);
     dragHandle.addEventListener('keydown', moveDockByKeyboard);
+    compactToggle.addEventListener('keydown', moveDockByKeyboard);
 
     const beginPressToTalk = event => {
       if (state.continuous || state.pressHeld || mic.disabled || (event.button !== undefined && event.button !== 0)) return;
       event.preventDefault();
       root.QGHRadioWorkspace?.controllerStart();
+      latestSpokenCall++;
+      state.uncertainTransaction = false;
       state.pressHeld = true;
       state.pressPointerId = event.pointerId ?? null;
       state.lastTranscript = '';
@@ -2146,6 +2320,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           syncVoiceDockCompactness();
         }
         reconfigureRecognitionContext(nextContext);
+        if (state.rehearsal && !onRehearsalSetup()) {
+          setRehearsal(false);
+          clearVoiceFeedback();
+          setStatus(state.localAvailability === 'ready' ? 'PTT READY' : 'SET UP OFFLINE VOICE','neutral');
+        }
         screen = nextScreen;
         context = nextContext;
         if (phoneDock()) app.scrollTop = 0;

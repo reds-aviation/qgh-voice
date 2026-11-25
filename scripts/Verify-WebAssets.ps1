@@ -37,6 +37,7 @@ $engineFiles = @(
     'single.html',
     'simulator-core.js',
     'scope-visuals.js',
+    'setup-loading.js',
     'procedure-core.js',
     'procedure-intent.js',
     'procedure-workspace.js',
@@ -75,7 +76,11 @@ $assetDirectories = @(
     'training-media',
     'vendor\pilot-tts'
 )
-$releaseFiles = @('app-version.json')
+$supportFiles = [ordered]@{
+    'app-version.json' = Join-Path $staticRoot 'app-version.json'
+    'setup-loading.css' = Join-Path $repoRoot 'packages\procedural-beta\static\setup-loading.css'
+    'suryakiran-formation.webp' = Join-Path $repoRoot 'packages\procedural-beta\static\suryakiran-formation.webp'
+}
 $legalFiles = [ordered]@{
     'LICENSE' = 'LICENSE.txt'
     'COPYRIGHT.md' = 'COPYRIGHT.txt'
@@ -131,19 +136,19 @@ foreach ($relativeFile in $engineFiles) {
     [PSCustomObject]$report
 }
 
-foreach ($relativeFile in $releaseFiles) {
-    $sourceFile = Join-Path $staticRoot $relativeFile
+foreach ($relativeFile in $supportFiles.Keys) {
+    $sourceFile = $supportFiles[$relativeFile]
     if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
-        $mismatches.Add("Shared release is missing $relativeFile")
+        $mismatches.Add("Shared support files are missing $relativeFile")
         continue
     }
     $sourceHash = (Get-FileHash -LiteralPath $sourceFile -Algorithm SHA256).Hash
     foreach ($targetName in $selectedTargets) {
         $candidate = Join-Path $availableRoots[$targetName] $relativeFile
         if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
-            $mismatches.Add("$targetName is missing release $relativeFile")
+            $mismatches.Add("$targetName is missing support file $relativeFile")
         } elseif ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ne $sourceHash) {
-            $mismatches.Add("$relativeFile differs between Shared release and $targetName")
+            $mismatches.Add("$relativeFile differs between its source and $targetName")
         }
     }
 }

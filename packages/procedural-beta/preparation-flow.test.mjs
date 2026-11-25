@@ -111,6 +111,25 @@ async function preparationHarness() {
     };
 }
 
+test('route guidance follows the enabled controls as an instructor manually advances through the real chart editor', async () => {
+    const h = await preparationHarness();
+    vm.runInContext(source('guide-context.js'), h.context);
+    const next = () => h.context.ATCGuideContext.routeAnswer(h.document, 'procedural')?.controlId;
+    h.get('entry').hidden = true;
+    h.get('setup').hidden = true;
+    h.get('desk').hidden = false;
+    h.get('role').textContent = 'INSTRUCTOR / PSEUDO-PILOT';
+    assert.equal(next(), 'traffic-setup');
+    h.get('work-panel').hidden = false;
+    h.get('tab-build').hidden = false;
+    assert.equal(next(), 'prepare-draw-chart');
+    await h.click('prepare-draw-chart');
+    assert.equal(next(), 'draw-feature-route');
+    await h.click('draw-feature-route');
+    assert.equal(next(), 'boundary-sketch-canvas');
+    assert.equal(h.commands.length, 0);
+});
+
 test('suggested save name follows a new exercise and preserves typed names or selected saved identity', async () => {
     const h = await preparationHarness();
     assert.equal(h.get('template-name').value, h.state().title);
@@ -229,6 +248,11 @@ test('opening setup contains only starting traffic while the unified airspace ed
     assert.equal(h.get('setup').contains(h.get('aircraft-form')), false);
     assert.equal(h.get('tab-pilot').contains(h.get('aircraft-form')), true);
     assert.equal(h.get('setup').contains(h.get('prepare-save-load')), false);
+    const runway = h.get('runway-form').elements.namedItem('runwayHeadingDeg');
+    assert.equal(h.document.querySelectorAll('input[name="runwayHeadingDeg"]').length, 1);
+    assert.equal(h.get('prepare-airspace').contains(runway), true);
+    assert.equal(runway.closest('[hidden],[inert]'), h.get('tab-build').closest('[hidden],[inert]'));
+    assert.match(h.get('exercise-runway-course').textContent, /270°T/);
     assert.equal(h.get('tab-build').contains(h.get('prepare-save-load')), true);
     assert.equal(h.get('prepare-save-load').contains(h.get('scenario-library')), true);
     assert.equal(h.get('prepare-airspace-library').contains(h.get('airspace-library')), true);
@@ -253,6 +277,18 @@ test('opening setup contains only starting traffic while the unified airspace ed
     assert.equal(h.get('tab-debrief').contains(h.get('import')), true, 'progress files are in Review rather than chart-only saving');
     assert.equal(h.get('prepare-custom').querySelector('h2'), null, 'embedded editor does not repeat a competing page heading');
     assert.equal(h.get('prepare-published').contains(h.get('aerodrome-form')), true);
+    assert.equal(h.document.querySelector('[data-source="published"]').getAttribute('aria-pressed'), 'true');
+    const loadPublished = h.get('aerodrome-form').querySelector('button[type="submit"],button:not([type])');
+    assert.equal(loadPublished.disabled, true, 'select a loadable aerodrome before loading');
+    h.get('aerodrome-select').value = 'pune';
+    h.get('aerodrome-select').dispatchEvent(new h.Event('change'));
+    assert.equal(loadPublished.disabled, false);
+    h.get('aerodrome-select').value = '';
+    h.get('aerodrome-select').dispatchEvent(new h.Event('change'));
+    assert.equal(loadPublished.disabled, true);
+    h.get('prepare-save-load').open = false;
+    h.get('prepare-airspace').querySelector('a[href="#prepare-save-load"]').click();
+    assert.equal(h.get('prepare-save-load').open, true);
     assert.equal(h.get('prepare-custom').contains(h.get('custom-arp-form')), true);
     assert.equal(h.get('custom-airspace-discard').hidden, true, 'embedded custom editor uses the common airspace discard action');
     assert.equal(h.get('prepare-airspace-discard').hidden, true, 'there is nothing to discard initially');
@@ -266,7 +302,10 @@ test('opening setup contains only starting traffic while the unified airspace ed
     assert.equal(h.get('custom-boundary-form').elements.namedItem('points').parentElement.hidden, false);
     await h.click('prepare-traffic-next');
     assert.equal(h.get('prepare-traffic').hidden, false);
-    assert.equal(h.get('prepare-traffic').querySelector('.roster-editor').open, true);
+    const editor = h.get('prepare-traffic');
+    assert.equal(!!editor.querySelector('.roster-editor').open, false, 'aircraft details expand on demand');
+    assert.match(editor.querySelector('.starting-traffic-summary').textContent, /1 aircraft.*101/);
+    assert.equal(editor.querySelectorAll('button[type="submit"]').length, 1, 'one action creates the exercise');
     assert.equal(h.get('prepare-traffic').querySelector('button[type="submit"]').textContent, 'Create exercise', 'dynamic traffic updates retain the preparation action label');
     h.workshop.openLibrary();
     assert.equal(h.get('prepare-save-load').open, true);
@@ -444,7 +483,8 @@ test('loaded traffic reconstructs bearing and range about the station and preser
     form.dispatchEvent(new h.Event('submit', { cancelable: true })); await flush();
     assert.equal(h.submissions.length, 1);
     const created = h.submissions[0];
-    assert.equal(created.environment.qnhHpa, 998); assert.equal(created.environment.runwayHeadingDeg, 270);
+    assert.equal('runwayHeadingDeg' in created.environment, false, 'starting traffic must not overwrite the airspace runway');
+    assert.equal('qnhHpa' in created.environment, false, 'starting traffic must not overwrite the existing QNH');
     assert.equal(created.title, saved.title); assert.equal(created.mode, 'approach');
     assert.equal(created.aircraft.length, 2);
     for (let i = 0; i < 2; i++) {

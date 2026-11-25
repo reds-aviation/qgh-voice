@@ -10,6 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 .entry-web-distribution[hidden],
 .entry-native-downloads[hidden],
+.entry-native-downloads a[hidden],
 .entry-release-availability[hidden] { display: none; }
 
 .entry-web-distribution {

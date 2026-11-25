@@ -9,10 +9,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 */
 
 (function exposeQghVoiceControl(root, factory) {
-  const api = factory();
+  const api = factory(root);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.QGHVoiceControl = api;
-})(typeof globalThis === 'undefined' ? this : globalThis, function createQghVoiceControl() {
+  root.ATSControllerVoice = Object.freeze({ interpretHeading: api.interpretHeading, interpretRequest: api.interpretRequest, interpretClearance: api.interpretClearance });
+})(typeof globalThis === 'undefined' ? this : globalThis, function createQghVoiceControl(root) {
   'use strict';
 
   // This module deliberately parses text only. It does not access a microphone,
@@ -1217,6 +1218,115 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return semantic || strict;
   }
 
+  // Paired desks accept one complete, explicitly addressed clearance. The classifier
+  // identifies a likely intent. Only exact slots can identify an aircraft and a target.
+  function pairedSpokenAddress(prefix) {
+    // Open dictation can write the prepositions "to" or "for" in a three-digit
+    // spoken callsign. Resolve only within the complete numeric address slot.
+    const tokens = prefix.split(' ');
+    if (tokens.length === 3) {
+      const digits = tokens.map(word => digitFor(word === 'to' || word === 'too' ? 'two' : word === 'for' ? 'four' : word));
+      if (digits.every(value => value !== null)) return normalizedCallsign(digits.join(''));
+    }
+    return normalizedCallsign(prefix);
+  }
+
+  function interpretHeading(value, callsigns) {
+    if (typeof value !== 'string' || value.length > 320 || !Array.isArray(callsigns)) return null;
+    if (!/^[A-Za-z0-9\s,.]+$/.test(value) || /\d[.,]\d/.test(value)) return null;
+    const splitDesignators = text => text.replace(/([a-z])(\d)/gi, '$1 $2');
+    const text = normalizeTranscript(splitDesignators(value));
+    const turn = /^(.+?) turn (left|right) (?:to )?(?:heading )?(.+)$/.exec(text);
+    if (!turn || safetyRejection(text)) return null;
+    const spoken = pairedSpokenAddress(turn[1]);
+    const matches = callsigns.map(item => typeof item === 'string' ? item : item?.callsign)
+      .filter(name => typeof name === 'string' && normalizedCallsign(splitDesignators(name)) === spoken);
+    if (matches.length !== 1) return null;
+    // Open dictation can emit "heading to six zero" for 260. Resolve this
+    // homophone only inside an explicit three-token heading slot.
+    const explicitHeading = /\bheading\b/.test(text.slice(turn[1].length));
+    const digits = explicitHeading && turn[3].split(' ').length === 3
+      ? turn[3].replace(/\b(?:to|too)\b/g, 'two') : turn[3];
+    if (!/^\d{3}$/.test(digits) && !/^(?:[a-z]+ ){2}[a-z]+$/.test(digits)) return null;
+    const heading = parseHeading(digits);
+    if (heading === null) return null;
+    const model = root.ATSRadioIntent || (typeof module === 'object' && module.exports ? require('./rt-intent-model.js') : null);
+    const instruction = text.slice(turn[1].length, -turn[3].length).trim() + ' ' + digits;
+    if (model?.classify(instruction)?.intent !== 'heading-turn') return null;
+    return { callsign: matches[0], side: turn[2], heading };
+  }
+
+  // Match the whole address before interpreting the rest of the transmission.
+  function addressedBody(value, callsigns) {
+    if (typeof value !== 'string' || value.length > 240 || !Array.isArray(callsigns)) return null;
+    if (!/^[a-z\d ,.?'-]+$/i.test(value) || /\d[.,]\d|\?.+\S/.test(value)) return null;
+    const split = text => normalizeTranscript(text.replace(/([a-z])(\d)/gi, '$1 $2'));
+    const words = split(value).split(' ');
+    const roster = callsigns.map(item => typeof item === 'string' ? item : item?.callsign).filter(Boolean);
+    const matches = [];
+    for (let i = 1; i < words.length; i++) {
+      const spoken = pairedSpokenAddress(words.slice(0, i).join(' '));
+      for (const callsign of roster) {
+        if (normalizedCallsign(split(callsign)) === spoken) {
+          matches.push({ callsign, body: words.slice(i).join(' ').replace(/^please | please$/g, '') });
+        }
+      }
+    }
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  const reportPatterns = {
+    'heading-report': /^(?:(?:say|report|confirm|give me|tell me) (?:your |the )?(?:(?:present|current|magnetic) )?heading|what(?: is|s)? (?:your |the )?(?:(?:present|current|magnetic) )?heading|what heading are you (?:on|flying)(?: now)?)$/,
+    'range-report': /^(?:(?:say|report|confirm|give me|tell me|what is|what s) (?:your |the )?(?:current |present )?(?:range|distance)(?: (?:from|to) (?:the )?(?:station|field|aerodrome))?|how far (?:are you )?(?:from (?:the )?(?:station|field|aerodrome)|out)(?: are you)?)$/,
+    'df-transmission': /^(?:transmit(?: for (?:df|a bearing|bearing|homing))?|give me a transmission for (?:df|a bearing)|make a transmission for (?:df|homing))$/,
+    'standby': /^(?:stand by|standby)(?: for further instructions)?$/
+  };
+
+  const reportVocabulary = new Set(('can could would you your we me us tell give confirm report say please what which how is are on the a from to of for at moment present current right now currently flying heading magnetic distance range far out station field aerodrome nautical miles away have got indicate reading degrees in showing').split(' '));
+
+  function interpretRequest(value, callsigns, candidateIntent) {
+    const target = addressedBody(value, callsigns);
+    if (!target) return null;
+    const entry = Object.entries(reportPatterns).find(([, pattern]) => pattern.test(target.body));
+    if (entry) return { callsign: target.callsign, intent: entry[0] };
+    // A natural question may be worded many ways. Accept a model interpretation
+    // only for a present-tense information request with one measured quantity.
+    if (!['heading-report','range-report'].includes(candidateIntent)) return null;
+    const words = target.body;
+    if (!/^(?:can you|could you|would you|what|how|tell me|give me|say|report|confirm)\b/.test(words)) return null;
+    if (words.split(' ').some(word => !reportVocabulary.has(word))) return null;
+    const heading = /\bheading\b/.test(words);
+    const distance = /\b(?:distance|range|far)\b/.test(words);
+    if (heading === distance || (candidateIntent === 'heading-report') !== heading) return null;
+    return { callsign: target.callsign, intent: candidateIntent };
+  }
+
+  // Only commands supported by the exercise engine receive an executable mapping.
+  function interpretClearance(value, callsigns) {
+    if (typeof value !== 'string' || value.includes('?')) return null;
+    const target = addressedBody(value, callsigns);
+    if (!target) return null;
+    const { body, callsign } = target;
+    let match = /^turn (left|right) now$/.exec(body);
+    if (match) return { callsign, command: { type: 'turn-now', side: match[1] } };
+    if (/^(?:stop (?:the )?turn(?: now)?|roll out now|wings level now)$/.test(body)) return { callsign, command: { type: 'stop-turn' } };
+    if (body === 'continue approach') return { callsign, command: { type: 'continue-approach' } };
+    if (body === 'report position' || body === 'say your position') return { callsign, command: { type: 'report-position' } };
+    if (body === 'report runway in sight') return null; // Future reporting point, not a present sighting.
+    if (body === 'confirm runway in sight') return { callsign, command: { type: 'report-runway-visual' } };
+    match = /^(?:maintain|set|reduce(?: speed)? to|increase(?: speed)? to) (?:speed )?(.+?) knots$/.exec(body);
+    if (match) {
+      const speedKt = parseNumber(match[1]);
+      if (!Number.isInteger(speedKt) || speedKt < 30 || speedKt > 700) return null;
+      return { callsign, command: { type: 'set-speed', speedKt, ...(body.startsWith('reduce') ? { speedDirection: 'reduce' } : body.startsWith('increase') ? { speedDirection: 'increase' } : {}) } };
+    }
+    match = /^(climb|descend|maintain) (?:to )?(?:altitude )?(.+?) feet$/.exec(body);
+    if (!match) return null;
+    const altitudeFt = parseNumber(match[2]);
+    if (!Number.isInteger(altitudeFt) || altitudeFt < 0 || altitudeFt > 45000) return null;
+    return { callsign, command: { type: 'set-altitude', direction: match[1], altitudeFt } };
+  }
+
   function requiresVoiceConfirmation(command) {
     return Boolean(command?.requiresConfirmation || CONFIRMATION_INTENTS.has(command?.intent));
   }
@@ -1238,6 +1348,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     normaliseTranscript: normalizeTranscript,
     parseNumber,
     parseHeading,
+    interpretHeading,
+    interpretRequest,
+    interpretClearance,
     parseCommand,
     requiresVoiceConfirmation,
     describeCommand

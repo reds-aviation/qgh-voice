@@ -54,11 +54,17 @@ const instructorLedFiles = [
   'remote-service.js',
   'remote-config.js',
   'suite-student.js',
+  'suite-controller-voice.js',
+  'suite-controller-voice.css',
+  'vendor/Apache-2.0.txt',
   'student-plotting.js',
   'student-plotting.css',
   'workspace-shell.js',
   'workspace-shell.css',
   'simulator-core.js',
+  'setup-loading.js',
+  'setup-loading.css',
+  'suryakiran-formation.webp',
   'scope-visuals.js',
   'published-boundaries.js',
   'published-airspace.js',
@@ -109,6 +115,9 @@ test('web build creates an allowlisted PWA package', () => {
     'pilot-voice-worker.js',
     'pilot-voices/manifest.json',
     'single.html',
+    'setup-loading.js',
+    'setup-loading.css',
+    'suryakiran-formation.webp',
     'scope-visuals.js',
   'simulator-core.js',
   'procedure-core.js',
@@ -117,6 +126,7 @@ test('web build creates an allowlisted PWA package', () => {
   'procedure.css',
     'simulator.js',
     'voice-control.js',
+    'rt-intent-model.js',
     'offline-voice-engine.js',
     'voice-workspace.js',
     'voice.css',
@@ -244,7 +254,12 @@ test('web build creates an allowlisted PWA package', () => {
   assert.match(serviceWorker, /const APP_SHELL_PATHS = new Set/);
   assert.match(serviceWorker, /function shellCacheKey\(request\)/);
   assert.match(serviceWorker, /VOICE_MODEL_URL/);
-  assert.match(serviceWorker, /isVoiceModelRequest/);
+  assert.match(serviceWorker, /isVoicePackRequest/);
+  for (const page of [entry, single, tactical, readFileSync(resolve(outputRoot, 'instructor-led/student.html'), 'utf8')]) {
+    assert.doesNotMatch(page, /<script[^>]+vosk-browser-/, 'manual entry does not load the optional recognizer');
+  }
+  assert.doesNotMatch(serviceWorker.split('const APP_SHELL = [')[1].split('];')[0], /vosk-browser|\.tar\.gz/,
+    'installing the core web app never downloads the optional voice pack');
   assert.match(serviceWorker, /if \(!cacheKey\) return;/);
   assert.match(serviceWorker, /return \(await openCache\(\)\)\.match\(cacheKey\);/);
   // Pack writes are integrity-checked and allowlisted; behavior is exercised in

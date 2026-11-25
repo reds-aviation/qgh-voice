@@ -12,10 +12,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   'use strict';
   const connection = document.getElementById('exerciseConnection');
   const instructor = document.getElementById('openInstructorSetup');
-  const controller = document.getElementById('openControllerPosition');
   const form = document.getElementById('entryJoinForm');
   const pin = document.getElementById('entryJoinPin');
-  if (!connection || !instructor || !controller || !form || !pin) return;
+  if (!connection || !instructor || !form || !pin) return;
   try {
     const params = new URLSearchParams(location.search);
     const mode = params.get('connection');
@@ -31,12 +30,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   };
   const refreshLinks = () => {
     instructor.href = urlFor('instructor.html');
-    controller.href = '#entryJoinPin';
   };
   connection.addEventListener('change', refreshLinks);
-  for (const link of [instructor, controller]) {
-    for (const event of ['click', 'auxclick', 'contextmenu']) link.addEventListener(event, refreshLinks);
-  }
+  for (const event of ['click', 'auxclick', 'contextmenu']) instructor.addEventListener(event, refreshLinks);
   pin.addEventListener('input', () => { pin.value = pin.value.replace(/\D/g, '').slice(0, 6); });
   form.addEventListener('submit', event => {
     event.preventDefault();

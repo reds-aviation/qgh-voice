@@ -16,6 +16,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const radians = Core.radians || (value => Number(value) * Math.PI / 180);
   const padHeading = value => String(normalize(Math.round(Number(value)))).padStart(3, '0');
 
+  function reviewInk(color) {
+    return window.ATCScopeVisuals?.reviewInk?.(color, document.documentElement?.dataset?.theme) || color;
+  }
+
   function pointOnBearing(cx, cy, radius, bearing) {
     const angle = radians(bearing);
     return { x: cx + Math.sin(angle) * radius, y: cy - Math.cos(angle) * radius };
@@ -79,7 +83,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function drawAircraft(context, x, y, heading, color, callsign, focused) {
     if (window.ATCScopeVisuals) {
-      window.ATCScopeVisuals.drawAircraftGlyph(context, { x, y, headingDeg: heading, color, outline: '#fffefa', selected: focused });
+      window.ATCScopeVisuals.drawAircraftGlyph(context, { x, y, headingDeg: heading, color, outline: '#fffefa', selected: focused, selectionColor: reviewInk(color) });
       return;
     }
     context.save();
@@ -102,7 +106,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     context.lineWidth = focused ? 2.5 : 1.5;
     context.beginPath();
     if (focused) { context.arc(x, y, 10, 0, Math.PI * 2); context.stroke(); }
-    context.fillStyle = '#17262b';
+    context.fillStyle = reviewInk('#17262b');
     context.font = '600 10px IBM Plex Sans, Arial';
     context.textAlign = 'center';
     context.textBaseline = 'bottom';
@@ -360,21 +364,21 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const focusedId = model.focusedId || model.activeId || null;
 
     context.clearRect(0, 0, width, height);
-    context.fillStyle = '#fffefa';
+    context.fillStyle = reviewInk('#fffefa');
     context.fillRect(0, 0, width, height);
 
-    context.strokeStyle = '#d1d8d4';
+    context.strokeStyle = reviewInk('#d1d8d4');
     context.lineWidth = 1;
     const ringSpacing = Number(model.ringSpacing) === 5 ? 5 : 10;
     if (window.ATCScopeVisuals) window.ATCScopeVisuals.drawRangeRings(context, { rangeNm: maxRange, spacingNm: ringSpacing,
-      cx, cy, scale, width, height, strokeStyle: '#d1d8d4', fillStyle: '#617177', font: '11px IBM Plex Sans, Arial' });
+      cx, cy, scale, width, height, strokeStyle: reviewInk('#d1d8d4'), fillStyle: reviewInk('#617177'), font: '11px IBM Plex Sans, Arial' });
     else for (let ring = ringSpacing; ring <= maxRange + ringSpacing; ring += ringSpacing) {
       const distance = Math.min(ring, maxRange);
       context.beginPath();
       context.arc(cx, cy, distance * scale, 0, Math.PI * 2);
       context.stroke();
       if (distance % 10 === 0 || distance === maxRange) {
-        context.fillStyle = '#617177';
+        context.fillStyle = reviewInk('#617177');
         context.font = '11px IBM Plex Sans, Arial';
         context.textAlign = 'left';
         context.fillText(`${distance} NM`, cx + 7, cy - distance * scale + 14);
@@ -387,7 +391,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       { bearing: 180, label: 'S · 180°' }, { bearing: 270, label: 'W · 270°' }
     ];
     context.setLineDash([5, 8]);
-    context.strokeStyle = '#d7dfdb';
+    context.strokeStyle = reviewInk('#d7dfdb');
     cardinals.forEach(cardinal => {
       const end = pointOnBearing(cx, cy, outerRadius, cardinal.bearing);
       context.beginPath();
@@ -395,7 +399,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       context.lineTo(end.x, end.y);
       context.stroke();
       const label = pointOnBearing(cx, cy, outerRadius + 17, cardinal.bearing);
-      context.fillStyle = '#6b7a7d';
+      context.fillStyle = reviewInk('#6b7a7d');
       context.font = '600 10px IBM Plex Sans, Arial';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -408,7 +412,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       { bearing: 225, label: 'SW' }, { bearing: 315, label: 'NW' }
     ].forEach(quadrant => {
       const label = pointOnBearing(cx, cy, outerRadius * .5, quadrant.bearing);
-      context.fillStyle = '#a0adaa';
+      context.fillStyle = reviewInk('#a0adaa');
       context.font = '600 10px IBM Plex Sans, Arial';
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -418,18 +422,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const outbound = normalize(Number(cfg.outbound));
     const outboundStart = pointOnBearing(cx, cy, outerRadius * .14, outbound);
     const outboundEnd = pointOnBearing(cx, cy, outerRadius * .86, outbound);
-    drawArrow(context, outboundStart, outboundEnd, '#2d7b79', 2);
+    drawArrow(context, outboundStart, outboundEnd, reviewInk('#2d7b79'), 2);
     drawCourseLabel(context, cx, cy, outerRadius * .72, outbound, [
       `OUTBOUND ${padHeading(outbound)}°M`, 'AWAY FROM VDF'
-    ], '#286967');
+    ], reviewInk('#286967'));
 
     const inboundStart = pointOnBearing(cx, cy, outerRadius * .9, finalRadial);
     const inboundEnd = pointOnBearing(cx, cy, outerRadius * .17, finalRadial);
-    drawArrow(context, inboundStart, inboundEnd, '#6b4b96', 2);
+    drawArrow(context, inboundStart, inboundEnd, reviewInk('#6b4b96'), 2);
     drawCourseLabel(context, cx, cy, outerRadius * .74, finalRadial, [
       `FINAL / INBOUND ${padHeading(cfg.inbound)}°M`,
       `QDR ${padHeading(finalRadial)}°M · RADIAL FROM VDF`
-    ], '#5b427f');
+    ], reviewInk('#5b427f'));
 
     if (window.ATCScopeVisuals?.drawRunwayStrip) {
       window.ATCScopeVisuals.drawRunwayStrip(context, { runwayHeadingDeg: Number(cfg.runway) || 0 }, (x, y) => [cx + x * scale, cy - y * scale], scale);
@@ -437,7 +441,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       context.save(); context.translate(cx, cy); context.rotate(radians(Number(cfg.runway) || 0));
       context.fillStyle = '#91979c'; context.fillRect(-2.5, -scale * (3 / 1.852) / 2, 5, scale * (3 / 1.852)); context.restore();
     }
-    context.fillStyle = '#52646a'; context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
+    context.fillStyle = reviewInk('#52646a'); context.beginPath(); context.arc(cx, cy, 3, 0, Math.PI * 2); context.fill();
     context.font = '600 11px IBM Plex Sans, Arial'; context.textAlign = 'left';
     context.fillText('ARP / VDF', cx + 8, cy - 10);
     context.fillText(`RWY ${padHeading(Number(cfg.runway) || 0)}°M`, cx + 11, cy + 22);
@@ -480,16 +484,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
     const visibleAircraft = visibleAircraftList.length;
     const focused = visibleAircraftList.find(item => item.id === focusedId);
-    context.fillStyle = '#52646a';
+    context.fillStyle = reviewInk('#52646a');
     context.font = '600 10px IBM Plex Sans, Arial';
     context.textAlign = 'left';
     context.fillText(`VISIBLE ${visibleAircraft}/${aircraft.length}`, 22, 24);
     if (focused) {
-      context.fillStyle = focused.color || '#007d7d';
+      context.fillStyle = reviewInk(focused.color || '#007d7d');
       context.fillText(`FOCUS · ${focused.callsign || focused.id}`, 22, 40);
     }
 
-    context.fillStyle = '#007d7d';
+    context.fillStyle = reviewInk('#007d7d');
     context.font = '600 13px IBM Plex Sans, Arial';
     context.textAlign = 'center';
     context.fillText('VDF / OVERHEAD', cx, cy + 5);
@@ -500,16 +504,20 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         const count = modelCount(model, item), current = item.path[count - 1], previous = item.path[count - 2];
         const stepSeconds = window.QGHTacticalCore?.STEP_SECONDS || .25;
         const gs = previous && current ? Math.hypot(current.x - previous.x, current.y - previous.y) * 3600 / stepSeconds : null;
-        return { id: item.id, callsign: item.callsign, x, y, selected: focusedId === item.id, color: item.color || '#007d7d',
+        return { id: item.id, callsign: item.callsign, x, y, selected: focusedId === item.id, color: reviewInk(item.color || '#007d7d'),
           details: [`${Math.round(item.level || 0)} FT  ${gs == null ? 'GS —' : `${Math.round(gs)} KT GS`}`, `${padHeading(heading)} H`] };
       });
       const labels = visuals.aircraftLabels(labelAircraft, { mode: model.labelMode, measure: text => context.measureText?.(text)?.width || text.length * 7 });
       visuals.drawAircraftLabels(context, visuals.placeAircraftLabels(labels, { width, height, aircraft: labelAircraft,
         obstacles: [...visuals.overlayObstacles(canvas, { document, width, height }), { x: 15, y: 10, width: 180, height: focused ? 38 : 22 }] }),
-        { background: '#fffefa' });
+        { background: reviewInk('#fffefa') });
     }
     return true;
   }
+
+  window.addEventListener?.('ats-appearance-change', () => {
+    if (lastModel) draw(lastModel);
+  });
 
   window.QGHTacticalReview = {
     draw,

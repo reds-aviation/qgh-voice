@@ -13,7 +13,7 @@ import {relative, resolve} from 'node:path';
 
 const assetExtension = /\.(?:css|m?js|wasm|json)$/i;
 const stableWorker = /(?:^|\/)(?:service-worker|browser-worker)\.js$/;
-const integrityManaged = /^(?:pilot-voices\/|vendor\/pilot-tts\/)/;
+const integrityManaged = /^(?:pilot-voices\/|vendor\/(?:pilot-tts\/|vosk-browser-[\d.]+\.js$))/;
 
 function safeRevision(revision) {
   if (!/^[a-z0-9][a-z0-9.+-]{0,79}$/i.test(revision)) throw new Error('Invalid hosted asset revision.');

@@ -26,16 +26,23 @@ function normalizeHeader(html) {
     return header.replace(/SERVICE NO\. 38703/g,'Service No. 38703')
       .replace(/>TRAINING CENTRE</g,'>Training guide<')
       .replace(/>CHANGE QGH TYPE</g,'>Change QGH type<')
-      .replace(/>SUITE HOME</g,'>Suite home<')
-      .replace(/>ATC SUITE</g,'>Suite home<')
       .replace(/>TRAINING GUIDE ↗</g,'>Training guide ↗<');
+  });
+}
+
+// Preserve the relative URL, review ID and navigation behaviour of each existing home link.
+function styleSuiteHomeLinks(html) {
+  const house = '<svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7.5 9 7.5M5.5 9v11h4.25v-6.5h4.5V20h4.25V9"/></svg>';
+  return html.replace(/<a\b([^>]*)>\s*(?:(?:ATS\s+)?Suite\s+home|ATC\s+suite)\s*<\/a>/gi, (link, attributes) => {
+    if (!/\bhref="(?:\.\/|(?:\.\.\/)?index\.html)"/i.test(attributes)) return link;
+    return `<a${attributes} data-suite-home title="ATS SIM BOX home">${house}Home</a>`;
   });
 }
 
 // This is a Pages presentation layer. Flight controls and exercise canvases keep
 // their original styles; the selectors follow each existing setup/desk state.
 export async function buildEntryTheme(output, root, version) {
-  for (const asset of ['flow-theme.css', 'iaf-theme.css', 'qgh-cloudbreak.png']) {
+  for (const asset of ['flow-theme.css', 'iaf-theme.css', 'qgh-cloudbreak.webp', 'exercise-motion.js', 'suite-appearance.js', 'suite-appearance.css', 'appearance-dark.css']) {
     await copyFile(resolve(root, 'packages/site-landing', asset), resolve(output, asset));
   }
   const pages = [
@@ -65,9 +72,11 @@ export async function buildEntryTheme(output, root, version) {
     if(['qgh','single','tactical'].includes(surface))html=html.replace(/<script[^>]+src="guided-familiarisation\.js[^\"]*"[^>]*><\/script>\s*/g,'').replace(/<link[^>]+href="guided-familiarisation\.css[^\"]*"[^>]*>\s*/g,'');
     html = html.replace('<body', `<body data-suite-surface="${surface}"`)
       .replace('</head>', `<link rel="stylesheet" href="${prefix}flow-theme.css?release=${version}">${entryStyle}<link rel="stylesheet" href="${prefix}iaf-theme.css?release=${version}"></head>`);
-    if (['qgh', 'instructor', 'guide'].includes(surface)) {
-      html = html.replace(/(<meta name="theme-color" content=")[^"]+/, '$1#365e7b');
-    }
+    const chromeColour = '<meta name="theme-color" content="#64b4e6">';
+    const previousChrome = /<meta\s+name="theme-color"\s+content="[^"]*"[^>]*>/i;
+    html = previousChrome.test(html)
+      ? html.replace(previousChrome, chromeColour)
+      : html.replace('</head>', chromeColour + '</head>');
     if (surface === 'qgh') {
       html = html.replace('<title>QGH Simulator</title>', '<title>ATS SIM BOX · QGH</title>')
         .replace('<h1>QGH SIMULATOR</h1>', '<h1>ATS SIM BOX</h1>')
@@ -89,15 +98,19 @@ export async function buildEntryTheme(output, root, version) {
         .replace('Join with the session PIN.', 'Controller position');
       // The shared entry already supplies this label. Older entry markup still
       // needs the presentation-layer label, but a second copy crowds the form.
-      if (!html.includes('PREPARE YOUR POSITION')) {
+      if (!/prepare your position/i.test(html)) {
         html = html.replace('<div class="entry-desks">', '<div class="flow-section-label">PREPARE YOUR POSITION<span></span></div><div class="entry-desks">');
       }
     }
     // Operational guides stay public; the owner’s hardware handbook is private.
     if (['qgh', 'instructor', 'procedural', 'guide'].includes(surface)) {
-      html = html.replace('</body>', `<footer class="flow-footer"><span>ATS SIM BOX</span><span>INDEPENDENT TRAINING SIMULATOR</span></footer></body>`);
+      html = html.replace('</body>', `<div class="flow-footer"><span>ATS SIM BOX</span><span>INDEPENDENT TRAINING SIMULATOR</span></div></body>`);
     }
-    html=normalizeHeader(html);
+    if (['qgh','single','tactical','instructor','host-setup','join','procedural'].includes(surface)) {
+      html = html.replace('</head>', `<script defer src="${prefix}exercise-motion.js"></script></head>`);
+    }
+    html = html.replace('</head>', `<link rel="stylesheet" href="${prefix}suite-appearance.css"><link rel="stylesheet" href="${prefix}appearance-dark.css"><script src="${prefix}suite-appearance.js"></script></head>`);
+    html=styleSuiteHomeLinks(normalizeHeader(html));
     await writeFile(path, html);
   }
 }

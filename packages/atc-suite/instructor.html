@@ -18,6 +18,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
   <title>Instructor Console · ATS SIM BOX</title>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="setup-loading.css">
   <link rel="stylesheet" href="suite.css">
   <link rel="stylesheet" href="workspace-shell.css">
   <script defer src="workspace-shell.js"></script>
@@ -35,10 +36,23 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <script defer src="suite-display.js"></script>
   <script defer src="suite-review.js"></script>
   <script defer src="suite-command-reference.js"></script>
+  <script defer src="rt-intent-model.js"></script>
+  <script defer src="voice-control.js"></script>
   <script defer src="suite-instructor.js"></script>
+  <script defer src="setup-loading.js"></script>
 </head>
 <body class="instructor-page">
-  <main class="shell shell--wide">
+  <section class="ats-setup-loader" id="setupLoader" aria-labelledby="setupLoadingTitle">
+    <div class="ats-setup-loader__content">
+      <span class="ats-setup-loader__brand">ATS SIM BOX</span>
+      <h1 id="setupLoadingTitle" data-setup-title role="status">Loading exercise setup…</h1>
+      <p class="ats-setup-loader__caption">IAF Surya Kiran Aerobatic Team</p>
+      <noscript><p>Enable JavaScript to open exercise setup.</p></noscript>
+      <a href="" id="setupRetry" hidden>Retry setup</a>
+      <a href="index.html">Back to exercise selection</a>
+    </div>
+  </section>
+  <main class="shell shell--wide" inert>
     <details class="console-navigation" id="consoleNavigation" open><summary>QGH + SRA &amp; vectoring · Navigation &amp; help</summary>
     <header class="site-header">
       <div class="header-left"><a class="wordmark" href="index.html">ATS SIM BOX</a><a class="suite-return-link" href="../index.html">SUITE HOME</a><span class="role-pill">INSTRUCTOR</span><a href="../training-centre.html#instructor" target="_blank" rel="noopener">Training guide ↗</a></div>
@@ -47,51 +61,56 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     </details>
 
     <section class="setup-panel" id="setupPanel">
-      <div class="section-title"><span>QGH + SRA &amp; VECTORING</span><h1>Set up starting traffic</h1><p>Choose the exercise and set your aircraft. Prepare airspace and saved exercises are below.</p><button id="returnToExercise" type="button" hidden>Return to exercise →</button><p id="trafficReturnStatus" role="status" hidden></p></div>
+      <div class="section-title"><span>QGH + SRA &amp; vectoring</span><h1>Set up starting traffic</h1><p>Use the starting traffic below or edit the aircraft before creating a session.</p><button id="returnToExercise" type="button" hidden>Return to exercise →</button><p id="trafficReturnStatus" role="status" hidden></p></div>
       <form id="scenarioForm" class="setup-form">
-        <label>EXERCISE CONNECTION<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label>
+        <div class="setup-session-actions">
+          <div class="setup-preview"><strong id="setupTrafficType">QGH · 1 aircraft</strong><span id="setupPreview" role="status">101 · QTE 065 · 25 NM · HDG 225</span></div>
+          <button class="primary-action" id="createSession" type="submit">Create session</button>
+        </div>
+        <details class="setup-environment" id="setupConnectionFields"><summary>Connection · <span id="setupConnectionSummary">This device</span></summary>
+        <label>Exercise connection<select id="exerciseConnection" aria-describedby="connectionHelp"><option value="local">This device · offline / same PC</option><option value="online">Online room · different devices</option></select></label>
         <p id="connectionHelp" class="connection-help">Offline: same PC and browser profile. Recommended: two monitors in Extend mode, with a separate student window. Online: different PCs with internet on both.</p>
-        <label>EXERCISE FAMILY<select id="exerciseFamily" name="family">
-          <option value="qgh">QGH / DIRECTION FINDING</option><option value="surveillance">SURVEILLANCE VECTORING</option>
-          <option value="sra">SRA · SURVEILLANCE RADAR APPROACH</option>
+        </details>
+        <label>Exercise family<select id="exerciseFamily" name="family">
+          <option value="qgh">QGH / direction finding</option><option value="surveillance">Surveillance vectoring</option>
+          <option value="sra">SRA · Surveillance radar approach</option>
         </select></label>
-        <label id="procedureField">QGH PROCEDURE<select id="procedureType" name="procedure"><option value="normal">NORMAL QGH</option><option value="us-compass">U/S COMPASS QGH</option></select></label>
-        <label><span id="aircraftCountLabel">AIRCRAFT COUNT · 1–2</span><input id="aircraftCount" name="aircraftCount" type="number" min="1" max="2" value="1" inputmode="numeric"></label>
+        <label id="procedureField">QGH procedure<select id="procedureType" name="procedure"><option value="normal">Normal QGH</option><option value="us-compass">U/S compass QGH</option></select></label>
+        <label><span id="aircraftCountLabel">Aircraft count · 1–2</span><input id="aircraftCount" name="aircraftCount" type="number" min="1" max="2" value="1" inputmode="numeric"></label>
         <div class="roster-editor">
-          <div class="roster-editor-head"><div><span>STARTING AIRCRAFT</span><b>POSITIONS AND PERFORMANCE</b></div><small>Set callsign, type, position, heading, altitude and speed. Aircraft performance is optional.</small></div>
+          <div class="roster-editor-head"><div><span>Starting aircraft</span><b>Positions and performance</b></div><small>Set callsign, type, position, heading, altitude and speed. Aircraft performance is optional.</small></div>
           <div class="roster-table" role="list" aria-label="Initial aircraft truth inputs">
             <div id="aircraftRoster" class="roster-body">
               <div class="roster-row" data-aircraft-index="0" role="listitem">
-                <label>CALLSIGN<input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign"></label>
-                <label>SQUAWK<input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code"></label>
-                <label>RADAR RETURN<select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">PRIMARY · +</option><option value="mode-a">MODE A · □</option><option value="mode-s">MODE S · □</option></select></label>
-                <label>AIRCRAFT TYPE<select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">FIGHTER</option><option value="transport">TRANSPORT</option><option value="helicopter">HELICOPTER</option><option value="general">GENERAL</option></select></label>
+                <label>Callsign<input id="callsign" value="101" maxlength="20" aria-label="Aircraft 1 callsign"></label>
+                <label>Squawk<input id="squawk" value="4300" inputmode="numeric" pattern="[0-7]{4}" maxlength="4" aria-label="Aircraft 1 four digit octal transponder code"></label>
+                <label>Radar return<select id="radarReturn" data-radar-return-auto="true" aria-label="Aircraft 1 radar return"><option value="primary">Primary · +</option><option value="mode-a">Mode A · □</option><option value="mode-s">Mode S · □</option></select></label>
+                <label>Aircraft type<select id="aircraftType" aria-label="Aircraft 1 type"><option value="fighter">Fighter</option><option value="transport">Transport</option><option value="helicopter">Helicopter</option><option value="general">General</option></select></label>
                 <label>QTE · °<input id="initialBearing" type="number" min="0" max="359" value="065" aria-label="Aircraft 1 initial QTE"></label>
-                <label>RANGE · NM<input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range"></label>
-                <label>HEADING · °M<input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading"></label>
-                <label>ALTITUDE · FT<input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude"></label>
-                <label>SPEED · KT<input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed"></label>
-                <details class="roster-performance"><summary>Aircraft performance</summary><div class="roster-performance-controls"><label>TURN · °/S<input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn"></label><label>VERTICAL · FT/MIN<input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute"></label></div></details>
+                <label>Range · NM<input id="initialRange" type="number" min="1" max="100" step=".1" value="25" aria-label="Aircraft 1 initial range"></label>
+                <label>Heading · °M<input id="initialHeading" type="number" min="0" max="359" value="225" aria-label="Aircraft 1 initial heading"></label>
+                <label>Altitude · FT<input id="initialAltitude" type="number" min="500" max="45000" step="100" value="12000" aria-label="Aircraft 1 altitude"></label>
+                <label>Speed · KT<input id="initialSpeed" type="number" min="60" max="600" step="5" value="240" aria-label="Aircraft 1 speed"></label>
+                <details class="roster-performance"><summary>Aircraft performance</summary><div class="roster-performance-controls"><label>Turn rate · °/s<input id="turnRate" type="number" min=".5" max="8" step=".1" value="3" aria-label="Aircraft 1 rate of turn"></label><label>Vertical rate · FT/MIN<input id="verticalRate" type="number" min="100" max="6000" step="100" value="1000" aria-label="Aircraft 1 vertical rate feet per minute"></label></div></details>
               </div>
             </div>
           </div>
         </div>
-        <div class="setup-preview" aria-live="polite"><span>START</span><b id="setupPreview">QTE 065 · 25 NM · HDG 225</b></div>
-        <button class="primary-action" id="createSession" type="submit">CREATE SESSION</button>
         <details class="setup-environment" id="setupEnvironment"><summary>Prepare airspace &amp; radar</summary><p>Set runway and approach references here. For SRA or vectoring, use a published LFA or a local training boundary.</p><section id="suitePublishedSection" hidden><h3>Published airspace</h3><input type="hidden" id="publishedAirspaceData" value=""><div id="suitePublishedPicker"></div><div class="preset-management-actions"><button id="clearPublishedAirspace" type="button">Use local training airspace</button><button id="applyPublishedAirspace" type="button" hidden>Apply airspace to current exercise</button></div><p id="suitePublishedStatus" role="status">Choose an airbase, then its LFA. Your aircraft setup is kept.</p></section><div class="setup-environment-grid">
-        <label>RUNWAY ORIENTATION · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
-        <label>FINAL APPROACH TRACK · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric"></label>
-        <label id="scanPresetField" hidden>RADAR SCAN<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 SIM SEC</option></select></label>
-        <label id="radarProfileField" hidden>RADAR ENVIRONMENT<select id="radarProfile"><option value="primary">PRIMARY · + PLOTS</option><option value="correlated">SECONDARY · □ SSR PLOTS</option></select></label>
-        <label id="parRefreshField" hidden>PAR TRAINING REFRESH<select id="parRefresh"><option value="1">1 HZ</option><option value="5">5 HZ</option></select></label>
-        <label id="approachAircraftField" hidden>DESIGNATED APPROACH AIRCRAFT<select id="approachAircraft"><option value="AC1">101</option></select></label>
-        <label id="parTransferGateField" hidden>PAR TRANSFER GATE · NM<input id="parTransferGate" type="number" min="1" max="20" step=".5" value="10" inputmode="decimal"></label>
-        <label class="setup-check" id="extendedCentrelineField" hidden><input id="extendedCentreline" type="checkbox" checked><span>EXTENDED CENTRELINE &amp; NM MARKS</span></label>
-        <label id="extendedCentrelineRangeField" hidden>EXTENDED CENTRELINE · NM<input id="extendedCentrelineNm" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
-        <label id="centrelineTickField" hidden>DISTANCE MARKS · NM<select id="centrelineTickNm"><option value="1">1 NM</option><option value="2" selected>2 NM</option><option value="5">5 NM</option></select></label>
-        <label class="setup-check" id="localLfaField" hidden><input id="localLfaEnabled" type="checkbox"><span>LOCAL TRAINING LFA BOUNDARY</span></label>
-        <label id="localLfaRadiusField" hidden>LOCAL LFA RADIUS · NM<input id="localLfaRadius" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
-        <label class="setup-check" id="sraDescentProfileField" hidden><input id="sraDescentProfile" type="checkbox" checked><span>SRA 3° DESCENT TRAINING GUIDE</span></label>
+        <label>Runway orientation · °M<input id="runwayOrientation" name="runway" type="number" min="0" max="359" value="230" inputmode="numeric" required></label>
+        <label class="setup-check"><input id="customFinalTrack" type="checkbox"><span>Use a different final approach track</span></label>
+        <label id="finalTrackField" hidden>Final approach track · °M<input id="finalTrack" name="finalTrack" type="number" min="0" max="359" value="230" inputmode="numeric" required disabled></label>
+        <label id="scanPresetField" hidden>Radar scan<select id="scanPreset" disabled><option value="15" selected>15 RPM · 4 sim seconds</option></select></label>
+        <label id="radarProfileField" hidden>Default radar return<select id="radarProfile"><option value="primary">Primary · + plots</option><option value="correlated">Secondary · □ SSR plots</option></select></label>
+        <label id="parRefreshField" hidden>PAR training refresh<select id="parRefresh"><option value="1">1 Hz</option><option value="5">5 Hz</option></select></label>
+        <label id="approachAircraftField" hidden>Designated approach aircraft<select id="approachAircraft"><option value="AC1">101</option></select></label>
+        <label id="parTransferGateField" hidden>PAR transfer gate · NM<input id="parTransferGate" type="number" min="1" max="20" step=".5" value="10" inputmode="decimal"></label>
+        <label class="setup-check" id="extendedCentrelineField" hidden><input id="extendedCentreline" type="checkbox" checked><span>Extended centreline &amp; NM marks</span></label>
+        <label id="extendedCentrelineRangeField" hidden>Extended centreline · NM<input id="extendedCentrelineNm" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
+        <label id="centrelineTickField" hidden>Distance marks · NM<select id="centrelineTickNm"><option value="1">1 NM</option><option value="2" selected>2 NM</option><option value="5">5 NM</option></select></label>
+        <label class="setup-check" id="localLfaField" hidden><input id="localLfaEnabled" type="checkbox"><span>Local training LFA boundary</span></label>
+        <label id="localLfaRadiusField" hidden>Local LFA radius · NM<input id="localLfaRadius" type="number" min="1" max="100" step="1" value="20" inputmode="decimal"></label>
+        <label class="setup-check" id="sraDescentProfileField" hidden><input id="sraDescentProfile" type="checkbox" checked><span>SRA 3° descent training guide</span></label>
         </div></details>
       </form>
       <details class="ats-saved-exercises" id="qghSavedExercises"><summary>Saved exercises</summary>
@@ -109,8 +128,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
     <section class="active-workspace" id="activeWorkspace" tabindex="-1" hidden>
       <details class="session-drawer" id="sessionDrawer" open><summary>Session <span id="compactPin">—</span> · <span id="compactConnection">Waiting</span></summary><aside class="session-rail" aria-label="Session management">
-        <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">COPY PIN</button><button id="openStudentDisplay" type="button">OPEN CONTROLLER ENTRY</button><button id="moveStudentDisplay" class="primary display-move-action" type="button">MOVE TO SECOND DISPLAY</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">Share the PIN on the paired entry page. Open a separate controller window only when needed.</output></div>
-        <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Enter this PIN in the dedicated Student Display, then request admission.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>REJECT</button><button id="admitStudent" type="button" class="primary" hidden>ADMIT</button></div><button id="releaseStudent" type="button" title="Pause the exercise and release the current student seat for a replacement window">RELEASE STUDENT SEAT</button></div>
+        <div class="session-card"><span>SESSION PIN</span><strong id="sessionPin">—— ——</strong><small id="sessionConnectionLabel">This device · same PC and browser profile</small><div class="session-card-actions"><button id="copyPin" type="button">Copy PIN</button><button id="openStudentDisplay" type="button">Open controller entry</button><button id="moveStudentDisplay" class="display-move-action" type="button">Move to second display</button></div><output id="studentDisplayStatus" class="display-status" aria-live="polite">Share the PIN on the paired entry page. Open a separate controller window only when needed.</output></div>
+        <div class="student-card" id="studentCard"><span>CONTROLLER POSITION</span><strong id="studentStatus">WAITING TO JOIN</strong><p id="studentDetail">Enter this PIN in the dedicated Student Display, then request admission.</p><div class="button-pair"><button id="rejectStudent" type="button" hidden>Decline</button><button id="admitStudent" type="button" class="primary" hidden>Admit controller</button></div><button id="releaseStudent" type="button" hidden title="Pause the exercise and release the current student seat for a replacement window">Release controller seat</button></div>
+        <div class="session-card" id="controllerVoiceSettings"><label for="controllerVoiceMode">Controller voice calls</label><select id="controllerVoiceMode" aria-describedby="controllerVoiceHelp"><option value="human" selected>Instructor handles calls</option><option value="automatic">Automatic pilot</option></select><small id="controllerVoiceHelp">Read the controller’s call in Aircraft &amp; radio and operate the aircraft.</small></div>
         <nav class="phase-list" aria-label="Exercise progress"><b class="active" data-phase="ready">1 · READY</b><b data-phase="running">2 · RUNNING</b><b data-phase="review">3 · REVIEW</b></nav>
         <button id="newScenario" type="button">Traffic setup</button>
       </aside></details>
@@ -136,7 +156,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
             <div class="instrument-shelf" id="instructorControlShelf">
               <section class="quick-aircraft-controls" aria-label="Selected aircraft quick controls"><output id="quickAircraftStatus">Select aircraft</output><div class="quick-turn-row"><button id="quickTurnLeft" type="button">← Left now</button><button id="quickStopTurn" type="button">Stop turn</button><button id="quickTurnRight" type="button">Right now →</button><button id="moreAircraftControls" type="button" aria-controls="aircraftControlDrawer" aria-expanded="false">More controls</button></div><div class="quick-heading-row"><label>Heading °M<input id="quickHeading" type="number" min="0" max="359" inputmode="numeric" placeholder="000–359"></label><button id="quickHeadingLeft" type="button">↶ Turn left</button><button id="quickHeadingRight" type="button">Turn right ↷</button></div></section>
               <section class="instructor-homing" id="instructorHoming" aria-label="Homing and direction finding"><label>D/F<select id="instructorDfReference"><option value="qdm">QDM</option><option value="qte">QTE</option></select></label><strong id="instructorDfBearing">—</strong><small id="instructorDfPhase">No transmission</small></section>
-              <section class="instructor-pilot-channel" aria-label="Pilot transmission"><span>PILOT TRANSMISSION</span><p id="instructorPilotCaption" aria-live="polite">Awaiting a transmission.</p><button id="quickTransmit" type="button">Transmit</button></section>
+              <section class="instructor-pilot-channel" aria-label="Pilot transmission"><output id="controllerVoiceHeard" aria-live="polite" hidden></output><span>PILOT TRANSMISSION</span><p id="instructorPilotCaption" aria-live="polite">Awaiting a transmission.</p><button id="quickTransmit" type="button">Transmit</button></section>
             </div>
           </div>
 
@@ -181,10 +201,64 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       </section>
     </section>
 
-    <section class="review-screen" id="reviewScreen" hidden>
-      <header class="workspace-head"><div><span class="eyebrow">DEBRIEF</span><h1>Truth versus observation</h1></div><button id="downloadReviewSetup" type="button">Download exercise setup</button><button id="restartExercise" class="primary" type="button">RESTART EXERCISE</button><a id="reviewSuiteHome" href="../index.html">ATS suite Home</a></header>
-      <p id="reviewSetupStatus" role="status">Download the original aircraft and airspace setup before leaving to use this exercise again.</p>
-      <div class="review-grid"><div class="scope-card"><canvas id="reviewScope" width="1000" height="720" aria-label="Exercise review"></canvas><div class="review-controls"><label><input type="checkbox" data-review-layer="truth" checked> TRUTH</label><label><input type="checkbox" data-review-layer="observations" checked> STUDENT OBSERVATIONS</label><label><input type="checkbox" data-review-layer="events" checked> COMMANDS</label></div><div class="review-playback"><button id="reviewPlay" type="button">PLAY</button><label>REPLAY SPEED<select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label><input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0"><output id="reviewTime">00:00:00</output></div></div><div class="review-summary"><span>EXERCISE SUMMARY</span><strong id="reviewMode">QGH</strong><dl><div><dt>DURATION</dt><dd id="reviewDuration">00:00:00</dd></div><div><dt>COMMANDS</dt><dd id="reviewCommandCount">0</dd></div><div><dt>OBSERVATIONS</dt><dd id="reviewObservationCount">0</dd></div><div><dt>TRACK END</dt><dd id="reviewEndState">—</dd></div></dl><ol id="reviewEvents"></ol></div></div>
+    <section class="review-screen" id="reviewScreen" aria-labelledby="pairedReviewTitle" tabindex="-1" hidden>
+      <header class="workspace-head">
+        <div><span class="eyebrow" id="reviewMode">QGH</span><h1 id="pairedReviewTitle">Exercise debrief</h1></div>
+      </header>
+      <div class="review-grid">
+        <section class="scope-card review-plot" aria-labelledby="reviewPlotTitle">
+          <header class="review-section-head">
+            <h2 id="reviewPlotTitle">Flight path replay</h2>
+            <output id="reviewTime" aria-label="Replay time" aria-live="off">00:00:00</output>
+          </header>
+          <div class="review-playback" role="group" aria-label="Replay controls">
+            <button id="reviewPlay" type="button" aria-pressed="false">Play</button>
+            <label for="reviewSpeed">Speed <select id="reviewSpeed"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+            <input id="reviewScrub" aria-label="Review time" type="range" min="0" max="0" step=".25" value="0">
+          </div>
+          <canvas id="reviewScope" width="1000" height="720" aria-label="Recorded aircraft tracks and student observations"></canvas>
+          <ul class="replay-key" aria-label="Replay chart legend">
+            <li id="reviewKeyTrack" data-symbol="track">Instructor track</li>
+            <li id="reviewKeyObservation" data-symbol="plot">Controller radar return</li>
+            <li id="reviewKeyCommand" data-symbol="event">Command location</li>
+          </ul>
+          <div class="review-controls" role="group" aria-label="Replay layers">
+            <label>Replay view <select id="reviewPerspective">
+              <option value="compare">Compare both perspectives</option>
+              <option value="instructor">Instructor · aircraft tracks</option>
+              <option value="controller">Controller · recorded observations</option>
+            </select></label>
+            <label><input type="checkbox" data-review-layer="events" checked> Command markers</label>
+          </div>
+          <p class="review-hint" id="reviewObservationHint" hidden></p>
+          <div class="review-bookmark" role="group" aria-label="Replay bookmark">
+            <button id="bookmarkReviewTime" type="button">Bookmark this time</button>
+            <button id="returnToReviewBookmark" type="button" hidden>Go to bookmark</button>
+            <output id="reviewBookmarkStatus" role="status"></output>
+          </div>
+        </section>
+        <aside class="review-summary" aria-labelledby="reviewSummaryTitle">
+          <h2 id="reviewSummaryTitle">Exercise summary</h2>
+          <dl>
+            <div><dt>Duration</dt><dd id="reviewDuration">00:00:00</dd></div>
+            <div><dt>Aircraft</dt><dd id="reviewAircraftCount">—</dd></div>
+            <div><dt>Commands</dt><dd id="reviewCommandCount">0</dd></div>
+            <div><dt>Observations</dt><dd id="reviewObservationCount">0</dd></div>
+            <div class="review-end-state"><dt>Final range from ARP</dt><dd id="reviewEndState">—</dd></div>
+          </dl>
+          <h2>Commands &amp; events</h2>
+          <ol id="reviewEvents" aria-label="Events up to the replay time, most recent first"></ol>
+          <p class="review-hint" id="reviewEventHint" hidden></p>
+        </aside>
+      </div>
+      <footer class="review-summary review-finish">
+        <div class="review-next-actions" role="group" aria-label="After the debrief">
+          <button id="downloadReviewSetup" type="button">Download exercise setup</button>
+          <button id="restartExercise" class="primary" type="button">Restart exercise</button>
+          <a id="reviewSuiteHome" href="../index.html">ATS suite Home</a>
+        </div>
+        <p id="reviewSetupStatus" role="status">The download includes the starting aircraft and airspace for use in another exercise.</p>
+      </footer>
     </section>
     <p class="equipment-note">Each sensor view is an inspired training representation of publicly described functions, not an operational equipment replica.</p>
 

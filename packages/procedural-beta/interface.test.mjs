@@ -85,7 +85,7 @@ test('sweep turns clockwise in real milliseconds and freezes while paused',()=>{
   assert.equal(advanceSweep(32,NaN,12),32);
 });
 
-test('Gyani recognises all deployed page paths and ordinary control questions',()=>{
+test('Saarthi recognises all deployed page paths and ordinary control questions',()=>{
   for(const path of ['/qgh-voice/procedural-beta/','/qgh-voice/procedural-beta/index.html','/procedural.html','/procedural-guide.html']) assert.equal(topicForPage(path),'procedural');
   for(const path of ['/qgh-voice/qgh.html','/qgh-voice/single.html','/qgh-voice/tactical.html']) assert.equal(topicForPage(path),'qgh-individual');
   assert.equal(topicForPage('/qgh-voice/'),'suite');
@@ -101,7 +101,7 @@ test('Gyani recognises all deployed page paths and ordinary control questions',(
   assert.match(unknown.escalation,/Contact the creator/);
 });
 
-test('generated guides and Gyani use the same control explanations',()=>{
+test('generated guides and Saarthi use the same control explanations',()=>{
   for(const topic of ['procedural','qgh-individual','qgh-instructor']) {
     const html=renderCurrentGuide(topic,'../'); const {document}=parseHTML(html);
     for(const entry of knowledge.entries.filter(item=>item.topics.includes(topic))) assert.ok(document.textContent===null ? html.includes(entry.title) : document.textContent.includes(entry.title));
@@ -124,7 +124,7 @@ test('app pages use ATS SIM BOX branding without version tags while the guide re
    assert.doesNotMatch(document.body.textContent,/\bVERSION\s*\d|\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,path);
  }
  const{document}=parseHTML(renderCommonGuide());assert.match(document.querySelector('title').textContent,/Training guide · ATS SIM BOX/);assert.ok(document.querySelector('#guideVersion'));assert.ok(document.querySelector('#releaseDetail'));
- assert.ok(knowledge.entries.every(entry=>!(/\bbeta\b/i.test(entry.text))),'Gyani retains training limitations without a beta release label');
+ assert.ok(knowledge.entries.every(entry=>!(/\bbeta\b/i.test(entry.text))),'Saarthi retains training limitations without a beta release label');
  assert.equal(document.querySelector('#current-flow').getAttribute('data-guide-revision'),knowledge.revision,'display branding never replaces the release identity used for cache/guide compatibility');
 });
 
@@ -190,7 +190,7 @@ test('local room registry allocates collision-free PINs and expires closed rooms
   assert.equal(await directory.find('bad'),null);
 });
 
-test('Gyani mounts in the tool rail, answers the reported question and collapses',async()=>{
+test('Saarthi mounts in the tool rail, answers the reported question and collapses',async()=>{
   const h=domHarness('<html><body class="desk-open"><nav id="edge-actions"></nav></body></html>');
   vm.runInContext(source('guide-knowledge.js'),h.context);
   vm.runInContext(source('suite-guide-chat.js'),h.context);
@@ -200,10 +200,73 @@ test('Gyani mounts in the tool rail, answers the reported question and collapses
   root.querySelector('.suite-guide-chat__launcher').click();
   const input=root.querySelector('textarea');input.value='How to turn right';
   root.querySelector('form').dispatchEvent(new h.Event('submit',{bubbles:true,cancelable:true}));
-  assert.match(root.querySelector('.suite-guide-chat__history').textContent,/Double-right-click/i);
+  assert.match(root.querySelector('.suite-guide-chat__history').textContent,/turn/i);
   root.querySelector('.suite-guide-chat__close').click();assert.equal(root.querySelector('[role="dialog"]').hidden,true);
   h.document.body.classList.add('exercise-running');
-  await new Promise(resolve=>setImmediate(resolve));assert.equal(root.hidden,true);
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(root.hidden,false);
+  root.querySelector('.suite-guide-chat__launcher').click();
+  let shortcuts=0;
+  h.document.addEventListener('keydown',()=>shortcuts++);h.document.addEventListener('keyup',()=>shortcuts++);
+  for(const type of ['keydown','keyup']){
+    const key=new h.Event(type,{bubbles:true,cancelable:true});key.key=' ';input.dispatchEvent(key);
+  }
+  assert.equal(shortcuts,0);assert.equal(root.querySelector('[role="dialog"]').hidden,false);
+  const escape=new h.Event('keydown',{bubbles:true,cancelable:true});escape.key='Escape';input.dispatchEvent(escape);
+  assert.equal(root.querySelector('[role="dialog"]').hidden,true);assert.equal(shortcuts,0);
+  assert.equal(h.document.activeElement,root.querySelector('.suite-guide-chat__launcher'));
+  assert.ok(h.document.body.classList.contains('exercise-running'));
+});
+
+test('open Procedural tools keep Saarthi alongside the drawer controls', async () => {
+  const h=domHarness('<html><body class="desk-open"><nav id="edge-actions"></nav><aside id="work-panel" hidden><div class="drawer-head"><strong>Session</strong><span class="ats-overlay-tools"><button id="drawer-close">Close</button></span></div></aside></body></html>');
+  vm.runInContext(source('guide-knowledge.js'),h.context);
+  vm.runInContext(source('suite-guide-chat.js'),h.context);
+  const chat=h.document.getElementById('suite-guide-chat'), drawer=h.document.getElementById('work-panel');
+  const launcher=chat.querySelector('.suite-guide-chat__launcher');
+  assert.equal(chat.parentElement.id,'edge-actions');
+  drawer.hidden=false;await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(chat.parentElement.matches('.drawer-head'));
+  assert.ok(chat.nextElementSibling.matches('.ats-overlay-tools'));
+  launcher.click();assert.equal(chat.querySelector('[role="dialog"]').hidden,false);
+  chat.querySelector('.suite-guide-chat__close').click();
+  assert.equal(h.document.activeElement,launcher);assert.equal(drawer.hidden,false);
+  drawer.hidden=true;await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(chat.parentElement.id,'edge-actions');
+});
+
+test('guide points to a visible control without pressing it and skips unavailable actions', () => {
+  const h = domHarness('<html><body><section hidden><button id="suiteTutorialLaunch">Load tutorial</button></section><button id="suiteTutorialChapter">Jump to chapter</button></body></html>');
+  vm.runInContext(source('guide-knowledge.js'), h.context);
+  vm.runInContext(source('suite-guide-chat.js'), h.context);
+  const chat = h.document.getElementById('suite-guide-chat');
+  const chapter = h.document.getElementById('suiteTutorialChapter');
+  let activations = 0;
+  chapter.addEventListener('click', () => activations++);
+  function ask(question) {
+    chat.querySelector('textarea').value = question;
+    chat.querySelector('form').dispatchEvent(new h.Event('submit', { bubbles: true, cancelable: true }));
+    return chat.querySelector('.suite-guide-chat__history').lastElementChild;
+  }
+  chat.querySelector('.suite-guide-chat__launcher').click();
+  const show = ask('How do I jump to a video chapter?').querySelector('.suite-guide-chat__show');
+  assert.ok(show);
+  show.click();
+  assert.equal(chat.querySelector('[role="dialog"]').hidden, true);
+  assert.equal(h.document.activeElement, chapter);
+  assert.ok(chapter.classList.contains('suite-guide-chat-target'));
+  assert.equal(activations, 0);
+  chapter.hidden = true;
+  chat.querySelector('.suite-guide-chat__launcher').click();
+  assert.equal(show.hidden, true);
+  assert.ok(!chapter.classList.contains('suite-guide-chat-target'));
+  assert.equal(ask('How do I jump to a video chapter?').querySelector('.suite-guide-chat__show'), null);
+  const choices = ask('How do I save?').querySelectorAll('.suite-guide-chat__choices button');
+  assert.deepEqual(Array.from(choices, button => button.textContent), ['Starting setup', 'Current progress', 'Airspace only']);
+  choices[2].click();
+  const history = chat.querySelector('.suite-guide-chat__history');
+  assert.equal(history.lastElementChild.previousElementSibling.querySelector('p').textContent, 'Airspace only');
+  assert.match(history.lastElementChild.textContent, /airspace/i);
+  assert.equal(history.lastElementChild.querySelector('.suite-guide-chat__choices'), null);
 });
 
 test('procedural console boots after feedback removal; mouse/touch controls preserve roles',async()=>{

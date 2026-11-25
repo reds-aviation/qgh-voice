@@ -35,6 +35,7 @@ $engineFiles = @(
     'single.html',
     'simulator-core.js',
     'scope-visuals.js',
+    'setup-loading.js',
     'procedure-core.js',
     'procedure-intent.js',
     'procedure-workspace.js',
@@ -73,7 +74,11 @@ $assetDirectories = @(
     'training-media',
     'vendor\pilot-tts'
 )
-$releaseFiles = @('app-version.json')
+$supportFiles = [ordered]@{
+    'app-version.json' = Join-Path $staticRoot 'app-version.json'
+    'setup-loading.css' = Join-Path $repoRoot 'packages\procedural-beta\static\setup-loading.css'
+    'suryakiran-formation.webp' = Join-Path $repoRoot 'packages\procedural-beta\static\suryakiran-formation.webp'
+}
 $legalFiles = [ordered]@{
     'LICENSE' = 'LICENSE.txt'
     'COPYRIGHT.md' = 'COPYRIGHT.txt'
@@ -122,11 +127,11 @@ foreach ($targetName in $selectedTargets) {
         Copy-Item -LiteralPath $sourceFile -Destination $destinationFile -Force
     }
 
-    foreach ($relativeFile in $releaseFiles) {
-        $sourceFile = Join-Path $staticRoot $relativeFile
+    foreach ($relativeFile in $supportFiles.Keys) {
+        $sourceFile = $supportFiles[$relativeFile]
         $destinationFile = Join-Path $destinationRoot $relativeFile
         if (-not (Test-Path -LiteralPath $sourceFile -PathType Leaf)) {
-            throw "Shared release file is missing: $sourceFile"
+            throw "Shared support file is missing: $sourceFile"
         }
         Copy-Item -LiteralPath $sourceFile -Destination $destinationFile -Force
     }

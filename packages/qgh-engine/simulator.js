@@ -68,6 +68,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     speedChangeTimer: null
   };
 
+  const recoveryKey = 'ats-single-qgh-flight-v1';
+  const recoveryFields = ['cfg', 'plane', 'procedure', 'bearingMode', 'phase', 'targetHeading', 'forcedTurnSide',
+    'initialTurnSide', 'manualTurnSide', 'orbit', 'manualTurnRecord', 'pendingLeg', 'commands', 'procedureTurns'];
+  let recoverableFlight = false;
   const $ = id => document.getElementById(id);
   const monotonicNow = () => window.performance?.now?.() ?? Date.now();
   const padHeading = value => String(normalize(Math.round(Number(value)))).padStart(3, '0');
@@ -131,18 +135,28 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return Math.floor(Math.random() * 360);
   }
 
+  function revealSetupInput(input) {
+    const options = input.closest?.('details');
+    if (options) options.open = true;
+    input.focus?.();
+  }
+
   function inputDegrees(id) {
-    const raw = String($(id).value ?? '').trim();
+    const input = $(id);
+    const raw = String(input.value ?? '').trim();
     const value = Number(raw);
     if (!raw || !Number.isFinite(value) || value < 0 || value > 359) {
+      revealSetupInput(input);
       throw new Error(`${id} must be from 000 to 359.`);
     }
     return normalize(value);
   }
 
   function inputNumber(id, minimum, maximum, label) {
-    const value = Number($(id).value);
+    const input = $(id);
+    const value = Number(input.value);
     if (!Number.isFinite(value) || value < minimum || value > maximum) {
+      revealSetupInput(input);
       throw new Error(`${label} must be from ${minimum} to ${maximum}.`);
     }
     return value;
@@ -221,6 +235,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     $('clock').textContent = time;
     $('clock').setAttribute('aria-label', `Operator stopwatch, ${state.clockRunning ? 'running' : 'stopped'}: ${time}`);
     $('clockStart').textContent = state.flightSuspended ? 'RESUME FLIGHT' : 'START';
+    if ($('advanceFlight')) $('advanceFlight').disabled = state.flightSuspended;
     const readout = $('homingClock');
     if (readout) {
       readout.textContent = time;
@@ -231,6 +246,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function startClock() {
     if (state.flightSuspended) {
       const resumeClock = state.suspendedClockRunning;
+      if ($('singleRecoveryHint')) $('singleRecoveryHint').hidden = true;
       state.flightSuspended = false;
       state.suspendedClockRunning = false;
       startFlightLoop();
@@ -455,7 +471,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function advanceFlight() {
-    if (!state.plane || !state.cfg) return;
+    if (!state.plane || !state.cfg || state.flightSuspended) return;
     const startingHeading = state.plane.heading;
     const startingRange = rangeNm();
     const steps = ADVANCE_FLIGHT_SECONDS / PHYSICS_STEP_SECONDS;
@@ -760,6 +776,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function terminate() {
     if (!state.plane) return;
     state.terminationPending = null;
+    recoverableFlight = false;
+    forgetCheckpoint();
     commitLiveSpeedChange();
     stopFlightLoop();
     state.flightSuspended = false;
@@ -810,6 +828,98 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function scrollToScreenTop() {
     if (typeof window === 'undefined' || typeof window.scrollTo !== 'function') return;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }
+
+  function forgetCheckpoint() {
+    try { window.sessionStorage?.removeItem(recoveryKey); } catch {}
+  }
+
+  function saveCheckpoint() {
+    if (!recoverableFlight || !state.plane || !$('console').classList.contains('active')) return;
+    try {
+      const procedure = window.QGHProcedureWorkspace?.singleCheckpoint();
+      if (!procedure) return;
+      if (state.clockRunning && state.stopwatchClock) {
+        const timing = state.stopwatchClock.consume(monotonicNow());
+        if (!timing.suspended) state.clockSeconds += timing.steps / 1000;
+      }
+      const inputs = Object.fromEntries(Array.from(document.querySelectorAll(
+        '#singleSetupFields .fields input[id], #singleSetupFields .fields select[id], #singleSetupFields .procedure-field input[id], #procedureRunway, #headingInput'
+      ), el => [el.id, el.value]));
+      const saved = { version: 1, flight: Object.fromEntries(recoveryFields.map(key => [key, state[key]])),
+        track: state.path.map(point => [point.x, point.y, point.heading]), procedure, inputs,
+        clock: state.clockSeconds, stopwatchWasRunning: state.clockRunning || state.suspendedClockRunning || !!state.terminationPending?.clockWasRunning,
+        clockVisible: !$('homingClock')?.hidden };
+      window.sessionStorage.setItem(recoveryKey, JSON.stringify(saved));
+    } catch {
+      // Do not offer an older position if the browser cannot store the current flight.
+      forgetCheckpoint();
+    }
+  }
+
+  function readCheckpoint() {
+    try {
+      const saved = JSON.parse(window.sessionStorage?.getItem(recoveryKey) || 'null');
+      if (!saved) return null;
+      if (saved.version !== 1 || !saved.flight?.cfg?.callsign || !Number.isFinite(saved.clock)
+        || !['normal', 'us'].includes(saved.flight.procedure) || !['qdm', 'qte'].includes(saved.flight.bearingMode)
+        || ![saved.flight.plane?.x, saved.flight.plane?.y, saved.flight.plane?.heading, saved.flight.cfg.speed, saved.flight.cfg.rate].every(Number.isFinite)
+        || !saved.track?.length || !saved.track.every(point => Array.isArray(point) && point.length === 3 && point.every(Number.isFinite))
+        || !Array.isArray(saved.flight.commands) || !saved.procedure?.domain?.aircraft?.single) throw new Error('Invalid checkpoint');
+      return saved;
+    } catch { forgetCheckpoint(); return null; }
+  }
+
+  function showRecovery(visible) {
+    $('singleRecovery').hidden = !visible;
+    $('singleSetupFields').hidden = visible;
+  }
+
+  function offerRecovery() {
+    // Intentional navigation starts a new visit. A reload keeps this tab's flight.
+    const navigation = window.performance?.getEntriesByType?.('navigation')[0];
+    if (navigation && navigation.type !== 'reload') { forgetCheckpoint(); return; }
+    const saved = readCheckpoint();
+    if (!saved) return;
+    $('singleRecoveryDetail').textContent = saved.flight.cfg.callsign + ' · ' + formatTime((saved.track.length - 1) * PHYSICS_STEP_SECONDS)
+      + ' elapsed. Your aircraft and stopwatch will stay paused until you resume flight.';
+    showRecovery(true);
+  }
+
+  function restorePausedFlight() {
+    const saved = readCheckpoint();
+    if (!saved) { showRecovery(false); return; }
+    try {
+      for (const el of document.querySelectorAll('#singleSetupFields input[id], #singleSetupFields select[id], #headingInput'))
+        if (Object.hasOwn(saved.inputs || {}, el.id)) el.value = saved.inputs[el.id];
+      window.QGHProcedureWorkspace.restoreSingle(saved.procedure);
+      for (const key of recoveryFields) state[key] = saved.flight[key];
+      state.path = saved.track.map(([x, y, heading]) => ({ x, y, heading }));
+      state.clockSeconds = saved.clock;
+      state.flightSuspended = true;
+      state.suspendedClockRunning = saved.stopwatchWasRunning;
+      state.clockRunning = false;
+      chooseProcedure(state.procedure);
+      chooseBearingMode(state.bearingMode);
+      $('callsign').value = state.cfg.callsign;
+      $('console').dataset.callsign = state.cfg.callsign;
+      $('badge').textContent = state.cfg.callsign + ' · ' + (state.procedure === 'us' ? 'U/S COMPASS' : 'NORMAL QGH');
+      $('liveSpeed').value = state.cfg.speed;
+      $('liveSpeed').dataset.lastLogged = String(state.cfg.speed);
+      resetConsole();
+      window.QGHProcedureWorkspace.updateReadout();
+      updateClock();
+      $('homingClock').hidden = !saved.clockVisible;
+      $('singleRecoveryHint').hidden = false;
+      recoverableFlight = true;
+      showRecovery(false);
+      showScreen('console');
+      $('clockStart').focus();
+    } catch {
+      $('singleRecoveryDetail').textContent = 'This saved flight could not be restored. Select Discard and open setup to start again.';
+      $('singleRecover').disabled = true;
+      $('singleDiscard').focus();
+    }
   }
 
   function startExercise() {
@@ -878,6 +988,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       logCommand('SETUP', `${callsign} · ${state.cfg.type.toUpperCase()} · random QTE ${padHeading(initialBearing)}°T · ${state.cfg.distance.toFixed(1)} NM · ${state.cfg.speed} KT · initial ${initialTurn.toUpperCase()} flight.`);
       showScreen('console');
       scrollToScreenTop();
+      recoverableFlight = true;
+      forgetCheckpoint();
+      if ($('singleRecoveryHint')) $('singleRecoveryHint').hidden = true;
       startFlightLoop();
       showToast('EXERCISE STARTED');
     } catch (error) {
@@ -942,6 +1055,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     $('qte').addEventListener('click', () => chooseBearingMode('qte'));
     $('aircraft').addEventListener('change', updateProfile);
     $('startExercise').addEventListener('click', startExercise);
+    $('singleRecover')?.addEventListener('click', restorePausedFlight);
+    $('singleDiscard')?.addEventListener('click', () => {
+      forgetCheckpoint();
+      showRecovery(false);
+      $('callsign').focus();
+    });
+    window.addEventListener?.('pagehide', saveCheckpoint);
+    document.addEventListener?.('visibilitychange', () => { if (document.hidden) saveCheckpoint(); });
     $('transmit').addEventListener('click', transmit);
     $('terminate').addEventListener('click', requestTermination);
     $('advanceFlight').addEventListener('click', advanceFlight);
@@ -1006,4 +1127,6 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   setReviewZoom(false);
   updateReplayButton();
   updateClock();
+  offerRecovery();
+  $('setup').setAttribute('data-setup-ready', '');
 })();

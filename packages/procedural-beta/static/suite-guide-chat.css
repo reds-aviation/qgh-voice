@@ -78,14 +78,27 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 #suite-guide-chat-panel .suite-guide-chat__send { background: #2c5777; border-color: #2c5777; color: #fff; opacity: 1; }
 #suite-guide-chat-panel .suite-guide-chat__send:hover:not(:disabled) { background: #203f58; border-color: #203f58; }
 #suite-guide-chat-panel .suite-guide-chat__send:disabled { background: #e6eff6; border-color: #607f98; color: #425b70; opacity: 1; cursor: default; }
+#suite-guide-chat-panel .suite-guide-chat__show {
+  display: inline-flex; align-items: center; width: auto; min-height: 44px;
+  margin: 8px 0 0; padding: 5px 12px; border: 1px solid #365a75;
+  border-radius: 6px; background: #fff; color: #173a54; font: inherit; font-weight: 600;
+}
+#suite-guide-chat-panel .suite-guide-chat__show:hover { background: #e6eff6; }
+#suite-guide-chat-panel .suite-guide-chat__choices { display: flex; padding: 8px 0 0; }
+.suite-guide-chat-target {
+  outline: 3px solid #ffd060 !important; outline-offset: 2px !important;
+  box-shadow: 0 0 0 7px #173a54 !important;
+}
+@media (forced-colors: active) {
+  .suite-guide-chat-target { outline-color: Highlight !important; }
+}
 #suite-guide-chat-panel :is(button,a,textarea):focus-visible { outline: 3px solid #2c5777; outline-offset: 3px; }
-body.desk-open.exercise-running .suite-guide-chat { display: none !important; }
 @media (max-width: 480px) {
   .suite-guide-chat__panel { right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); width: calc(100vw - 16px); height: calc(100dvh - 16px - env(safe-area-inset-bottom)); max-height: calc(100dvh - 16px - env(safe-area-inset-bottom)); border-radius: 13px; }
   .suite-guide-chat__launcher { right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); }
 }
 
-/* Gyani lives in the navigation/tool rail, never on top of flight controls. */
+/* Saarthi lives in the navigation/tool rail, never on top of flight controls. */
 .suite-guide-chat { flex: 0 0 auto; display: inline-flex; vertical-align: middle; }
 .suite-guide-chat .suite-guide-chat__launcher {
   position: static; display: inline-flex; align-items: center; gap: 6px; margin: 0;
@@ -96,6 +109,11 @@ body.desk-open.exercise-running .suite-guide-chat { display: none !important; }
 .suite-guide-chat__avatar { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
 .suite-guide-chat__invitation { font-size: 11px; line-height: 1.3; text-align: left; white-space: normal; }
 .suite-guide-chat--desk .suite-guide-chat__invitation { display: none; }
+.suite-guide-chat--desk .suite-guide-chat__launcher { padding: 0; }
+.suite-guide-chat--desk .suite-guide-chat__launcher .suite-guide-chat__avatar { width: 40px; height: 40px; }
+#work-panel > .drawer-head:has(> .suite-guide-chat) > strong { min-width: 0; overflow-wrap: anywhere; }
+#work-panel > .drawer-head .suite-guide-chat__launcher { min-width: 44px; min-height: 44px; padding: 2px; border: 0; background: transparent; }
+.suite-guide-chat .suite-guide-chat__panel[popover] { left: auto; padding: 0; }
 .suite-guide-chat .suite-guide-chat__panel { top: 8px; bottom: auto; height: min(650px, var(--gyani-height, calc(100dvh - 16px))); max-height: var(--gyani-height, calc(100dvh - 16px)); }
 .suite-guide-chat__header { padding: 10px 12px; gap: 7px; }
 .suite-guide-chat__header > div { flex: 1; }

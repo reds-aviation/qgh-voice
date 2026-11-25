@@ -43,7 +43,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     // Procedural moves its existing fleet into the toolbar later in the same
     // module. Attach after that move so the track keeps the correct home.
     if (root?.ownerDocument?.createElement) Promise.resolve().then(()=>{
-      installInstrumentToggle(root,shelf);
+      if(root.id!=='studentWorkspace')installInstrumentToggle(root,shelf);
       installScopeSelectors(root);
       installScopeRailAnchor(root,scope,shelf);
       installPhoneScrollTracks(root);
@@ -66,7 +66,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const radioBody=make('div',null,'ats-student-radio-body');radioBody.id='studentRadioBody';minimize.setAttribute('aria-controls',radioBody.id);
     minimize.addEventListener('click',()=>{const closed=radioBody.hidden=!radioBody.hidden;minimize.textContent=closed?'+':'−';minimize.setAttribute('aria-expanded',String(!closed));minimize.setAttribute('aria-label',closed?'Restore homing and radio':'Minimize homing and radio');});
     radioHead.append(minimize);radio.append(radioHead,radioBody);stage.append(radio);
-    for(const id of ['qghStudentView','studentCaption'])if(byId(id))radioBody.append(byId(id));
+    for(const id of ['studentControllerVoice','qghStudentView','studentCaption'])if(byId(id))radioBody.append(byId(id));
     const rail=make('nav',null,'ats-tool-rail');rail.id='studentTools';rail.setAttribute('aria-label','Scope tools');stage.append(rail);
     const drawers=['studentNavigation','student-estimate-panel'].map(byId).filter(Boolean);
     let active=null,returnFocus=null;
@@ -145,12 +145,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const doc=element.ownerDocument,desktop=window.matchMedia?.('(min-width: 701px)');
     if(!header){header=doc.createElement('header');header.className='ats-overlay-header';element.prepend(header);}
     const controls=doc.createElement('span');controls.className='ats-overlay-tools';
-    const handle=doc.createElement('button');handle.type='button';handle.className='ats-overlay-move ats-panel-icon';handle.textContent='⠿';
-    handle.setAttribute('aria-label',`Move ${label}. Drag, or use arrow keys. Home resets position.`);
-    handle.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Home');
-    handle.title='Drag to move · arrow keys move · Shift makes small moves · Home resets';
+    header.tabIndex=0;
+    header.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Home');
+    header.title='Drag the title bar to move. Keyboard: arrow keys to move, Home to reset.';
     const reset=doc.createElement('button');reset.type='button';reset.className='ats-overlay-reset ats-panel-icon';reset.textContent='↺';reset.title='Reset position';reset.setAttribute('aria-label',`Reset ${label} position`);
-    controls.append(handle,reset);
+    controls.append(reset);
     let close=header.querySelector('.ats-drawer-close,#drawer-close,.suite-guide-chat__close,.ats-panel-close');
     if(!close&&element.tagName==='DIALOG'){
       close=doc.createElement('button');close.type='button';close.className='ats-panel-close';
@@ -195,17 +194,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       const node=target?.closest?.('button,a,input,select,textarea,label,summary,[contenteditable],[role="button"],[role="link"],[role="checkbox"],[role="tab"],[role="slider"],[tabindex]');
       return node&&header.contains(node)?node:null;
     };
-    handle.addEventListener('click',stop);
     // A details summary is also its native toggle. A completed drag must not
     // turn into a click that closes it; ordinary clicks keep their behaviour.
     header.addEventListener('click',event=>{
       if(!suppressHeaderClick)return;suppressHeaderClick=false;
       const interactive=interactiveTarget(event.target);
-      if(!interactive||interactive===header||interactive===handle)stop(event);
+      if(!interactive||interactive===header)stop(event);
     },true);
     reset.addEventListener('click',event=>{stop(event);resetPosition();});
-    handle.addEventListener('keydown',event=>{
-      if(!enabled())return;
+    header.addEventListener('keydown',event=>{
+      if(!enabled()||event.target!==header)return;
       if(event.key==='Home'){stop(event);resetPosition();return;}
       const direction={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
       if(!direction)return;stop(event);const r=bounds(),step=event.shiftKey?1:10;
@@ -215,8 +213,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       suppressHeaderClick=false;
       if(event.button!==0||!enabled())return;
       const interactive=interactiveTarget(event.target);
-      if(interactive&&interactive!==header&&interactive!==handle)return;
-      stop(event);if(event.target===handle)handle.focus?.({preventScroll:true});const r=bounds();
+      if(interactive&&interactive!==header)return;
+      stop(event);header.focus?.({preventScroll:true});const r=bounds();
       drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:r.left,top:r.top,position:position&&{...position},moved:false};
       header.setPointerCapture?.(event.pointerId);
     });
@@ -247,14 +245,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       for(const panel of doc.querySelectorAll('.ats-console-drawer'))installMovableOverlay(panel,{header:panel.querySelector('summary'),label:'Exercise panel',preserveHeight:true});
       const work=doc.getElementById('work-panel');installMovableOverlay(work,{header:work?.querySelector('.drawer-head'),label:'Exercise tools',preserveHeight:true});
       const popover=doc.querySelector('.ats-clock-popover');installMovableOverlay(popover,{label:'Clock settings'});
-      const help=doc.getElementById('suite-guide-chat-panel');installMovableOverlay(help,{header:help?.querySelector('header'),label:'Gyani help'});
-      const tour=doc.getElementById('suite-tour'),tourHeader=tour?.querySelector('h2');
-      const tourClose=[...(tour?.querySelectorAll('button')||[])].find(button=>/^(Skip|Close) tour$/.test(button.textContent));
-      if(tourClose){const label=tourClose.textContent;tourClose.textContent='×';tourClose.classList.add('ats-panel-close','ats-panel-icon');tourClose.setAttribute('aria-label',label);tourClose.title=label;(tourHeader?.querySelector('.ats-overlay-tools')||tourHeader)?.append(tourClose);}
-      installMovableOverlay(tour,{header:tourHeader,label:'Guided tour'});
+      const help=doc.getElementById('suite-guide-chat-panel');installMovableOverlay(help,{header:help?.querySelector('header'),label:'Saarthi help'});
+      const tour=doc.getElementById('suite-tour');
+      installMovableOverlay(tour,{header:tour?.querySelector('.suite-tour-header'),label:'Guided tour'});
       const notice=doc.getElementById('exercise-notice');installMovableOverlay(notice,{label:'Exercise notice'});
       const boundary=doc.getElementById('boundary-scope-tools');installMovableOverlay(boundary,{label:'Boundary drawing controls'});
-      for(const dialog of doc.querySelectorAll('dialog'))installMovableOverlay(dialog,{header:dialog.querySelector('h2'),label:'Confirmation'});
+      for(const dialog of doc.querySelectorAll('dialog:not(.ats-setup-loader)'))installMovableOverlay(dialog,{header:dialog.querySelector('h2'),label:'Confirmation'});
     }
     wire();
     if(!overlayWatchInstalled&&typeof MutationObserver==='function'){
@@ -275,6 +271,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         if(legacy){legacy.setAttribute('aria-pressed','false');legacy.textContent='Hide controls';}
       }
       const bounds=scope.getBoundingClientRect(),container=parent.getBoundingClientRect();
+      if(root.id==='activeWorkspace' && container.height>0)
+        body.style.setProperty('--ats-instructor-drawer-top',`${Math.max(0,container.top)}px`);
       parent.style.setProperty('--ats-plot-top',`${Math.max(0,bounds.top-container.top)}px`);
       const instruments=shelf?.getBoundingClientRect();
       const reserve=desktop?.matches?container.bottom-bounds.bottom:instruments?.height>0?container.bottom-instruments.top:container.bottom-bounds.bottom;
@@ -527,9 +525,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     sync();
     button.addEventListener('click',async()=>{
       if(binding.busy||!binding.hasAttempt())return;
-      binding.busy=true;button.disabled=true;status.hidden=true;
+      binding.busy=true;status.hidden=true;
       try{
         if(!await confirmAction('Log out and return to ATS suite Home? Current exercise progress will be lost.',{confirmLabel:'Log out',title:'Log out'}))return;
+        button.disabled=true;
         await binding.onLogout();
         const location=globalThis.location || window.location,target=new URL(binding.homeHref,location.href).href;
         if(typeof location.assign==='function')location.assign(target);else location.href=target;

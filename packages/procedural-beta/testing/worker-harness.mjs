@@ -29,7 +29,12 @@ export async function harness(saved = new Map(), {roomId = 'legacy', directory =
     fetch:async path=>new Response(readFileSync(new URL(path,folder))),
   });
   context.self = context;
-  context.importScripts = (...paths) => { for (const path of paths) vm.runInContext(readFileSync(new URL(path,folder),'utf8'),context); };
+  context.importScripts = (...paths) => {
+    for (const path of paths) {
+      const source = ['../rt-intent-model.js','../voice-control.js'].includes(path) ? new URL('../../qgh-engine/' + path.slice(3), import.meta.url) : new URL(path,folder);
+      vm.runInContext(readFileSync(source,'utf8'),context);
+    }
+  };
   vm.runInContext(readFileSync(new URL('browser-worker.js',folder),'utf8'),context);
   let sequence = 0;
   function port() {

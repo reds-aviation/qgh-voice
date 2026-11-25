@@ -19,7 +19,7 @@ function fixture(mode) {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, { id, value: '40', hidden: false, width: 1000, height: 800,
-      addEventListener() {}, getBoundingClientRect: () => ({ left: 20, top: 50, width: 1000, height: 800 }),
+      addEventListener() {}, setAttribute() {}, getBoundingClientRect: () => ({ left: 20, top: 50, width: 1000, height: 800 }),
       setPointerCapture() {}, releasePointerCapture() {}, getContext: () => new Proxy({}, { get: () => () => {} }) });
     return nodes.get(id);
   };

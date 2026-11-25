@@ -27,11 +27,9 @@ body.ats-has-logout .workspace-head,body.ats-has-logout .student-head,body.ats-h
 .ats-overlay-header>strong{flex:1 1 auto;min-width:0;font-size:12px}
 .ats-overlay-tools{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;font-size:11px;font-weight:400}
 body.instructor-page .ats-overlay-tools button,body.instructor-desk .ats-overlay-tools button,.ats-overlay-tools button,body.instructor-page .ats-overlay-collapse,body.instructor-desk .ats-overlay-collapse{width:auto;min-width:0;min-height:30px;height:auto;margin:0;padding:4px 6px;font:inherit;line-height:1.25;letter-spacing:0;border:1px solid var(--ats-border);border-radius:5px;background:var(--ats-panel-raised);color:var(--ats-text)}
-.ats-overlay-move{cursor:grab;touch-action:none;user-select:none}
-.ats-overlay-move:active{cursor:grabbing}
+.ats-overlay-drag-bar:focus-visible{outline:2px solid #eeba50;outline-offset:-2px}
 .ats-overlay-drag-bar{cursor:grab;touch-action:none;user-select:none}
 .ats-overlay-drag-bar :is(button,a,input,select,textarea,label,[contenteditable]){cursor:auto;user-select:auto}
-.ats-overlay-drag-bar .ats-overlay-move{cursor:grab}
 .ats-overlay-dragging .ats-overlay-drag-bar{cursor:grabbing}
 .ats-overlay-drag-bar>.ats-overlay-tools{margin-left:auto}
 body.instructor-page .ats-panel-icon,body.instructor-desk .ats-panel-icon,.ats-movable-overlay .ats-panel-icon{display:inline-grid;place-items:center;flex:0 0 32px;width:32px;min-width:32px;min-height:32px;height:32px;max-height:32px;margin:0;padding:0;font:600 20px/1 Arial,sans-serif;letter-spacing:0;border-radius:5px}

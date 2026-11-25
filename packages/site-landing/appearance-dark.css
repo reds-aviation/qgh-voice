@@ -1,0 +1,262 @@
+/* ATS SIM BOX · Copyright 2026 Balaram Reddy. CPAL-1.0. */
+@media screen {
+  html[data-theme="dark"] {
+    --night-page: #101e2c;
+    --night-panel: #192e40;
+    --night-raised: #223e52;
+    --night-field: #102435;
+    --night-text: #edf5fa;
+    --night-muted: #b4c9d7;
+    --night-link: #9bd9ff;
+    --night-line: #56748a;
+    --night-header: #234d69;
+    --night-focus: #ffcb70;
+  }
+
+  /* Match the same setup/desk transitions as the light entry theme. */
+  html[data-theme="dark"] body:is(.suite-home,
+    [data-suite-surface="qgh"], [data-suite-surface="instructor"], [data-suite-surface="guide"],
+    [data-suite-surface="procedural"]:not(.desk-open),
+    [data-suite-surface="single"]:has(:is(#setup,#analysis).active),
+    [data-suite-surface="tactical"]:has(:is(#tSetup,#tAnalysis).active),
+    [data-suite-surface="host-setup"]:has(:is(#setupPanel,#reviewScreen):not([hidden])),
+    [data-suite-surface="join"]:has(#studentWorkspace[hidden])) {
+    color-scheme: dark;
+    background-color: var(--night-page);
+    color: var(--night-text);
+    --iaf-sky: var(--night-page);
+    --iaf-card: var(--night-panel);
+    --iaf-ink: var(--night-text);
+    --iaf-muted: var(--night-muted);
+    --iaf-soft: var(--night-raised);
+    --iaf-line: var(--night-line);
+    --iaf-blue-dark: var(--night-link);
+    --iaf-header: var(--night-header);
+    --iaf-header-ink: #e6f6ff;
+    --iaf-header-secondary: #c1deed;
+    --iaf-header-edge: #80a5bd;
+    --iaf-header-hover: #35617d;
+    --suite-navy: var(--night-text);
+    --suite-blue: var(--night-link);
+    --suite-muted: var(--night-muted);
+    --suite-sky: var(--night-page);
+    --suite-border: var(--night-line);
+    --bg: var(--night-page);
+    --paper: var(--night-panel);
+    --paper-strong: var(--night-raised);
+    --card: var(--night-panel);
+    --panel: var(--night-panel);
+    --ink: var(--night-text);
+    --text: var(--night-text);
+    --muted: var(--night-muted);
+    --line: var(--night-line);
+    --line-strong: #7495ab;
+    --border: var(--night-line);
+    --teal: var(--night-link);
+    --teal-dark: var(--night-link);
+    --teal-soft: var(--night-raised);
+    --accent: var(--night-link);
+    --accent-dark: var(--night-link);
+    --tint: var(--night-raised);
+    --t-paper: var(--night-page);
+    --t-card: var(--night-panel);
+    --t-ink: var(--night-text);
+    --t-muted: var(--night-muted);
+    --t-line: var(--night-line);
+    --t-accent: var(--night-link);
+    --t-accent-dark: var(--night-link);
+    --entry-bg: var(--night-page);
+    --entry-paper: var(--night-page);
+    --entry-card: var(--night-panel);
+    --entry-ink: var(--night-text);
+    --entry-muted: var(--night-muted);
+    --entry-line: var(--night-line);
+    --entry-accent: var(--night-link);
+    --entry-accent-dark: var(--night-link);
+
+    & :is(#setup,#tSetup,#setupPanel,#joinPanel,#waitingPanel,#readyPanel,#studentEnded,#entry.suite-entry) {
+      --entry-bg: var(--night-page);
+      --entry-ink: var(--night-text);
+      --entry-muted: var(--night-muted);
+      --entry-accent: var(--night-link);
+      --entry-line: var(--night-line);
+      color: var(--night-text);
+    }
+    & :is(.entry-app,.entry-stage,.simulator-selection,.setup,.setup-panel,.topic-nav-wrap,.site-footer,
+      .license-footer,.flow-footer,.common-footer,.section-nav,.setup-actions,.setup-sticky,.tactical-setup-actions) {
+      background-color: var(--night-page);
+      color: var(--night-muted);
+      border-color: var(--night-line);
+    }
+    & :is(.entry-role,.session-connection,.entry-option,.entry-web-distribution,.join-card,
+      .setup-card,.setup-panel,.tactical-setup-card,.roster-editor,.setup-environment,.preset-import,
+      .preset-management,.scenario-library,.ats-saved-exercises,.setup-preview,.pwa-install-sheet-card,
+      .guide-choice,.guide-card,.guide-answer,.catalogue-tools,.call-card,.video-card,.common-nav,
+      .review-summary,.tactical-summary,.tactical-review-side,.analysis-head,.tactical-analysis-head,
+      .summary,.debrief,.turn-summary,.log-panel) {
+      background-color: var(--night-panel);
+      color: var(--night-text);
+      border-color: var(--night-line);
+    }
+    & :is(#entry.suite-entry,#setup,#tSetup,#setupPanel,#joinPanel,#waitingPanel,#readyPanel,#reviewScreen,
+      #analysis,#tAnalysis,.suite-entry-join,.entry-card,.guide-track,.training-layout) {
+      & :is(h1,h2,h3,h4,legend,label,.entry-option-copy strong,strong:not(.scope-layout-guide *)) {color:var(--night-text)}
+      & :is(.hint,.lead,.entry-note,.connection-help,.eyebrow,small,.preset-help,.equipment-note,
+        .entry-copy p,.entry-role p,.session-connection p,.section-title p,.field label,.guide-choice p) {color:var(--night-muted)}
+      & :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) {
+        color-scheme:dark; color:var(--night-text); background-color:var(--night-field); border-color:var(--night-line)
+      }
+      & :is(input,textarea)::placeholder {color:var(--night-muted);opacity:1}
+      & :is(.button,.primary,.primary-action,.entry-action,.entry-secondary,button):not(:disabled) {
+        background-color:var(--night-raised);color:var(--night-text);border-color:var(--night-line);
+      }
+      & :is(.button.primary,.primary,.primary-action,.entry-action,#startExercise,#tStart,#studentReady,#joinSession,
+        button[aria-pressed="true"]):not(:disabled) {background-color:#74bfe9;color:#102b3c;border-color:#99d7f7}
+      & :is(.button,.primary,.primary-action,.entry-action,.entry-secondary,button):hover:not(:disabled) {
+        background-color:#315873;color:white;border-color:var(--night-link)
+      }
+      & :is(.danger,.button.danger):not(:disabled) {background-color:#532e37;border-color:#b66f7f;color:#ffd5d9}
+      & button:disabled {background-color:var(--night-panel);color:#9bb0bf;border-color:#486176}
+    }
+    & :is(.entry-option-index,.entry-option-action,.entry-program-tab,.flow-subtitle,.flow-section-label,
+      .common-layout a,.entry-option-copy small,.guide-full>summary,.section-nav a,.license-footer a,.flow-footer a) {
+      color:var(--night-link)
+    }
+    & :is(#entry.suite-entry,.suite-entry-join) .entry-families li,
+    & :is(.entry-families span,.choice,.call-badge,.meta-line span,.catalogue-tools,.guide-flow li,.roster-editor-head) {
+      background-color:var(--night-panel);border-color:var(--night-line);color:var(--night-text)
+    }
+    & :is(.guide-choice,.entry-option,.entry-role,.path-card):hover {background-color:var(--night-raised);border-color:var(--night-link)}
+    & :focus-visible {outline-color:var(--night-focus)}
+
+    /* Blend the existing runway/aircraft illustration into the underlying navy. */
+    & :is(.exercise-motion-host,#entry .entry-copy,#setup .section-title,.guide-hero,.common-hero,
+      .training-hero,#joinPanel,#waitingPanel,#readyPanel) {
+      background-color:#233d52;background-blend-mode:multiply;color:var(--night-text)
+    }
+    & .exercise-motion-host::before {background:none}
+    & .exercise-motion-art {background:linear-gradient(90deg, transparent, #142a3de8 30%, #142a3df0 78%, #142a3dba)}
+    & :is(a.skip,a.skip-link) {color:var(--night-link);background:var(--night-panel)}
+    & .training-layout a:not(.button) {color:var(--night-link)}
+    & #setupPanel .roster-editor-head {background:var(--night-raised)}
+    & #setupPanel .roster-row:nth-child(even) {background:var(--night-raised)}
+    & #setup .roster-editor--cards .roster-row::before,
+    & #setup .roster-row--head > span {background:var(--night-raised);color:var(--night-text)}
+    & #setup .roster-editor--cards .roster-cell::before,
+    & #tSetup .tactical-aircraft-row .tactical-field::before {color:var(--night-muted)}
+    & #setup :is(.roster-row,.roster-cell), & #setup .roster-editor--cards :is(.roster-row,.roster-cell) {
+      border-color:var(--night-line)
+    }
+    & :is(#setup,#tSetup) :is(.procedure-setup,.tactical-aircraft-row) {
+      background:var(--night-panel);color:var(--night-text);border-color:var(--night-line)
+    }
+    & :is(#setup,#tSetup) .procedure-setup :is(summary,a) {color:var(--night-link)}
+    & :is(#setup,#tSetup) .procedure-note {color:var(--night-muted)}
+    & :is(#setup,#tSetup) :is(.choice,.segmented,.tactical-choice,.tactical-segmented) button[aria-pressed]:not(:disabled) {
+      background:var(--tab-fill,var(--tab-hover-fill,var(--night-raised)));color:var(--tab-ink,var(--night-text));border-color:var(--night-line)
+    }
+    & #setup .roster-cell input[type="checkbox"] {
+      color-scheme:dark;accent-color:var(--night-link);background-color:var(--night-field)
+    }
+  }
+
+  html[data-theme="dark"] .suite-home {
+    & .suite-page,& .suite-footer {background-color:var(--night-page)}
+    & .suite-hero {background:linear-gradient(120deg,#152637,#203b50)}
+    & .suite-hero:not(.hero-radar-ready)::after {
+      content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+      background:var(--suite-hero-art, url('hero-airspace.webp')) var(--hero-art-x,50%) center / cover no-repeat;
+      filter:grayscale(1) invert(1);mix-blend-mode:screen;opacity:.72;
+    }
+    & .suite-hero::before {
+      content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+      background:linear-gradient(90deg,#101e2cfa 3%,#101e2ce8 36%,#101e2c44 68%,transparent);
+    }
+    & .hero-radar {filter:grayscale(1) invert(1);mix-blend-mode:screen;opacity:.72}
+    & .hero-kicker span {color:var(--night-muted)}
+    & .hero-motion-toggle,& .path-card {
+      background-color:var(--night-panel);color:var(--night-link);border-color:var(--night-line)
+    }
+    & :is(.path-card,.procedural-link,.hero-motion-toggle):hover {background-color:var(--night-raised);border-color:var(--night-link)}
+    & :is(.procedural-card,.qgh-card) {background-color:#294457;background-blend-mode:multiply;color:var(--night-text)}
+    & :is(.procedural-card p,.path-content small,.hero-caption,.selection-motto) {color:var(--night-muted)}
+    & .hero-caption {z-index:1}
+  }
+
+  html[data-theme="dark"] .pwa-install-sheet-card {
+    & h2 { color: var(--night-text); }
+    & > span, & p { color: var(--night-muted); }
+    & .pwa-install-close { color: var(--night-text); background: var(--night-raised); border-color: var(--night-line); }
+  }
+
+  html[data-theme="dark"] .headphone-dialog {
+    & :is(.headphone-eyebrow,.headphone-pace) { color: var(--night-link); }
+    & :is(.headphone-help,.headphone-test-status) { color: var(--night-muted); }
+    & button { color: var(--tab-ink,var(--tab-text)); background: var(--tab-fill,var(--tab-surface)); border-color: var(--tab-edge); }
+    & button:enabled:hover { background: var(--tab-fill,var(--tab-hover)); }
+    & button[aria-pressed="true"] { box-shadow: inset 0 -3px var(--tab-marker); }
+    & button:disabled { color: var(--night-muted); background: var(--night-field); border-color: var(--night-line); }
+    & .headphone-enable:enabled { color: var(--sim-primary-ink); background: var(--sim-primary-fill); }
+  }
+
+  /* The assistant can move inside a setup header or onto a live desk. Scope
+     its colours to the panel so both placements keep the same readable text. */
+  html[data-theme="dark"] body:is(.suite-home,[data-suite-surface],[data-suite-surface="join"]:has(#studentWorkspace[hidden])) {
+    & :is(a.skip,a.skip-link) {color:var(--night-link);background:var(--night-panel)}
+    & #suite-guide-chat .suite-guide-chat__launcher .suite-guide-chat__invitation {color:var(--night-text)}
+    & :is(#suite-tour,#suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel) {
+      --ink:var(--night-text);--muted:var(--night-muted);color-scheme:dark;
+      background:var(--night-panel);color:var(--night-text);border-color:var(--night-line)
+    }
+    & :is(#suite-tour,#suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel) :is(h2,h3,p,span,label) {color:var(--night-text)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel :is(.suite-guide-chat__header,.suite-guide-chat__composer) {
+      background:var(--night-field);color:var(--night-text);border-color:var(--night-line)
+    }
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel :is(.suite-guide-chat__history,.suite-guide-chat__suggestions,.suite-guide-chat__guides) {
+      color:var(--night-text);background:var(--night-panel);border-color:var(--night-line)
+    }
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel .suite-guide-chat__message {background:var(--night-raised);color:var(--night-text)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel .suite-guide-chat__message--user {background:#1c4e61}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel :is(button,a), & #suite-tour button {
+      background:var(--night-raised);border-color:var(--night-line);color:var(--night-text)
+    }
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel :is(button,a):hover, & #suite-tour button:hover {
+      background:#315873;color:white
+    }
+    & #suite-tour button:disabled {color:var(--night-muted);background:var(--night-field);border-color:var(--night-line)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel textarea {background:var(--night-field);color:var(--night-text);border-color:var(--night-line)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel textarea::placeholder {color:var(--night-muted)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel :is(.suite-guide-chat__speaker,.suite-guide-chat__creator,.suite-guide-chat__compose-row small,
+      .suite-guide-chat__header p,.suite-guide-chat__composer label) {color:var(--night-muted)}
+    & #suite-guide-chat #suite-guide-chat-panel.suite-guide-chat__panel .suite-guide-chat__send:not(:disabled) {background:#74bfe9;color:#102b3c}
+  }
+
+  html[data-theme="dark"] body[data-suite-surface="procedural"].instructor-desk:has(#instructor-control-shelf[hidden])
+    #work-panel:has(#tab-build:not([hidden])) {
+    --paper:var(--night-panel);--panel:var(--night-panel);--ink:var(--night-text);--text:var(--night-text);
+    --muted:var(--night-muted);--line:var(--night-line);--teal:var(--night-link);--teal-dark:var(--night-link);
+    --accent:var(--night-link);--radar-panel:var(--night-panel);--radar-chrome:var(--night-raised);--radar-text:var(--night-text);
+    color-scheme:dark;background:var(--night-panel);color:var(--night-text);
+    & :is(.drawer-head,.record,.airspace-legend){background:var(--night-raised);color:var(--night-text)}
+    & .drawer-head strong,& a {color:var(--night-link)}
+    & :is(button,input,textarea,select){background:var(--night-field);color:var(--night-text);border-color:var(--night-line)}
+    & button:hover:not(:disabled),& button[aria-expanded="true"] {background:var(--night-raised);color:var(--night-text)}
+    & .primary {background:#74bfe9;color:#102b3c}
+    & .danger,& .danger:hover:not(:disabled){color:#ffd5d9;background:#532e37;border-color:#b66f7f}
+    & :is(input,textarea)::placeholder {color:var(--night-muted)}
+  }
+
+  html[data-theme="dark"] body[data-suite-surface="procedural"]:has(#terminate.is-terminated)
+    #work-panel:has(#tab-debrief:not([hidden])) {
+    &, & #tab-debrief {
+      --paper:var(--night-panel);--panel:var(--night-panel);--ink:var(--night-text);
+      --text:var(--night-text);--muted:var(--night-muted);--line:var(--night-line);--teal:var(--night-link);
+      background:var(--night-panel);color:var(--night-text);
+    }
+    & .drawer-head,& .record,& .traffic-review-events button {background:var(--night-raised);color:var(--night-text)}
+    & :is(.drawer-head h2,.drawer-head strong,a) {color:var(--night-link)}
+    & :is(.review-cue-assessment,.traffic-review-markers button) {color:#ffcd75}
+    & .review-cue-warning {color:#ffacb5}
+    & .review-cue-measurement {color:var(--night-muted)}
+  }
+}

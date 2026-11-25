@@ -29,9 +29,40 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     wrap.append(input); parent.append(wrap); return input;
   }
   const setup = node('details', null, { class: 'procedure-setup' });
-  setup.append(node('summary', 'AIRFIELD & VERTICAL TRAINING'));
+  setup.append(node('summary', 'Airfield and vertical training'));
   const grid = node('div', null, { class: 'procedure-grid' }); setup.append(grid);
-  field(grid, 'RUNWAY DESIGNATOR', 'procedureRunway', tactical ? '23' : '15');
+  const orientation = $(tactical ? 'tRunway' : 'runway');
+  const inbound = $(tactical ? 'tInbound' : 'inbound');
+  const outbound = $(tactical ? 'tOutbound' : 'outbound');
+  const trackSummary = $('setupTrackSummary');
+  const marking = node('details', null, { class: 'procedure-runway-marking' });
+  const markingSummary = node('summary');
+  marking.append(markingSummary);
+  const publishedMarking = field(marking, 'Published marking (optional)', 'procedureRunway', '');
+  publishedMarking.setAttribute('maxlength', '3');
+  publishedMarking.setAttribute('autocomplete', 'off');
+  publishedMarking.setAttribute('aria-describedby', 'runwayMarkingHint');
+  marking.append(node('small', 'Use the published marking if it differs, for example 23L. Clear it to follow the orientation.', { id: 'runwayMarkingHint' }));
+  orientation.parentElement.after(marking);
+  function refreshRunwayMarking() {
+    const number = P.runwayNumber(orientation.value);
+    publishedMarking.placeholder = number || '01–36';
+    const effective = publishedMarking.value.trim().toUpperCase() || number;
+    markingSummary.textContent = effective ? `Runway marking · ${effective}` : 'Runway marking';
+    if (trackSummary) {
+      const formatted = field => {
+        const value = Number(field.value);
+        return field.value && value >= 0 && value <= 359
+          ? String(Math.round(value) % 360).padStart(3, '0') + '°'
+          : '—';
+      };
+      trackSummary.textContent = `RWY ${effective || '—'} · In ${formatted(inbound)} · Out ${formatted(outbound)}`;
+    }
+  }
+  for (const input of [orientation, inbound, outbound]) input.addEventListener('input', refreshRunwayMarking);
+  publishedMarking.addEventListener('input', refreshRunwayMarking);
+  root.addEventListener('pageshow', refreshRunwayMarking);
+  refreshRunwayMarking();
   field(grid, 'AERODROME ELEVATION · FT MSL', 'procedureElevation', 0, 0, 15000, 100);
   field(grid, 'QNH · hPa', 'procedureQnh', 1013, 850, 1100);
   field(grid, 'QFE · hPa', 'procedureQfe', 1013, 850, 1100);
@@ -42,13 +73,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   field(grid, 'VISUAL RANGE GATE · NM', 'procedureVisualRange', 2, .1, 10, .1);
   field(grid, 'VISUAL ALTITUDE GATE · FT AAL', 'procedureVisualAltitude', 3000, 100, 10000, 100);
   setup.append(node('p', 'Generic training rates and visual gates. Pressure conversion uses an approximate 27 ft/hPa.', { class: 'procedure-note' }));
-  $('setupPilotReadbacks').before(setup);
+  setup.classList.add('exercise-setup-disclosure');
+  const setupCard = document.querySelector(tactical ? '#tSetup .tactical-setup-card' : '#singleSetupFields');
+  if (setupCard) setupCard.append(setup);
+  else $('setupPilotReadbacks').before(setup);
   if (!tactical) {
     const initial = node('div', null, { class: 'field wide procedure-initial' });
     field(initial, 'INITIAL ALTITUDE · FT MSL', 'procedureInitialLevel', 15000, 1000, 45000, 1000);
     const random = node('button', 'RANDOMISE 9,000–19,000 FT', { type: 'button', id: 'procedureRandomLevel' });
     random.addEventListener('click', () => { const values = new Uint32Array(1); root.crypto.getRandomValues(values); $('procedureInitialLevel').value = 9000 + values[0] % 11 * 1000; });
-    initial.append(random); document.querySelector('#setup .fields').append(initial);
+    initial.append(random); ($('setupPerformanceFields') || document.querySelector('#setup .fields')).append(initial);
   }
   const controls = node('details', null, { class: 'procedure-controls', id: 'procedureControls' });
   controls.append(node('summary', 'LEVEL & RADIO'));
@@ -100,7 +134,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   confirm.addEventListener('click', () => { const plan = pendingConflict; pendingConflict = null; conflict.hidden = true; if (plan) execute(plan, true); });
   cancel.addEventListener('click', () => { pendingConflict = null; conflict.hidden = true; });
   function environmentInput() {
-    return { runway: $('procedureRunway').value.trim().toUpperCase(), aerodromeElevationFt: Number($('procedureElevation').value),
+    return { runway: publishedMarking.value.trim().toUpperCase(), runwayOrientation: orientation.value, aerodromeElevationFt: Number($('procedureElevation').value),
       qnhHpa: Number($('procedureQnh').value), qfeHpa: Number($('procedureQfe').value),
       transitionAltitudeFt: Number($('procedureTransition').value), transitionLevel: Number($('procedureTransitionLevel').value),
       weather: { visibilityM: Number($('procedureVisibility').value) },
@@ -187,19 +221,33 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const max = Math.ceil(Math.max(...heights) / 1000) * 1000 + 1000;
     const end = Math.max(1, domain.simulationSeconds), y = value => 185 - (value - min) / (max - min) * 155;
     [min, (min + max) / 2, max].forEach(level => {
-      svg.append(svgNode('line', { x1: 72, y1: y(level), x2: 725, y2: y(level), stroke: '#d4dcda' }));
-      svg.append(svgNode('text', { x: 62, y: y(level) + 4, 'text-anchor': 'end', fill: '#435b61', 'font-size': 13 }, String(Math.round(level))));
+      svg.append(svgNode('line', { x1: 72, y1: y(level), x2: 725, y2: y(level), stroke: 'var(--night-line, #d4dcda)' }));
+      svg.append(svgNode('text', { x: 62, y: y(level) + 4, 'text-anchor': 'end', fill: 'var(--night-muted, #435b61)', 'font-size': 13 }, String(Math.round(level))));
     });
     const dashes = ['', '8 4', '2 4', '8 3 2 3'];
     fleet.forEach((a, i) => svg.append(svgNode('polyline', { points: points.map(sample => `${72 + sample.time / end * 653},${y(sample.levels[a.id])}`).join(' '),
-      fill: 'none', stroke: palette[i], 'stroke-width': 2.5, 'stroke-dasharray': dashes[i] })));
-    svg.append(svgNode('text', { x: 72, y: 215, fill: '#435b61', 'font-size': 13 }, '0:00 · ALTITUDE FT MSL'));
-    svg.append(svgNode('text', { x: 725, y: 215, fill: '#435b61', 'font-size': 13, 'text-anchor': 'end' }, `${Math.floor(end / 60)}:${String(Math.floor(end % 60)).padStart(2, '0')}`));
+      fill: 'none', stroke: `color-mix(in srgb, ${palette[i]} 65%, var(--night-text, ${palette[i]}))`, 'stroke-width': 2.5, 'stroke-dasharray': dashes[i] })));
+    svg.append(svgNode('text', { x: 72, y: 215, fill: 'var(--night-muted, #435b61)', 'font-size': 13 }, '0:00 · ALTITUDE FT MSL'));
+    svg.append(svgNode('text', { x: 725, y: 215, fill: 'var(--night-muted, #435b61)', 'font-size': 13, 'text-anchor': 'end' }, `${Math.floor(end / 60)}:${String(Math.floor(end % 60)).padStart(2, '0')}`));
     panel.append(svg);
     fleet.forEach((a, i) => panel.append(node('p', `${a.callsign} · ${['solid', 'dashed', 'dotted', 'dash-dot'][i]} · ${P.levelReport(a, domain.environment)} · SQUAWK ${a.squawk}`, { class: 'procedure-review-state' })));
     panel.append(node('p', `RUNWAY ${domain.environment.runway} · QNH ${domain.environment.qnhHpa} · QFE ${domain.environment.qfeHpa} · ${domain.outcomes.length} structured RT outcomes`, { class: 'procedure-note' }));
     $(tactical ? 'tAnalysis' : 'analysis').append(panel);
   }
-  root.QGHProcedureWorkspace = Object.freeze({ initialize, advance, execute, endTransmission, updateReadout, renderReview,
+  function restoreSingle(saved) {
+    const restored = P.migrate(saved?.domain);
+    if (tactical || !restored.ok || !restored.state.aircraft.single || !Array.isArray(saved.levels)
+      || !saved.levels.every(sample => Array.isArray(sample) && sample.length === 2 && sample.every(Number.isFinite)))
+      throw new Error('The saved procedure cannot be restored.');
+    domain = restored.state;
+    pendingConflict = null;
+    conflict.hidden = true;
+    history.length = 0;
+    for (const [time, level] of saved.levels) history.push({ time, levels: { single: level } });
+    refreshRunwayMarking();
+    updateReadout();
+  }
+  root.QGHProcedureWorkspace = Object.freeze({ initialize, advance, execute, endTransmission, updateReadout, renderReview, restoreSingle,
+    singleCheckpoint: () => domain && !tactical ? { domain, levels: history.map(sample => [sample.time, sample.levels.single]) } : null,
     state: () => domain, history: () => history.slice(), snapshot: id => domain?.aircraft[id] || null });
 })(typeof globalThis === 'undefined' ? this : globalThis);

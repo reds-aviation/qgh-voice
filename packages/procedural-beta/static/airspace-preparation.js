@@ -114,6 +114,7 @@ export function createAirspacePreparation(host) {
     const featureChoices = element('div', '', 'airspace-feature-choices'); featureChoices.id = 'airspace-feature-choices'; featureChoices.setAttribute('aria-label', 'Choose what to draw');
     for (const [choice, label] of [...kinds, ['route', 'ATS route']]) {
         const control = button(label, () => void chooseFeature(choice)); control.dataset.feature = choice; control.setAttribute('aria-pressed', String(choice === 'local-flying')); featureChoices.append(control);
+        if (choice === 'route') control.id = 'draw-feature-route';
     }
     const arpForm = element('form', '', 'airspace-arp-form'); arpForm.id = 'custom-arp-form';
     const arpFields = {};
@@ -157,7 +158,7 @@ export function createAirspacePreparation(host) {
     routeActions.append(saveRoute);
     routeForm.append(element('h3', 'Route name and direction'), element('p', 'Unidirectional follows your drawing order. Bidirectional shows arrows both ways.', 'hint'), routeGrid, levelsWrap, levelHint, routeModeWrap, routePointsWrap, pointNames, routeActions);
     const sketch = element('details', '', 'airspace-sketch'); sketch.id = 'boundary-sketch';
-    const sketchSummary = element('summary', 'Draw area on the radar scope or preview'); sketch.append(sketchSummary); sketch.open = true;
+    const sketchSummary = element('summary', 'Draw area on the radar scope or preview'); sketchSummary.id = 'chart-sketch-heading'; sketch.append(sketchSummary); sketch.open = true;
     const tools = element('div', '', 'airspace-preparation-actions');
     let draft = [], routePointNames = [], routeGeneratedText = '', closed = false, active = false, placingARP = false, placementBusy = false, drag = -1, selectedVertex = -1, dragPointer = null, dragCanvas = null, gestureBefore = null, previewDragScale = null, scopeTransform = null, lastExercise = '', dirtyARP = false, editingOrigin = null, editingRoute = null, drawingError = '', featureKind = 'area', method = 'draw';
     const canvas = element('canvas'); canvas.id = 'boundary-sketch-canvas'; canvas.width = 720; canvas.height = 380; canvas.tabIndex = 0; canvas.setAttribute('aria-label', 'Boundary editor. Click to add points. Drag a point to move it. Close boundary when complete.');
@@ -195,7 +196,7 @@ export function createAirspacePreparation(host) {
         } catch (e) { showDrawingError(e); }
     };
     const undo = button('Undo point', () => { draft.pop(); routePointNames.pop(); selectedVertex = Math.min(selectedVertex, draft.length - 1); closed = false; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); });
-    const closePreview = button('Close boundary', closeRing); closeButtons.push(closePreview);
+    const closePreview = button('Close boundary', closeRing); closePreview.id = 'finish-chart-feature'; closeButtons.push(closePreview);
     const clear = button('Clear points', () => { draft = []; routePointNames = []; selectedVertex = -1; closed = false; syncPoints(); drawPreview(); host.scope?.drawChanged?.(); }); draftButtons.push(undo, clear);
     tools.append(undo, closePreview, clear, deleteVertex);
     let drawScope;
@@ -287,6 +288,7 @@ export function createAirspacePreparation(host) {
         const instruction = placingARP ? 'Click the ARP position. The dot sets the range-ring centre and D/F station.' : progress;
         drawingStatus.textContent = drawingError || (placingARP ? placementReason : reason) || instruction;
         drawingStatus.dataset.ready = String(ready);
+        drawingStatus.dataset.phase = placingARP ? 'placing-arp' : reason ? 'blocked' : closed ? 'finished' : 'drawing';
         canvas.setAttribute('aria-disabled', String(!ready));
         canvas.style.cursor = ready ? 'crosshair' : 'not-allowed';
         goARP.hidden = method === 'draw' || !!host.view()?.environment.chartOrigin && !dirtyARP;

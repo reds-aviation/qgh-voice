@@ -137,11 +137,11 @@ test('QGH setup uses a static navigation header and restores it after moving the
  h.context.ATCSuiteWorkspace.bindShell({root,scope:get('instructorScope'),shelf:get('instructorControlShelf'),actions:get('instructorRunActions')});
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(navigation.open,true);assert.equal(navigation.querySelector('summary').hidden,true);
- assert.ok(navigation.querySelector('.ats-overlay-move').closest('[hidden]'),'Move and Reset belong only to the exercise drawer');
+ assert.ok(navigation.querySelector('.ats-overlay-drag-bar').closest('[hidden]'),'Move and Reset belong only to the exercise drawer');
  root.hidden=false;h.document.body.classList.add('exercise-console');await new Promise(resolve=>setImmediate(resolve));
  assert.equal(navigation.querySelector('summary').hidden,false);
  get('instructorTools').querySelector('[aria-controls="consoleNavigation"]').click();
- const move=navigation.querySelector('.ats-overlay-move'),event=new h.Event('keydown',{bubbles:true,cancelable:true});event.key='ArrowRight';move.dispatchEvent(event);
+ const move=navigation.querySelector('.ats-overlay-drag-bar'),event=new h.Event('keydown',{bubbles:true,cancelable:true});event.key='ArrowRight';move.dispatchEvent(event);
  assert.equal(navigation.style.position,'fixed');
  root.hidden=true;h.document.body.classList.remove('exercise-console');await new Promise(resolve=>setImmediate(resolve));
  assert.equal(navigation.open,true);assert.equal(navigation.querySelector('summary').hidden,true);
@@ -164,7 +164,7 @@ test('a phone confirmation keeps Tab inside the modal instead of the underlying 
  accept.click();assert.equal(await choice,true);
  // With the modal gone, the existing phone drawer containment still works.
  get('work-panel').querySelector('input').focus();const outside=new h.Event('keydown',{bubbles:true,cancelable:true});outside.key='Tab';get('work-panel').querySelector('input').dispatchEvent(outside);
- assert.equal(outside.defaultPrevented,true);assert.equal(h.document.activeElement===get('work-panel').querySelector('button'),true);
+ assert.equal(outside.defaultPrevented,true);assert.equal(h.document.activeElement===get('work-panel').querySelector('.ats-overlay-drag-bar'),true);
 });
 
 test('instructor Options changes display only and preserves selected aircraft controls',()=>{
@@ -273,9 +273,9 @@ async function floatingHarness(){
  const get=id=>h.document.getElementById(id);get('activeWorkspace').hidden=false;h.document.body.classList.add('exercise-console');
  h.context.ATCSuiteWorkspace.bindShell({root:get('activeWorkspace'),scope:get('instructorScope'),shelf:get('instructorControlShelf'),actions:get('instructorRunActions')});await Promise.resolve();
  const box=get('instructorFloatingControls');box.getBoundingClientRect=()=>({left:parseFloat(box.style.left)||6,top:parseFloat(box.style.top)||104,width:260,height:360});
- return {...h,get,box,resize,handle:box.querySelector('.ats-overlay-move')};
+ return {...h,get,box,resize,handle:box.querySelector('.ats-overlay-drag-bar')};
 }
-test('dragging the dedicated box handle is isolated from flight controls, and pointer cancel restores its position',async()=>{
+test('dragging the panel title bar is isolated from flight controls, and pointer cancel restores its position',async()=>{
  const h=await floatingHarness();let leaked=0,commands=0;
  h.document.addEventListener('pointerdown',()=>leaked++);h.document.addEventListener('pointermove',()=>leaked++);
  h.get('quickStopTurn').addEventListener('click',()=>commands++);h.get('quickHeading').value='233';
@@ -313,7 +313,7 @@ test('drawer header dragging preserves close controls and compact icons retain a
  assert.equal(drawer.style.left,'660px');assert.equal(drawer.style.top,'76px');
  const afterDrag=new h.Event('click',{bubbles:true,cancelable:true});header.dispatchEvent(afterDrag);assert.equal(afterDrag.defaultPrevented,true);
  const close=drawer.querySelector('.ats-drawer-close');assert.equal(close.textContent,'×');assert.ok(close.getAttribute('aria-label'));close.click();assert.equal(drawer.open,false);
- assert.equal(h.handle.textContent,'⠿');assert.match(h.handle.getAttribute('aria-label'),/arrow keys/);
+ assert.equal(h.box.querySelector('button.ats-overlay-move'),null);assert.match(h.handle.getAttribute('aria-keyshortcuts'),/ArrowRight/);
  assert.equal(h.box.querySelector('.ats-overlay-reset').textContent,'↺');
  const collapse=h.box.querySelector('.ats-overlay-collapse');assert.equal(collapse.textContent,'−');assert.match(collapse.getAttribute('aria-label'),/Minimize/);
  collapse.click();assert.equal(collapse.textContent,'+');assert.match(collapse.getAttribute('aria-label'),/Restore/);
@@ -349,27 +349,27 @@ test('keyboard movement and drag clamp to the viewport after resize, and Reset/H
 test('modal Move/Reset never chooses an answer, and Escape leaves the underlying drawer open',async()=>{
  const h=await floatingHarness(),sessionButton=h.get('instructorTools').querySelector('[aria-controls="sessionDrawer"]');sessionButton.click();
  let settled=false;const choice=h.context.ATCSuiteWorkspace.confirmAction('Replace exercise?').then(value=>{settled=true;return value;});
- const dialog=h.document.querySelector('dialog'),move=dialog.querySelector('.ats-overlay-move');dialog.getBoundingClientRect=()=>({left:400,top:200,width:360,height:220});
+ const dialog=h.document.querySelector('dialog'),move=dialog.querySelector('.ats-overlay-drag-bar');dialog.getBoundingClientRect=()=>({left:400,top:200,width:360,height:220});
  pointer(h,move,'pointerdown',420,220);pointer(h,move,'pointermove',470,250);pointer(h,move,'pointerup',470,250);
  dialog.querySelector('.ats-overlay-reset').click();await Promise.resolve();assert.equal(settled,false);
  const cancel=dialog.querySelector('.ats-confirm-cancel');cancel.focus();key(h,cancel,'Escape');assert.equal(h.get('sessionDrawer').open,true);
  dialog.querySelector('.ats-panel-close').click();assert.equal(await choice,false);assert.equal(h.get('sessionDrawer').open,true);
 });
-test('drawer, clock, help and guided-tour panels use dedicated move handles while their controls remain the same nodes',async()=>{
+test('drawer, clock, help and guided-tour panels use their title bars for movement while their controls remain the same nodes',async()=>{
  const h=await floatingHarness();
- for(const id of ['sessionDrawer','aircraftControlDrawer','eventDrawer','consoleNavigation'])assert.ok(h.get(id).querySelector('.ats-overlay-move'));
- assert.ok(h.document.querySelector('.ats-clock-popover .ats-overlay-move'));assert.equal(h.get('trainingTimeRate').value,'1');
+ for(const id of ['sessionDrawer','aircraftControlDrawer','eventDrawer','consoleNavigation'])assert.ok(h.get(id).querySelector('.ats-overlay-drag-bar'));
+ assert.ok(h.document.querySelector('.ats-clock-popover .ats-overlay-drag-bar'));assert.equal(h.get('trainingTimeRate').value,'1');
  for(const [id,tag]of [['suite-guide-chat-panel','header'],['suite-tour','h2'],['boundary-scope-tools','strong']]){
    const panel=h.document.createElement('section');panel.id=id;panel.append(h.document.createElement(tag));h.document.body.append(panel);
  }
  await new Promise(resolve=>setTimeout(resolve,0));
- for(const id of ['suite-guide-chat-panel','suite-tour','boundary-scope-tools'])assert.ok(h.get(id).querySelector('.ats-overlay-move'));
+ for(const id of ['suite-guide-chat-panel','suite-tour','boundary-scope-tools'])assert.ok(h.get(id).querySelector('.ats-overlay-drag-bar'));
 });
 
 test('a moved drawer keeps its height through close/reopen and fits the visual viewport without losing its preferred size',async()=>{
  const h=await floatingHarness(),drawer=h.get('sessionDrawer');drawer.open=true;
  drawer.getBoundingClientRect=()=>drawer.open?{left:parseFloat(drawer.style.left)||700,top:parseFloat(drawer.style.top)||56,width:360,height:parseFloat(drawer.style.height)||600}:{left:0,top:0,width:0,height:0};
- const handle=drawer.querySelector('.ats-overlay-move');key(h,handle,'ArrowLeft');assert.equal(drawer.style.height,'600px');
+ const handle=drawer.querySelector('.ats-overlay-drag-bar');key(h,handle,'ArrowLeft');assert.equal(drawer.style.height,'600px');
  drawer.open=false;for(const sync of h.resize)sync();assert.equal(drawer.style.height,'600px');
  drawer.open=true;for(const sync of h.resize)sync();assert.equal(drawer.style.height,'600px');
  // Pinch zoom or the phone keyboard can make the visible viewport smaller.

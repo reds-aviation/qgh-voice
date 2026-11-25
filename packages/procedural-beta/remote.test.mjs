@@ -128,6 +128,32 @@ test('Supabase SQL: rooms, admission, role boundaries, receipts, expiry and priv
   } finally { await db.close(); }
 });
 
+test('a processed online controller call publishes its receipt before the next idle poll', async () => {
+  const command = {type:'controller-call', id:'call-1'};
+  const receipt = {status:200, body:{accepted:true}};
+  const sent = [];
+  let timer, executions = 0;
+  const host = createRemoteRoom({
+    session:{role:'instructor', cloud:{id:'room',hostKey:'host'}},
+    schedule(fn, delay) { return timer = {fn, delay}; }, cancel() { timer = null; },
+    local: async path => {
+      if (path === 'cloud-command') { executions++; return receipt; }
+      return {status:200, body:{role:'student', exerciseId:'exercise'}};
+    },
+    service:{ async call(action, room, payload) {
+      sent.push(payload.receipts);
+      return {room:{}, commands:sent.length === 2 ? [command] : []};
+    }}
+  });
+  await host.start(); assert.equal(timer.delay, 1000);
+  await host.sync(); assert.equal(timer.delay, 0);
+  await timer.fn();
+  assert.deepEqual(sent.at(-1), [{id:command.id,result:receipt}]);
+  assert.equal(executions, 1);
+  assert.equal(timer.delay, 1000);
+  host.stop();
+});
+
 test('cloud transport shares only student projection; freeze on lost link; no direct student clearances', async () => {
   let now=10000, lastPublished, connected=true;
   const view={role:'student',exerciseId:'exercise',available:true,running:true,environment:{},roster:[]};

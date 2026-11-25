@@ -32,6 +32,16 @@ test('one Training guide exposes three complete flows and keeps every answer sea
  assert.equal(document.querySelector('iframe'),null,'video remains optional until explicitly loaded');
 });
 
+test('the shared startup walkthrough identifies who acts at each step',()=>{
+ const {document}=parseHTML(renderCommonGuide());
+ const flow=document.querySelector('#connection #join-flow');
+ assert.deepEqual([...flow.querySelectorAll('dt')].map(n=>n.textContent),['This device','Online room']);
+ assert.deepEqual([...flow.querySelectorAll('li div')].map(step=>[step.querySelector('span').textContent,step.querySelector('strong').textContent]),[
+  ['Instructor','Share PIN'],['Controller','Request to join'],['Instructor','Admit'],
+  ['Controller','Ready'],['Instructor','Start / Run']
+ ]);
+});
+
 test('legacy guide paths redirect to the same page with readable fallback links',()=>{
  for(const [prefix,anchor]of [['',''],['../','instructor'],['../','procedural']]){
   const {document}=parseHTML(legacyGuide(prefix,anchor)),target=prefix+'training-centre.html'+(anchor?'#'+anchor:'');
@@ -65,7 +75,7 @@ test('guide search reveals collapsed detail and keeps RT catalogue usable',async
  await new Promise(resolve=>setImmediate(resolve));
 });
 
-test('Gyani context and current scope/radio guidance use canonical destinations',()=>{
+test('Saarthi context and current scope/radio guidance use canonical destinations',()=>{
  for(const [hash,topic]of [['#qgh','qgh-individual'],['#instructor','qgh-instructor'],['#procedural','procedural'],['','suite']])assert.equal(topicForPage('/qgh-voice/training-centre.html',hash),topic);
  const distance=matchGuideQuestion('Why does QGH Transmit no longer show range?','qgh-individual');assert.equal(distance.intent,'individual-distance');assert.match(distance.text,/bearing only/);assert.match(distance.text,/does not update continuously/);
  const position=matchGuideQuestion('Where is Position report in SRA?','sra');assert.equal(position.intent,'instructor-transmit');assert.match(position.text,/2 seconds/);assert.match(position.text,/does not replace or refresh/);assert.match(position.links[0].href,/training-centre\.html#pilot/);

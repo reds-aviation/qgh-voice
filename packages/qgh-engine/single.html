@@ -17,11 +17,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <meta name="theme-color" content="#007d7d">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>ATS SIM BOX · Single QGH</title>
+  <link rel="stylesheet" href="setup-loading.css">
   <link rel="stylesheet" href="workspace.css?v=4.2.0">
   <link rel="stylesheet" href="voice.css?v=4.2.0">
   <link rel="stylesheet" href="guided-familiarisation.css?v=4.2.0">
-  <script defer src="vendor/vosk-browser-0.0.8.js?v=4.2.0"></script>
   <script defer src="offline-voice-engine.js?v=4.2.0"></script>
+  <script defer src="rt-intent-model.js?v=4.2.0"></script>
   <script defer src="voice-control.js?v=4.2.0"></script>
   <script defer src="simulator-core.js?v=4.2.0"></script>
   <link rel="stylesheet" href="procedure.css">
@@ -35,43 +36,78 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   <script defer src="radio-workspace.js?v=4.2.0"></script>
   <script defer src="headphone-consent.js?v=4.4.2"></script>
   <script defer src="procedure-workspace.js"></script>
+  <script defer src="setup-loading.js"></script>
   <script defer src="voice-workspace.js?v=4.2.0"></script>
   <script defer src="guided-familiarisation.js?v=4.2.0"></script>
 <link rel="stylesheet" href="license-footer.css"></head>
 <body>
-  <main class="app">
+  <section class="ats-setup-loader" id="setupLoader" aria-labelledby="setupLoadingTitle">
+    <div class="ats-setup-loader__content">
+      <span class="ats-setup-loader__brand">ATS SIM BOX</span>
+      <h1 id="setupLoadingTitle" data-setup-title role="status">Loading exercise setup…</h1>
+      <p class="ats-setup-loader__caption">IAF Surya Kiran Aerobatic Team</p>
+      <noscript><p>Enable JavaScript to open exercise setup.</p></noscript>
+      <button id="setupRetry" type="button" hidden>Retry setup</button>
+      <a href="index.html">Back to exercise selection</a>
+    </div>
+  </section>
+  <main class="app" inert>
     <header class="app-header">
-      <div class="brand"><h1>ATS SIM BOX</h1><a class="mode-home-link" href="index.html">CHANGE QGH TYPE</a><a class="mode-home-link" href="training-centre.html#qgh" target="_blank" rel="noopener">Training guide</a></div>
+      <div class="brand"><h1>ATS SIM BOX</h1><a id="qghTypeSelection" class="mode-home-link" href="index.html">CHANGE QGH TYPE</a><a class="mode-home-link" href="training-centre.html#qgh" target="_blank" rel="noopener">Training guide</a></div>
       <div class="credit"><small>CREATED BY</small><span>Flt Lt Balaram Reddy</span><small>SERVICE NO. 38703</small></div>
     </header>
 
     <section class="screen setup active" id="setup" aria-label="Exercise setup" tabindex="-1">
-      <div class="setup-card">
+      <section id="singleRecovery" class="setup-card" aria-labelledby="singleRecoveryTitle" hidden>
+        <header class="setup-intro"><h2 id="singleRecoveryTitle">Return to your exercise</h2><p id="singleRecoveryDetail" role="status"></p></header>
+        <div class="setup-actions"><button class="start" id="singleRecover" type="button">Restore paused exercise</button><button id="singleDiscard" type="button">Discard and open setup</button></div>
+      </section>
+      <div id="singleSetupFields" class="setup-card">
         <header class="setup-intro">
           <span>INDIVIDUAL PRACTICE · SINGLE AIRCRAFT</span>
           <h2>Set up your QGH exercise</h2>
-          <p>Choose the tracks, aircraft and procedure. You can adjust the exercise before you start.</p>
+          <p>Use the defaults or edit the setup below.</p>
         </header>
-        <div class="fields">
-          <div class="field">
-            <label for="runway">RUNWAY ORIENTATION · °M</label>
-            <div class="unit" data-unit="°"><input id="runway" type="number" inputmode="numeric" min="0" max="359" value="150"></div>
+        <fieldset class="exercise-procedure-picker">
+          <legend>Procedure</legend>
+          <div class="choice">
+            <button id="normal" type="button" aria-pressed="true" title="Use heading-assignment controls">Normal QGH</button>
+            <button id="us" type="button" aria-pressed="false" title="Use timed left, right and stop turn calls">U/S Compass</button>
           </div>
-          <div class="field">
-            <label for="inbound">INBOUND / FINAL TRACK · °M</label>
-            <div class="unit" data-unit="°"><input id="inbound" type="number" inputmode="numeric" min="0" max="359" value="150"></div>
+        </fieldset>
+        <details class="exercise-setup-disclosure" id="setupTracks">
+          <summary><span>Runway and tracks</span><small id="setupTrackSummary"></small></summary>
+          <div class="fields exercise-track-fields">
+            <div class="field">
+              <label for="runway">Runway orientation · °M</label>
+              <div class="unit" data-unit="°"><input id="runway" type="number" inputmode="numeric" min="0" max="359" value="150"></div>
+            </div>
+            <div class="field">
+              <label for="inbound">Inbound / final track · °M</label>
+              <div class="unit" data-unit="°"><input id="inbound" type="number" inputmode="numeric" min="0" max="359" value="150"></div>
+            </div>
+            <div class="field">
+              <label for="outbound">Outbound track · °M</label>
+              <div class="unit" data-unit="°"><input id="outbound" type="number" inputmode="numeric" min="0" max="359" value="330"></div>
+            </div>
           </div>
-          <div class="field">
-            <label for="outbound">OUTBOUND TRACK · °M</label>
-            <div class="unit" data-unit="°"><input id="outbound" type="number" inputmode="numeric" min="0" max="359" value="330"></div>
+        </details>
+        <div class="setup-actions exercise-launch" id="exerciseLaunch">
+          <button class="start" id="startExercise" type="button">Start Single exercise</button>
+          <div class="exercise-audio-tools" role="group" aria-label="Optional radio practice and audio">
+            <button class="exercise-rehearsal" id="setupRehearsal" type="button" aria-pressed="false">Rehearse a radio call</button>
+            <button class="pilot-readback-setup" id="setupPilotReadbacks" type="button">Test headphones</button>
+            <div id="setupVoiceMount"></div>
           </div>
+        </div>
+        <div class="fields exercise-aircraft-fields">
           <div class="field">
-            <label for="aircraft">AIRCRAFT PROFILE</label>
+            <label for="aircraft">Aircraft profile</label>
             <select id="aircraft">
               <optgroup label="GENERAL">
-                <option value="fighter">FIGHTER · GENERAL</option>
-                <option value="transport">TRANSPORT · GENERAL</option>
-                <option value="helicopter">HELICOPTER · GENERAL</option>
+                <option value="fighter">General fighter</option>
+                <option value="transport">General transport</option>
+                <option value="helicopter">General helicopter</option>
               </optgroup>
               <optgroup label="IAF TRAINING PRESETS">
                 <option value="tejas">TEJAS</option>
@@ -90,35 +126,28 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
             </select>
           </div>
           <div class="field">
-            <label for="distance">INITIAL DISTANCE</label>
-            <div class="unit" data-unit="NM"><input id="distance" type="number" inputmode="numeric" min="5" max="50" value="25"></div>
-          </div>
-          <div class="field">
-            <label for="speed">SIMULATED GROUND SPEED</label>
-            <div class="unit" data-unit="KT"><input id="speed" type="number" inputmode="numeric" min="60" max="600" step="5" value="240"></div>
-          </div>
-          <div class="field">
-            <label for="rate">RATE OF TURN</label>
-            <div class="unit" data-unit="°/SEC"><input id="rate" type="number" inputmode="decimal" min=".5" max="8" step=".1" value="3"></div>
-          </div>
-          <div class="field">
-            <label for="callsign">AIRCRAFT CALLSIGN</label>
+            <label for="callsign">Aircraft callsign</label>
             <input id="callsign" type="text" value="FALCON 11" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="callsignHint">
               <small id="callsignHint">Use a text callsign or a number from 100 to 999. Callsign is optional in single-aircraft voice calls.</small>
           </div>
-          <div class="field wide">
-            <label>PROCEDURE</label>
-            <div class="choice" role="group" aria-label="Procedure selection">
-              <button id="normal" type="button" aria-pressed="true" title="Use heading-assignment controls">NORMAL QGH</button>
-              <button id="us" type="button" aria-pressed="false" title="Use timed left, right and stop turn calls">U/S COMPASS</button>
+        </div>
+        <details class="exercise-setup-disclosure" id="setupAircraftPerformance">
+          <summary>Aircraft performance</summary>
+          <div class="fields" id="setupPerformanceFields">
+            <div class="field">
+              <label for="distance">Initial distance</label>
+              <div class="unit" data-unit="NM"><input id="distance" type="number" inputmode="numeric" min="5" max="50" value="25"></div>
+            </div>
+            <div class="field">
+              <label for="speed">Simulated ground speed</label>
+              <div class="unit" data-unit="KT"><input id="speed" type="number" inputmode="numeric" min="60" max="600" step="5" value="240"></div>
+            </div>
+            <div class="field">
+              <label for="rate">Rate of turn</label>
+              <div class="unit" data-unit="°/SEC"><input id="rate" type="number" inputmode="decimal" min=".5" max="8" step=".1" value="3"></div>
             </div>
           </div>
-        </div>
-        <div class="setup-actions">
-          <p><strong>Ready to practise?</strong><span>Pilot readbacks are optional; test headphones first if you want audio.</span></p>
-          <button class="pilot-readback-setup" id="setupPilotReadbacks" type="button">TEST HEADPHONES · PILOT READBACKS</button>
-          <button class="start" id="startExercise" type="button">START SINGLE EXERCISE</button>
-        </div>
+        </details>
       </div>
     </section>
 
@@ -194,6 +223,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           <button id="clockStop" type="button">STOP</button>
           <button id="clockReset" type="button">RESET</button>
         </div>
+        <p id="singleRecoveryHint" role="status" hidden>Flight is paused. Select Resume flight to continue.</p>
         <button class="restart-session" id="restartExercise" type="button">RESTART EXERCISE</button>
       </section>
 

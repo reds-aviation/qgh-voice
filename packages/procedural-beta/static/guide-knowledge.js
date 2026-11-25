@@ -8,10 +8,34 @@ Contributor(s): None designated in this initial notice.
 No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
 */
 
-// Shared release knowledge: the common guide, Gyani and screen tours. Maintain with each UI change.
+// Shared release knowledge: the common guide, Saarthi and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.10",
+  "revision": "1.0.11",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
+  "examples": {
+    "paired-controller-voice": "With aircraft 101 in a running exercise, hold to talk and say One zero one, turn right heading two six zero. Release and check the outcome.",
+    "connections": "For two desks in the same room on separate laptops, select Online room on both, connect both to the internet and share the instructor’s PIN. You can speak across the room. Google Meet is optional.",
+    "session": "If the instructor sees your name but Start is still unavailable, check the two desks in order. The instructor admits your request. Once your controller desk opens, you select Ready. The instructor can then start.",
+    "guided-tour": "In setup, open Guided tour and choose Next once. The outline points to a control. Escape closes the tour so you can use that control yourself.",
+    "individual-distance": "For example, request a distance and note the reply. Transmit again for D/F. To obtain a fresh distance, ask for distance again.",
+    "turn": "To practise stopping a turn, select the aircraft and choose Right now. When you want it to roll out, press and release the middle mouse button without dragging. The selected aircraft stops turning at its current heading.",
+    "instructor-turn": "To practise a specified turn, select the aircraft, enter 260 in Heading °M, then choose Turn right. To roll out early, select Stop turn.",
+    "saved-exercises": "For a second class, import the starting setup and create or load the exercise from that record. The new class starts with the original traffic. In Procedural, use a current-progress file when you need the first class’s elapsed time and records.",
+    "saved-airspaces": "To give another instructor your chart, save the airspace, select its saved name and choose Download file. On the other device, import the airspace file and choose Load to apply it.",
+    "custom-polygons": "For a practice route, place two points in order, choose Finish route, add its name and direction, then choose Save route. For a practice area, place at least three points and choose Close boundary before saving.",
+    "help-limits": "On either desk, ask “What next?” during setup. If the suggested control is visible, Show me takes you to it. You decide when to use it."
+  },
+  "saveHelp": {
+    "procedural": {
+      "Starting setup": {"entry":"saved-exercises","controls":["template-save","prepare-save-load","traffic-setup"],"text":"Before the first Run or +1 minute, open Prepare airspace → Save or load. Choose Complete exercise (aircraft + chart), enter an exercise name and select Save exercise. After termination, Review → Download exercise setup gives you the captured starting setup."},
+      "Current progress": {"entry":"saved-exercises","controls":["export","tab-debrief"],"text":"Open Review → Current progress file (includes records) and download the progress file. Restoring it later reopens the attempt paused, with its elapsed time and records."},
+      "Airspace only": {"entry":"saved-airspaces","controls":["airspace-save","prepare-save-load","traffic-setup"],"text":"Open Prepare airspace → Save or load. Choose Airspace only (chart), name it and select Save airspace. Download file gives you a copy to use on another device."}
+    },
+    "qgh-instructor": {
+      "Starting setup": {"entry":"saved-exercises","controls":["saveExercisePreset","qghSavedExercises"],"text":"In starting traffic, expand Saved exercises. Select Current setup · new exercise, enter a name, then choose Save. The saved setup is available on this device."},
+      "Download setup after review": {"entry":"saved-exercises","controls":["downloadReviewSetup"],"text":"After terminating the exercise, open Review and select Download exercise setup. To use the original aircraft and airspace again, import the file under Saved exercises, then create the session."}
+    }
+  },
   "flow": [
     {
       "title": "QGH",
@@ -31,6 +55,53 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   ],
   "entries": [
     {
+      "id": "home-radar-motion",
+      "title": "Pause the homepage radar animation",
+      "topics": ["suite"],
+      "anchor": "start",
+      "controls": [],
+      "match": "\\b(?:home(?:page)? radar|radar animation|banner animation|animated banner)\\b",
+      "text": "Use the pause button beside the homepage illustration to hold the aircraft and radar sweep. Select it again to resume. With reduced motion enabled on your device, the homepage displays the original still illustration.",
+      "questions": ["How do I pause the homepage radar animation?"]
+    },
+    {
+      "id": "setup-loading",
+      "title": "Opening exercise setup",
+      "topics": [
+        "suite",
+        "qgh-individual",
+        "qgh-instructor",
+        "sra",
+        "procedural"
+      ],
+      "controls": [],
+      "anchor": "start",
+      "priority": true,
+      "match": "\\b(?:surya\\s*kiran|loading (?:page|screen|exercise setup)|setup (?:is )?loading)\\b",
+      "text": "The Surya Kiran formation appears while the simulator prepares exercise setup. The form opens automatically as soon as it is ready.",
+      "questions": [
+        "Why is setup loading?",
+        "What is the Surya Kiran screen?",
+        "Do I need to click the loading screen?"
+      ]
+    },
+    {
+      "id": "install-web-app",
+      "title": "Install the web app",
+      "topics": ["suite", "qgh", "qgh-individual", "qgh-instructor", "sra", "procedural"],
+      "controls": ["installWebApp"],
+      "anchor": "answer-install-web-app",
+      "priority": true,
+      "match": "\\b(?:install(?:ing)? (?:ats sim box|(?:the |this |a )?(?:web app|app|website|simulator))|add to home screen|where (?:is|s) (?:the )?install(?:ation)? (?:button|option))\\b",
+      "text": "Select Install web app at the top of the ATS SIM BOX home page. Accept your browser’s prompt if offered. On iPhone or iPad, open the home page in Safari, tap Share, then choose Add to Home Screen. Enable Open as Web App if shown, then tap Add. For local training without internet, use Prepare for offline use on the home page.",
+      "intro": "Select Install web app at the top of the ATS SIM BOX home page and follow your browser’s steps.",
+      "questions": [
+        "Where is the install button?",
+        "How do I install ATS SIM BOX?",
+        "How do I add this to my iPhone Home Screen?"
+      ]
+    },
+    {
       "id": "app-logo",
       "title": "ATS SIM BOX logo",
       "topics": [
@@ -44,7 +115,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "help",
       "priority": true,
       "match": "\\b(?:logo|brand badge|simulator badge|roundel|icons?|review app update|updat.*installed app)\\b",
-      "text": "Inside the app, suite, setup and Help page headers use the Air Force roundel. The separate installed-app icon uses the approved ATS SIM BOX emblem with an air traffic controller, radar, ATC tower, airliner and roundel. An app installed from the website can keep its previous Android or Windows icon until the browser detects and applies the new icon. Finish the current exercise, open the installed app while online, choose Update app if offered, then close and reopen it. In newer Chrome versions, open the app's three-dot menu and choose Review app update if shown, then accept the new ATS SIM BOX logo. This browser approval is separate from the simulator's Update app action. Android update checks and the device launcher can take longer; the simulator cannot promise an immediate icon refresh. This update does not erase saved exercises. Older browsers may require separate installation help if they cannot apply icon changes.",
+      "text": "The headers use the Indian Air Force roundel. The installed ATS SIM BOX icon shows a white aircraft and runway within a blue radar ring, with the IAF roundel as the radar return. The home page plays one sweep when it opens and uses the still mark if reduced motion is enabled. An app installed from the website can keep its previous Android or Windows icon until the browser detects and applies the new icon. Finish the current exercise, open the installed app while online, choose Update app if offered, then close and reopen it. In newer Chrome versions, open the app's three-dot menu and choose Review app update if shown, then accept the new ATS SIM BOX logo. This browser approval is separate from the simulator's Update app action. Android update checks and the device launcher can take longer; the simulator cannot promise an immediate icon refresh. This update does not erase saved exercises. Older browsers may require separate installation help if they cannot apply icon changes.",
       "questions": [
         "What does the new ATS SIM BOX logo represent?",
         "Why does the app icon look different?",
@@ -99,14 +170,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "tutorial",
       "priority": true,
       "match": "\\b(?:(?:video|tutorial|gyani|guided (?:tour|training)).*updat|tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
-      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. Recent updates mean some screens, button positions and setup steps may differ; no percentage of differences has been measured. The written Training guide, Gyani answers and guided screen tour share the maintained current release knowledge. A notice below the video identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. A revised video is planned after the simulator changes are finalised, possibly for Version 2. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
+      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. Recent updates mean some screens, button positions and setup steps may differ; no percentage of differences has been measured. The written Training guide, Saarthi answers and guided screen tour share the maintained current release knowledge. On Home, Prepare for offline use can cache exercises and charts, including instructor-led. Download voice separately or use the Training Guide to save individual clips. A notice below the video identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. A revised video is planned after the simulator changes are finalised, possibly for Version 2. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
       "questions": [
         "Where is the full tutorial?",
         "Can I watch the tutorial inside the web app?",
         "How do I jump to a video chapter?",
         "Does the YouTube tutorial work offline?",
         "Does the YouTube video update when the app changes?",
-        "Are Gyani and guided tours updated with this app?",
+        "Are Saarthi and guided tours updated with this app?",
         "What percentage of the video differs from the simulator?",
         "Will the tutorial video be updated for Version 2?"
       ],
@@ -308,6 +379,58 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ]
     },
     {
+      "id": "paired-controller-voice",
+      "title": "Give a spoken clearance",
+      "topics": [
+        "procedural",
+        "qgh-instructor",
+        "sra"
+      ],
+      "controls": [
+        "auto-voice-headings",
+        "controllerVoiceMode"
+      ],
+      "anchor": "aircraft",
+      "priority": true,
+      "match": "\\b(?:automatic (?:pilot|heading)|human pseudo.pilot|controller voice|spoken (?:clearance|heading)|push.to.talk|hold to talk|speech model)\\b",
+      "intro": "The instructor chooses who handles spoken calls. In automatic mode, the simulated pilot reads back a supported clearance and the addressed aircraft carries it out.",
+      "text": "Choose Automatic pilot in Session. Hold the microphone on the student desk, wait for Listening, say the full callsign and one call, then release. The pilot can turn, stop a turn, change speed or altitude, transmit for D/F, and answer heading or range requests. Available actions depend on the exercise and instruments. Enable local pilot audio to hear the readback. The Windows installer also interprets common English requests on this PC. Use instructor handling for exchanges beyond these supported actions.",
+      "questions": [
+        "Can I control aircraft by voice from the student desk?",
+        "Where do I select automatic pilot or human pseudo-pilot?",
+        "How do I talk with the microphone icon and hear the pilot?",
+        "Can the student address a different aircraft without the instructor selecting it?"
+      ],
+      "pointers": [
+        "Instructor handles calls by default. Choose Automatic pilot in Session for this exercise.",
+        "On the controller desk, find the microphone in the radio panel. In Procedural it also appears on the scope tool rail. Select Set up offline voice, then allow the microphone. Hold the microphone icon to speak.",
+        "Hold to talk and wait for Listening. Say “One zero one, turn right heading two six zero”, then release.",
+        "For a noisy room, use a headset microphone and hold to talk only for your call. If prompted to repeat, say the full callsign and instruction again. Ask “One zero one, what heading are you flying?” for the actual heading. An unclear or unsupported call leaves aircraft movement unchanged."
+      ]
+    },
+    {
+      "id": "appearance",
+      "controls": [],
+      "anchor": "setup",
+      "title": "Choose a colour theme",
+      "topics": [
+        "suite",
+        "procedural",
+        "qgh"
+      ],
+      "match": "\\b(?:dark mode|light mode|colour theme|color theme|tab colours|change theme)\\b",
+      "intro": "Use the Dark mode switch to change the display.",
+      "text": "Find Dark mode in the header or exercise toolbar. Switch it on for Dark or off for Light. Your first visit follows your device setting. Other simulator windows on this site follow your choice. A line marks the selected tab. The same tab stays selected when you switch themes or move the pointer over it.",
+      "questions": [
+        "How do I switch to dark mode?",
+        "How do I change the tab colours?"
+      ],
+      "pointers": [
+        "Find Dark mode in the header or on the exercise desk.",
+        "Turn the switch on for Dark or off for Light."
+      ]
+    },
+    {
       "id": "instructor-instrument-shelf",
       "title": "Matching instructor and student workspaces",
       "topics": [
@@ -326,7 +449,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:where.*(?:homing|pilot message|pilot caption)|homing.*(?:below|moved)|heading.*(?:white|visible|read|dark)|same (?:screen|layout|workspace)|instructor (?:layout|interface|workspace)|scroll ?bar|scroll track|scroll.*(?:aircraft list|tools|legend)|(?:move|drag|reset) (?:the |a )?(?:box|panel|floating|aircraft controls)|floating (?:box|controls|panel))\\b",
-      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the compact move symbol and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Gyani, tour and same-screen confirmations also have Move/Reset controls. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session and Aircraft controls sit on the right tool rail. QGH/SRE/SRA Event history opens the running command/event list; Terminate opens the full debrief. Procedural retains its Review tool, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation. The compact live header identifies instructor role, mode, exercise time and actual session state. The startup explanation is inside Session, reachable with Startup steps. The selected aircraft summary stays above its quick controls; minimizing the panel retains selection and field values. Homing keeps the actual transmission/source status visible beneath its numerical readout. Help includes one seven-step instructor flow with the optional airspace and connection differences explained. Individual QGH readouts and voice settings use larger labels; unavailable offline voice still requires its existing one-time setup, while manual controls remain available. Instructor-led QGH, SRE/vectoring and SRA students now use the same scope shell: local Options above, the mode instrument central, Homing & radio in a movable/collapsible left panel, and Session/Tools/Help on the right. Hiding the radio box is reversible from Tools. Session/Ready drawers close with × or Escape. The student receives only the permitted bearings or sampled radar observations and has no aircraft-command, Start or Pause authority.",
+      "text": "QGH, SRE/vectoring, SRA and Procedural share the instructor workspace. On desktop, the scope fills the working area. The left floating Aircraft & radio box holds the selected aircraft quick controls, then homing and red pilot captions below. Controls hides or restores this box. Drag an empty part of its title bar, or focus the title bar and use arrow keys; Shift + arrows makes smaller moves. Home or Reset restores its position. Collapse/Expand folds the contents. Exercise drawers, clock, Saarthi, tour and same-screen confirmations also move by their title bars. The QGH opening page uses its normal static navigation header without drawer Close, Move or Reset buttons; those controls return when the exercise is open. Boxes stay within the visible screen. The right tool rail remains in its usual position. More controls opens the Aircraft controls drawer for target heading, speed and level. Session and Aircraft controls sit on the right tool rail. QGH/SRE/SRA Event history opens the running command/event list; Terminate opens the full debrief. Procedural retains its Review tool, with chart or mode tools where applicable. One drawer opens at a time and overlays the scope without resizing it. Close or Escape restores focus to the opening control. Status, clock and Run/Pause stay above; Options expands secondary controls and Start/Run collapses them. The phone arrangement stays unchanged, with controls and instruments below the plot. Swipe aircraft, tool or legend strips sideways, or drag the visible track below an overflowing row; arrow keys move a focused track. Tracks hide when everything fits. Long forms and review lists scroll vertically inside their panels, and the page scrolls to lower controls. Beside an aircraft blip on the canvas, including its hover details, heading is shown as three digits followed by H, for example 030 H. Procedural retains a true reference; QGH/SRE/SRA retains a magnetic reference. H means heading; QDM/QTE bearings keep their own references. Opening QGH setup forms use larger labels and field values with dark text on light fields. Active aircraft-control panels use light text on dark backgrounds. Unavailable flight buttons are grey while waiting for the controller; admit the controller and wait for Ready before Start becomes available. Panel titles are drag surfaces: avoid buttons, links and fields when dragging. × closes a panel, the minus symbol collapses it where offered, and the circular-arrow symbol resets position. These controls retain accessible labels and keyboard operation. The compact live header identifies instructor role, mode, exercise time and actual session state. The startup explanation is inside Session, reachable with Startup steps. The selected aircraft summary stays above its quick controls; minimizing the panel retains selection and field values. Homing keeps the actual transmission/source status visible beneath its numerical readout. Help includes one seven-step instructor flow with the optional airspace and connection differences explained. Individual QGH readouts and voice settings use larger labels; unavailable offline voice still requires its existing one-time setup, while manual controls remain available. Instructor-led QGH, SRE/vectoring and SRA students now use the same scope shell: local Options above, the mode instrument central, Homing & radio in a movable/collapsible left panel, and Session/Tools/Help on the right. Hiding the radio box is reversible from Tools. Session/Ready drawers close with × or Escape. On SRA and vectoring, choose a Cooperative return to inspect the same sampled detail by keyboard. Escape closes the detail. The student receives only the permitted bearings or sampled radar observations and has no aircraft-command, Start or Pause authority.",
       "questions": [
         "Where is the homing display?",
         "Where are pilot messages now?",
@@ -338,7 +461,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "How do I hide the instructor control strip?",
         "Why does opening a drawer not shrink the scope?",
         "Can I drag the aircraft and radio box?",
-        "How do I move a floating panel?",
+        "How do I drag a floating panel by its title?",
         "How do I reset a moved box?",
         "Why are there no Move buttons in the opening navigation?",
         "Why are flight controls grey before Start?",
@@ -349,7 +472,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "pointers": [
         "Centre: scope or QGH homing instrument. Left: homing and pilot transmission; instructor aircraft controls above.",
         "Right: Session and display/help tools. Flight commands remain on the instructor position.",
-        "Drag an empty panel title; use the move handle with arrow keys when needed. × closes; − folds; reset restores position.",
+        "Drag an empty panel title; focus the title and use arrow keys when needed. × closes; − folds; reset restores position.",
         "On phones the tools scroll and radio panel sits below the instrument. Hiding it is reversible.",
         "Matching layout never reveals hidden instructor aircraft data."
       ]
@@ -514,7 +637,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "scope",
       "priority": true,
       "match": "\\b(?:small screen|landscape|screen clipped|buttons off screen|scope disappeared|radar too small|scroll (?:the )?workspace|scroll ?bars?|scrolling)\\b",
-      "text": "Select an aircraft in the traffic row and use Left now, Stop turn and Right now below the scope. The target-heading field and buttons wrap together on small screens. More controls opens the scrollable Aircraft controls drawer; Close or Escape returns to the scope. The shared instructor layout keeps status, clock and exercise actions together, with homing and pilot captions below the plot. Options reveals display settings and minimises at Start/Run. Swipe long traffic and tool rows sideways, or drag the visible horizontal track below the row. Scroll long forms and review panels vertically. Use landscape for SRE/SRA controller displays. Gyani stays tucked away during running traffic.",
+      "text": "Select an aircraft in the traffic row and use Left now, Stop turn and Right now below the scope. The target-heading field and buttons wrap together on small screens. More controls opens the scrollable Aircraft controls drawer; Close or Escape returns to the scope. The shared instructor layout keeps status, clock and exercise actions together, with homing and pilot captions below the plot. Options reveals display settings and minimises at Start/Run. Swipe long traffic and tool rows sideways, or drag the visible horizontal track below the row. Scroll long forms and review panels vertically. Use landscape for SRE/SRA controller displays. The compact Saarthi button opens help on request while traffic is running.",
       "questions": [
         "The scope disappeared on my phone",
         "How do I use landscape?",
@@ -639,7 +762,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "tour",
       "priority": true,
       "match": "\\b(?:guided tour|screen tour|walkthrough|walk through|show me around|where are the controls)\\b",
-      "text": "A brief, skippable introduction opens on first use when the workspace is ready, before the first Run; Individual QGH shows it during setup. It does not open automatically after Pause or during review. Next highlights the essential controls; Skip tour or Escape closes it. You can reopen Guided tour before Start, while paused or during review. Run closes all tour overlays without pausing or changing the exercise. The first instructor Start may show a short mouse-control reminder inside the controls shelf. Phone users use the aircraft arrows and Stop turn.",
+      "text": "Individual QGH can show a short introduction during setup. For Procedural and instructor-led training, open Guided tour when you want help; you can join, mark Ready and start without opening it. Next highlights the essential controls. Close tour, Skip tour or Escape dismisses it. You can reopen Guided tour before Start, while paused or during review. Run closes all tour overlays without pausing or changing the exercise. The first instructor Start may show a short mouse-control reminder inside the controls shelf. Phone users use the aircraft arrows and Stop turn.",
       "questions": [
         "Show me around the simulator",
         "Where are all the buttons?",
@@ -648,7 +771,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     },
     {
       "id": "help-limits",
-      "title": "What Gyani knows",
+      "title": "How Saarthi can help",
       "topics": [
         "suite",
         "qgh",
@@ -661,10 +784,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "help",
       "priority": true,
       "match": "\\b(?:embeddings?|rag|llm|artificial intelligence|limitations?|learning|trained|smart answers|update (?:the )?guides)\\b",
-      "text": "Look for the Gyani instructor portrait with a headset to open simulator help. Gyani searches the same versioned knowledge as the Training guide and screen tour, using keywords, spelling tolerance and a small local vector index. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
+      "text": "Select Saarthi · Simulator guide on the entry screen or open the guide from your desk, including during a running exercise. Ask “Why can’t I start?” to check admission and Ready status for your position. In Procedural, ask “Where do I draw an ATS route?” and choose Show me to highlight the next available control. Choose the control yourself to proceed. Ask “Tell me more” for an example or the relevant Training guide section. For “How do I save?”, choose what you want to keep. Saarthi works offline using the same release knowledge as the Training guide and screen tour. It does not inspect live traffic or invent operational clearances. Every feature change must update this shared knowledge before release. I am also learning. If I’m unable to answer, please refer to the training guide.",
       "questions": [
         "Are you a real AI?",
         "Can you see my aircraft?",
+        "Can I open Saarthi while the exercise is running?",
         "Are answers automatically updated?"
       ]
     },
@@ -972,7 +1096,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     },
     {
       "id": "terminate-location",
-      "title": "Where to find Terminate",
+      "title": "Find Terminate across the suite",
       "topics": [
         "suite",
         "qgh"
@@ -990,7 +1114,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     },
     {
       "id": "terminate-instructor",
-      "title": "Where to find Terminate",
+      "title": "End an instructor-led exercise",
       "topics": [
         "qgh-instructor",
         "sra"
@@ -1009,7 +1133,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     },
     {
       "id": "terminate-individual",
-      "title": "Where to find Terminate",
+      "title": "End Single or Tactical QGH",
       "topics": [
         "qgh-individual"
       ],
@@ -1082,7 +1206,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "procedural",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sample traffic)\\b",
-      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form. Prepare airspace offers three methods: Published airspace, Draw on chart or Enter coordinates, with ARP, feature choices and existing routes/areas directly available. Save or load starts with Airspace only (chart); choose Complete exercise (aircraft + chart) for a starting-exercise library instead. The three airspace methods contain the current tools; the duplicate legacy settings groups have been removed. Back to traffic setup preserves the roster. Create exercise applies it and opens the scope paused. Return to exercise restores the existing attempt or ended Review without applying traffic drafts. Session → Admit → controller Ready → optional voice connection → Run. Startup steps shows remaining requirements. Sample traffic is available under Aircraft controls; current-progress files are in Review. Sample traffic loads a complete sample exercise after replacement confirmation and is available to Run without creating its traffic again. Only the selected chart or full-exercise library is shown.",
+      "text": "Choose Exercise connection → Set up starting traffic. The opening setup page contains only the initial traffic form. Prepare airspace offers three methods: Published airspace, Draw on chart or Enter coordinates, with ARP, feature choices and existing routes/areas directly available. Save or load starts with Airspace only (chart); choose Complete exercise (aircraft + chart) for a starting-exercise library instead. The three airspace methods contain the current tools; the duplicate legacy settings groups have been removed. Back to traffic setup preserves the roster. Create exercise applies it and opens the scope paused. Confirm only when replacing an existing exercise. Under Prepare airspace → Exercise runway, the true runway heading you set applies to both positions. Return to exercise restores the existing attempt or ended Review without applying traffic drafts. Session → Admit → controller Ready → optional voice connection → Run. Startup steps shows remaining requirements. Sample traffic is available under Aircraft controls; current-progress files are in Review. Sample traffic loads a complete sample exercise after replacement confirmation and is available to Run without creating its traffic again. Only the selected chart or full-exercise library is shown.",
       "questions": [
         "How do I start?",
         "Where is the aircraft roster?",
@@ -1104,7 +1228,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         "preset-form"
       ],
       "pointers": [
-        "Enter the starting traffic, then Create exercise to open a paused scope.",
+        "Choose Set up starting traffic. When the form opens, enter your aircraft and choose Create exercise.",
         "Prepare airspace inside the workspace: Published airspace, Draw on chart or Enter coordinates.",
         "Admit the controller and wait for Ready if using a paired session.",
         "Run → work the exercise → Terminate → Review. Google Meet is optional."
@@ -1113,14 +1237,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     {
       "id": "instructor-start",
       "title": "Start Instructor QGH + SRA",
-      "intro": "Open Instructor setup. Choose QGH, SRE/vectoring or SRA, prepare the traffic and create the session. Keep this position open while the controller joins.",
+      "intro": "Open Instructor setup. The formation screen clears when setup is ready. Choose QGH, SRE/vectoring or SRA, prepare the traffic and create the session. Keep this position open while the controller joins.",
       "topics": [
         "qgh-instructor",
         "sra"
       ],
       "anchor": "instructor",
       "match": "\\b(?:start|begin|create|set up|setup|configure|first exercise|what next|sre|vectoring)\\b",
-      "text": "Open Instructor setup → Set up starting traffic. Choose QGH, SRE/vectoring or SRA, then set the aircraft; new QGH sessions allow up to 2 aircraft, SRE/SRA up to 24. Aircraft performance folds away optional turn and vertical rates. Prepare airspace & radar is collapsed below traffic for runway, final approach, radar and local training boundary settings. Saved exercises offers Save, Import exercise file and Download. Choosing an exercise under Saved on this device fills traffic setup directly; Rename or remove holds occasional management actions. Create session starts the exercise; if an attempt already exists, confirm its replacement or Cancel to keep it. Session → Admit → controller Ready → optional voice connection → Start. Startup steps names missing requirements. Traffic setup pauses and retains the current attempt; Return to exercise restores its desk or ended Review without applying setup edits. More controls opens heading, speed and level controls; the floating Aircraft & radio box and right tool rail remain in the workspace.",
+      "text": "Open Instructor setup → Set up starting traffic. Choose QGH, SRE/vectoring or SRA, then set the aircraft; new QGH sessions allow up to 2 aircraft, SRE/SRA up to 24. Aircraft performance folds away optional turn and vertical rates. Prepare airspace & radar is collapsed below traffic for runway, final approach, radar and local training boundary settings. Enter the magnetic runway orientation once. The final approach track follows it unless you select Use a different final approach track. Saved exercises offers Save, Import exercise file and Download. Choosing an exercise under Saved on this device fills traffic setup directly; Rename or remove holds occasional management actions. Opening a saved setup keeps the connection you chose on entry. Create session opens the instructor desk. Use the Session checklist to share the PIN, admit the controller and check Ready. The controller can open Guided tour on request. If an attempt already exists, confirm its replacement or Cancel to keep it. Session → Admit → controller Ready → optional voice connection → Start. Startup steps names missing requirements. Traffic setup pauses and retains the current attempt; Return to exercise restores its desk or ended Review without applying setup edits. More controls opens heading, speed and level controls; the floating Aircraft & radio box and right tool rail remain in the workspace.",
       "questions": [
         "How do I start SRA?",
         "How do I start instructor QGH?",
@@ -1176,7 +1300,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "individual",
       "match": "\\b(?:start|begin|set up|setup|configure|first exercise|what next)\\b",
-      "text": "Open Single QGH, then choose Single aircraft or Tactical. Check runway, inbound/outbound tracks, Normal or U/S Compass, initial range, performance and level settings. Start opens the controller console and starts aircraft movement. The Stopwatch starts at 00:00:00 and is operated independently with Start, Stop and Reset. Stop pauses this timer while aircraft keep moving. Flight logs and review use recorded simulated elapsed time, independently of the Stopwatch. In Tactical select the intended aircraft before commanding it. The Training Centre holds the accepted radio-call catalogue.",
+      "text": "From Individual QGH, choose Single aircraft or Tactical, then select Normal QGH or U/S Compass. Open Runway and tracks to check the magnetic runway orientation and separate inbound and outbound tracks. The runway marking follows the orientation. Review the optional aircraft and airfield settings if your exercise needs them. Start opens the controller console and starts aircraft movement. If Single QGH reloads during a flight, Restore paused exercise returns to the same aircraft and clock in that tab. Select Resume flight in the console when ready. The Stopwatch starts at 00:00:00 and is operated independently with Start, Stop and Reset. Stop pauses this timer while aircraft keep moving. Flight logs and review use recorded simulated elapsed time, independently of the Stopwatch. In Tactical select the intended aircraft before commanding it. The Training Centre holds the accepted radio-call catalogue.",
       "questions": [
         "How do I start individual QGH?",
         "How do I start Tactical?"
@@ -1185,8 +1309,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "controls": [],
       "intro": "Check runway, procedure tracks, Normal or U/S Compass and aircraft settings. Start begins aircraft movement. Start the separate Stopwatch when you want to time your procedure. Use the controller controls, then Terminate to review your track.",
       "pointers": [
-        "Choose Single or Tactical QGH, then Normal or U/S Compass.",
-        "Set callsigns, tracks, aircraft performance, levels and airfield values.",
+        "Choose Single or Tactical QGH. When the loading screen clears, choose Normal or U/S Compass.",
+        "Use the displayed defaults or open Runway and tracks and the aircraft or airfield settings to make changes.",
         "Start practice; use manual controls or prepare optional voice input.",
         "Terminate to reveal the track and review."
       ]
@@ -1244,7 +1368,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "individual",
       "match": "\\b(?:voice|audio|microphone|ptt|radio|accepted call|command)\\b",
-      "text": "Individual QGH provides manual controls and optional local voice input. Press to talk (PTT) is the default: hold PTT, speak one complete call, then release and allow the final words to be recognised. There is no cloud speech fallback. Prepare the local voice resources and check microphone permission before practice. Pilot audio starts muted; test and confirm headphones before enabling audible replies. Continuous Listening is optional: finish the call with a natural pause; recognition pauses during pilot replies. Controller PTT takes priority when an interruption is needed. In Tactical, address the intended aircraft, for example Raven Twenty One turn right heading zero six zero. A unique designator can identify one aircraft; use the full callsign if two aircraft share a designator. The Training guide’s searchable Accepted RT calls catalogue is the source for supported commands, prerequisites and effects. Supported Normal QGH heading forms include turn right heading 260 and turn left heading two six zero. Use the catalogue for the supported to/onto forms and number wording. These are deterministic parser variants, not a claim of speech-recognition accuracy. Include an explicit direction for a turn instruction. Negated instructions (including don’t), questions, conversation and ambiguous calls must not command a manoeuvre. Check the accepted acknowledgement and use manual controls if recognition is unclear. Confirm termination in the dialog before ending an exercise. Instructor-led and Procedural use instructor-operated controls rather than microphone recognition.",
+      "text": "Individual QGH provides manual controls and optional local voice input. Press to talk (PTT) is the default: hold PTT, speak one complete call, then release and allow the final words to be recognised. There is no cloud speech fallback. Prepare the local voice resources and check microphone permission before practice. For a short offline rehearsal, select Rehearse a radio call on the setup screen or in Voice settings. Hold PTT to try “turn right heading two six zero”, “report heading” or “report distance”. The panel displays the recognized words and an example readback. Exit rehearsal to send normal commands. Pilot audio starts muted; test and confirm headphones before enabling audible replies. Continuous Listening is optional: finish the call with a natural pause; recognition pauses during pilot replies. Controller PTT takes priority when an interruption is needed. In Tactical, address the intended aircraft, for example Raven Twenty One turn right heading zero six zero. A unique designator can identify one aircraft; use the full callsign if two aircraft share a designator. The Training guide’s searchable Accepted RT calls catalogue is the source for supported commands, prerequisites and effects. Supported Normal QGH heading forms include turn right heading 260 and turn left heading two six zero. Use the catalogue for the supported to/onto forms and number wording. These are deterministic parser variants, not a claim of speech-recognition accuracy. Include an explicit direction for a turn instruction. Negated instructions (including don’t), questions, conversation and ambiguous calls must not command a manoeuvre. Check the accepted acknowledgement and use manual controls if recognition is unclear. Confirm termination in the dialog before ending an exercise. Paired exercises have a separate controller push-to-talk setting. The instructor can enable Automatic pilot in Session.",
       "questions": [
         "Which radio calls work?",
         "How do I enable voice?",
@@ -1254,7 +1378,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "controls": [],
       "pointers": [
         "Press to talk (PTT) is the default; Continuous Listening is optional. Manual controls remain available.",
-        "Prepare local voice resources and check the microphone. There is no cloud speech fallback.",
+        "Use Rehearse a radio call on the setup screen to check your microphone and practise a call.",
         "Pilot replies start muted. Test and confirm headphones before enabling audible replies.",
         "In Tactical, address the intended aircraft; use the full callsign when a designator is shared.",
         "Use the Accepted RT calls catalogue for phrase variants, state requirements and effects.",
@@ -1356,7 +1480,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "airspace",
       "match": "^(?!.*\\b(?:reporting point coordinates|route coordinate labels|route arrows?|route levels?|odd(?: and)? even)\\b).*\\b(?:polygon|draw|drawing|boundary|boundaries|point to point|set save arp|custom airspace|custom lfa|coordinates)\\b",
-      "text": "Pause, then Prepare airspace → Draw on chart or Enter coordinates. Select a separate feature: LFA, Prohibited, Restricted, Danger, Control zone or ATS route. A route does not become part of an LFA. Draw on chart first offers Place ARP on preview or Place ARP on radar scope, without coordinate entry. Click or tap points in the preview or choose Draw / edit on radar scope; drag a vertex to adjust it. Delete selected vertex removes that point. Areas need at least three points: Close boundary validates the polygon, then name it, set lower/upper labels and Save boundary. ATS routes need two points: Finish route leaves an open line, then set a route name of at most six letters/numbers, point names, direction and minimum/maximum flight levels before Save route. Enter coordinates is separate: save the geographic ARP first when using latitude/longitude, then enter ordered pairs with the same feature details; local east/north NM is also accepted. Scope aircraft turns, transmissions, panning and exercise shortcuts are isolated during drawing. Existing routes and areas are visible below the method choices; Edit opens and focuses the matching editor, and Remove confirms deletion. + New area or + New route begins a separate feature after confirming any discarded draft. Saved referenced routes/fixes cannot be removed while aircraft use them. Save boundary/route applies geometry to both desks; Save or load saves, downloads or imports reusable airspace. Cancel drawing keeps completed unsaved points. Discard unsaved airspace entries restores saved values after confirmation. Back to traffic setup keeps the roster; Create exercise requires drafts to be saved or discarded. Inactive feature edits retain their inactive state. No latitude or longitude is needed for mouse drawing. Discard unsaved airspace entries appears only when drafts exist. The readiness message explains blockers and shows the point count. Close boundary validates the area; then Save boundary applies it. Closing alone does not save. Drag an empty title bar or focus the move symbol and use arrow keys; Home or Reset restores its position.",
+      "text": "Pause, then Prepare airspace → Draw on chart or Enter coordinates. Select a separate feature: LFA, Prohibited, Restricted, Danger, Control zone or ATS route. A route does not become part of an LFA. Draw on chart first offers Place ARP on preview or Place ARP on radar scope, without coordinate entry. Click or tap points in the preview or choose Draw / edit on radar scope; drag a vertex to adjust it. Delete selected vertex removes that point. Areas need at least three points: Close boundary validates the polygon, then name it, set lower/upper labels and Save boundary. ATS routes need two points: Finish route leaves an open line, then set a route name of at most six letters/numbers, point names, direction and minimum/maximum flight levels before Save route. Enter coordinates is separate: save the geographic ARP first when using latitude/longitude, then enter ordered pairs with the same feature details; local east/north NM is also accepted. Scope aircraft turns, transmissions, panning and exercise shortcuts are isolated during drawing. Use the Routes and areas shortcut to find existing features. Edit opens and focuses the matching editor, and Remove confirms deletion. + New area or + New route begins a separate feature after confirming any discarded draft. Saved referenced routes/fixes cannot be removed while aircraft use them. Save boundary/route applies geometry to both desks; Save or load saves, downloads or imports reusable airspace. Cancel drawing keeps completed unsaved points. Discard unsaved airspace entries restores saved values after confirmation. Back to traffic setup keeps the roster; Create exercise requires drafts to be saved or discarded. Inactive feature edits retain their inactive state. No latitude or longitude is needed for mouse drawing. Discard unsaved airspace entries appears only when drafts exist. The readiness message explains blockers and shows the point count. Close boundary validates the area; then Save boundary applies it. Closing alone does not save. Drag an empty title bar or focus the move symbol and use arrow keys; Home or Reset restores its position.",
       "questions": [
         "How do I draw an LFA polygon?",
         "Can I drag boundary points?",
@@ -1441,7 +1565,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ],
       "anchor": "traffic",
       "match": "^(?!.*\\b(?:saved airspaces?|airspace library|save (?:only )?airspace|load (?:saved )?airspace|reuse airspace|export airspace|import airspace)\\b)(?!.*\\blog ?(?:out|off)\\b).*(?:\\b(?:template|preset|library|import(?:ing)?|restore (?:the |a |my )?(?:current )?progress|export|(?:save|saved|load|reuse) (?:the |a |an |my |this |current |starting |same )?(?:exercise|setup|set up))\\b|^(?!.*\\b(?:boundary|polygon|arp|drawing|draw)\\b).*\\b(?:save|saved|reuse|re use|preset|preload|pre loaded|template|same (?:exercise|setup|set up)|import|export|library|(?:duplicate|rename) (?:selected|(?:(?:a|the|my) )?(?:exercise|setup|template|preset)))\\b)",
-      "text": "Prepare the starting setup before Run. Procedural: Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart). This shows the full-exercise library; Airspace only (chart) shows the chart-only library instead. The opening setup page contains only starting traffic. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. The four main actions are Save exercise, Load, Import exercise file and Download file. To save a new setup, choose New exercise / choose a saved exercise, enter Exercise name and select Save exercise. Choosing a stored exercise then Save exercise asks before replacing it. Apply unfinished chart changes and create or load the starting exercise before Save exercise. Save the full starting setup before its first Run or +1 minute. After termination, Review → Download exercise setup exports the captured initial aircraft and starting airspace for future use; Import exercise file stores that download, then Load applies it. Older underway exercises without a captured starting setup offer Download current progress instead. Saved airspace in Save or load stores the chart alone and keeps current traffic when loaded. Download file exports the selected saved setup as a portable JSON backup. Rename or remove a saved exercise is a collapsed group containing only Rename selected and Remove selected. Procedural has no separate Save as new or Duplicate action; choose the blank new-exercise option and a new name to save the current setup as a new record. Review → Current progress file (includes records) exports or restores an attempt rather than a reusable starting setup. Restoring this file confirms replacement, retains its elapsed time and records, and opens it paused; it does not require Create exercise again. Controller admission and Ready still apply before Run; Google Meet and its audio check are optional. Import exercise file adds a stored starting setup; Load applies it. New Procedural traffic and template imports allow up to 20 aircraft. Previously stored device exercises and captured starting-setup archives retain 21–24 aircraft for loading, recovery or download. To move an older exercise with more than 20 aircraft to another device, use Download current progress and Restore a saved scenario; a new starting-template import still has the 20-aircraft limit. Instructor QGH/SRE/SRA: expand Saved exercises under the starting traffic form. The main actions are Save, Import exercise file and Download. Choose an exercise under Saved on this device to fill traffic setup directly; no separate Load button is needed. Import exercise file fills traffic setup and keeps an independent device copy. Create session opens a new exercise. Save updates the selected exercise; choose Current setup · new exercise and enter a new name to save a separate setup. Download exports the selected setup. Rename or remove folds Rename selected and Remove selected away until needed. Traffic setup retains an existing attempt; Return to exercise restores it without applying setup edits. Create session explicitly confirms replacement of the current exercise and PIN. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens. If another window changes the device library, the list refreshes and the action stops; select the intended exercise again before saving. An unreadable device library is protected from overwrite; download a backup and recover it before replacing saved records. QGH/SRE/SRA Review → Download exercise setup exports the original aircraft and airspace from this attempt, even if you later edited another draft. Import it under Saved exercises to fill traffic setup, then Create session to reuse it. Restart Exercise restores that same original setup to the traffic form.",
+      "text": "Prepare the starting setup before Run. Procedural: Prepare airspace → Save or load → Setup type: Complete exercise (aircraft + chart). This shows the full-exercise library; Airspace only (chart) shows the chart-only library instead. The opening setup page contains only starting traffic. Expand Start from a training scenario to see a sample objective and load editable draft traffic without replacing your airspace or current attempt. Choose a record under Load saved exercise and press Load; it restores the saved airspace and original traffic paused at 00:00:00 after replacement confirmation. Replacement uses a confirmation on the same screen; Cancel keeps unsaved entries. The four main actions are Save exercise, Load, Import exercise file and Download file. To save a new setup, choose New exercise / choose a saved exercise, enter Exercise name and select Save exercise. Choosing a stored exercise then Save exercise asks before replacing it. Apply unfinished chart changes and create or load the starting exercise before Save exercise. Save the full starting setup before its first Run or +1 minute. After termination, Review → Download exercise setup exports the captured initial aircraft and starting airspace for future use; Import exercise file stores that download, then Load applies it. Older underway exercises without a captured starting setup offer Download current progress instead. Saved airspace in Save or load stores the chart alone and keeps current traffic when loaded. Download file exports the selected saved setup as a portable JSON backup. Rename or remove a saved exercise is a collapsed group containing only Rename selected and Remove selected. Procedural has no separate Save as new or Duplicate action; choose the blank new-exercise option and a new name to save the current setup as a new record. Review → Current progress file (includes records) exports or restores an attempt rather than a reusable starting setup. Restoring this file confirms replacement, retains its elapsed time and records, and opens it paused; it does not require Create exercise again. Controller admission and Ready still apply before Run; Google Meet and its audio check are optional. Import exercise file adds a stored starting setup; Load applies it. New Procedural traffic and template imports allow up to 20 aircraft. Previously stored device exercises and captured starting-setup archives retain 21–24 aircraft for loading, recovery or download. To move an older exercise with more than 20 aircraft to another device, use Download current progress and Restore a saved scenario; a new starting-template import still has the 20-aircraft limit. Instructor QGH/SRE/SRA: expand Saved exercises under the starting traffic form. The main actions are Save, Import exercise file and Download. Choose an exercise under Saved on this device to fill traffic setup directly; no separate Load button is needed. Import exercise file fills traffic setup and keeps an independent device copy. Create session opens a new exercise. Save updates the selected exercise; choose Current setup · new exercise and enter a new name to save a separate setup. Download exports the selected setup. Rename or remove folds Rename selected and Remove selected away until needed. Traffic setup retains an existing attempt; Return to exercise restores it without applying setup edits. Create session explicitly confirms replacement of the current exercise and PIN. QGH imports create an independent entry with a unique name. Legacy QGH setups above 2 aircraft remain stored and exportable but cannot Load/Import. Restart after review retries the initial roster. Libraries keep starting setups on this browser/device, separate from live attempt recovery; new live sessions have independent PINs/admissions and saved setups contain no room tokens. If another window changes the device library, the list refreshes and the action stops; select the intended exercise again before saving. An unreadable device library is protected from overwrite; download a backup and recover it before replacing saved records. QGH/SRE/SRA Review → Download exercise setup exports the original aircraft and airspace from this attempt, even if you later edited another draft. Import it under Saved exercises to fill traffic setup, then Create session to reuse it. Restart Exercise restores that same original setup to the traffic form. In the paired debrief, choose Compare, Instructor or Controller on the shared replay timeline. Add a decision bookmark to revisit a timestamp. Procedural review shows Controller reports at replay time beside the instructor plot, and Decision bookmarks are included in the replay download.",
       "questions": [
         "How do I reuse an exercise?",
         "Can I test two students on the same setup?",
@@ -1613,6 +1737,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
   ],
   "tours": [
+    {"pages":["instructor"],"selector":"#controllerVoiceMode","title":"Choose who handles voice calls","entry":"paired-controller-voice","brief":true},
+    {"pages":["procedural"],"selector":"#auto-voice-headings","title":"Choose who handles voice calls","entry":"paired-controller-voice","brief":true},
     {
       "pages": [
         "training-centre"
@@ -2410,6 +2536,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
   ]
 };
+knowledge.saveHelp.sra=knowledge.saveHelp['qgh-instructor'];
 for(const step of knowledge.tours) if(step.entry){const entry=knowledge.entries.find(entry=>entry.id===step.entry);step.text=(step.brief?entry?.intro:entry?.text)||entry?.text||"";}
 for(const step of knowledge.firstUse) if(step.entry){const entry=knowledge.entries.find(entry=>entry.id===step.entry);step.text=entry?.intro||entry?.text||"";}
 if(typeof module === "object" && module.exports) module.exports=knowledge; else root.ATCGuideKnowledge=knowledge;

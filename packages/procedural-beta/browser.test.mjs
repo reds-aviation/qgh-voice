@@ -14,6 +14,127 @@ import { IDBFactory } from 'fake-indexeddb';
 import {webcrypto} from 'node:crypto';
 import {harness} from './testing/worker-harness.mjs';
 
+test('spoken Procedural calls reach the human pilot by default and apply an opted-in heading exactly once', async () => {
+  const host = await harness(), instructor = host.port(), controller = host.port();
+  const i = (await instructor.request('session',{role:'instructor'})).body;
+  const pin = (await instructor.request('room',undefined,i)).body.pin;
+  const s = (await controller.request('session',{role:'student',name:'Controller',pin})).body;
+  const studentId = (await instructor.request('room',undefined,i)).body.students[0].id;
+  await instructor.request('room',{action:'admit',studentId},i);
+  const read = async () => (await instructor.request('state',undefined,i)).body;
+  const initial = await read(), exerciseId = initial.exerciseId;
+  const clock = action => instructor.request('command',{type:'clock',id:webcrypto.randomUUID(),exerciseId,payload:{action}},i);
+  const voice = async (text, fallback = 'p2') => {
+    const {controllerVoice} = await read();
+    return {type:'controller-call',id:webcrypto.randomUUID(),exerciseId,aircraftId:fallback,
+      payload:{text,source:'voice',runKey:controllerVoice.runKey,issuedAt:controllerVoice.issuedAt}};
+  };
+  const transmit = cmd => controller.request('command',cmd,s);
+  const phrase = 'one zero one turn right heading two six zero';
+  assert.equal((await transmit(await voice(phrase))).status,403,'admitted without Ready');
+  await controller.request('room',{action:'ready'},s);
+  assert.equal((await transmit(await voice(phrase))).status,409,'paused');
+  assert.equal((await clock('resume')).status,200);
+  assert.equal((await read()).controllerVoice.automatic,false);
+  assert.equal((await controller.request('voice-mode',{exerciseId,automatic:true},s)).status,403);
+  const manual = await transmit(await voice(phrase));
+  assert.equal(manual.status,200);
+  assert.match(manual.body.voiceOutcome,/instructor review/);
+  assert.equal((await read()).calls.at(-1).status,'pending');
+  assert.equal((await instructor.request('voice-mode',{exerciseId,automatic:true},i)).status,200);
+  assert.equal((await read()).calls.at(-1).status,'pending','enabling does not replay an earlier call');
+  const sent = await voice(phrase);
+  const result = await transmit(sent);
+  assert.equal(result.status,200);
+  assert.match(result.body.voiceOutcome,/101.*right.*260/);
+  const applied = await read(), target = applied.aircraft.find(a=>a.id==='p1');
+  assert.equal(target.targetHeadingDeg,260);
+  assert.equal(target.turnDirection,'right');
+  assert.equal(applied.calls.at(-1).aircraftId,'p1','spoken address wins over selected p2');
+  assert.equal(applied.calls.at(-1).status,'handled');
+  assert.equal(applied.reports.at(-1).source,'readback');
+  assert.equal((await transmit(sent)).status,200);
+  assert.equal((await read()).reports.length,applied.reports.length);
+  assert.equal((await read()).calls.length,applied.calls.length);
+  // Language-model suggestions may request a report. Only the worker can produce pilot facts.
+  for (const [utterance, intent, expected] of [
+    ['101 report heading','heading-report',/^101, heading (\d{3}) true\.$/],
+    ['101 report range','range-report',/^101, range ([\d.]+) nautical miles from ARP\.$/],
+    ['101 transmit for direction finding','df-transmission',/^101, roger\.$/]
+  ]) {
+    const request = await voice(utterance, 'p2');
+    request.payload.candidateIntent = intent;
+    const result = await transmit(request);
+    assert.equal(result.status,200);
+    const sampled = host.saved.get('checkpoint').state;
+    const state = await read();
+    assert.match(result.body.voiceOutcome,expected);
+    const current = sampled.aircraft.find(a=>a.id===target.id);
+    const value = Number(result.body.voiceOutcome.match(expected)[1]);
+    if(intent==='range-report') assert.equal(value,Number(Math.hypot(current.xNm-sampled.environment.stationXNm,current.yNm-sampled.environment.stationYNm).toFixed(1)));
+    if(intent==='heading-report') assert.equal(value,Math.round(current.headingDeg)%360);
+    assert.equal(state.calls.at(-1).status,'handled');
+    assert.equal(state.reports.at(-1).text,result.body.voiceOutcome);
+    assert.equal(state.reports.at(-1).aircraftId,target.id);
+    assert.equal(state.radio.aircraftId,target.id);
+    assert.equal(state.aircraft.find(a=>a.id===target.id).targetHeadingDeg,260);
+    await transmit(request);
+    assert.equal((await read()).reports.length,state.reports.length);
+  }
+  const reportCount = (await read()).reports.length;
+  for (const unclear of ['report range', '999 report range', '101 after passing the station report range', '101 said report range']) {
+    const request = await voice(unclear);
+    request.payload.candidateIntent = 'range-report';
+    assert.match((await transmit(request)).body.voiceOutcome,/instructor review/);
+  }
+  assert.equal((await read()).reports.length,reportCount);
+  for (const [utterance, check] of [
+    ['101 reduce speed to 180 knots', a=>a.targetSpeedKt===180],
+    ['101 descend to 6000 feet', a=>a.targetAltitudeFt===6000],
+    ['101 turn left now', a=>a.continuousTurn&&a.turnDirection==='left'],
+    ['101 stop turn', a=>!a.continuousTurn&&!a.turnDirection]
+  ]) {
+    const result = await transmit(await voice(utterance));
+    assert.equal(result.status,200);
+    const state = await read();
+    assert.equal(state.calls.at(-1).status,'handled',utterance + ' – ' + result.body.voiceOutcome);
+    assert.ok(check(state.aircraft.find(a=>a.id===target.id)),utterance);
+  }
+  for (const utterance of ['101 reduce speed to 600 knots','101 climb to 1000 feet','101 descend to 5000',
+    '101 if clear turn left now','101 said stop turn','101 expect 180 knots']) {
+    assert.match((await transmit(await voice(utterance))).body.voiceOutcome,/instructor review/,utterance);
+  }
+  const stoppedHeading = (await read()).aircraft.find(a=>a.id===target.id).targetHeadingDeg;
+  for (const command of ['did one zero one turn right heading two six zero', 'turn left heading 180',
+    'one zero one turn left heading 180 after passing the station', '999 turn left heading 180']) {
+    const result = await transmit(await voice(command));
+    assert.equal(result.status,200);
+    assert.match(result.body.voiceOutcome,/instructor review/);
+  }
+  const typed = await voice('101 turn left heading 180','p1');
+  typed.payload = {text:typed.payload.text};
+  assert.equal((await transmit(typed)).status,200);
+  assert.equal((await read()).aircraft.find(a=>a.id==='p1').targetHeadingDeg,stoppedHeading);
+  const pending = await voice('101 turn left heading 180');
+  await clock('pause'); await clock('resume');
+  assert.equal((await transmit(pending)).status,409,'previous run cannot submit a late call');
+  const stale = await voice('101 turn left heading 180');
+  stale.payload.issuedAt -= 30000;
+  assert.equal((await transmit(stale)).status,409,'old desk image');
+  const online = await instructor.request('cloud-command',await voice('101 turn left heading 180'), i);
+  assert.equal(online.status,200);
+  assert.equal((await read()).aircraft.find(a=>a.id==='p1').targetHeadingDeg,180);
+  const studView = (await controller.request('state',undefined,s)).body;
+  assert.equal(studView.aircraft,undefined);
+  assert.match(studView.reports.at(-1).text,/180/);
+  await clock('terminate');
+  assert.equal((await transmit(await voice(phrase))).status,409);
+  const restored = await harness(host.saved), fresh = restored.port();
+  const resumedSession = (await fresh.request('session',{role:'instructor'})).body;
+  const restoredView = (await fresh.request('state',undefined,resumedSession)).body;
+  assert.equal(restoredView.controllerVoice.automatic,false,'an offline file never opts in a new instructor');
+});
+
 test('browser worker: admission, privacy, authoritative commands, durability and recovery',async()=>{
   const h = await harness(), instructor = h.port(), student = h.port(), intruder = h.port();
   const opened = await instructor.request('session',{role:'instructor'});

@@ -61,8 +61,9 @@ function loadEngineRuntime(options) {
     }
 
     on(event, listener) { this.listeners.set(event, listener); }
-    acceptWaveform() {}
-    retrieveFinalResult() {}
+    setWords(enabled) { this.words = enabled; }
+    acceptWaveform(buffer) { (this.buffers ||= []).push(buffer); }
+    retrieveFinalResult() { this.finalRequests = (this.finalRequests || 0) + 1; }
     remove() { this.removed = true; }
     emit(event, payload) {
       if (!this.removed) this.listeners.get(event)?.(payload);
@@ -71,7 +72,7 @@ function loadEngineRuntime(options) {
 
   class FakeAudioContext {
     constructor() {
-      this.sampleRate = 16000;
+      this.sampleRate = config.sampleRate || 16000;
       this.destination = node();
       this.state = config.initialAudioState || 'running';
       this.closed = false;
@@ -84,7 +85,8 @@ function loadEngineRuntime(options) {
       if (config.resumeToState) this.state = config.resumeToState;
     }
     createMediaStreamSource() { return node(); }
-    createScriptProcessor() { return { ...node(), onaudioprocess: null }; }
+    createScriptProcessor(bufferSize) { return { ...node(), bufferSize, onaudioprocess: null }; }
+    createBiquadFilter() { return { ...node(), frequency: { value: 0 }, Q: { value: 0 } }; }
     createGain() { return { ...node(), gain: { value: 1 } }; }
     close() {
       this.closeCalls = (this.closeCalls || 0) + 1;
@@ -99,7 +101,7 @@ function loadEngineRuntime(options) {
     }
   }
 
-  const track = { stopped: false, stop() { this.stopped = true; }, addEventListener() {} };
+  const track = { stopped: false, stop() { this.stopped = true; }, addEventListener(name, fn) { this[name] = fn; } };
   state.track = track;
   const sandbox = {
     URL,
@@ -140,7 +142,10 @@ function loadEngineRuntime(options) {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(engineSource, sandbox, { filename: 'offline-voice-engine.js' });
-  return { api: sandbox.QGHOfflineVoiceEngine, state, timers };
+  function expireCaptureTail() {
+    for (const timer of timers.values()) if (!timer.cleared && timer.delay <= 100) timer.callback();
+  }
+  return { api: sandbox.QGHOfflineVoiceEngine, state, timers, expireCaptureTail };
 }
 
 test('single exercise grammar supports its callsign, legacy calls and cache refresh', () => {
@@ -215,6 +220,7 @@ test('forwards recognizer partial text and suppresses partials while finalizing'
   assert.deepEqual(partials, ['turn left', '', ''], 'silence must remain empty so it cannot claim the radio channel');
 
   session.stop();
+  runtime.expireCaptureTail();
   assert.equal(session.isFinalizing(), true);
   assert.equal(recognizer.removed, false, 'the recognizer remains available for its final result');
   recognizer.emit('partialresult', { result: { partial: 'turn right' } });
@@ -272,6 +278,85 @@ test('replaces a pending PTT final-result drain before a new press starts', asyn
   assert.equal(runtime.state.recognizers.length, 2, 'a new recognizer opens immediately for the new PTT press');
   assert.equal(session.isFinalizing(), false);
   assert.deepEqual(lifecycle, [], 'the stale final result does not emit an end callback into the new PTT press');
+  session.cancel();
+});
+
+test('release drains queued audio replies before marking the final utterance complete', async () => {
+  const runtime = loadEngineRuntime();
+  const complete = [], segments = [];
+  const session = runtime.api.create({ onEnded: detail => complete.push(detail.finalDrained) });
+  await session.start({ onResult: text => segments.push(text) });
+  session.processor.onaudioprocess({ inputBuffer: {} });
+  session.processor.onaudioprocess({ inputBuffer: {} });
+  session.stop();
+  runtime.expireCaptureTail();
+  const recognizer = runtime.state.recognizer;
+  recognizer.emit('result', {result: {text: 'one zero one turn right heading two six zero'}});
+  recognizer.emit('partialresult', {result: {partial: 'when'}});
+  assert.deepEqual(complete, []);
+  recognizer.emit('result', {result: {text: 'when ready'}});
+  assert.deepEqual(segments, ['one zero one turn right heading two six zero', 'when ready']);
+  assert.deepEqual(complete, [true]);
+});
+
+test('uses speech-sized blocks and submits the buffered end of the call before finalizing', async () => {
+  for (const [sampleRate, frames] of [[16000, 512], [44100, 1024], [48000, 1024]]) {
+    const runtime = loadEngineRuntime({ sampleRate });
+    const ended = [];
+    const session = runtime.api.create({onEnded: details => ended.push(details.finalDrained)});
+    await session.start({});
+    const recognizer = runtime.state.recognizer;
+    const processor = session.processor;
+    assert.equal(processor.bufferSize, frames);
+    assert.equal(session.speechFilter.type, 'highpass');
+    assert.equal(session.speechFilter.frequency.value, 75);
+    session.stop();
+    assert.equal(runtime.state.track.stopped, true);
+    assert.equal(recognizer.finalRequests, undefined);
+    const tail = { lastSyllable: true };
+    processor.onaudioprocess({ inputBuffer: tail });
+    assert.equal(recognizer.buffers[0], tail);
+    assert.equal(recognizer.finalRequests, 1);
+    runtime.expireCaptureTail();
+    processor.onaudioprocess({ inputBuffer: {} });
+    assert.equal(recognizer.buffers.length, 1);
+    recognizer.emit('partialresult', { result: { partial: 'two six zero' } });
+    assert.deepEqual(ended, []);
+    recognizer.emit('result', { result: { text: 'two six zero' } });
+    assert.deepEqual(ended, [true]);
+  }
+});
+
+test('flags an entire uncertain segment, including a weak heading digit or mixed unknown token', async () => {
+  const {api, state} = loadEngineRuntime();
+  const heard = [], uncertain = [];
+  const session = api.create();
+  await session.start({onResult: text => heard.push(text), onUnrecognizedSegment: () => uncertain.push(true)});
+  const recognizer = state.recognizer;
+  assert.equal(recognizer.words, true);
+  recognizer.emit('result', {result: {text: 'turn left [unk]'}});
+  recognizer.emit('result', {result: {text: 'turn left two six zero',
+    result: [{word:'turn', conf:0.98}, {word:'six', conf:0.25}]}});
+  recognizer.emit('result', {result: {text:'report heading', result:[{word:'report', conf:0.97}, {word:'heading', conf:0.94}]}});
+  assert.deepEqual(uncertain, [true, true]);
+  assert.deepEqual(heard, ['report heading']);
+  session.cancel();
+});
+
+test('retired microphone events cannot feed a new transmission or stop its recognizer', async () => {
+  const {api, state} = loadEngineRuntime();
+  const session = api.create();
+  await session.start({});
+  const oldProcessor = session.processor;
+  const oldTrackEnded = state.track.ended;
+  const oldRecognizer = state.recognizer;
+  session.stop();
+  await session.start({});
+  oldProcessor.onaudioprocess({ inputBuffer: {} });
+  oldTrackEnded();
+  assert.equal(oldRecognizer.buffers, undefined);
+  assert.equal(state.recognizer.removed, false);
+  assert.equal(session.listening, true);
   session.cancel();
 });
 
@@ -467,6 +552,7 @@ test('final recognition ends synchronously while audio release waits for context
   } });
   await session.start({ onResult: transcript => events.push(transcript) });
   session.stop();
+  runtime.expireCaptureTail();
   runtime.state.recognizer.emit('result', { result: { text: 'report heading' } });
   assert.deepEqual(events, ['report heading', 'ended']);
   assert.equal(session.listening, false);

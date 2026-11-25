@@ -8,7 +8,7 @@ Contributor(s): None designated in this initial notice.
 No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
 */
 
-// Review uses instructor samples only. It never publishes truth to a live controller.
+// The instructor records truth alongside the reports shared with the controller.
 export function sampleTraffic(view) {
   return {t:view.elapsed, aircraft:(view.aircraft || []).filter(a=>a.status !== 'scheduled').map(a=>({id:a.id,callsign:a.callsign,x:a.xNm,y:a.yNm,z:a.altitudeFt,heading:a.headingDeg})), alerts:(view.alerts || []).map(a=>{
     const rule=(view.criteria || []).find(c=>c.id===a.criterionId);
@@ -35,6 +35,18 @@ export function recordedReviewEvents(events, next, start=0) {
   for(const e of next || []) if(e.id && Number.isFinite(e.elapsed) && e.elapsed>=start) merged.set(e.id,{id:e.id,t:e.elapsed,kind:e.kind,text:e.text,aircraftId:e.aircraftId});
   return [...merged.values()].filter(e=>e.t>=start).sort((a,b)=>a.t-b.t).slice(-2000);
 }
+const eventLabels = {
+  'clock-step': 'Clock advanced by 1 min',
+  'clock-resume': 'Exercise resumed',
+  'clock-pause': 'Exercise paused',
+  'clock-terminate': 'Exercise terminated',
+  'clock-reopen': 'Exercise reopened',
+};
+
+function eventLabel(event) {
+  return eventLabels[event.kind] || event.text || event.kind.replaceAll('-', ' ');
+}
+
 export function interpolateTraffic(frames, time) {
   if (!frames.length) return null;
   let index = frames.findIndex(f=>f.t > time);
@@ -45,8 +57,40 @@ export function interpolateTraffic(frames, time) {
 }
 export function createTrafficReview(container) {
   let exercise='',frames=[],events=[],active=false,playing=false,time=0,last=0,mode='top',timer=0,selected='',selectionSignature='',timelineSignature='';
+  let timelineDirty = true, reports = [], bookmarks = [], snapshotKey = '';
   const el=(tag,text='')=>{const e=document.createElement(tag);e.textContent=text;return e;};
+  const metrics = el('dl');
+  metrics.className = 'procedural-review-metrics';
+  const metric = label => {
+    const group = el('div'), value = el('dd', '—');
+    group.append(el('dt', label), value); metrics.append(group); return value;
+  };
+  const duration = metric('Exercise time'), aircraftCount = metric('Aircraft recorded');
+  const eventCount = metric('Recorded events'), reportCount = metric('Pilot reports');
+  const layout = el('div'), plot = el('section'), evidence = el('section');
+  layout.className = 'procedural-review-layout';
+  plot.className = 'procedural-review-plot'; evidence.className = 'procedural-review-evidence';
   const toolbar=el('div');toolbar.className='traffic-review-toolbar';
+  const controllerEvidence = el('details'), controllerList = el('ol');
+  controllerEvidence.append(el('summary', 'Controller reports at replay time'), controllerList);
+  const bookmarksPanel = el('details'), bookmarkForm = el('form'), bookmarkInput = el('input'), bookmarkList = el('ul');
+  const bookmarkLabel = el('label','Decision note');
+  bookmarkInput.maxLength = 160; bookmarkInput.required = true;
+  bookmarkLabel.append(bookmarkInput);
+  const bookmarkButton = el('button','Bookmark current time'); bookmarkButton.type = 'submit';
+  bookmarkForm.className = 'traffic-review-bookmark-form';
+  bookmarkForm.append(bookmarkLabel, bookmarkButton);
+  bookmarksPanel.append(el('summary','Decision bookmarks'), bookmarkForm, bookmarkList);
+  bookmarkForm.onsubmit = event => {
+    event.preventDefault();
+    const label = bookmarkInput.value.trim();
+    if (!label || bookmarks.length >= 40 || !frames.length) return;
+    seek(time);
+    bookmarks.push({t:time,label});
+    bookmarks.sort((a,b) => a.t - b.t);
+    bookmarkInput.value = ''; persist(); renderBookmarks();
+  };
+
   const play=el('button','▶ Play');play.type='button';
   const viewLabel=el('label','View'),views=el('select');views.setAttribute('aria-label','Traffic replay view');
   for(const [id,name] of [['top','Top'],['side','Side · altitude'],['3d','3D schematic']]){const option=el('option',name);option.value=id;views.append(option);}
@@ -60,29 +104,76 @@ export function createTrafficReview(container) {
   const markers=el('div');markers.className='traffic-review-markers';markers.setAttribute('aria-label','Recorded command and event timeline');
   const eventDetails=el('details'),eventSummary=el('summary','Commands & events'),eventList=el('div');eventList.className='traffic-review-events';eventDetails.append(eventSummary,eventList);
   const canvas=el('canvas');canvas.className='traffic-review-canvas';canvas.setAttribute('aria-label','Instructor traffic replay with altitude and configured separation cues');
-  const note=el('p','Recorded instructor traffic. Red cues use the configured exercise objectives; they do not certify every Doc 4444 separation rule.');note.className='hint';
+  const note=el('p','Cues use the separation objectives configured for this exercise.');note.className='hint';
   const cues=el('div');cues.className='review-cues';cues.setAttribute('role','status');
   const download=el('button','Download replay');download.type='button';
-  container.append(toolbar,markers,canvas,cues,eventDetails,note,download);
-  function persist(){try{sessionStorage.setItem('ats-procedural-replay',JSON.stringify({exercise,frames,events}));}catch{ /* Quota failure leaves the in-memory replay available. */ }}
+  plot.append(el('h3', 'Traffic replay'), toolbar, markers, canvas);
+  evidence.append(el('h3', 'Separation cues'), cues, note, controllerEvidence, bookmarksPanel, eventDetails);
+  layout.append(plot, evidence);
+  container.append(metrics, layout);
+  (document.getElementById('review-record-downloads') || container).append(download);
+  function persist(){try{sessionStorage.setItem('ats-procedural-replay',JSON.stringify({exercise,frames,events,reports,bookmarks}));}catch{ /* Quota failure leaves the in-memory replay available. */ }}
   function seek(t){time=Math.max(frames[0]?.t || 0,Math.min(frames.at(-1)?.t || 0,t));playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);draw();}
   const clock=t=>{const s=Math.max(0,Math.floor(Number(t)||0));return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(v=>String(v).padStart(2,'0')).join(':');};
+  function renderBookmarks() {
+    bookmarkButton.disabled = bookmarks.length >= 40 || !frames.length;
+    bookmarkList.replaceChildren(...bookmarks.map((bookmark,index) => {
+      const row = el('li'), go = el('button', clock(bookmark.t) + ' · ' + bookmark.label);
+      go.type = 'button'; go.onclick = () => seek(bookmark.t);
+      const remove = el('button','Remove'); remove.type = 'button'; remove.setAttribute('aria-label','Remove bookmark ' + bookmark.label);
+      remove.onclick = () => { bookmarks.splice(index,1); persist(); renderBookmarks(); bookmarkInput.focus(); };
+      row.append(go,remove);
+      return row;
+    }));
+  }
+  function renderControllerEvidence() {
+    if (!controllerEvidence.open) return;
+    const history = reports.filter(report => report.elapsed <= time && (!selected || report.aircraftId === selected)).slice(-20).reverse();
+    const key = JSON.stringify([exercise,selected,history]);
+    if (key === snapshotKey) return;
+    snapshotKey = key;
+    controllerList.replaceChildren(...(history.length ? history.map(report => el('li',clock(report.elapsed)+' · '+report.text)) : [el('li','No pilot reports by this point in the replay.')]));
+  }
+  controllerEvidence.addEventListener('toggle',renderControllerEvidence);
   function renderTimeline(){
+    if (!timelineDirty) return;
+    timelineDirty = false;
     const targets=[...new Map(frames.flatMap(f=>f.aircraft).map(a=>[a.id,a.callsign])).entries()];
     const signature=JSON.stringify(targets);
     if(signature!==selectionSignature){selectionSignature=signature;aircraftSelect.replaceChildren(...[['','All aircraft'],...targets].map(([id,name])=>{const o=el('option',name);o.value=id;return o;}));if(!targets.some(([id])=>id===selected))selected='';aircraftSelect.value=selected;}
     const visible=events.filter(e=>!selected || !e.aircraftId || e.aircraftId===selected).slice(-100);
     const start=frames[0]?.t || 0,end=frames.at(-1)?.t || 1;
-    const timelineKey=JSON.stringify([selected,start,end,visible]);
+    duration.textContent = clock(frames.at(-1)?.t);
+    aircraftCount.textContent = String(targets.length);
+    eventCount.textContent = String(events.length);
+    reportCount.textContent = String(reports.length);
+    play.disabled = scrub.disabled = frames.length < 2 || frames.at(-1).t <= start;
+    const timelineWidth = Math.max(1, markers.clientWidth || 600);
+    const timelineKey=JSON.stringify([selected,start,end,visible,timelineWidth]);
     if(timelineSignature===timelineKey)return;
     timelineSignature=timelineKey;
-    markers.replaceChildren(...visible.map(e=>{const b=el('button','•');b.type='button';b.style.left=`${Math.max(0,Math.min(100,(e.t-start)/(end-start || 1)*100))}%`;b.title=`${clock(e.t)} · ${e.kind} · ${e.text}`;b.setAttribute('aria-label',b.title);b.onclick=()=>seek(e.t);return b;}));
-    eventList.replaceChildren(...visible.map(e=>{const b=el('button',`${clock(e.t)} · ${e.kind} · ${e.text}`);b.type='button';b.onclick=()=>seek(e.t);return b;}));
+    const groups = [];
+    for (const event of visible) {
+      const position = Math.max(0, Math.min(1, (event.t - start) / (end - start || 1)));
+      const previous = groups.at(-1);
+      if (previous && (position - previous.position) * timelineWidth < 32) previous.events.push(event);
+      else groups.push({position, events: [event]});
+    }
+    markers.replaceChildren(...groups.map(group => {
+      const first = group.events[0], count = group.events.length;
+      const mark = el('button', count > 1 ? String(count) : '•');
+      mark.type = 'button'; mark.style.left = `${group.position * 100}%`;
+      mark.title = count > 1 ? `${count} events from ${clock(first.t)}` : `${clock(first.t)} · ${eventLabel(first)}`;
+      mark.setAttribute('aria-label', mark.title); mark.onclick = () => seek(first.t);
+      return mark;
+    }));
+    eventList.replaceChildren(...visible.map(e=>{const b=el('button',`${clock(e.t)} · ${eventLabel(e)}`);b.type='button';b.onclick=()=>seek(e.t);return b;}));
     if(!visible.length)eventList.append(el('p','No recorded commands or events for this selection.'));
   }
   function draw(){
     const f=interpolateTraffic(frames,time),width=canvas.clientWidth || 700,height=canvas.clientHeight || 400,dpr=Math.min(devicePixelRatio || 1,2);
     renderTimeline();
+    renderControllerEvidence();
     if(canvas.width!==width*dpr || canvas.height!==height*dpr){canvas.width=width*dpr;canvas.height=height*dpr;}
     const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#10181e';ctx.fillRect(0,0,width,height);
     if(!f){ctx.fillStyle='#b6cbd5';ctx.font='14px Plex,"IBM Plex Sans",Arial,sans-serif';ctx.fillText('Traffic is recorded when the exercise starts.',18,30);return;}
@@ -96,7 +187,7 @@ export function createTrafficReview(container) {
     ctx.fillText(mode==='top'?'NORTH ↑ · NM':mode==='side'?'EAST–WEST NM · ALTITUDE FT':'3D SCHEMATIC · ALTITUDE EXAGGERATED',18,20);
     const warningIDs=new Set(f.alerts.filter(a=>reviewCueSeverity(a)==='warning').flatMap(a=>a.ids));
     for(const a of f.aircraft){
-      const color=warningIDs.has(a.id)?'#ff7d7d':selected && selected!==a.id?'#617c88':'#82e5ed';
+      const color=warningIDs.has(a.id)?'#ff7d7d':selected && selected!==a.id?'#758e9a':'#82e5ed';
       ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();
       let started=false;for(const old of frames){if(old.t>time)break;const v=old.aircraft.find(v=>v.id===a.id);if(!v)continue;const p=project(v);started?ctx.lineTo(...p):ctx.moveTo(...p);started=true;}ctx.stroke();
       const [x,y]=project(a);ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,a.id===selected?7:5,0,Math.PI*2);ctx.fill();
@@ -118,28 +209,62 @@ export function createTrafficReview(container) {
   play.onclick=()=>{if(!frames.length)return;cancelAnimationFrame(timer);playing=!playing;play.textContent=playing?'Ⅱ Pause':'▶ Play';if(playing){if(time>=frames.at(-1).t)time=frames[0].t;last=performance.now();timer=requestAnimationFrame(loop);}};
   scrub.oninput=()=>seek(Number(scrub.value));
   views.onchange=()=>{mode=views.value;draw();};
-  aircraftSelect.onchange=()=>{selected=aircraftSelect.value;draw();};
-  download.onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({version:2,exercise,frames,events})],{type:'application/json'}));const a=el('a');a.href=url;a.download='ATS-SIMBOX-traffic-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-  const resize=new ResizeObserver(()=>{if(active)draw();});resize.observe(container);
+  aircraftSelect.onchange=()=>{selected=aircraftSelect.value;timelineDirty=true;draw();};
+  download.onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({version:2,exercise,frames,events,reports,bookmarks})],{type:'application/json'}));const a=el('a');a.href=url;a.download='ATS-SIMBOX-traffic-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  const resize=new ResizeObserver(()=>{timelineDirty=true;if(active)draw();});resize.observe(container);
   return {
     record(v){
-      if(!v?.exerciseId || !v.aircraft)return;
-      if(exercise!==v.exerciseId){playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);exercise=v.exerciseId;frames=[];events=[];selectionSignature='';timelineSignature='';selected='';try{const saved=JSON.parse(sessionStorage.getItem('ats-procedural-replay'));if(saved?.exercise===exercise && Array.isArray(saved.frames)){frames=saved.frames;events=Array.isArray(saved.events)?saved.events:[];}}catch{}}
+      if(!v?.exerciseId || !v.aircraft || v.role === 'student')return;
+      if(exercise!==v.exerciseId){
+        playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);
+        exercise=v.exerciseId;frames=[];events=[];reports=[];bookmarks=[];
+        selectionSignature='';timelineSignature='';selected='';
+        try {
+          const saved=JSON.parse(sessionStorage.getItem('ats-procedural-replay'));
+          if(saved?.exercise===exercise && Array.isArray(saved.frames)){
+            frames=saved.frames;events=Array.isArray(saved.events)?saved.events:[];
+            reports=Array.isArray(saved.reports)?saved.reports:[];
+            bookmarks=Array.isArray(saved.bookmarks)?saved.bookmarks:[];
+          }
+        } catch {}
+      }
       let previous=frames.at(-1);
-      if(previous && v.elapsed<previous.t){playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);frames=[];events=[];previous=null;}
+      if(previous && v.elapsed<previous.t){
+        playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);
+        frames=[];events=[];reports=[];bookmarks=[];snapshotKey='';previous=null;
+        if (active) renderBookmarks();
+      }
+      const mergedReports = new Map(reports.map(report => [report.id,report]));
+      for(const report of v.reports || []) {
+        if (report.id && Number.isFinite(report.elapsed)) mergedReports.set(report.id,report);
+      }
+      const newReports = mergedReports.size !== reports.length;
+      if (newReports) {
+        reports = [...mergedReports.values()].sort((a,b) => a.elapsed-b.elapsed).slice(-2000);
+        timelineDirty = true;
+      }
+
       const oldEvents=JSON.stringify(events);events=recordedReviewEvents(events,v.events,frames[0]?.t || 0);
       const sample=sampleTraffic(v);
       const cuesChanged=previous && cueTransitions(sample.alerts)!==cueTransitions(previous.alerts);
       const preparationChanged=previous && !v.running && JSON.stringify(sample.aircraft)!==JSON.stringify(previous.aircraft);
-      if(!previous || v.elapsed-previous.t>=4 || cuesChanged || preparationChanged || v.terminated && v.elapsed!==previous.t || oldEvents!==JSON.stringify(events)){
+      if(!previous || v.elapsed-previous.t>=4 || newReports || cuesChanged || preparationChanged || v.terminated && v.elapsed!==previous.t || oldEvents!==JSON.stringify(events)){
         if(previous && v.elapsed===previous.t) frames[frames.length-1]=sample;
         else frames.push(sample);
-        if(frames.length>1800)frames.shift();persist();
+        if(frames.length>1800)frames.shift();timelineDirty=true;persist();
         if(active){time=Math.max(frames[0]?.t || 0,Math.min(frames.at(-1)?.t || 0,time));scrub.min=String(frames[0]?.t || 0);scrub.max=String(frames.at(-1)?.t || 0);draw();}
       }
     },
-    open(v){active=true;this.record(v);time=frames[0]?.t || 0;scrub.min=String(time);scrub.max=String(frames.at(-1)?.t || time);draw();},
+    open(v){
+      if (v?.role === 'student') return;
+      active = true; this.record(v);
+      eventDetails.open = !!v?.terminated;
+      time = frames[0]?.t || 0;
+      bookmarkInput.value = ''; renderBookmarks();
+      scrub.min = String(time); scrub.max = String(frames.at(-1)?.t || time);
+      draw();
+    },
     close(){active=false;playing=false;play.textContent='▶ Play';cancelAnimationFrame(timer);},
-    clear(){this.close();frames=[];events=[];exercise='';time=0;selected='';selectionSignature='';timelineSignature='';}
+    clear(){this.close();frames=[];events=[];exercise='';time=0;selected='';selectionSignature='';timelineSignature='';timelineDirty=true;reports=[];bookmarks=[];snapshotKey='';}
   };
 }

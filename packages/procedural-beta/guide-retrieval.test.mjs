@@ -19,6 +19,27 @@ import {parseHTML} from 'linkedom';
 const require=createRequire(import.meta.url), {matchGuideQuestion}=require('./static/suite-guide-chat.js');
 const source=n=>readFileSync(new URL('./static/'+n,import.meta.url),'utf8');
 
+test('Saarthi gives a worked example on follow-up and distinguishes the available save workflows',()=>{
+  const initial=matchGuideQuestion('Which connection mode should I select?','procedural');
+  const more=matchGuideQuestion('Give me an example','procedural',initial.intent);
+  assert.notEqual(more.text,initial.text);
+  assert.match(more.text,/separate laptops/);
+  assert.ok(initial.brief.length<initial.text.length);
+  assert.ok(initial.choices.includes('Tell me more'));
+  const section=matchGuideQuestion('Tell me more','procedural',more.intent);
+  assert.notEqual(section.text,more.text);
+  assert.match(section.links[0].href,/#answer-connections$/);
+  const prompt=matchGuideQuestion('How do I save?','procedural');
+  assert.deepEqual(prompt.choices,['Starting setup','Current progress','Airspace only']);
+  assert.match(matchGuideQuestion('Current progress','procedural',prompt.intent).text,/elapsed time and records/);
+  assert.match(matchGuideQuestion('Airspace only','procedural',prompt.intent).text,/Save airspace/);
+  assert.deepEqual(matchGuideQuestion('save','sra').choices,['Starting setup','Download setup after review']);
+  assert.match(matchGuideQuestion('save','qgh-individual').text,/recorded track/);
+  const desk=parseHTML('<html><body><section id="desk"><b id="role">STUDENT / CONTROLLER</b><b id="clock-state">PAUSED</b></section></body></html>').document;
+  assert.match(matchGuideQuestion('save','procedural','',desk).text,/Ask your instructor/);
+  assert.match(matchGuideQuestion('Hello Gyani').text,/Saarthi/);
+});
+
 test('tutorial help distinguishes recorded playback from maintained current guidance',()=>{
   for(const topic of ['suite','qgh-individual','qgh-instructor','procedural','sra']){
     for(const question of ['Where is the full tutorial?','How do I jump to a video chapter?','Does the YouTube tutorial work offline?']){
@@ -30,7 +51,7 @@ test('tutorial help distinguishes recorded playback from maintained current guid
   assert.match(renderCommonGuide(),/training-centre\.html#demonstrations/);
 });
 
-test('Gyani: connection, extended screens, common controls, paraphrases and unsupported questions',()=>{
+test('Saarthi: connection, extended screens, common controls, paraphrases and unsupported questions',()=>{
   const cases=[
     ['Which connection mode should I select?','connections'],['Can I use a different PC?','connections'],
     ['How do we practise without internet?','connections'],['Does Supabase connect QGH and SRA?','connections'],
@@ -82,23 +103,34 @@ test('retired airspace choices cannot return in preset or regional catalogues',(
   for(const id of ['sirsa','jamnagar']){assert.ok(!presets.some(x=>x.id===id));assert.equal(enroute.aerodromes[id],undefined);}
 });
 
-test('Gyani hides throughout individual exercise and returns for review',async()=>{
+test('Saarthi closes on Start and opens on request inside either individual console',async()=>{
   for(const [path,id] of [['single.html','console'],['tactical.html','tConsole']]) {
-    const h=domHarness(`<html><body><section id="${id}"></section></body></html>`,'/qgh-voice/'+path);
+    const header=id==='console'?'console-head':'tactical-console-head';
+    const appHead=id==='console'?'app-header':'tactical-app-header';
+    const brand=id==='console'?'brand':'tactical-brand';
+    const h=domHarness(`<html><body><header class="${appHead}"><div class="${brand}"></div></header><section id="${id}"><header class="${header}"></header></section></body></html>`,'/qgh-voice/'+path);
     vm.runInContext(source('guide-knowledge.js'),h.context);
     vm.runInContext(source('suite-guide-chat.js'),h.context);
     const chat=h.document.getElementById('suite-guide-chat');
     assert.equal(chat.hidden,false);
+    assert.equal(chat.parentElement.className,brand);
     chat.querySelector('button').click();assert.equal(h.document.getElementById('suite-guide-chat-panel').hidden,false);
     h.document.getElementById(id).classList.add('active');
     await new Promise(resolve=>setImmediate(resolve));
-    assert.equal(chat.hidden,true);assert.equal(h.document.getElementById('suite-guide-chat-panel').hidden,true);
+    const panel=h.document.getElementById('suite-guide-chat-panel');
+    assert.equal(chat.hidden,false);assert.equal(panel.hidden,true);
+    assert.equal(chat.parentElement.className,header);
+    chat.querySelector('button').click();assert.equal(panel.hidden,false);
+    const input=chat.querySelector('textarea');input.value='Hello';
+    chat.querySelector('form').dispatchEvent(new h.Event('submit',{bubbles:true,cancelable:true}));
+    assert.match(chat.querySelector('.suite-guide-chat__history').lastElementChild.textContent,/Saarthi/);
+    assert.ok(h.document.getElementById(id).classList.contains('active'));
     h.document.getElementById(id).classList.remove('active');
-    await new Promise(resolve=>setImmediate(resolve));assert.equal(chat.hidden,false);
+    await new Promise(resolve=>setImmediate(resolve));assert.equal(chat.hidden,false);assert.equal(chat.parentElement.className,brand);
   }
 });
 
-test('Gyani explains current shared controls, saved setups and retired PAR',()=>{
+test('Saarthi explains current shared controls, saved setups and retired PAR',()=>{
   for(const [question,topic,intent,pattern] of [
     ['How does centre mouse click stop turning?','procedural','stop-turn',/Middle.click/],
     ['Can I type a target heading?','qgh-instructor','instructor-turn',/Heading °M/],
@@ -282,11 +314,15 @@ test('review help distinguishes reusable starting setup download from current pr
   }
 });
 
-test('Gyani remains available at student join despite a hidden initial RUNNING label',async()=>{
-  const h=domHarness('<html><body><header></header><section id="studentWorkspace" hidden><b id="studentExerciseState">RUNNING</b></section></body></html>','/qgh-voice/instructor-led/student.html');
+test('Saarthi moves from student join to the scope tool rail without opening itself',async()=>{
+  const h=domHarness('<html><body><header></header><section id="studentWorkspace" hidden><nav id="studentTools"></nav><b id="studentExerciseState">RUNNING</b></section></body></html>','/qgh-voice/instructor-led/student.html');
   vm.runInContext(source('guide-knowledge.js'),h.context);vm.runInContext(source('suite-guide-chat.js'),h.context);
   const chat=h.document.getElementById('suite-guide-chat');assert.equal(chat.hidden,false);
-  h.document.getElementById('studentWorkspace').hidden=false;await new Promise(resolve=>setImmediate(resolve));assert.equal(chat.hidden,true);
+  h.document.getElementById('studentWorkspace').hidden=false;await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(chat.parentElement.id,'studentTools');assert.equal(chat.querySelector('[role="dialog"]').hidden,true);
+  chat.querySelector('.suite-guide-chat__launcher').click();assert.equal(chat.querySelector('[role="dialog"]').hidden,false);
+  h.document.getElementById('studentExerciseState').textContent='RUNNING';await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(chat.querySelector('[role="dialog"]').hidden,false);
 });
 
 test('first instructor Start shows one dismissible mouse hint without pausing traffic',async()=>{
@@ -301,7 +337,7 @@ test('first instructor Start shows one dismissible mouse hint without pausing tr
   h.document.body.classList.add('exercise-running');await new Promise(resolve=>setImmediate(resolve));assert.equal(hint.hidden,true);
 });
 
-test('first workspace introduction is skippable before Run and never overlays running traffic',async()=>{
+test('on-demand workspace tour is closable before Run and never overlays running traffic',async()=>{
   for(const [page,workspace,scope,pilot,controls,status] of [
     ['instructor','activeWorkspace','instructorScope','instructorHoming','startExercise','exerciseState'],
     ['procedural','desk','scope','homing','resume','clock-state'],
@@ -312,7 +348,8 @@ test('first workspace introduction is skippable before Run and never overlays ru
     vm.runInContext(source('guide-knowledge.js'),h.context);vm.runInContext(source('suite-tour.js'),h.context);
     const panel=h.document.getElementById('suite-tour');assert.equal(panel.hidden,true);
     h.document.getElementById(workspace).hidden=false;await new Promise(resolve=>setImmediate(resolve));
-    assert.equal(panel.hidden,false);assert.match(panel.textContent,/Quick introduction/);assert.match(panel.textContent,/middle-click|Middle mouse/i);assert.equal(panel.querySelectorAll('button')[2].textContent,'Skip tour');
+    assert.equal(panel.hidden,true);h.document.getElementById('suite-tour-open').click();
+    assert.equal(panel.hidden,false);assert.equal(panel.querySelector('.suite-tour-close').textContent,'Close tour');
     assert.equal(h.document.getElementById('test-clock').textContent,'00:00','introduction never advances the clock');
     panel.querySelectorAll('button')[2].click();assert.equal(panel.hidden,true);
     h.document.getElementById(workspace).hidden=true;h.document.getElementById(workspace).hidden=false;await new Promise(resolve=>setImmediate(resolve));assert.equal(panel.hidden,true,'first-use introduction appears only once');
@@ -322,8 +359,8 @@ test('first workspace introduction is skippable before Run and never overlays ru
   }
 });
 
-test('first-use tour recognises the zero exercise clock and does not reopen an underway attempt',async()=>{
-  for(const [clock,expected] of [['00:00:00',true],['00:02:00',false]]){
+test('neither zero-time nor underway Procedural opens a tour automatically',async()=>{
+  for(const [clock,expected] of [['00:00:00',false],['00:02:00',false]]){
     const h=domHarness(`<html><body><header><nav></nav></header><section id="desk" hidden><canvas id="scope"></canvas><div id="homing"></div><button id="resume">Run</button><b id="clock-state">PAUSED</b><time id="clock">${clock}</time></section></body></html>`);
     h.context.HTMLElement.prototype.getClientRects=function(){return this.hidden?[]:[{}];};h.context.requestAnimationFrame=fn=>fn();h.context.innerHeight=800;
     vm.runInContext(source('guide-knowledge.js'),h.context);vm.runInContext(source('suite-tour.js'),h.context);

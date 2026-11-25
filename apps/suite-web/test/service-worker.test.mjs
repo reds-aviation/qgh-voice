@@ -101,10 +101,18 @@ test('install precaches the complete local two-position shell', async () => {
     './remote-service.js',
     './remote-config.js',
     './suite-student.js',
+    './suite-controller-voice.js',
+    './suite-controller-voice.css',
+    './rt-intent-model.js',
+    './voice-control.js',
+    './offline-voice-engine.js',
     './student-plotting.js',
     './student-plotting.css',
     './workspace-shell.js',
     './workspace-shell.css',
+    './setup-loading.js',
+    './setup-loading.css',
+    './suryakiran-formation.webp',
     './simulator-core.js',
     './scope-visuals.js',
     './published-boundaries.js',
@@ -127,6 +135,26 @@ test('install precaches the complete local two-position shell', async () => {
   ];
   assert.deepEqual(shell, expectedShell);
   assert.equal(harness.calls.skipWaiting, 0, 'install never replaces an active session automatically');
+});
+
+test('offline preparation checks and repairs only the current shell assets', async () => {
+  const harness = createWorkerHarness();
+  for (const repair of [false, true]) {
+    let preparation, status;
+    harness.handlers.get('message')({
+      source: { url: scope + 'index.html' },
+      data: { type: 'OFFLINE_SHELL_STATUS', repair },
+      ports: [{ postMessage: payload => { status = payload; } }],
+      waitUntil: value => { preparation = value; },
+    });
+    await preparation;
+    assert.equal(status.ready, repair);
+  }
+  assert.equal(harness.calls.addAll.length, 1);
+  const paths = harness.calls.addAll[0].map(request => request.url);
+  assert.ok(paths.includes(scope + 'student.html'));
+  assert.ok(paths.includes(scope + 'instructor.html'));
+  assert.ok(paths.every(path => !path.includes('vosk-browser') && !path.endsWith('.tar.gz')));
 });
 
 test('offline navigation and versioned assets use only the approved shell cache', async () => {
@@ -173,6 +201,24 @@ test('query-tainted, wrong-version, cross-origin and non-GET requests bypass the
     assert.equal(response, undefined, `${request.method} ${request.url} is not intercepted`);
   }
   assert.deepEqual(harness.calls.match, []);
+});
+
+test('the local desk and PIN join links reopen only their unpersonalised page shell offline', async () => {
+  const harness = createWorkerHarness({networkFails: true, cachedResponse: new Response('offline desk')});
+  async function navigation(path, mode = 'navigate') {
+    let result;
+    harness.handlers.get('fetch')({request: {url: scope + path, method: 'GET', mode}, respondWith: reply => { result = reply; }});
+    return result ? (await result).text() : null;
+  }
+  assert.equal(await navigation('instructor.html?connection=local'), 'offline desk');
+  assert.equal(await navigation('student.html?pin=012345&join=1&connection=local'), 'offline desk');
+  for (const path of [
+    'instructor.html?connection=local&pin=123456', 'student.html?pin=012345&join=1&connection=online',
+    'student.html?connection=local&pin=12345&join=1', 'student.html?connection=local&pin=123456&join=0',
+    'student.html?connection=local&connection=local&pin=123456&join=1', 'student.html?connection=local&pin=123456&join=1&extra=1'
+  ]) assert.equal(await navigation(path), null, path);
+  assert.equal(await navigation('instructor.html?connection=local', 'cors'), null);
+  assert.deepEqual(harness.calls.match, [scope + 'instructor.html', scope + 'student.html']);
 });
 
 test('installed instructor manifest revalidates online while normal assets stay cached', async () => {

@@ -19,9 +19,9 @@ const ok = body => ({ status: 200, body });
 const errorResult = error => ({ status: error.status || 503, body: { error: error.message || 'Online session unavailable.' } });
 const staleView = state => state && ({ ...state, available: false, running: false, radio: { phase: 'idle' }, df: null });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-export function createRemoteRoom({ service, local, session, now = Date.now }) {
+export function createRemoteRoom({ service, local, session, now = Date.now, schedule = setTimeout, cancel = clearTimeout }) {
   const cloud = session.cloud;
-  let room, state, sequence = cloud.sequence || 0, syncedAt = 0, syncJob, timer, stopped = false, lastError;
+  let room, state, sequence = cloud.sequence || 0, syncedAt = 0, syncJob, timer, started = false, stopped = false, lastError;
   const receipts = new Map();
   let sharedMap = '';
   const host = session.role === 'instructor';
@@ -77,11 +77,23 @@ export function createRemoteRoom({ service, local, session, now = Date.now }) {
     })();
     try { return await syncJob; }
     catch (error) { lastError = error; throw error; }
-    finally { syncJob = null; }
+    finally {
+      syncJob = null;
+      // A foreground sync (for example, an instructor action) can receive
+      // student calls between heartbeats as well.
+      if (host && receipts.size && !lastError) scheduleCycle();
+    }
   }
   async function cycle() {
     try { await sync(); } catch { /* Six seconds without a heartbeat pauses the worker. */ }
-    if (!stopped) timer = setTimeout(cycle, 1000);
+    scheduleCycle();
+  }
+  function scheduleCycle() {
+    if (!started || stopped) return;
+    // Newly processed commands already have authoritative worker receipts.
+    // Send them on the next turn without waiting a full idle heartbeat.
+    cancel(timer);
+    timer = schedule(cycle, host && receipts.size && !lastError ? 0 : 1000);
   }
   async function dispatch(path, body, method = body === undefined ? 'GET' : 'POST') {
     try {
@@ -149,8 +161,8 @@ export function createRemoteRoom({ service, local, session, now = Date.now }) {
   }
   return {
     dispatch, sync,
-    async start() { await sync(); if (!stopped) timer = setTimeout(cycle, 1000); },
-    stop(close = false) { stopped = true; clearTimeout(timer); if (close && host) void call('close').catch(() => {}); },
+    async start() { await sync(); started = true; scheduleCycle(); },
+    stop(close = false) { stopped = true; cancel(timer); if (close && host) void call('close').catch(() => {}); },
     get lastError() { return lastError; },
   };
 }

@@ -349,9 +349,6 @@ function createTacticalHarness() {
 }
 
 function showAppliedReply(harness) {
-  const stage = [...harness.timers.values()].find(callback => callback.toString().includes('const message = `${phase}'));
-  assert.ok(stage, 'the acknowledgement has a pending result transition');
-  stage();
   return harness.controls.voiceCommandAck.textContent;
 }
 
@@ -605,15 +602,10 @@ test('accepted voice calls visibly acknowledge above the active homing display a
   assert.equal(controls.headingInput.classList.contains('voice-command-effect'), true);
   assert.equal(controls.turnHeadingRight.classList.contains('voice-command-effect'), true);
   assert.equal(controls.voiceCommandAck.hidden, false);
-  assert.match(controls.voiceCommandAck.textContent, /^HEARD ·/);
-  assert.match(controls.voiceCommandAck.textContent, /TURN RIGHT HEADING 270/);
+  assert.match(controls.voiceCommandAck.textContent, /^APPLIED ·/);
   assert.equal(controls.voiceCommandAck.getAttribute('aria-label'), controls.voiceCommandAck.textContent);
   assert.equal(controls.voiceCommandAck.title, controls.voiceCommandAck.textContent);
   assert.equal(controls.voiceCommandAck.classList.contains('voice-command-ack-active'), true);
-  const stage = [...single.timers.values()].find(callback => callback.toString().includes('const message = `${phase}'));
-  assert.ok(stage);
-  stage();
-  assert.match(controls.voiceCommandAck.textContent, /^APPLIED ·/);
   [...single.timers.values()].forEach(callback => callback());
   assert.equal(controls.voiceCommandAck.hidden, true, 'the acknowledgement clears after its short acquisition window');
 
@@ -636,7 +628,7 @@ test('voice heading and range acknowledgements snapshot the returned data, not t
   controls.headingReply.textContent = 'HEADING 120°M';
   controls.requestHeading.onClick = () => { controls.headingReply.textContent = 'HEADING 300°M'; };
   assert.equal(workspace.dispatchTranscript('report heading').ok, true);
-  assert.match(controls.voiceCommandAck.textContent, /HEARD · REPORT HEADING/);
+  assert.equal(controls.voiceCommandAck.textContent, 'APPLIED · HEADING 300°M');
   assert.equal(controls.requestHeading.classList.contains('voice-command-effect'), true);
   controls.headingReply.textContent = 'HEADING 305°M';
   assert.equal(showAppliedReply(harness), 'APPLIED · HEADING 300°M');
@@ -934,4 +926,40 @@ test('Android native voice bridge uses the same safe voice dock workflow', async
   assert.equal(nativeBridge.stops, 1);
   environment.workspace.receiveNativeVoiceEvent({ type: 'ended', requestId: nativeBridge.requestId });
   assert.equal(mic.getAttribute('aria-pressed'), 'false');
+});
+
+test('Change QGH type follows the mode picker link after confirmation in hosted and standalone pages', () => {
+  for (const createHarness of [createSingleHarness, createTacticalHarness]) {
+    for (const destination of ['qgh.html', 'index.html']) {
+      const { workspace, sandbox } = createHarness();
+      const doc = sandbox.document;
+      const home = add(doc, doc.body, 'a', { attributes: { href: './' } });
+      const picker = add(doc, doc.body, 'a', { id: 'qghTypeSelection', attributes: { href: destination } });
+      assert.match(workspace.dispatchTranscript('change qgh type').message, /CONFIRM/);
+      assert.equal(picker.clickCount, 0);
+      assert.equal(workspace.dispatchTranscript('confirm voice command').ok, true);
+      assert.equal(home.clickCount, 0);
+      assert.equal(picker.clickCount, 1);
+    }
+  }
+});
+
+
+test('radio rehearsal returns an example and cannot send an aircraft command', () => {
+  const h = createSingleHarness();
+  const rehearsal = h.sandbox.document.querySelector('.voice-rehearsal');
+  rehearsal.click();
+  assert.equal(rehearsal.getAttribute('aria-pressed'), 'true');
+  const simulated = h.workspace.dispatchTranscript('turn right heading two six zero');
+  assert.equal(simulated.ok, true);
+  assert.match(simulated.message, /Turning right, heading 260/);
+  const feedback = h.sandbox.document.querySelector('.voice-rehearsal-output');
+  assert.equal(feedback.hidden, false);
+  assert.match(feedback.textContent, /Example readback.*260/);
+  assert.equal(h.controls.turnHeadingRight.clickCount, 0);
+  assert.equal(h.workspace.dispatchTranscript('start exercise').ok, false);
+  rehearsal.click();
+  setActive(h.screens, h.consoleScreen);
+  assert.equal(h.workspace.dispatchTranscript('turn right heading two six zero').ok, true);
+  assert.equal(h.controls.turnHeadingRight.clickCount, 1);
 });

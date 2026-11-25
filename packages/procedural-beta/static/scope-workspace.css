@@ -63,9 +63,9 @@ body.setup-open .topbar button { min-height: 30px; padding: 5px 10px; font-size:
 body.desk-open .topbar { background: var(--radar-panel); border-color: var(--radar-line); }
 body.desk-open .brand,
 body.desk-open .brand small,
-body.desk-open .topbar a { color: #e0e6eb; }
+body.desk-open .topbar a { color: var(--radar-text); }
 body.desk-open .brand-mark { border-color: #87949e; }
-body.desk-open .topbar button { color: var(--radar-text); background: #292f35; border-color: #59636c; }
+body.desk-open .topbar button { color: var(--tab-text,#e7ecef); background: var(--tab-surface,#292f35); border-color: var(--tab-edge,#59636c); }
 body.desk-open .topbar .profile-summary,
 body.desk-open .topbar .profile-name,
 body.desk-open .topbar .author-credit { color: var(--radar-muted); }
@@ -224,7 +224,8 @@ body.desk-open .scope-wrap {
   width: 100%; height: 100%; aspect-ratio: auto;
 }
 body.desk-open #scope { display: block; width: 100%; height: 100%; background: #111416; }
-body.desk-open .scope-caption { font-size: 9px; left: 10px; right: 10px; bottom: 7px; color: var(--radar-muted); }
+/* The radar picture keeps its dark background in both interface themes. */
+body.desk-open .scope-caption { font-size: 9px; left: 10px; right: 10px; bottom: 7px; color: #b6c6d1; }
 .scope-edge-actions {
   grid-area: tools; display: flex; flex-direction: column; gap: 5px;
   min-width: 0; min-height: 0; padding: 8px; overflow-y: auto; scrollbar-width: thin;
@@ -323,8 +324,15 @@ body.student-desk #work-panel .transmission-card { position: sticky; top: 0; z-i
 body.desk-open #work-panel { background: var(--radar-panel); color-scheme: dark; }
 body.desk-open #work-panel .drawer-head,
 body.desk-open #work-panel .work-tabs { background: var(--radar-chrome); }
-body.desk-open #work-panel button { color: var(--radar-text); background: #2a3036; border-color: #626f7a; }
-body.desk-open #work-panel button:not(:disabled):hover { background: #404e5a; border-color: #9aaeba; }
+body.desk-open #work-panel button {
+  color: var(--tab-ink,var(--tab-text,#e7ecef));
+  background: var(--tab-fill,var(--tab-surface,#2a3036));
+  border-color: var(--tab-edge,#626f7a);
+}
+body.desk-open #work-panel button:where(:not(.primary,.danger,.terminate-action)):not(:disabled):hover {
+  background: var(--tab-fill,var(--tab-hover,#404e5a));
+  border-color: var(--tab-edge,#9aaeba);
+}
 body.desk-open #work-panel .primary { background: #355a66; border-color: #83aebd; color: #fff; }
 body.desk-open #work-panel .danger,
 body.desk-open #work-panel #terminate { color: #ffc1b6; border-color: #8d514f; background: #3b272c; }
@@ -343,6 +351,42 @@ body.desk-open #work-panel .pill { background: #30353a; border-color: #69747c; c
 body.desk-open #work-panel .airspace-legend { background: #20252a; }
 body.desk-open #work-panel a { color: #a1c9da; }
 body.desk-open #work-panel a:hover { color: #d7eef9; }
+html[data-theme="light"] body.desk-open :is(a.skip,#work-panel a:not([data-suite-home])) {
+  color: #244f70;
+}
+html[data-theme="light"] body.desk-open #work-panel a:not([data-suite-home]):hover {
+  color: #12364f;
+}
+html[data-theme="light"] body.desk-open #work-panel :is(.record,.truth-readout,.airspace-legend,.transmission-card) {
+  color: var(--radar-text); background: #e2eaf0; border-color: #8096a5;
+}
+html[data-theme="light"] body.desk-open #work-panel .record.warning {
+  color: #503900; background: #f5ead0; border-left-color: #906723;
+}
+html[data-theme="light"] body.desk-open #work-panel .transmission-card small {
+  color: var(--radar-muted);
+}
+html[data-theme="light"] body.desk-open #work-panel .review-cue-warning { color: #902737; }
+html[data-theme="light"] body.desk-open #work-panel .review-cue-assessment { color: #705000; }
+html[data-theme="light"] body.desk-open #work-panel .review-cue-measurement { color: #345065; }
+html[data-theme="light"] body.desk-open #work-panel #scope-flight-controls,
+html[data-theme="light"] body.desk-open #compact-flight-slot #scope-flight-controls form {
+  color: var(--radar-text); background: var(--radar-chrome);
+}
+html[data-theme] body.desk-open #work-panel #prepare-airspace .airspace-preparation-actions button[aria-expanded="true"] {
+  color: var(--tab-selected-text); background: var(--tab-selected);
+  box-shadow: inset 0 -3px var(--tab-marker);
+}
+html[data-theme] body.desk-open .topbar #suite-tour-open {
+  color: var(--tab-text); background: var(--tab-surface); border-color: var(--tab-edge);
+}
+html[data-theme] body.desk-open #suite-guide-chat .suite-guide-chat__launcher,
+html[data-theme] body.desk-open #suite-guide-chat .suite-guide-chat__invitation {
+  color: var(--radar-text) !important;
+}
+html[data-theme] body.desk-open .topbar button:not(:disabled):hover {
+  background: var(--tab-hover); color: var(--tab-text);
+}
 #work-panel .check,
 #layer-controls label,
 #area-layer-controls label,
@@ -375,6 +419,27 @@ body.desk-open #work-panel .layer-actions button { min-height: 32px; padding: 5p
 .pin-card strong { font: 500 34px PlexMono, monospace; letter-spacing: .14em; color: #f2ddb2; }
 .pin-card button { justify-self: start; min-height: 33px; padding: 6px 12px; font-size: 12px; }
 body.desk-open .pin-card { background: #252f37; color: var(--radar-text); border: 1px solid var(--radar-line); }
+html[data-theme="light"] body.desk-open .pin-card {
+  background: var(--radar-panel); color: var(--radar-text);
+}
+html[data-theme="light"] body.desk-open .pin-card strong { color: #714b0a; }
+html[data-theme="light"] body.desk-open :is(#route-count,#area-count,#student-instrument-note p),
+html[data-theme="light"] body.desk-open #compact-manual-slot :is(.eyebrow,#scope-selected-truth),
+html[data-theme="light"] body.desk-open #work-panel .layer-item small {
+  color: var(--radar-muted);
+}
+html[data-theme="light"] body.desk-open #work-panel .layer-item--route strong { color: #28563e; }
+html[data-theme="light"] body.desk-open #work-panel :is(.layer-item,.airspace-legend) .zone-p { color: #902633; }
+html[data-theme="light"] body.desk-open #work-panel :is(.layer-item,.airspace-legend) .zone-r { color: #80414c; }
+html[data-theme="light"] body.desk-open #work-panel :is(.layer-item,.airspace-legend) .zone-d { color: #98392d; }
+html[data-theme="light"] body.desk-open #work-panel :is(.layer-item,.airspace-legend) .zone-l { color: #89354a; }
+html[data-theme="light"] body.desk-open #work-panel :is(.layer-item,.airspace-legend) .zone-c { color: #145a73; }
+html[data-theme="dark"] body[data-suite-surface="procedural"] #waiting #waiting-leave {
+  color: var(--tab-text); background: var(--tab-surface); border-color: var(--tab-edge);
+}
+html[data-theme="dark"] body[data-suite-surface="procedural"] #waiting #student-ready {
+  color: var(--sim-primary-ink); background: var(--sim-primary-fill); border-color: var(--tab-edge);
+}
 
 /* The setup page makes the starting conditions editable together. */
 body.setup-open { height: auto; min-height: 100dvh; overflow: auto; }
@@ -1075,3 +1140,89 @@ body.desk-open input::placeholder,body.desk-open textarea::placeholder { color:#
     max-height:min(350px,40dvh); overflow-y:auto;
   }
 }
+
+#scope-voice-slot {min-width:0}
+#scope-voice-slot[hidden] {display:none!important}
+#scope-voice-slot .suite-controller-voice {gap:5px;padding:6px;min-width:0}
+#scope-voice-slot .suite-controller-voice button {width:100%;max-width:none;min-height:44px}
+#scope-voice-slot .scv-label {font-size:12px}
+#scope-voice-slot .scv-status, #scope-voice-slot .scv-heard {font-size:11px;line-height:1.35}
+@media(max-width:700px){#scope-voice-slot{min-width:130px;max-width:180px;flex:0 0 auto}}
+
+/* The completed instructor debrief fills the viewport even after the working drawer was moved. */
+body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #work-panel {
+  position: fixed;
+  inset: var(--ats-header-height, 54px) 0 0 !important;
+  width: 100%; height: auto !important; max-width: none !important; max-height: none !important;
+  margin: 0 !important; transform: none !important; overflow: hidden;
+}
+body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #tab-debrief {
+  box-sizing: border-box; width: min(1520px,100%); margin: 0 auto;
+  padding: clamp(16px,2.6vw,38px); overscroll-behavior: contain; scrollbar-gutter: stable;
+}
+body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #work-panel .drawer-head {
+  cursor: default; flex-shrink: 0;
+}
+body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #work-panel .drawer-head .ats-overlay-reset,
+body.desk-open.instructor-desk.review-open #terminate.is-terminated { display: none; }
+#tab-debrief .review-heading h2 { margin: 3px 0 14px; }
+#tab-debrief .procedural-review-metrics {
+  display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 0 0 20px;
+}
+#tab-debrief .procedural-review-metrics > div {
+  border: 1px solid var(--line,var(--radar-line)); border-radius: 8px; padding: 10px 14px;
+}
+#tab-debrief .procedural-review-metrics dt { font-size: .88rem; }
+#tab-debrief .procedural-review-metrics dd { margin: 3px 0 0; font-size: clamp(1.25rem,2vw,1.8rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+#tab-debrief .procedural-review-plot, #tab-debrief .procedural-review-evidence { min-width: 0; }
+#tab-debrief :is(.procedural-review-layout,.review-next) h3 { margin: 0 0 8px; }
+#tab-debrief .procedural-review-evidence .review-cues { padding: 0; }
+#tab-debrief .procedural-review-evidence .hint { margin: 8px 0 16px; }
+#tab-debrief .review-record { margin-top: 15px; }
+#tab-debrief .review-next { display: flex; flex-wrap: wrap; gap: 16px 28px; padding: 20px 0; }
+#tab-debrief .review-next .review-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#tab-debrief .traffic-review-toolbar { padding: 0 0 8px; }
+#tab-debrief .traffic-review-canvas { height: clamp(260px,43vh,510px); }
+#tab-debrief .traffic-review-events { max-height: min(38vh,360px); }
+@media (min-width: 970px) {
+  body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #tab-debrief .procedural-review-layout {
+    display: grid; grid-template-columns: minmax(0,2.6fr) minmax(260px,1fr); gap: clamp(18px,2.5vw,38px);
+  }
+}
+@media (max-width: 700px) {
+  body.desk-open.instructor-desk.review-open:has(#terminate.is-terminated) #work-panel { inset: 0 !important; }
+  #tab-debrief .procedural-review-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+  #tab-debrief .procedural-review-metrics > div { padding: 7px 10px; }
+  #tab-debrief .procedural-review-evidence { margin-top: 16px; }
+  #tab-debrief .traffic-review-toolbar label { flex: 1 1 85px; min-width: 80px; }
+  #tab-debrief .traffic-review-toolbar input[type=range] { flex: 1 1 60%; min-width: 100px; }
+  #tab-debrief .traffic-review-canvas { height: clamp(200px,34vh,380px); }
+}
+/* Direct instructor invitations open on the join form. Connection remains editable. */
+#entry.controller-invitation > :not(.entry-desks),
+#entry.controller-invitation .entry-role:not(#controller-entry) { display: none; }
+body #entry.controller-invitation .entry-desks { grid-template-columns: minmax(0, 1fr); width: min(100%, 38rem); margin: 0 auto; }
+#entry.controller-invitation #controller-entry h1 { font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.14; margin: .35em 0; }
+#controller-entry .invite-connection { margin-top: 1rem; }
+#controller-entry .invite-connection > summary { cursor: pointer; padding: .5rem 0; font-weight: 600; }
+#entry.controller-invitation #controller-entry .session-connection { display: grid; grid-template-columns: 1fr; padding: .75rem; margin: .35rem 0 0; }
+#session-next { display: grid; gap: .5rem; }
+#session-next .session-progress { margin: 0; }
+#session-next > button { justify-self: start; }
+#session-next + .ats-startup-checklist { margin-top: .9rem; }
+#setup .starting-traffic-summary { font-weight: 700; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+#setup .setup-form > .setup-actions { position: static; background: transparent; padding: .55rem 0 1rem; }
+#setup .setup-settings { margin-bottom: 1rem; }
+@media (max-width: 700px) {
+    body #entry.controller-invitation { padding: .6rem; }
+    body #entry.controller-invitation #controller-entry { padding: 1rem; }
+    body #entry.controller-invitation #student-join { margin-top: .6rem; gap: .5rem; }
+    #setup .setup-form { margin-top: .75rem; }
+    #setup .section-title { padding: .85rem; }
+}
+
+.traffic-scenarios { padding:12px; border:1px solid var(--line); border-radius:8px; }
+.traffic-scenarios summary { cursor:pointer; font-weight:600; }
+.traffic-scenarios .setup-field { max-width:22rem; margin-block:8px; }
+.traffic-review-bookmark-form { display:grid; gap:8px; padding:8px 0; }
+.traffic-review-bookmark-form label { display:grid; gap:4px; }

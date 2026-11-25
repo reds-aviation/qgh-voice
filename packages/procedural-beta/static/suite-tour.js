@@ -21,9 +21,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     (rail || document.body).append(button);
     const panel=make('section',null,'suite-tour'); panel.hidden=true; panel.setAttribute('role','dialog'); panel.setAttribute('aria-modal','false'); panel.setAttribute('aria-labelledby','suite-tour-title');
     const progress=make('small'), title=make('h2',null,'suite-tour-title'), description=make('p'), actions=make('div');
+    const header=make('header');header.className='suite-tour-header';header.append(title);
     const back=make('button','Back'), next=make('button','Next'), close=make('button','Close tour');
     for(const b of [back,next,close]) b.type='button';
-    actions.append(back,next,close); panel.append(progress,title,description,actions); document.body.append(panel);
+    close.className='suite-tour-close';actions.append(back,next,close); panel.append(progress,header,description,actions); document.body.append(panel);
     const startHint=make('aside',null,'suite-start-hint');startHint.hidden=true;startHint.setAttribute('role','status');
     const hintText=make('span'),hintClose=make('button','Got it');hintClose.type='button';hintClose.setAttribute('aria-label','Dismiss aircraft mouse controls');startHint.append(hintText,hintClose);document.body.append(startHint);
     let hasRun=false,exerciseStarted=false,hintTimer=0;
@@ -48,7 +49,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const alreadyStarted=()=>['exerciseState','studentExerciseState'].some(id=>/^(?:PAUSED|ENDED|TERMINATED|REVIEW|PICTURE FROZEN)/.test(phase(id)))
       || visible(document.getElementById('studentEnded')) || phase('clock-state')==='ENDED'
       || (phase('clock-state')==='PAUSED' && !!document.getElementById('clock')?.textContent && document.getElementById('clock').textContent.trim()!=='00:00:00');
-    const workspaceReady=()=>page==='procedural'?visible(document.getElementById('desk')):page==='instructor'?visible(document.getElementById('activeWorkspace')):page==='student'?visible(document.getElementById('readyPanel')):page==='single'?visible(document.querySelector('#setup.active')):visible(document.querySelector('#tSetup.active'));
+    const workspaceReady=()=>page==='single'?visible(document.querySelector('#setup.active')):page==='tactical'&&visible(document.querySelector('#tSetup.active'));
     const rememberFirstUse=()=>{firstUseHandled=true;try{localStorage.setItem(firstUseKey,'1');}catch{}};
     function clearTarget(){target?.classList.remove('suite-tour-target');target=null;}
     function finish(restore=true){panel.hidden=true;clearTarget();if(restore && !running())button.focus();}
@@ -73,7 +74,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     next.onclick=()=>{if(index===steps.length-1)finish();else{index++;show();}};
     close.onclick=()=>finish();document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidden){event.preventDefault();finish();}});
     // Close before the exercise start handler runs. The tour never changes the clock.
-    document.addEventListener('click',event=>{if(event.target.closest?.('#resume,#startExercise,#tStart,#studentReady,#student-ready')){rememberFirstUse();if(!panel.hidden)finish(false);}},true);
+    document.addEventListener('click',event=>{if(event.target.closest?.('#resume,#startExercise,#tStart,#studentReady,#student-ready,#session-run,#start')){rememberFirstUse();if(!panel.hidden)finish(false);}},true);
     function update(){
       const live=running();if(live&&!hasRun)showStartHint();hasRun=live;
       // Automatic onboarding is finished once traffic has run. A later Pause,
@@ -83,7 +84,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       const tutorialPending=page==='training-centre'&&!visible(document.getElementById('suiteTutorial'));
       const unavailable=live||tutorialPending;
       if(button.hidden!==unavailable)button.hidden=unavailable;button.disabled=unavailable;
-      if(!panel.hidden&&(live||(tourMode==='first'&&!workspaceReady())))finish(false);
+      if(!panel.hidden&&(live||!visible(target)))finish(false);
       if(!live&&!exerciseStarted&&!firstUseHandled&&workspaceReady()){
         try{firstUseHandled=localStorage.getItem(firstUseKey)==='1';}catch{}
         if(!firstUseHandled)openTour('first');

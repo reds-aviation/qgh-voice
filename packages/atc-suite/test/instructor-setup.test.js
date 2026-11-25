@@ -29,7 +29,15 @@ async function instructorHarness(){
   const source=readFileSync(join(__dirname,'../suite-instructor.js'),'utf8').replace(/\}\)\(\);\s*$/, 'globalThis.fixture={state,setTrainingTimeRate,createSession,retryScenario,checkpoint,restoreAttempt,importPreset};})();');
   vm.runInContext(source,h.context);
   await new Promise(resolve=>setImmediate(resolve));
-  return {...h,...h.context.fixture,get:id=>h.document.getElementById(id)};
+  function admitController() {
+    const host = h.context.fixture.state.session;
+    const controller = Session.createStudentSession({ pin: host.pin, storage: h.context.localStorage,
+      transportFactory: name => hub.createTransport(name) });
+    assert.ok(controller.requestJoin());
+    host.admit(controller.clientId);
+    return controller;
+  }
+  return {...h,...h.context.fixture,admitController,get:id=>h.document.getElementById(id)};
 }
 
 test('QGH instructor boots with traffic first and collapsed preparation and saved exercise tools',async()=>{
@@ -49,6 +57,52 @@ test('QGH instructor boots with traffic first and collapsed preparation and save
     assert.equal(get('squawk').closest('label').hidden,family==='qgh');assert.equal(get('radarReturn').closest('label').hidden,family==='qgh');
     assert.equal(get('squawk').value,'4312');assert.equal(get('radarReturn').value,'mode-a','switching families retains the saved return choice');
   }
+});
+
+test('a single runway heading drives aligned approaches, the preview and paired exercise metadata', async () => {
+  for (const family of ['qgh', 'surveillance', 'sra']) {
+    const h = await instructorHarness(), { get, state } = h;
+    get('exerciseFamily').value = family;
+    get('runwayOrientation').value = '0';
+    get('runwayOrientation').dispatchEvent(new h.Event('input', { bubbles: true }));
+    assert.equal(get('finalTrackField').hidden, true);
+    assert.equal(get('finalTrack').value, '0');
+    assert.match(get('setupPreview').textContent, /RWY 000°M/);
+    await h.createSession({ preventDefault() {} });
+    assert.equal(state.initialScenario.finalTrackDeg, 0);
+    assert.equal(state.simulation.scenario.runwayOrientationDeg, 0);
+    const controller = h.admitController(), metadata = controller.snapshot().publicMetadata;
+    assert.equal(metadata.runwayOrientation, 0);
+    assert.equal(metadata.finalTrack, 0);
+    controller.close(); state.session.close();
+  }
+});
+
+test('legacy offset approaches survive import and stay separate until the instructor selects an aligned approach', async () => {
+  const h = await instructorHarness(), { get, state } = h;
+  get('exerciseConnection').value = 'local';
+  const data = { format: 'ats-simbox-instructor-exercise', version: 1, name: 'Offset approach',
+    setup: [{ id: 'exerciseConnection', value: 'online' }, { id: 'exerciseFamily', value: 'sra' },
+      { id: 'runwayOrientation', value: '150' }, { id: 'finalTrack', value: '0' }] };
+  await h.importPreset({ target: { files: [{ size: 500, text: async () => JSON.stringify(data) }], value: '' } });
+  assert.match(get('presetStatus').textContent, /Imported/);
+  assert.equal(get('exerciseConnection').value, 'local');
+  assert.equal(get('customFinalTrack').checked, true);
+  assert.equal(get('finalTrackField').hidden, false);
+  get('runwayOrientation').value = '170';
+  get('runwayOrientation').dispatchEvent(new h.Event('input', { bubbles: true }));
+  assert.match(get('setupPreview').textContent, /RWY 170°M · FINAL 000°M/);
+  await h.createSession({ preventDefault() {} });
+  assert.equal(state.sra.runwayHeadingDeg, 0);
+  const controller = h.admitController(), metadata = controller.snapshot().publicMetadata;
+  assert.equal(metadata.runwayOrientation, 170);
+  assert.equal(metadata.finalTrack, 0);
+  controller.close();
+  h.retryScenario();
+  get('customFinalTrack').checked = false;
+  get('customFinalTrack').dispatchEvent(new h.Event('change', { bubbles: true }));
+  assert.equal(get('finalTrackField').hidden, true);
+  assert.equal(get('finalTrack').value, '170');
 });
 
 test('changing the draft exercise family cannot change the retained exercise clock rate',async()=>{

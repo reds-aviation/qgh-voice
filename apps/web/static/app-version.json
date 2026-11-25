@@ -1,9 +1,9 @@
 {
   "name": "ATS SIM BOX",
-  "releaseName": "ATS SIM BOX \u00c2\u00b7 Version 1",
+  "releaseName": "ATS SIM BOX \u00b7 Version 1",
   "releaseStage": "release",
-  "version": "1.0.10",
-  "androidVersionCode": 51,
-  "updated": "2026-10-26",
+  "version": "1.0.11",
+  "androidVersionCode": 52,
+  "updated": "2026-11-24",
   "displayVersion": "Version 1"
 }

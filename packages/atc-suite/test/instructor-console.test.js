@@ -39,10 +39,13 @@ function harness(mode = 'qgh', sessionAdapter = Session, displayAdapter = Displa
   };
   const document = { body: { classList: { add() {}, remove() {} } }, getElementById: node, querySelectorAll: () => [], createElement: () => node(`created-${nodes.size}`) };
   let code = readFileSync(join(__dirname, '../suite-instructor.js'), 'utf8');
+  const reviewListeners = code.slice(code.indexOf("  byId('reviewScrub').addEventListener"), code.indexOf("  byId('newScenario').addEventListener"));
   code = code.slice(0, code.indexOf("  family.addEventListener('change'")) +
-    '\n globalThis.fixture = {state, updateAll, configureActiveControls, command, scopeTransmit, finishTransmission, publishCurrentObservation, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, openTrafficSetup, returnToExercise, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
+    reviewListeners +
+    '\n globalThis.fixture = {state, updateAll, renderReview, drawReview, configureActiveControls, command, handleControllerVoice, scopeTransmit, finishTransmission, publishCurrentObservation, openStudentDisplay, drawTruth, scopeClick, scopeDoubleClick, scopeRightClick, scopePointerDown, scopePointerMove, scopePointerEnd, quickTurn, checkpoint, restoreAttempt, retryScenario, openTrafficSetup, returnToExercise, logout, collapseSetupControls, startExercise, pauseExercise, advanceWallElapsed, enterWorkspace, createSession, onSessionEvent, setScenarioInput(input) {scenarioInput = () => input;}};})();';
   const context = { document, structuredClone, sessionStorage: store(), localStorage: store(),
     ATCSuiteCore: Core, ATCSuiteSensors: Sensors, ATCSuiteSession: sessionAdapter, ATCSuiteDisplay: displayAdapter, ATCSuiteCommandReference: require('../suite-command-reference.js'),
+    ATSControllerVoice: require('../../qgh-engine/voice-control.js'),
     ATCSuiteWorkspace: {bindShell(options) {shellOptions = options;}},
     setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); }, performance: { now: () => now }, confirm:()=>true, Date, console };
   vm.runInNewContext(code, context);
@@ -61,6 +64,51 @@ function harness(mode = 'qgh', sessionAdapter = Session, displayAdapter = Displa
   }
   return { ...context.fixture, context, ctx, node, captions, timers, event, get shellOptions(){return shellOptions;},tick(ms) { now += ms; }, flush() { const jobs = [...timers.values()]; timers.clear(); jobs.forEach(fn => fn()); } };
 }
+
+test('controller heading calls share the manual flight and readback path and leave aircraft selection intact', () => {
+  const transcript = 'one zero two turn right heading two six zero';
+  for (const mode of ['qgh', 'sra', 'surveillance']) {
+    const h = harness(mode), start = h.state.simulation;
+    assert.equal(h.handleControllerVoice({ transcript, mode: 'human' }).status, 'sent');
+    assert.equal(h.node('controllerVoiceHeard').textContent, 'Controller: ' + transcript);
+    assert.equal(h.state.simulation, start);
+    assert.equal(h.handleControllerVoice({ transcript, mode: 'automatic' }).status, 'rejected');
+    h.state.controllerVoiceMode = 'automatic';
+    for (const unclear of ['turn right heading two six zero', 'one zero two do not turn right heading two six zero', 'one zero nine turn right heading two six zero']) {
+      assert.equal(h.handleControllerVoice({ transcript: unclear, mode: 'automatic' }).status, 'rejected');
+      assert.equal(h.state.simulation, start);
+    }
+    assert.equal(h.handleControllerVoice({ transcript, mode: 'automatic' }).status, 'applied');
+    assert.equal(h.state.simulation.selectedAircraftId, 'AC1');
+    assert.equal(h.state.simulation.aircraftList[0].turn.mode, 'straight');
+    assert.equal(h.state.simulation.aircraftList[1].turn.targetHeadingDeg, 260);
+    assert.equal(h.state.simulation.activeReadback.aircraftId, 'AC2');
+    assert.deepEqual(h.captions, ['TURNING RIGHT HEADING 260, 102']);
+    const paused = h.state.simulation = Core.setLifecycle(h.state.simulation, 'paused');
+    assert.equal(h.handleControllerVoice({ transcript, mode: 'automatic' }).status, 'rejected');
+    assert.equal(h.state.simulation, paused);
+  }
+});
+
+test('automatic pilot reads live values and applies only complete addressed instructions', () => {
+  const h = harness('sra');
+  h.state.controllerVoiceMode = 'automatic';
+  const call = (transcript, modelIntent) => h.handleControllerVoice({ mode: 'automatic', transcript, modelIntent });
+  assert.equal(call('102 turn right heading 260').status, 'applied');
+  assert.equal(call('102 could you tell me your present heading please', 'heading-report').message, 'HEADING 150, 102');
+  assert.equal(call('102 how far are you from the station', 'range-report').message, 'RANGE 24.0 NAUTICAL MILES, 102');
+  assert.equal(call('102 reduce speed to two one zero knots').message, 'SPEED 210 KNOTS, 102');
+  assert.equal(call('102 descend to six thousand feet').message, 'DESCENDING TO ALTITUDE 6000 FEET, 102');
+  const before = h.state.simulation;
+  for (const text of ['102 reduce speed to three hundred knots', '101 if able descend to six thousand feet',
+    '101 do not turn right now', '101 report heading and descend to six thousand feet', '102 climb to flight level one six zero']) {
+    assert.equal(call(text, 'heading-report').status, 'rejected', text);
+    assert.equal(h.state.simulation, before, text);
+  }
+  assert.equal(before.aircraftList[0].speedKt, 240);
+  assert.equal(before.aircraftList[1].speedKt, 210);
+  assert.equal(before.aircraftList[1].vertical.targetAltitudeFt, 6000);
+});
 
 test('instructor wheel zoom works during running and paused exercises without changing flight or pan', () => {
   for (const mode of ['qgh', 'sra', 'surveillance']) {
@@ -604,4 +652,55 @@ test('instructor radar uses shared configured chart aids and local visibility ne
     assert.equal(JSON.stringify(h.state.simulation), before);
     assert.equal(chartCalls.at(-1).metadata.aircraft, undefined, 'chart helpers receive only the public scenario');
   }
+});
+
+test('paired debrief distinguishes missing evidence, later events and command markers', () => {
+  const h = harness('sra');
+  const layers = [{ dataset: { reviewLayer: 'events' }, checked: true }];
+  h.context.document.querySelectorAll = selector => selector === '[data-review-layer]' ? layers : [];
+  h.renderReview();
+  assert.equal(h.node('reviewAircraftCount').textContent, '2');
+  assert.equal(h.node('reviewPlay').disabled, true);
+  assert.match(h.node('reviewEventHint').textContent, /No commands or events/);
+  assert.match(h.node('reviewObservationHint').textContent, /No student observations/);
+
+  h.state.simulation = Core.advance(h.state.simulation, 10);
+  h.state.review.recordEvent({ timestamp: 2, kind: 'command', readback: 'WINGS LEVEL, 101' });
+  h.state.review.recordEvent({ timestamp: 8, kind: 'par-transfer', readback: 'TRANSFERRED TO PAR' });
+  h.state.review.recordObservation('sra', { timestamp: 5, plots: [] });
+  h.renderReview();
+  assert.equal(h.node('reviewCommandCount').textContent, '1');
+  assert.equal(h.node('reviewObservationCount').textContent, '1');
+  assert.equal(h.node('reviewPlay').disabled, false);
+  assert.match(h.node('reviewEventHint').textContent, /later/);
+  assert.match(h.node('reviewObservationHint').textContent, /later/);
+
+  layers[0].checked = false;
+  h.state.reviewTime = 10;
+  h.drawReview(h.state.review.snapshot());
+  assert.equal(h.node('reviewEventHint').hidden, true);
+  assert.equal(h.node('reviewObservationHint').hidden, true);
+  assert.equal(h.node('reviewEvents').children[0].children[0].textContent, '00:00:08');
+  assert.equal(h.node('reviewEvents').children[1].children[1].textContent, 'WINGS LEVEL, 101');
+});
+
+test('paired perspectives retain the replay time and a bookmark never changes original observations', () => {
+  const h = harness('sra');
+  h.state.simulation = Core.advance(h.state.simulation, 10);
+  h.state.review.recordObservation('sra', { timestamp: 8, plots: [] });
+  const before = JSON.stringify(h.state.review.snapshot());
+  h.state.reviewTime = 5;
+  h.node('bookmarkReviewTime').emit('click');
+  assert.equal(h.node('returnToReviewBookmark').textContent, 'Go to 00:00:05');
+  for (const view of ['instructor','controller','compare']) {
+    h.node('reviewPerspective').value = view;
+    h.node('reviewPerspective').emit('change');
+    assert.equal(h.node('reviewTime').textContent,'00:00:05');
+    assert.equal(h.node('reviewObservationHint').hidden, view === 'instructor');
+  }
+  h.state.reviewTime = 9; h.state.reviewPlaying = true;
+  h.node('returnToReviewBookmark').emit('click');
+  assert.equal(h.state.reviewTime, 5);
+  assert.equal(h.state.reviewPlaying, false);
+  assert.equal(JSON.stringify(h.state.review.snapshot()), before);
 });

@@ -53,7 +53,7 @@ begin
       exit when not exists(select 1 from atc_private.suite_rooms where pin=candidate);
     end loop;
     insert into atc_private.suite_rooms(owner_id,host_key,pin) values(who,(p_payload->>'hostKey')::uuid,candidate) returning * into r;
-    return jsonb_build_object('id',r.id,'sessionId',r.id::text,'channelName','online-'||r.id::text,'pin',r.pin);
+    return jsonb_build_object('id',r.id,'sessionId',r.id::text,'channelName','online-'||r.id::text,'pin',r.pin,'controllerVoiceSupported',true);
   elsif p_action='join' then
     if not atc_private.take_limit('suite-join',12,60) then return '{"error":"Too many PIN attempts. Wait a minute.","status":429}'::jsonb; end if;
     if coalesce(p_payload->>'pin','')!~'^[0-9]{6}$' then return '{"error":"Enter six digits.","status":400}'::jsonb; end if;
@@ -62,7 +62,7 @@ begin
     if r.owner_id=who then return '{"error":"Use the controller position in another window.","status":409}'::jsonb; end if;
     if (select count(*) from atc_private.suite_members where room_id=r.id)>=24 and not exists(select 1 from atc_private.suite_members where room_id=r.id and user_id=who) then return '{"error":"Room request limit reached.","status":429}'::jsonb; end if;
     insert into atc_private.suite_members(room_id,user_id) values(r.id,who) on conflict do nothing;
-    return jsonb_build_object('id',r.id,'sessionId',r.id::text,'channelName','online-'||r.id::text,'pin',r.pin);
+    return jsonb_build_object('id',r.id,'sessionId',r.id::text,'channelName','online-'||r.id::text,'pin',r.pin,'controllerVoiceSupported',true);
   end if;
   select * into r from atc_private.suite_rooms where id=p_room for update;
   if not found or r.expires_at<now() then return '{"error":"Room expired. Request a new PIN.","status":410}'::jsonb; end if;
@@ -94,7 +94,13 @@ begin
       return '{"error":"Invalid session message.","status":403}'::jsonb;
     end if;
     if host then
-      if kind not in ('admission-granted','admission-rejected','lifecycle','public-metadata','observation','caption','host-heartbeat','student-disconnected','terminated') or kind is null then return '{"error":"Unsupported instructor message.","status":403}'::jsonb; end if;
+      if kind not in ('admission-granted','admission-rejected','lifecycle','public-metadata','observation','caption','host-heartbeat','student-disconnected','terminated','controller-voice-result') or kind is null then return '{"error":"Unsupported instructor message.","status":403}'::jsonb; end if;
+      if kind='controller-voice-result' and (item->>'targetClientId' is null
+        or coalesce(item->'payload'->>'requestId','') !~ '^[A-Za-z0-9_-]{8,64}$'
+        or coalesce(item->'payload'->>'status','') not in ('sent','applied','rejected')
+        or length(coalesce(item->'payload'->>'message','')) not between 1 and 240) then
+        return '{"error":"Invalid voice result.","status":400}'::jsonb;
+      end if;
       -- Never accept a complete instructor simulation or a truth/history payload.
       if item->'payload' ?| array['aircraft','aircraftList','truth','events','history','simulation'] then return '{"error":"Share only controller observations.","status":403}'::jsonb; end if;
       if item->>'targetClientId' is not null and not exists(select 1 from atc_private.suite_members where room_id=r.id and user_id::text=item->>'targetClientId') then return '{"error":"Unknown controller.","status":403}'::jsonb; end if;
@@ -102,7 +108,15 @@ begin
       -- A final poll may carry an already-queued heartbeat. Ignore it after
       -- close, but still deliver the instructor's termination notice.
       if r.closed then continue; end if;
-      if kind not in ('join-request','rejoin-request','ready','student-heartbeat','preferences','pilot-playback') or kind is null or item->'payload'->>'clientId' is distinct from who::text then return '{"error":"Controller operation unavailable.","status":403}'::jsonb; end if;
+      if kind not in ('join-request','rejoin-request','ready','student-heartbeat','preferences','pilot-playback','controller-voice') or kind is null or item->'payload'->>'clientId' is distinct from who::text then return '{"error":"Controller operation unavailable.","status":403}'::jsonb; end if;
+      if kind='controller-voice' and ((item->'payload') - array['clientId','seatToken','requestId','transcript','voiceWindowId','mode'] <> '{}'::jsonb
+        or coalesce(item->'payload'->>'requestId','') !~ '^[A-Za-z0-9_-]{8,64}$'
+        or coalesce(item->'payload'->>'voiceWindowId','') !~ '^[A-Za-z0-9_-]{8,64}$'
+        or coalesce(item->'payload'->>'mode','') not in ('human','automatic')
+        or jsonb_typeof(item->'payload'->'transcript') is distinct from 'string'
+        or length(trim(coalesce(item->'payload'->>'transcript',''))) not between 1 and 240) then
+        return '{"error":"Invalid controller call.","status":400}'::jsonb;
+      end if;
       if kind='join-request' then
         if item->'payload'->>'pin' is distinct from r.pin or item->'payload'->>'seat' is distinct from 'controller' then return '{"error":"Incorrect PIN.","status":403}'::jsonb; end if;
       elsif m.status<>'admitted' or item->'payload'->>'seatToken' is distinct from m.seat_token then return '{"error":"Wait for instructor admission.","status":403}'::jsonb;

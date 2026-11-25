@@ -16,6 +16,40 @@ import {PGlite} from '@electric-sql/pglite';
 import Session from '../atc-suite/suite-session.js';
 import Cloud from '../atc-suite/suite-cloud.js';
 
+test('outgoing online voice wakes the polling loop, preserves order and backs off on failure', async () => {
+  for (const type of ['controller-voice', 'controller-voice-result']) {
+    let timer, fail = false, waiting;
+    const batches = [];
+    const transport = Cloud.createTransport({
+      room: {id:'room', sessionId:'room'}, host: type === 'controller-voice-result',
+      sessionApi: {validateStudentMessage: () => ({ok:true}), validateInstructorMessage: () => ({ok:true})},
+      schedule(fn, delay) { return timer = {fn, delay}; }, cancel() { timer = null; },
+      service: {async call(action, id, payload) {
+        if (fail) throw new Error('offline');
+        batches.push(payload.messages.map(message => message.type));
+        if (waiting) await waiting;
+        return {messages:[]};
+      }}
+    });
+    transport.start(); await timer.fn();
+    assert.equal(timer.delay, 750);
+    transport.post({type:'preferences'}); transport.post({type});
+    assert.equal(timer.delay, 0, 'send a call or receipt on the next turn');
+    let finish; waiting = new Promise(resolve => { finish = resolve; });
+    const cycle = timer.fn();
+    transport.post({type});
+    finish(); await cycle; waiting = null;
+    assert.deepEqual(batches.at(-1), ['preferences',type]);
+    assert.equal(timer.delay, 0, 'send the call queued during an exchange immediately afterwards');
+    fail = true; await timer.fn();
+    assert.equal(timer.delay, 750);
+    fail = false; await timer.fn();
+    assert.deepEqual(batches.at(-1), [type]);
+    assert.equal(timer.delay, 750, 'return to normal polling when the voice queue empties');
+    transport.detach();
+  }
+});
+
 test('QGH online relay: independent rooms, admission, ready, observation, retry, recovery and termination', async () => {
   const db = new PGlite();
   try {

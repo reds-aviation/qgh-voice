@@ -244,3 +244,13 @@ test('leader stop cancels companion reaching reports while preserving explicitly
   assert.equal(P.step(state, 60, { B: 'single' }).length, 0);
   assert.equal(state.aircraft.B.actualAltitudeMslFt, stopped);
 });
+
+test('setup derives the runway marking from magnetic orientation and preserves published or saved overrides', () => {
+  for (const [orientation, marking] of [[0, '36'], [4, '36'], [5, '01'], [90, '09'], [150, '15'], [225, '23'], [354, '35'], [355, '36'], [359, '36']]) {
+    assert.equal(make(undefined, { runwayOrientation: orientation }).environment.runway, marking);
+  }
+  assert.equal(P.runwayNumber(''), '');
+  assert.equal(make(undefined, { runwayOrientation: 224, runway: '23l' }).environment.runway, '23L');
+  assert.equal(make(undefined, { runway: '06R' }).environment.runway, '06R');
+  assert.equal(make().environment.runway, '15');
+});

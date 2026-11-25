@@ -149,13 +149,40 @@ function reviewHarness(filename, useHelper=true) {
   const plot={classList:{add(){},remove(){},toggle(){}},addEventListener:(type,fn)=>handlers.set(type,fn)};
   const canvas={clientWidth:800,clientHeight:600,width:800,height:600,style:{},parentElement:plot,getContext:()=>ctx,addEventListener(){},getBoundingClientRect:()=>({left:0,top:0,width:800,height:600})};
   const helper={...Visuals,drawAircraftGlyph(context,options){captured.push({kind:'glyph',...options});return Visuals.drawAircraftGlyph(context,options);},drawRangeRings(context,options){captured.push({kind:'rings',...options});return Visuals.drawRangeRings(context,options);}};
-  const window={devicePixelRatio:2,QGHCore:{normalize:n=>(n+360)%360,radians:n=>n*Math.PI/180}};
+  const documentElement = {dataset: {theme: 'light'}};
+  const window={addEventListener:(type, fn)=>handlers.set(type,fn),devicePixelRatio:2,QGHCore:{normalize:n=>(n+360)%360,radians:n=>n*Math.PI/180}};
   if(useHelper)window.ATCScopeVisuals=helper;
-  vm.runInNewContext(readFileSync(join(__dirname,'..',filename),'utf8'),{window,document:{getElementById:()=>canvas,querySelectorAll:()=>[]}});
-  return {window,canvas,ctx,handlers,captured};
+  vm.runInNewContext(readFileSync(join(__dirname,'..',filename),'utf8'),{window,document:{documentElement,getElementById:()=>canvas,querySelectorAll:()=>[]}});
+  return {window,canvas,ctx,handlers,captured,documentElement};
 }
 
 for(const [filename,api] of [['workspace.js','QGHReview'],['tactical-workspace.js','QGHTacticalReview']]) {
+  test(`${filename} repaints the same review at the current zoom when the appearance changes`, () => {
+    const h = reviewHarness(filename);
+    const cfg = { distance: 20, inbound: 230, outbound: 45, runway: 230 };
+    const path = [{ x: 4, y: 8, heading: 45 }, { x: 5, y: 9, heading: 50 }];
+    const model = api === 'QGHReview' ? { cfg, path, count: 1 }
+      : { cfg, canvas: h.canvas, count: 1, aircraft: [{ id: 'A', callsign: '101', color: '#296aa7', path }] };
+    const backgrounds = [];
+    h.ctx.fillRect = (x, y, w, height) => { if (w === 800 && height === 600) backgrounds.push(h.ctx.fillStyle); };
+    h.window[api].draw(model);
+    h.window[api].setZoomEnabled(true);
+    h.handlers.get('wheel')({ deltaY: -1, preventDefault() {} });
+    const before = h.captured.filter(entry => entry.kind === 'rings').at(-1);
+    h.documentElement.dataset.theme = 'dark';
+    h.handlers.get('ats-appearance-change')();
+    const dark = h.captured.filter(entry => entry.kind === 'rings').at(-1);
+    assert.deepEqual(backgrounds.slice(-2), ['#fffefa', '#102435']);
+    assert.equal(dark.fillStyle, '#b4c9d7');
+    assert.equal(dark.strokeStyle, '#56748a');
+    assert.equal(dark.scale, before.scale);
+    assert.equal(model.count, 1);
+    h.documentElement.dataset.theme = 'light';
+    h.handlers.get('ats-appearance-change')();
+    assert.equal(backgrounds.at(-1), '#fffefa');
+    assert.equal(h.captured.filter(entry => entry.kind === 'rings').at(-1).fillStyle, before.fillStyle);
+  });
+
   test(`${filename} rounded north review labels stay within 000 to 359 degrees`,()=>{
     const h=reviewHarness(filename),cfg={distance:20,inbound:359.6,outbound:359.6,runway:359.6},path=[{x:10,y:10,heading:359.6}];
     const model=api==='QGHReview'?{cfg,path,maxRange:35}:{cfg,canvas:h.canvas,aircraft:[{id:'a',callsign:'101',cfg:{speed:240},level:10000,path}],maxRange:35,labelMode:'all'};

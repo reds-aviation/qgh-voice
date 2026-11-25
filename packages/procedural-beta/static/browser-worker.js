@@ -30,11 +30,95 @@ let db, checkpoint, owner, fault, queue = Promise.resolve();
 let room = {pin: '', students: []}, attempts = {start: 0, count: 0};
 let cloud = { enabled: false, seen: 0 };
 const uuid = () => crypto.randomUUID();
+let automaticVoice = false, voiceRun = '', voiceExercise = '';
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), {status}); };
 function engine(op, value = '', role = 'instructor') {
   const result = JSON.parse(self.proceduralEngine(op, typeof value === 'string' ? value : JSON.stringify(value), role));
   if (result.error) fail(result.error);
   return result.value;
+}
+function voiceView(role) {
+  const state = engine('state', '', role);
+  if (voiceExercise !== state.exerciseId) {
+    automaticVoice = false;
+    voiceExercise = state.exerciseId;
+    voiceRun = '';
+  }
+  if (state.running && state.available && !state.terminated) voiceRun ||= uuid();
+  else voiceRun = '';
+  return { ...state, controllerVoice: { automatic: automaticVoice, runKey: voiceRun, issuedAt: Date.now() } };
+}
+
+function liveVoiceClearance(command, aircraft) {
+  switch (command?.type) {
+    case 'turn-now': return {action:command.side};
+    case 'stop-turn': return {action:'stop-turn'};
+    case 'set-altitude': return {action:command.direction === 'maintain' ? 'altitude' : command.direction,
+      reference:'qnh', value:command.altitudeFt};
+    case 'set-speed':
+      if ((command.speedDirection === 'reduce' && command.speedKt >= aircraft.speedKt) ||
+          (command.speedDirection === 'increase' && command.speedKt <= aircraft.speedKt)) return null;
+      return {action:'speed', value:command.speedKt};
+    default: return null;
+  }
+}
+
+function receiveControllerCall(body) {
+  if (body.type !== 'controller-call' || body.payload?.source !== 'voice') return engine('command', body, 'student');
+  const state = voiceView('instructor');
+  const {text, runKey, issuedAt} = body.payload;
+  if (!voiceRun || runKey !== voiceRun || body.exerciseId !== state.exerciseId ||
+      !Number.isFinite(issuedAt) || issuedAt > Date.now() || Date.now() - issuedAt > 15000) {
+    fail('Exercise or connection changed. Repeat the call while the exercise is running.', 409);
+  }
+  if (typeof text !== 'string' || !text.trim() || text.length > 1000 ||
+      typeof body.id !== 'string' || !/^[a-zA-Z0-9_-]{1,52}$/.test(body.id)) fail('Invalid voice call.');
+  const roster = state.roster.filter(a => a.status !== 'scheduled');
+  // Voice is optional. A missing recognizer/grammar still leaves human radio calls usable.
+  if (!self.ATSControllerVoice) {
+    try { importScripts('../rt-intent-model.js', '../voice-control.js'); }
+    catch { /* Retain the call for the instructor if the optional parser is unavailable. */ }
+  }
+  const callsigns = roster.map(a => a.callsign);
+  const heading = self.ATSControllerVoice?.interpretHeading(text, callsigns);
+  const request = heading || self.ATSControllerVoice?.interpretRequest?.(text, callsigns, body.payload.candidateIntent)
+    || self.ATSControllerVoice?.interpretClearance?.(text, callsigns);
+  const aircraft = request && state.aircraft.find(a => a.callsign === request.callsign);
+  const aircraftId = aircraft?.id || body.aircraftId;
+  const previous = state.calls.at(-1)?.id;
+  const receipt = engine('command', {id:body.id, exerciseId:state.exerciseId, type:'controller-call', aircraftId, payload:{text:'Voice · ' + text.trim()}}, 'student');
+  const call = engine('state', '', 'instructor').calls.at(-1);
+  if (!call || call.id === previous) return {...receipt, voiceOutcome:'Call already received. Check pilot readback or the calls list.'};
+  if (automaticVoice && aircraft?.status === 'active') {
+    try {
+      const dispatchPilot = (type, payload) => engine('command', {
+        id: type + '-' + body.id, exerciseId:state.exerciseId, aircraftId, type, payload
+      }, 'instructor');
+      const clearance = heading ? {action:'heading', direction:heading.side, value:heading.heading}
+        : liveVoiceClearance(request.command, aircraft);
+      if (clearance) {
+        dispatchPilot('clearance', {...clearance, callId:call.id});
+      } else {
+        let payload;
+        if (request.command?.type === 'report-position') payload = {mode:'position'};
+        if (request.intent === 'heading-report') payload = {mode:'heading'};
+        if (request.intent === 'df-transmission') payload = {mode:'df'};
+        if (request.intent === 'range-report') {
+          const station = state.environment;
+          const range = Math.hypot(aircraft.xNm - station.stationXNm, aircraft.yNm - station.stationYNm);
+          if (Number.isFinite(range)) payload = {text:`${aircraft.callsign}, range ${range.toFixed(1)} nautical miles from ${station.stationName}.`};
+        }
+        if (!payload) return {...receipt, voiceOutcome:'Sent for instructor review. Await pilot readback.'};
+        dispatchPilot('transmit', {...payload, durationSeconds:8});
+        dispatchPilot('call-handled', {id:call.id});
+      }
+      return {...receipt, voiceOutcome:engine('state', '', 'instructor').reports.at(-1).text};
+    } catch (error) {
+      if (error.status !== 400) throw error;
+      // A compass failure or another flight rule can require the human pseudo-pilot.
+    }
+  }
+  return {...receipt, voiceOutcome:'Sent for instructor review. Await pilot readback.'};
 }
 function transaction(mode, action) {
   return new Promise((resolve, reject) => {
@@ -56,6 +140,8 @@ async function persist() {
   }
 }
 async function resetRoom() {
+  automaticVoice = false;
+  voiceRun = '';
   await advertise(true);
   room.students = [];
 }
@@ -126,9 +212,9 @@ async function dispatch(port, request) {
   tick();
   if (path.startsWith('cloud-')) {
     if (session.role !== 'instructor') fail('Instructor control required', 403);
-    if (path === 'cloud-view' && method === 'GET') return engine('state', '', 'student');
+    if (path === 'cloud-view' && method === 'GET') return voiceView('student');
     if (path === 'cloud-heartbeat' && method === 'POST') { cloud = { enabled: body.enabled === true, seen: Date.now() }; return {ok: true}; }
-    if (path === 'cloud-command' && method === 'POST') { const result = engine('command', body, 'student'); await persist(); return result; }
+    if (path === 'cloud-command' && method === 'POST') { const result = receiveControllerCall(body); await persist(); return result; }
     fail('Unknown cloud request', 400);
   }
   if (path === 'room') {
@@ -147,11 +233,22 @@ async function dispatch(port, request) {
     return roomView(session);
   }
   if (session.role === 'student' && !['admitted', 'ready'].includes(roomView(session).status)) fail('Instructor admission required', 403);
-  if (path === 'state' && method === 'GET') return engine('state', '', session.role);
+  if (path === 'state' && method === 'GET') return voiceView(session.role);
+  if (path === 'voice-mode' && method === 'POST') {
+    if (session.role !== 'instructor') fail('Instructor control required.', 403);
+    const state = voiceView(session.role);
+    if (body.exerciseId !== state.exerciseId || state.terminated || typeof body.automatic !== 'boolean') fail('Open the current exercise before choosing a voice mode.', 409);
+    automaticVoice = body.automatic;
+    voiceRun = '';
+    return voiceView(session.role).controllerVoice;
+  }
   if (path === 'command' && method === 'POST') {
     if (body.type === 'clock' && body.payload?.action === 'resume' && room.students.some(s => s.status === 'admitted')) fail('Wait for admitted controllers to press Ready');
     const before = engine('checkpoint').state.exerciseId;
-    const result = engine('command', body, session.role);
+    if (body.type === 'controller-call' && body.payload?.source === 'voice' &&
+        (session.role !== 'student' || roomView(session).status !== 'ready')) fail('A ready controller is required for voice calls.', 403);
+    const result = session.role === 'student' ? receiveControllerCall(body) : engine('command', body, session.role);
+    if (body.type === 'clock') voiceRun = '';
     await persist(); // Never acknowledge before the command receipt and state are durable.
     if (before !== checkpoint.state.exerciseId) await resetRoom();
     return result;
@@ -194,6 +291,7 @@ self.onconnect = event => {
     const request = event.data;
     serial(async () => {
       if (request?.kind === 'detach') {
+        if (owner?.port === port) { automaticVoice = false; voiceRun = ''; }
         for (const session of sessions.values()) if (session.port === port) { session.port = null; session.seen = 0; }
         if (self.proceduralEngine) { tick(); await persist(); await advertise(); }
         return;

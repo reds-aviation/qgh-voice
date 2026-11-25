@@ -23,6 +23,12 @@ The browser adapter is pinned and stored at `packages/qgh-engine/vendor/vosk-bro
 
 The project's application licence does not relicense these components or the language model. Preserve the additional upstream notices embedded in the browser adapter.
 
+## Radio transcript intent model
+
+The simulator's small English transcript classifier uses a vocabulary-specific transformation of Google's Apache-2.0 [BERT-Tiny embeddings](https://huggingface.co/google/bert_uncased_L-2_H-128_A-2/tree/30b0a37ccaaa32f332884b96992754e246e48c5f). The simulator training script fits a new classification head on synthetic radiotelephony examples and exports token scores. The source model and its weights retain their Apache-2.0 terms. The distribution includes the licence at `vendor/Apache-2.0.txt`.
+
+The Windows x64 offline distribution also includes [Hugging Face SmolLM2-360M-Instruct](https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct), [Bartowski's Q4_K_M conversion](https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/tree/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec), and [llama.cpp b12669](https://github.com/ggml-org/llama.cpp/releases/tag/b12669). Reuse and redistribution of the model are under Apache-2.0, the llama.cpp runtime under MIT, and its LLVM OpenMP library under Apache-2.0 with LLVM exceptions. The pack contains unmodified Microsoft Visual C++ x64 runtime DLLs under Microsoft's Visual Studio redistributable terms. Original licence texts and notices accompany these files in the installed radio model directory.
+
 ## Go browser runtime
 
 The Procedural browser engine uses the Go runtime and `wasm_exec.js`. Their BSD-3-Clause licence is in `packages/procedural-beta/static/GO-LICENSE.txt` and is included in the generated Procedural package. The compiled `procedural-engine.wasm` contains both application code and Go runtime portions; the application's CPAL licence does not relicense the Go portions.
@@ -40,3 +46,9 @@ The Gradle wrapper retains its embedded Apache-2.0 licence. Electron, AndroidX, 
 ## External aeronautical data and insignia
 
 Published airspace records retain their original source and edition references. The application licence does not assert copyright ownership or grant a new licence over external aeronautical data or government insignia. Preserve their applicable source notices and permissions.
+
+## Surya Kiran formation photograph
+
+Exercise setup shows the Indian Air Force Surya Kiran Aerobatic Team at Jodhpur on 8 October 2026. U.S. Air Force photograph by Airman 1st Class Nathaniel Jackson, Pacific Air Forces. DVIDS identifies the photograph as public domain. This app includes a resized WebP copy for offline use.
+
+Source: https://www.dvidshub.net/image/10004641/iaf-day-showcases-tarang-shakti-26

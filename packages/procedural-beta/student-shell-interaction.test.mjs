@@ -62,6 +62,7 @@ test('student tools keep one drawer open and restore focus on close and Escape',
 
 test('radio hide, minimize and reopen retain the original D/F, captions and listeners',()=>{
   const h=studentShell(),radio=h.get('studentRadioPanel'),toggle=h.trigger('studentRadioPanel'),body=h.get('studentRadioBody');
+  assert.equal(h.get('studentControllerVoice').parentElement,body,'microphone controls share the radio panel instead of displacing the radar');
   let selections=0;h.get('selectQte').addEventListener('click',()=>selections++);
   h.get('studentCaption').querySelector('strong').textContent='101, position report.';
   toggle.click();assert.equal(radio.hidden,true);assert.equal(toggle.getAttribute('aria-expanded'),'false');

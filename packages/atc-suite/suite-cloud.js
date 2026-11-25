@@ -16,9 +16,16 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   'use strict';
   // Relay only already-validated protocol messages. Simulation/sensor truth stays local.
   const replaceable = new Set(['observation', 'host-heartbeat', 'student-heartbeat']);
+  const isVoice = message => message.type === 'controller-voice' || message.type === 'controller-voice-result';
   function createTransport({ service, room, host, sessionApi, initialCursor = 0, now = Date.now, onStatus = () => {}, schedule = setTimeout, cancel = clearTimeout }) {
     const listeners = new Set(), queue = [];
     let cursor = initialCursor, stopped = false, closing = false, timer, job, lastSuccess = now(), healthy = true;
+    let started = false, cycling = false;
+    function scheduleCycle(delay) {
+      if (!started || stopped || closing) return;
+      cancel(timer);
+      timer = schedule(cycle, delay);
+    }
     function post(message) {
       if (stopped || closing) return;
       const validation = (host ? sessionApi.validateInstructorMessage : sessionApi.validateStudentMessage)(message, { sessionId: room.sessionId });
@@ -29,6 +36,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       }
       if (queue.length >= 200) { healthy = false; onStatus({ connected: false, error: 'Online queue full. Pause and reconnect.' }); return; }
       queue.push(JSON.parse(JSON.stringify(message)));
+      if (isVoice(message) && !cycling && healthy) scheduleCycle(0);
     }
     async function sync() {
       if (job) return job;
@@ -53,14 +61,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       finally { job = null; }
     }
     async function cycle() {
+      cycling = true;
       try { await sync(); } catch { /* The instructor pauses; retry preserves revisions. */ }
-      if (!stopped) timer = schedule(cycle, 750);
+      cycling = false;
+      // A reply can be queued while dispatching the incoming call. Keep revision
+      // order and retry failed exchanges at the normal heartbeat interval.
+      scheduleCycle(healthy && queue.some(isVoice) ? 0 : 750);
     }
     return {
-      channelName: room.channelName, post,
+      channelName: room.channelName, controllerVoiceSupported: room.controllerVoiceSupported === true, post,
       subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
       sync,
-      start() { if (!timer && !stopped) timer = schedule(cycle, 0); },
+      start() { if (!started) { started = true; scheduleCycle(0); } },
       get connected() { return !stopped && healthy && now() - lastSuccess < 6000; },
       recoverySnapshot() { return { room: JSON.parse(JSON.stringify(room)), cursor }; },
       detach() { stopped = true; cancel(timer); listeners.clear(); },
@@ -103,20 +115,22 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   async function configureConnection() {
     const select = document.getElementById('exerciseConnection');
     if (!select) return;
-    const { remoteConfig } = await import('./remote-config.js');
-    const available = !!remoteConfig.url && !!remoteConfig.publishableKey;
-    select.querySelector('[value="online"]').disabled = !available;
     const requested = new URLSearchParams(globalThis.location?.search || '').get('connection');
     if (requested === 'local' || requested === 'online') select.value = requested;
-    if (!available) select.value = 'local';
     const update = () => {
       const online = select.value === 'online';
+      const summary = document.getElementById('setupConnectionSummary');
+      if (summary) summary.textContent = online ? 'Online room' : 'This device';
       const help = document.getElementById('connectionHelp');
       if (help) help.textContent = online
         ? 'Online room: instructor and student may use different PCs or devices. Internet is required on both. Use the same PIN; the instructor must admit the student.'
         : 'This device / offline: one PC, same browser profile, separate windows. Best with two monitors: Windows + P → Extend. Keep instructor and student on separate screens; Duplicate reveals the instructor picture.';
     };
     select.addEventListener('change', update); update();
+    const { remoteConfig } = await import('./remote-config.js');
+    const available = !!remoteConfig.url && !!remoteConfig.publishableKey;
+    select.querySelector('[value="online"]').disabled = !available;
+    if (!available) { select.value = 'local'; update(); }
   }
   if (typeof document === 'object') document.addEventListener('DOMContentLoaded', () => { void configureConnection().catch(() => {}); });
   return Object.freeze({ createTransport, prepareHost, prepareStudent, configureConnection });

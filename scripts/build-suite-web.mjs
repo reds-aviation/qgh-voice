@@ -38,8 +38,17 @@ const suiteFiles = [
   'suite-session.js',
   'suite-cloud.js',
   'suite-student.js',
+  'suite-controller-voice.js',
+  'suite-controller-voice.css',
 ];
 const sharedEngineFiles = [
+  'rt-intent-model.js',
+  'voice-control.js',
+  'offline-voice-engine.js',
+  'vendor/vosk-browser-0.0.8.js',
+  'vendor/Apache-2.0.txt',
+  'voice-models/qgh-vosk-en-us-small-0.15.tar.gz',
+  'setup-loading.js',
   'published-boundaries.js',
   'ats-simbox-logo.png',
   'license-footer.css',
@@ -52,6 +61,8 @@ const sharedEngineFiles = [
   'fonts/OFL-1.1.txt',
 ];
 const sharedProceduralFiles = [
+  'setup-loading.css',
+  'suryakiran-formation.webp',
   'published-airspace.js',
   'published-airspace.css',
   'india-airbase-lfa-catalogue.json',

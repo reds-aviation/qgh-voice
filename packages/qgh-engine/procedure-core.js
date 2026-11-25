@@ -47,9 +47,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     return next;
   }
+  function runwayNumber(orientation) {
+    if (orientation == null || String(orientation).trim() === '') return '';
+    const degrees = Number(orientation);
+    if (!Number.isFinite(degrees) || degrees < 0 || degrees > 360) return '';
+    return String(Math.round(degrees / 10) || 36).padStart(2, '0');
+  }
   function environment(input = {}) {
     return {
-      runway: String(input.runway || '15').toUpperCase(),
+      runway: String(input.runway || runwayNumber(input.runwayOrientation) || '15').toUpperCase(),
       aerodromeElevationFt: bounded(input.aerodromeElevationFt ?? 0, 0, 15000, 'Aerodrome elevation'),
       qnhHpa: bounded(input.qnhHpa ?? 1013, 850, 1100, 'QNH hPa'),
       qfeHpa: bounded(input.qfeHpa ?? 1013, 850, 1100, 'QFE hPa'),
@@ -311,5 +317,5 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return { ok: true, state: next };
     } catch { return { ok: false, original: value }; }
   }
-  return Object.freeze({ SCHEMA_VERSION, FT_PER_HPA, create, apply, step, toMsl, displayedLevel, levelText, levelReport, visual, observeOverhead, migrate });
+  return Object.freeze({ SCHEMA_VERSION, FT_PER_HPA, runwayNumber, create, apply, step, toMsl, displayedLevel, levelText, levelReport, visual, observeOverhead, migrate });
 });

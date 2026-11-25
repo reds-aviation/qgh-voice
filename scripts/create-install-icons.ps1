@@ -10,12 +10,12 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$sourcePath = Join-Path $repositoryRoot 'packages/qgh-engine/ats-simbox-logo.png'
 $installRoot = Join-Path $repositoryRoot 'packages/site-landing/install-icons'
+$sourcePath = Join-Path $installRoot 'ats-simbox-artwork.png'
 $webIconRoot = Join-Path $repositoryRoot 'apps/web/static/icons'
 
 function Save-ApprovedIcon {
-  param([System.Drawing.Image]$Artwork, [int]$Size, [string]$Destination, [switch]$Maskable)
+  param([System.Drawing.Image]$Artwork, [int]$Size, [string]$Destination)
 
   $bitmap = New-Object System.Drawing.Bitmap($Size, $Size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb))
   $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -28,10 +28,8 @@ function Save-ApprovedIcon {
     $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::HighQuality
     $attributes.SetWrapMode([System.Drawing.Drawing2D.WrapMode]::TileFlipXY)
 
-    # Keep the complete approved artwork; the maskable variant fits its full
-    # rectangle inside the central safe circle, whose diameter is 80% of Size.
-    $contentSize = if ($Maskable) { [int][Math]::Floor($Size * 0.8 / [Math]::Sqrt(2)) } else { $Size }
-    $scale = [Math]::Min($contentSize / [double]$Artwork.Width, $contentSize / [double]$Artwork.Height)
+    # The master is full bleed and its mark fits the central 80% maskable circle.
+    $scale = [Math]::Min($Size / [double]$Artwork.Width, $Size / [double]$Artwork.Height)
     $width = [int][Math]::Floor($Artwork.Width * $scale)
     $height = [int][Math]::Floor($Artwork.Height * $scale)
     $left = [int][Math]::Floor(($Size - $width) / 2.0)
@@ -51,8 +49,9 @@ try {
   foreach ($item in @(@(192, 'ats-simbox-192.png'), @(512, 'ats-simbox-512.png'), @(180, 'ats-simbox-apple.png'))) {
     Save-ApprovedIcon -Artwork $artwork -Size ([int]$item[0]) -Destination (Join-Path $installRoot $item[1])
   }
-  Save-ApprovedIcon -Artwork $artwork -Size 512 -Destination (Join-Path $installRoot 'ats-simbox-maskable-512.png') -Maskable
-  Save-ApprovedIcon -Artwork $artwork -Size 512 -Destination (Join-Path $webIconRoot 'icon-maskable-512.png') -Maskable
+  $standardIcon = Join-Path $installRoot 'ats-simbox-512.png'
+  Copy-Item -LiteralPath $standardIcon -Destination (Join-Path $installRoot 'ats-simbox-maskable-512.png')
+  Copy-Item -LiteralPath $standardIcon -Destination (Join-Path $webIconRoot 'icon-maskable-512.png')
   foreach ($item in @(@(192, 'icon-192.png'), @(512, 'icon-512.png'), @(180, 'apple-touch-icon.png'), @(32, 'favicon-32.png'))) {
     Save-ApprovedIcon -Artwork $artwork -Size ([int]$item[0]) -Destination (Join-Path $webIconRoot $item[1])
   }

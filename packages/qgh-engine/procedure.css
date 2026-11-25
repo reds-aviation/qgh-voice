@@ -23,3 +23,194 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 .tactical-rail-item.radio-target{outline:3px solid var(--aircraft-color,#007d7d);outline-offset:-3px}.tactical-rail-item.radio-target .tactical-rail-tx{background:#007d7d;color:white}
 @media(max-width:480px){.procedure-grid{gap:10px}.procedure-setup,.procedure-controls{padding:10px}.procedure-initial{align-items:stretch;flex-direction:column}.procedure-field{font-size:11px}}
 @media(prefers-reduced-motion:no-preference){.radio-target{transition:outline-color .15s}}
+.procedure-runway-marking{margin-top:4px;font-size:.85rem;line-height:1.4}
+.procedure-runway-marking summary{cursor:pointer}
+.procedure-runway-marking[open] summary{margin-bottom:.5rem}
+.procedure-runway-marking small{display:block;margin-top:.4rem}
+
+
+.exercise-procedure-picker {
+  min-width: 0;
+  max-width: 33rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+.exercise-procedure-picker legend {
+  padding: 0;
+  margin-bottom: .45rem;
+  color: var(--tab-text, var(--ink, var(--t-ink, #183744)));
+  font-size: .875rem;
+  font-weight: 650;
+}
+.exercise-procedure-picker button {
+  min-height: 44px;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.exercise-setup-disclosure {
+  min-width: 0;
+  margin: 0 0 .78rem;
+  padding: 0;
+  border: 1px solid var(--tab-edge, #91a9b6);
+  border-radius: 8px;
+  background: var(--tab-surface, #f1f5f6);
+  color: var(--tab-text, #214052);
+}
+.exercise-setup-disclosure > summary {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: .7rem .85rem;
+  color: inherit;
+  font: 600 .875rem/1.4 'IBM Plex Sans', Arial, sans-serif;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.exercise-setup-disclosure > summary:hover {
+  background: var(--tab-hover, #e6eff2);
+  border-radius: 7px;
+}
+.exercise-setup-disclosure > summary small {
+  display: block;
+  margin: .15rem 0 0 1.05rem;
+  font-weight: 400;
+}
+.exercise-setup-disclosure[open] > summary {
+  border-bottom: 1px solid var(--tab-edge, #91a9b6);
+}
+.exercise-setup-disclosure > summary:focus-visible {
+  outline: 2px solid var(--tab-focus, #174c72);
+  outline-offset: 2px;
+}
+.exercise-setup-disclosure > :not(summary) { margin-inline: .85rem; }
+.exercise-setup-disclosure > :last-child:not(summary) { margin-bottom: .85rem; }
+.exercise-setup-disclosure > :is(.fields,.tactical-setup-fields,.procedure-grid) { margin-top: .85rem; }
+#setup .exercise-aircraft-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: .85rem;
+}
+:where(#setup,#tSetup) .exercise-track-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+#tSetup .tactical-fleet-builder {
+  margin-top: 0;
+  padding-top: .2rem;
+  border-top: 0;
+}
+#tSetup .tactical-fleet-builder > header {
+  gap: .5rem;
+  margin-bottom: .65rem;
+}
+#tSetup .tactical-fleet-builder > header h3 {
+  margin: 0;
+  font-size: .9rem;
+}
+#tSetup .tactical-fleet-builder > header .tactical-count { flex: 0 0 clamp(105px, 36%, 188px); }
+#tSetup .tactical-fleet-builder > header .tactical-count button[aria-pressed="true"] {
+  color: var(--tab-selected-text, #fff);
+  background: var(--tab-selected, #2b4f64);
+  box-shadow: inset 0 -3px var(--tab-marker, #a3d1ee);
+}
+:where(#setup,#tSetup) .exercise-launch {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  margin-top: 1rem;
+  padding-top: .85rem;
+}
+.exercise-audio-tools { display: flex; gap: .5rem; flex-wrap: wrap; }
+.exercise-launch .exercise-audio-tools button {
+  width: auto;
+  min-height: 44px;
+  padding: .55rem .8rem;
+  margin: 0;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: .875rem;
+}
+.exercise-launch .exercise-rehearsal {
+  font-family: inherit;
+  font-weight: 650;
+  color: var(--tab-ink,var(--tab-text,#214052));
+  background: var(--tab-fill,var(--tab-surface,#f1f5f6));
+}
+.exercise-launch .voice-rehearsal-output { flex: 1 0 100%; }
+html[data-theme] :is(#setup,#tSetup) .exercise-launch { background: transparent; }
+.exercise-launch { margin-bottom: 1rem; }
+#setup .exercise-aircraft-fields .field { align-content: start; }
+#setupVoiceMount:empty { display: none; }
+#setupVoiceMount .voice-dock {
+  position: static;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#setupVoiceMount .voice-dock .voice-compact-toggle { cursor: pointer; }
+#setupVoiceMount .voice-compact-toggle { min-height: 44px; }
+@media (max-width: 600px) {
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header {
+    /* The suite header normally stacks all controls. Keep these two setup headers to two groups. */
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    align-items: center;
+    gap: .4rem .45rem !important;
+    padding: .6rem .65rem .6rem 48px;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header .iaf-header-brand {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: auto;
+    gap: .32rem .4rem !important;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header .iaf-header-credit {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    gap: 0 !important;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header > #suite-tour-open {
+    grid-column: 1;
+    grid-row: 2 !important;
+    justify-self: start;
+    width: auto;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header > .sim-appearance {
+    grid-column: 3;
+    grid-row: 2 !important;
+    width: 46px;
+    justify-self: end;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-header-brand :is(.mode-home-link,.tactical-mode-home) {
+    padding-inline: .45rem;
+  }
+  html body:is([data-suite-surface="single"],[data-suite-surface="tactical"]):has(:is(#setup.active,#tSetup.active)) .iaf-site-header .sim-switch-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  body[data-suite-surface] :is(#setup,#tSetup) .exercise-motion-stacked { min-height: 0; }
+  body[data-suite-surface] :is(#setup,#tSetup) .exercise-motion-stacked .exercise-motion-art {
+    height: 44px;
+    margin-top: .35rem;
+  }
+  body:has(#setupVoiceMount .voice-dock) :is(.app,.tactical-app) { padding-bottom: .75rem; }
+}
+
+@media (max-width: 600px) {
+  :where(#setup,#tSetup) .exercise-track-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #setup .exercise-aircraft-fields { gap: .6rem; }
+  #setup .exercise-aircraft-fields small { font-size: .65rem; }
+  #tSetup .tactical-fleet-builder > header { flex-wrap: nowrap; }
+  .exercise-launch > :is(.start,.tactical-start), .exercise-audio-tools { width: 100%; }
+  .exercise-launch .exercise-audio-tools button { flex: 1 1 9rem; }
+  :is(#setup,#tSetup) { padding-bottom: max(5rem, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 345px) {
+  #setup .exercise-aircraft-fields { grid-template-columns: 1fr; }
+}

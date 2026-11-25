@@ -33,5 +33,18 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return ranked[0].entry;
     };
   }
-  const api={createIndex};if(typeof module==='object'&&module.exports)module.exports=api;else root.ATCGuideSearch=api;
+  // Choose a complete, maintained instruction from the matched handbook entry.
+  function briefAnswer(entry, question){
+    const sentences=value=>String(value||'').split(/(?<=[.!?])\s+/).filter(Boolean);
+    const candidates=[...sentences(entry.intro),...(entry.pointers||[]),...sentences(entry.text)];
+    const terms=new Set(words(question));
+    let best=candidates[0], bestScore=0;
+    for(const sentence of candidates){
+      const tokens=new Set(words(sentence));
+      const score=[...terms].filter(word=>tokens.has(word)).length;
+      if(score>bestScore){best=sentence;bestScore=score;}
+    }
+    return best;
+  }
+  const api={createIndex,briefAnswer};if(typeof module==='object'&&module.exports)module.exports=api;else root.ATCGuideSearch=api;
 })(typeof globalThis==='object'?globalThis:this);

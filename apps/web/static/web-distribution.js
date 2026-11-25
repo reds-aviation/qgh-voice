@@ -20,12 +20,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const sheet = document.getElementById('pwaInstallSheet');
   const sheetContent = document.getElementById('pwaInstallContent');
   const closeSheet = document.getElementById('closeInstallSheet');
-  if (!distribution || !installButton || !nativeDownloads || !releaseAvailability || !sheet || !sheetContent || !closeSheet) return;
+  if (!installButton || !sheet || !sheetContent || !closeSheet) return;
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   if (isStandalone) return;
 
-  distribution.hidden = false;
+  installButton.hidden = false;
+  if (distribution) distribution.hidden = false;
 
   const appleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -54,8 +55,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const releases = window.QGH_RELEASES || {};
   const hasWindows = configureDownload('downloadWindows', releases.windows);
   const hasAndroid = configureDownload('downloadAndroid', releases.android);
-  nativeDownloads.hidden = !hasWindows && !hasAndroid;
-  releaseAvailability.hidden = hasWindows || hasAndroid;
+  if (nativeDownloads) nativeDownloads.hidden = !hasWindows && !hasAndroid;
+  if (releaseAvailability) releaseAvailability.hidden = hasWindows || hasAndroid;
 
   const showSheet = paragraphs => {
     sheetContent.replaceChildren(...paragraphs.map(text => {
@@ -84,18 +85,24 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
-    installButton.textContent = 'INSTALL ATS SIM BOX ON THIS DEVICE';
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = undefined;
+    installButton.hidden = true;
   });
 
   installButton.addEventListener('click', async () => {
     if (deferredInstallPrompt) {
       const prompt = deferredInstallPrompt;
       deferredInstallPrompt = undefined;
-      await prompt.prompt();
-      const outcome = await prompt.userChoice;
-      if (outcome.outcome !== 'accepted') {
-        showSheet(['Installation was not completed. You can try again from your browser menu.']);
+      try {
+        await prompt.prompt();
+        const outcome = await prompt.userChoice;
+        if (outcome.outcome === 'accepted') return;
+      } catch {
+        // The browser may withdraw an install prompt before the user can use it.
       }
+      showSheet(['Installation was not completed. You can try again from your browser menu.']);
       return;
     }
 

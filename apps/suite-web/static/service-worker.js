@@ -14,6 +14,10 @@ const cacheScope = new URL(self.registration.scope).pathname
 const APP_VERSION = '__ATC_SUITE_VERSION__';
 const CACHE_PREFIX = `reds-atc-suite-${cacheScope}-`;
 const CACHE_NAME = `${CACHE_PREFIX}v${APP_VERSION}`;
+const VOICE_PACK_URLS = [
+  './voice-models/qgh-vosk-en-us-small-0.15.tar.gz',
+  './vendor/vosk-browser-0.0.8.js',
+].map(asset => new URL(asset, self.registration.scope).href);
 
 // This explicit shell is the complete offline boundary. Session messages and
 // review data are intentionally never written to Cache Storage.
@@ -47,10 +51,18 @@ const APP_SHELL = [
   './remote-service.js',
   './remote-config.js',
   './suite-student.js',
+  './suite-controller-voice.js',
+  './suite-controller-voice.css',
+  './rt-intent-model.js',
+  './voice-control.js',
+  './offline-voice-engine.js',
   './student-plotting.js',
   './student-plotting.css',
   './workspace-shell.js',
   './workspace-shell.css',
+  './setup-loading.js',
+  './setup-loading.css',
+  './suryakiran-formation.webp',
   './simulator-core.js',
   './scope-visuals.js',
   './published-boundaries.js',
@@ -90,6 +102,17 @@ function shellCacheKey(request) {
   const requestUrl = new URL(request.url);
   if (requestUrl.origin !== self.location.origin || !APP_SHELL_PATHS.has(requestUrl.pathname)) return null;
 
+  // The entry form opens these exact local desks. Reuse only their static HTML;
+  // the PIN and all session state remain outside the shell cache.
+  if (request.mode === 'navigate' && requestUrl.searchParams.get('connection') === 'local') {
+    const params = requestUrl.searchParams;
+    const hostPage = new URL('instructor.html', self.registration.scope);
+    const studentPage = new URL('student.html', self.registration.scope);
+    if (requestUrl.pathname === hostPage.pathname && params.size === 1) return new Request(hostPage);
+    if (requestUrl.pathname === studentPage.pathname && params.size === 3
+      && params.get('join') === '1' && /^\d{6}$/.test(params.get('pin') || '')) return new Request(studentPage);
+  }
+
   if (requestUrl.search) {
     const isCurrentVersionedAsset = !PAGE_SHELL_PATHS.has(requestUrl.pathname)
       && requestUrl.search === `?v=${APP_VERSION}`;
@@ -120,12 +143,44 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('message', event => {
+  if (event.data?.type === 'OFFLINE_SHELL_STATUS' && event.ports?.length) {
+    const clientURL = event.source?.url;
+    const suiteHome = new URL('../', self.registration.scope).href;
+    if (!clientURL || !clientURL.startsWith(self.registration.scope)
+      && clientURL !== suiteHome && clientURL !== new URL('index.html', suiteHome).href) return;
+    const reply = event.ports[0];
+    event.waitUntil((async () => {
+      try {
+        const cache = await openCache();
+        const requests = APP_SHELL.map(asset => new Request(new URL(asset, self.registration.scope), { cache: 'reload' }));
+        const contents = await Promise.all(requests.map(request => cache.match(request)));
+        const missing = requests.filter((_, i) => !contents[i]);
+        if (event.data.repair === true && missing.length) await cache.addAll(missing);
+        reply.postMessage({ ready: !missing.length || event.data.repair === true });
+      } catch {
+        reply.postMessage({ ready: false });
+      }
+    })());
+  }
   if (event.data?.type === 'SKIP_WAITING' && event.source?.url?.startsWith(self.registration.scope)) {
     self.skipWaiting();
   }
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.method === 'GET' && VOICE_PACK_URLS.includes(event.request.url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open('qgh-offline-voice-pack-v1');
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+      try {
+        return await fetch(event.request);
+      } catch {
+        return new Response('', { status: 504, statusText: 'Offline voice pack unavailable' });
+      }
+    })());
+    return;
+  }
   const cacheKey = shellCacheKey(event.request);
   if (!cacheKey) return;
 

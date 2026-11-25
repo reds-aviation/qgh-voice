@@ -36,10 +36,18 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     }
     assert.doesNotMatch(document.body.textContent,/\bBETA\b|UNDER DEVELOPMENT|USER TRIALS|ATC TRAINING SUITE|Reds QGH Simulator/i,`${page}: no stale visible branding or release stage`);
     assert.ok(!html.includes('offline-setup'), `private handbook link in ${page}`);
-    if(!redirects.has(page))assert.ok(html.includes('suite-guide-chat.js'),`missing Gyani in ${page}`);
+    if(!redirects.has(page))assert.ok(html.includes('suite-guide-chat.js'),`missing Saarthi in ${page}`);
     assert.ok(!html.includes('entry-theme.css'),`deferred theme included in ${page}`);
     if(['qgh.html','single.html','tactical.html'].includes(page))assert.ok(!html.includes('guided-familiarisation.js'),`${page}: legacy tour must not compete with the shared suite tour`);
     if(['single.html','tactical.html'].includes(page))assert.ok(html.includes('suite-tour.js'),`${page}: shared tour is available`);
+    const install = document.querySelector('#installWebApp');
+    assert.equal(Boolean(install), page === 'index.html', `${page}: install belongs on suite home`);
+    if (install) {
+      assert.ok(install.closest('.suite-header'));
+      assert.equal(install.textContent, 'Install web app');
+      assert.ok(document.querySelector('#pwaInstallSheet'));
+      assert.match(html, /src="web-distribution\.js\?/);
+    }
     for(const el of document.querySelectorAll('script[src],link[href],img[src],a[href]')) {
       const value=el.getAttribute('src') || el.getAttribute('href');
       if(!value || value.startsWith('#')) continue;
@@ -76,7 +84,7 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.equal(readFileSync(resolve(dist,'instructor-led/suite-entry.css'),'utf8'),readFileSync(resolve(dist,'procedural-beta/suite-entry.css'),'utf8'),'both families receive one shared entry stylesheet');
   const canonicalGuide=readFileSync(resolve(dist,'training-centre.html'),'utf8');
   assert.equal((canonicalGuide.match(/id="current-flow"/g)||[]).length,1);
-  assert.ok(canonicalGuide.includes('I am also learning.'),'Training guide explains Gyani limitations');
+  assert.ok(canonicalGuide.includes('I am also learning.'),'Training guide explains Saarthi limitations');
   const{document:guideDocument}=parseHTML(canonicalGuide);
   for(const id of ['qgh','instructor','procedural','calls','demonstrations'])assert.ok(guideDocument.getElementById(id),'one guide includes '+id);
   for(const [page,anchor,prefix] of [['user-guide.html','',''],['instructor-led/training-guide.html','instructor','../'],['procedural-beta/procedural-guide.html','procedural','../']]) {
@@ -87,7 +95,7 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
     assert.ok(document.querySelector(`a[href="${destination}"]`),`${page}: usable redirect fallback`);
     const common=guideDocument;
     if(anchor)assert.ok(common.getElementById(anchor),`${page}: common guide destination exists`);
-    assert.ok([...common.querySelectorAll('script[src]')].some(script => new URL(script.getAttribute('src'),base).pathname === '/qgh-voice/procedural-beta/suite-guide-chat.js'),`${page}: common guide has Gyani`);
+    assert.ok([...common.querySelectorAll('script[src]')].some(script => new URL(script.getAttribute('src'),base).pathname === '/qgh-voice/procedural-beta/suite-guide-chat.js'),`${page}: common guide has Saarthi`);
     assert.equal(document.querySelectorAll('#current-flow').length,0,`${page}: no competing handbook`);
   }
   const context=vm.createContext({URL,Request,Response,console,self:{registration:{scope:base},location:{origin:'https://example.test'},addEventListener(){}}});

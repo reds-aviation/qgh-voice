@@ -45,7 +45,7 @@ function harness(options = {}) {
     now, storage, transportFactory, crypto: deterministicCrypto(7), pin: '431230',
     publicMetadata: { mode: 'qgh', procedure: 'normal', callsign: '431', runwayOrientation: 230,
       finalTrack: 230, trainingReference: 'Co-aligned; zero variation modelled' },
-    onEvent: event => instructorEvents.push(event)
+    onEvent: event => instructorEvents.push(event), onControllerVoice: options.onControllerVoice
   });
   function student(clientId = 'student_00000001', pin = '431230', events = [], recoveryStorage) {
     return Session.createStudentSession({ now, storage, transportFactory, crypto: deterministicCrypto(91),
@@ -54,6 +54,58 @@ function harness(options = {}) {
   return { now, storage, hub, transportFactory, instructor, instructorEvents, student,
     setTime: value => { time = value; }, advance: value => { time += value; } };
 }
+
+test('controller voice is targeted, bound to a running seat and never replayed across mode or lifecycle changes', () => {
+  const calls = [];
+  const h = harness({ onControllerVoice(call) {
+    calls.push(call);
+    return { status: call.mode === 'human' ? 'sent' : 'applied', message: call.transcript };
+  } });
+  const events = [], student = h.student('student_00000001', '431230', events);
+  const call = { requestId: 'call_0001', transcript: '431 turn left heading two six zero' };
+  student.requestJoin();
+  assert.equal(student.controllerVoice(call), false);
+  h.instructor.admit(student.clientId);
+  student.ready();
+  assert.equal(student.controllerVoice(call), false);
+  h.instructor.start();
+  const original = student.controllerVoice(call);
+  assert.equal(events.at(-1).status, 'sent');
+  student.controllerVoice(call);
+  assert.equal(calls.length, 1);
+  h.instructor.updatePublicMetadata({ mode: 'qgh', controllerVoiceMode: 'automatic' });
+  const automatic = student.controllerVoice({ ...call, requestId: 'call_0002' });
+  assert.equal(events.at(-1).status, 'applied');
+  assert.equal(calls[1].mode, 'automatic');
+  const staleMode = { ...original, revision: automatic.revision + 1 };
+  h.instructor.receive(staleMode);
+  assert.equal(events.at(-1).status, 'rejected');
+  h.instructor.pause();
+  assert.equal(student.controllerVoice(call), false);
+  h.instructor.resume();
+  h.instructor.receive({ ...automatic, revision: staleMode.revision + 1 });
+  assert.equal(events.at(-1).status, 'rejected');
+  assert.equal(calls.length, 2);
+  assert.equal(Session.validateStudentMessage({ ...original, payload: { ...original.payload, headingDeg: 260 } }).ok, false);
+  assert.equal(h.instructor.receive({ ...original, revision: staleMode.revision + 3,
+    payload: { ...original.payload, seatToken: 'wrong_token' } }).reason, 'not-admitted');
+});
+
+test('a legacy relay can continue a normal exercise without sending unsupported voice packets', () => {
+  const h = harness(), messages = [];
+  h.hub.createTransport(h.instructor.channelName).subscribe(message => messages.push(message));
+  const transport = { ...h.hub.createTransport(h.instructor.channelName), controllerVoiceSupported: false };
+  const student = Session.createStudentSession({ pin: '431230', storage: h.storage, now: h.now,
+    clientId: 'student_legacy01', crypto: deterministicCrypto(91), transport });
+  student.requestJoin(); h.instructor.admit(student.clientId); student.ready(); h.instructor.start();
+  assert.equal(student.snapshot().state, 'running');
+  assert.ok(student.snapshot().voiceWindowId);
+  assert.equal(student.controllerVoice({ requestId: 'call_0001', transcript: '431 turn right heading 260' }), false);
+  student.heartbeat();
+  assert.equal(messages.at(-1).type, Session.TYPES.STUDENT_HEARTBEAT);
+  assert.deepEqual(messages.filter(message => message.type === Session.TYPES.LIFECYCLE).at(-1).payload, { state: 'running' });
+  assert.equal(messages.some(message => message.type === Session.TYPES.CONTROLLER_VOICE), false);
+});
 
 test('local session performs join, instructor admission, ready, run, pause, resume and termination', () => {
   const h = harness();

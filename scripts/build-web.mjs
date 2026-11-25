@@ -40,6 +40,7 @@ const engineFiles = [
   'tutorial-video.json',
   'rt-reference.md',
   'single.html',
+  'setup-loading.js',
   'simulator-core.js',
   'scope-visuals.js',
   'procedure-core.js',
@@ -54,6 +55,7 @@ const engineFiles = [
   'pilot-voices/manifest.json',
   'simulator.js',
   'voice-control.js',
+  'rt-intent-model.js',
   'offline-voice-engine.js',
   'voice-workspace.js',
   'voice.css',
@@ -74,6 +76,11 @@ const engineFiles = [
   'vendor/Apache-2.0.txt',
   'voice-models/qgh-vosk-en-us-small-0.15.tar.gz',
   'voice-models/NOTICE.txt',
+];
+
+const sharedProceduralFiles = [
+  'setup-loading.css',
+  'suryakiran-formation.webp',
 ];
 
 const pageFiles = ['index.html', 'user-guide.html', 'training-centre.html', 'single.html', 'tactical.html'];
@@ -107,7 +114,7 @@ const webHead = version => `
   <link rel="stylesheet" href="pwa.css?v=${version}">
 `;
 
-const webDistribution = version => `
+const webDistribution = `
         <!-- QGH_WEB_DISTRIBUTION -->
         <section class="entry-web-distribution" id="webDistribution" aria-label="Install and downloads" hidden>
           <div class="entry-web-distribution-head">
@@ -151,7 +158,7 @@ function assertReplaced(html, target, replacement, pageName) {
   return html.replace(target, replacement);
 }
 
-function addPwaMarkup(pageName, source, version) {
+function addPwaMarkup(pageName, source, version, includeSuite) {
   // The simulator's shared pages intentionally use versioned asset URLs. Rewrite
   // their query strings for each PWA build so a browser cannot retain a previous
   // voice or simulator script after the service worker has updated.
@@ -179,14 +186,12 @@ function addPwaMarkup(pageName, source, version) {
       const intro = '        <header class="entry-intro">';
       html = assertReplaced(html, intro, `${webInstructorGateway}${intro}`, pageName);
     }
-    if (!html.includes('QGH_WEB_DISTRIBUTION')) {
-      const quote = '        <p class="entry-quote">“Order in the air begins with clarity on the ground.”</p>';
-      html = assertReplaced(html, quote, `${quote}${webInstructorGatewayNote}${webDistribution(version)}`, pageName);
-    }
+    const quote = '        <p class="entry-quote">“Order in the air begins with clarity on the ground.”</p>';
+    html = assertReplaced(html, quote, `${quote}${webInstructorGatewayNote}${includeSuite ? '' : webDistribution}`, pageName);
   }
 
   if (!html.includes('pwa-register.js')) {
-    const scripts = pageName === 'index.html'
+    const scripts = pageName === 'index.html' && !includeSuite
       ? `  <script defer src="web-environment.js?v=${version}"></script>\n  <script defer src="release-links.js?v=${version}"></script>\n  <script defer src="web-distribution.js?v=${version}"></script>\n  <script defer src="pwa-register.js?v=${version}"></script>\n`
       : `  <script defer src="web-environment.js?v=${version}"></script>\n  <script defer src="pwa-register.js?v=${version}"></script>\n`;
     html = assertReplaced(html, '</body>', `${scripts}</body>`, pageName);
@@ -238,10 +243,25 @@ async function buildInstructorLedSuite() {
   // scope, cache namespace and install identity without widening the existing
   // QGH application's offline cache boundary.
   await import('./build-suite-web.mjs');
+  const sharedVoiceAssets = [
+    'voice-control.js', 'rt-intent-model.js', 'offline-voice-engine.js',
+    'vendor/vosk-browser-0.0.8.js', 'voice-models/qgh-vosk-en-us-small-0.15.tar.gz',
+  ];
+  const sharedSources = new Set(sharedVoiceAssets.map(asset => resolve(suiteWebOutputRoot, asset)));
   await cp(suiteWebOutputRoot, instructorLedOutputRoot, {
     recursive: true,
     force: true,
+    filter: source => !sharedSources.has(resolve(source)),
   });
+  for (const page of ['instructor.html', 'student.html', 'service-worker.js']) {
+    const path = resolve(instructorLedOutputRoot, page);
+    let contents = await readFile(path, 'utf8');
+    for (const asset of sharedVoiceAssets) {
+      contents = contents.replaceAll('src="' + asset, 'src="../' + asset)
+        .replaceAll("'./" + asset + "'", "'../" + asset + "'");
+    }
+    await writeFile(path, contents);
+  }
 
   for (const page of ['index.html', 'instructor.html', 'student.html', 'service-worker.js']) {
     try {
@@ -254,6 +274,7 @@ async function buildInstructorLedSuite() {
 
 async function build() {
   const version = await readWebVersion();
+  const includeSuite = process.env.QGH_PROCEDURAL_BETA === '1';
   const pilotPack = JSON.parse(await readFile(resolve(engineRoot, 'pilot-voices/manifest.json'), 'utf8'));
   if (!Array.isArray(pilotPack.assets) || !pilotPack.assets.length) throw new Error('Pilot voice pack manifest is empty.');
   const filesToCopy = [...engineFiles];
@@ -296,16 +317,19 @@ async function build() {
   await Promise.all(filesToCopy.map(copyEngineFile));
 
   await Promise.all(pwaFiles.map(copyStaticFile));
+  await Promise.all(sharedProceduralFiles.map(file => copyFile(
+    resolve(repositoryRoot, 'packages/procedural-beta/static', file), resolve(outputRoot, file)
+  )));
   await copyLicenseNotices(outputRoot, repositoryRoot);
   await applyVersionToServiceWorker(version);
 
   await Promise.all(pageFiles.map(async pageName => {
     const pagePath = resolve(outputRoot, pageName);
     const source = await readFile(pagePath, 'utf8');
-    await writeFile(pagePath, addPwaMarkup(pageName, source, version), 'utf8');
+    await writeFile(pagePath, addPwaMarkup(pageName, source, version, includeSuite), 'utf8');
   }));
 
-  await Promise.all([...filesToCopy, ...pwaFiles].map(async relativePath => {
+  await Promise.all([...filesToCopy, ...pwaFiles, ...sharedProceduralFiles].map(async relativePath => {
     try {
       await access(resolve(outputRoot, relativePath));
     } catch {
@@ -316,7 +340,7 @@ async function build() {
   await buildInstructorLedSuite();
 
   // Hosted suite builds opt in; Netlify and GitHub Pages now use the same flow.
-  if (process.env.QGH_PROCEDURAL_BETA === '1') {
+  if (includeSuite) {
     const { buildProceduralBeta } = await import('./build-procedural-beta.mjs');
     await buildProceduralBeta(outputRoot);
   }

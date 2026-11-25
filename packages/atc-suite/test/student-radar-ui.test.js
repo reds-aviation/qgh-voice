@@ -44,6 +44,32 @@ const returns = h => h.node('radarScope').ctx.strokes.filter(stroke => (
     && stroke.path[0].y === stroke.path[1].y && stroke.path[2].x === stroke.path[3].x)
 )).map(stroke => ({ ...stroke, x: (stroke.path[0].x + stroke.path[1].x) / 2, y: (stroke.path[0].y + stroke.path.at(-1).y) / 2 }));
 
+test('keyboard inspection uses only current cooperative returns inside the chosen range', () => {
+  for (const mode of ['sra', 'surveillance']) {
+    const h = harness(mode, { metadata: { radarProfile: 'correlated-training' },
+      Option: class { constructor(text, value) { this.text = text; this.value = value; } } });
+    const picker = h.node('radarTargetSelect'), inspect = h.node('inspectRadarTarget');
+    picker.options = [];
+    picker.replaceChildren = function (...options) { this.options = options; this.value = options[0].value; };
+    const present = { ...plot('target', 20), callsign: '101', surveillance: { secondary: true } };
+    const anonymous = { ...plot('primary', 20), callsign: 'PRIVATE' };
+    const distant = { ...present, trackId: 'far', rangeNm: 65 };
+    h.emit({ plots: [anonymous, present, distant], history: [{ ...present, trackId: 'old' }] });
+    assert.deepEqual(picker.options.map(option => option.text), ['101']);
+    inspect.events.click();
+    assert.equal(h.node('inspectTrack').textContent, '101');
+    const panel = h.node('radarInspection');
+    panel.events.keydown({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
+    assert.equal(panel.hidden, true);
+    h.emit({ plots: [anonymous, distant] });
+    assert.equal(inspect.disabled, true);
+    assert.equal(picker.value, '');
+    picker.value = 'track:target';
+    inspect.events.click();
+    assert.equal(panel.hidden, true);
+  }
+});
+
 test('SRA and vectoring students can wheel zoom while running or paused without changing sampled data or sending controls', () => {
   for (const mode of ['sra', 'surveillance']) for (const lifecycle of ['running', 'paused']) {
     const h = harness(mode), observation = { timestamp: 20, scanAngleDeg: 90, plots: [plot('sample', 20)], history: [] };

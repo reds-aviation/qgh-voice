@@ -33,7 +33,7 @@ test('Tactical QGH page contains all tactical controller bindings', () => {
   assert.match(simulator, /TRANSMIT FOR D\/F/);
   assert.match(simulator, /ADVANCE FLIGHT/);
   assert.match(simulator, /QGHTacticalReview/);
-  assert.match(html, /FORMATION FLIGHT/);
+  assert.match(html, /Formation flight/);
   assert.match(html, /tFormationLeader/);
   assert.match(html, /tStopFollowing/);
   assert.match(simulator, /formationRoleFor/);

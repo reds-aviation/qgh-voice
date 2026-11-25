@@ -412,7 +412,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
   background: #889795;
 }
 
-.signal.live { color: var(--green); }
+.signal.live { color: #13724f; }
 .signal.live i { background: var(--green); box-shadow: 0 0 0 4px #16875f22; }
 
 .df-mode { width: min(100%, 330px); margin: 16px auto 0; }
@@ -1261,3 +1261,19 @@ select:focus-visible {
 }
 
 .product-version{font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;white-space:nowrap}
+
+#console #controls button:disabled {
+  color: #52626b;
+  background: #e9eef0;
+  border-color: #aab7bd;
+  opacity: 1;
+}
+html[data-theme="dark"] #console #controls button:disabled {
+  color: #adbdc8;
+  background: #20303c;
+  border-color: #526676;
+}
+html[data-theme="dark"] body[data-suite-surface="single"] #console.active .df-mode button[aria-pressed="true"]:enabled {
+  background: var(--tab-selected);
+  color: var(--tab-selected-text);
+}

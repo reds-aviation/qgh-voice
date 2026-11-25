@@ -45,17 +45,54 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   const radarSweepClock = globalThis.ATCSuiteDisplay?.createRadarSweepClock();
   function enterWorkspace(element) {
     if (!element) return;
-    if (globalThis.ATCSuiteWorkspace?.enter) globalThis.ATCSuiteWorkspace.enter(element, { block: 'start' });
-    else element.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+    const heading = element.querySelector?.('h1') || element;
+    if (globalThis.ATCSuiteWorkspace?.enter) globalThis.ATCSuiteWorkspace.enter(element, { block: 'start', focusTarget: heading });
+    else {
+      element.scrollIntoView?.({ block: 'start', behavior: 'instant' });
+      heading.setAttribute?.('tabindex', '-1'); heading.focus?.({ preventScroll: true });
+    }
   }
   const state = { session: null, metadata: null, observation: null, simulationTime: 0, displayBearing: 'qdm', heartbeat: null, cloudTransport: null, joining: false,
     radarInspection: null, radarDrag: null, audioGeneration: 0, activeTransmission: null, renderedAt: null, pictureError: false,
     scopePan: { x: 0, y: 0 }, scopeDrag: null, plotting: null, observationReceivedAt: null,
-    loggingOut: false, freshnessTimer: null, animationFrame: null };
+    loggingOut: false, voiceLinkLost: false, freshnessTimer: null, animationFrame: null };
   let joinGeneration = 0;
+  const voiceContainer = byId('studentControllerVoice');
+  function supportsControllerVoice() {
+    return ['human', 'automatic'].includes(state.metadata?.controllerVoiceMode)
+      && ['qgh', 'sra', 'surveillance'].includes(state.metadata?.mode)
+      && (!state.cloudTransport || state.cloudTransport.controllerVoiceSupported === true);
+  }
+  const controllerVoice = globalThis.SuiteControllerVoice?.mount(voiceContainer, {
+    context() {
+      const seat = state.session?.snapshot();
+      return {
+        key: state.metadata?.mode,
+        exerciseId: seat?.sessionId,
+        runKey: seat?.voiceWindowId,
+        enabled: Boolean(seat?.admitted && !state.loggingOut && !state.voiceLinkLost && !byId('studentWorkspace').hidden
+          && supportsControllerVoice()
+          && ['ready', 'running', 'paused'].includes(seat.state)),
+        running: seat?.state === 'running' && Boolean(seat.voiceWindowId),
+        mode: state.metadata?.controllerVoiceMode,
+        // The online relay accepts transcripts only. A local model hint may
+        // accompany a same-PC call; only use callsigns already on this desk.
+        allowModelHint: !state.cloudTransport,
+        callsigns: [...new Set([state.metadata?.callsign, state.metadata?.approachCallsign,
+          state.observation?.callsign, ...currentRadarPlots().map(plot => plot.callsign)].filter(Boolean))]
+      };
+    },
+    onPress: cancelPilotAudio,
+    send(call) { return Boolean(state.session?.controllerVoice(call)); }
+  });
+  function refreshControllerVoice() {
+    if (!controllerVoice) return;
+    voiceContainer.hidden = !supportsControllerVoice();
+    controllerVoice.refresh();
+  }
   const clock = seconds => { const total = Math.max(0, Math.floor(Number(seconds) || 0)); return `${String(Math.floor(total / 3600)).padStart(2, '0')}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`; };
   const pad = value => String(Math.round(((Number(value) % 360) + 360) % 360) % 360).padStart(3, '0');
-  const modeLabel = mode => ({ qgh: 'QGH / DIRECTION FINDING', surveillance: 'SURVEILLANCE VECTORING', sra: 'SURVEILLANCE RADAR APPROACH', par: 'PRECISION APPROACH RADAR' })[mode] || 'CONTROLLER POSITION';
+  const modeLabel = mode => ({ qgh: 'QGH / direction finding', surveillance: 'Surveillance vectoring', sra: 'SRA · Surveillance radar approach', par: 'PAR · Precision approach radar' })[mode] || 'Controller position';
   const radarLabelFields = [
     ['callsign', 'radarLabelCallsign'], ['squawk', 'radarLabelSquawk'], ['modeS', 'radarLabelModeS'], ['level', 'radarLabelLevel'],
     ['groundSpeed', 'radarLabelSpeed'], ['heading', 'radarLabelHeading'], ['bearingRange', 'radarLabelBearingRange']
@@ -80,6 +117,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     if (id !== 'studentWorkspace') document.body.classList.toggle('narrow-radar', false);
     if (entering && scroll) enterWorkspace(byId(id));
     renderMeeting();
+    refreshControllerVoice();
   }
 
   function onSessionEvent(event) {
@@ -92,7 +130,10 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       state.simulationTime = Number(snapshot.simulationTime) || 0;
       byId('studentClock').textContent = clock(snapshot.simulationTime);
     }
-    if (event.kind === 'admitted' || event.kind === 'rejoined') {
+    if (event.kind === 'controller-voice-result') {
+      controllerVoice?.acknowledge(event);
+    } else if (event.kind === 'admitted' || event.kind === 'rejoined') {
+      controllerVoice?.reset();
       meetingPanel?.resetVoice?.();
       byId('studentReady').disabled = false; byId('studentReady').textContent = state.cloudTransport ? 'Ready — open my display' : 'READY';
       show('readyPanel'); byId('readyMode').textContent = modeLabel(state.metadata.mode);
@@ -141,6 +182,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     }
     renderFreshness(snapshot);
     renderMeeting();
+    if (!['observation', 'host-heartbeat'].includes(event.kind)) refreshControllerVoice();
   }
 
   async function requestJoin() {
@@ -150,11 +192,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const generation = ++joinGeneration;
     state.joining = true; byId('joinSession').disabled = true;
     try {
+    controllerVoice?.reset(); state.voiceLinkLost = false;
     state.session?.close();
     const online = byId('exerciseConnection')?.value === 'online';
     try { sessionStorage.setItem('atc-suite-connection', online ? 'online' : 'local'); } catch (_) {}
     const cloud = online ? await globalThis.ATCSuiteCloud.prepareStudent(pin, Session, status => {
       if (generation !== joinGeneration) return;
+      state.voiceLinkLost = !status.connected; refreshControllerVoice();
       if (!status.connected) { meetingPanel?.resetVoice?.(); byId('connectionState').textContent = 'ONLINE LINK LOST'; byId('waitingMessage').textContent = status.error; }
     }) : null;
     if (generation !== joinGeneration) { cloud?.transport?.close(); return; }
@@ -174,6 +218,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
   function logout() {
     ++joinGeneration; state.loggingOut = true; state.joining = false;
+    controllerVoice?.reset();
     const snapshot = state.session?.snapshot?.(), pin = byId('joinPin').value.replace(/\D/g, '');
     cancelPilotAudio(); meetingPanel?.resetVoice?.();
     if (typeof clearInterval === 'function') { clearInterval(state.heartbeat); clearInterval(state.freshnessTimer); }
@@ -201,13 +246,12 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   function renderLifecycle(lifecycle) {
     if (['ready', 'running', 'paused'].includes(lifecycle)) {
       const alreadyVisible = !byId('studentWorkspace').hidden;
-      const collapseNavigation = ['running', 'paused'].includes(lifecycle) && byId('studentNavigation').open;
       show('studentWorkspace', { scroll: false });
       document.body.classList.add?.('exercise-console');
       if (lifecycle === 'running' || lifecycle === 'paused') byId('studentNavigation').open = false;
       byId('studentExerciseState').textContent = lifecycle.toUpperCase(); byId('connectionState').textContent = 'CONNECTED';
       renderWorkspaceMode(); refreshAudioAvailability(); renderObservation();
-      if (!alreadyVisible || collapseNavigation) enterWorkspace(byId('studentWorkspace'));
+      if (!alreadyVisible) enterWorkspace(byId('studentWorkspace'));
     } else if (lifecycle === 'terminated' || lifecycle === 'disconnected') {
       setPilotAudio(false);
     }
@@ -236,7 +280,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const box = byId('studentCaption'); box.querySelector('strong').textContent = caption;
     cancelPilotAudio();
     const voice = localVoice();
-    if (byId('studentAudio').checked && voice) {
+    if (byId('studentAudio').checked && voice && !controllerVoice?.isCapturing()) {
       const generation = state.audioGeneration;
       state.activeTransmission = transmissionId || null;
       const notify = phase => {
@@ -649,8 +693,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function selectableSurveillancePlot(plot) {
-    return correlatedRadarProfile() && validPlot(plot) && plot.rangeNm <= selectedRadarRange()
-      && plot.surveillance?.secondary === true;
+    if (!correlatedRadarProfile() || !validPlot(plot) || plot.rangeNm > selectedRadarRange() || plot.surveillance?.secondary !== true) return false;
+    const canvas = byId('radarScope'), point = radarTransform(canvas, plot.rangeNm, plot.azimuthDeg);
+    return point.x >= 0 && point.x < canvas.width && point.y >= 0 && point.y < canvas.height;
   }
 
   function sameInspectedPlot(plot, selected) {
@@ -659,13 +704,32 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     return Boolean(selected.callsign && plot.callsign && selected.callsign === plot.callsign);
   }
 
+  function radarTargetKey(plot) {
+    return plot.trackId ? 'track:' + plot.trackId : plot.callsign ? 'call:' + plot.callsign : '';
+  }
+
+  function syncRadarTargetChoices(plots) {
+    const tools = byId('radarTargetTools'), picker = byId('radarTargetSelect'), inspect = byId('inspectRadarTarget');
+    if (!picker?.options) return;
+    tools.hidden = !correlatedRadarProfile();
+    const targets = plots.filter(selectableSurveillancePlot).filter(plot => radarTargetKey(plot));
+    const choices = targets.map(plot => [radarTargetKey(plot), plot.callsign || displayedSquawk(plot) || displayedBearingRange(plot)]);
+    if (!choices.length) choices.push(['', 'No sampled returns']);
+    if (picker.options.length !== choices.length || choices.some(([key, label], i) => picker.options[i].value !== key || picker.options[i].text !== label)) {
+      const previous = picker.value;
+      picker.replaceChildren(...choices.map(([key, label]) => new Option(label, key)));
+      if (choices.some(([key]) => key === previous)) picker.value = previous;
+    }
+    picker.disabled = inspect.disabled = !targets.length;
+  }
+
   function updateRadarInspection(plots) {
+    syncRadarTargetChoices(plots);
     const panel = byId('radarInspection');
     const selected = state.radarInspection;
     const plot = selected && Array.isArray(plots) ? plots.find(item => selectableSurveillancePlot(item) && sameInspectedPlot(item, selected)) : null;
     if (!plot) {
-      panel.hidden = true;
-      state.radarInspection = null;
+      if (!panel.hidden) closeRadarInspection();
       return;
     }
     const surveillance = plot.surveillance || {};
@@ -679,13 +743,28 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       ? surveillance.modeSId ? `ACTIVE · ${surveillance.modeSId}` : 'ACTIVE'
       : 'NOT FITTED';
     panel.hidden = false;
+    byId('inspectRadarTarget')?.setAttribute('aria-expanded', 'true');
   }
 
   function closeRadarInspection() {
+    const panel = byId('radarInspection');
+    const restoreFocus = panel?.contains?.(document.activeElement);
     state.radarInspection = null;
     state.radarDrag = null;
-    const panel = byId('radarInspection');
     if (panel) panel.hidden = true;
+    byId('inspectRadarTarget')?.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) {
+      const picker = byId('radarTargetSelect');
+      (picker && !picker.disabled && !byId('radarTargetTools').hidden ? picker : byId('radarScope')).focus?.({ preventScroll: true });
+    }
+  }
+
+  function openRadarInspection(plot) {
+    state.radarInspection = { trackId: plot.trackId, callsign: plot.callsign };
+    updateRadarInspection(currentRadarPlots());
+    const picker = byId('radarTargetSelect');
+    if (picker) picker.value = radarTargetKey(plot);
+    byId('closeRadarInspection').focus?.({ preventScroll: true });
   }
 
   function selectRadarPlot(event) {
@@ -701,11 +780,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       .filter(candidate => candidate.distance <= 22)
       .sort((left, right) => left.distance - right.distance || String(left.plot.trackId || left.plot.callsign).localeCompare(String(right.plot.trackId || right.plot.callsign)))[0];
     if (!match) return;
-    state.radarInspection = {
-      trackId: typeof match.plot.trackId === 'string' ? match.plot.trackId : null,
-      callsign: typeof match.plot.callsign === 'string' ? match.plot.callsign : null
-    };
-    updateRadarInspection(currentRadarPlots());
+    openRadarInspection(match.plot);
     return true;
   }
 
@@ -918,6 +993,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   byId('resetStudentScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
   byId('resetRadarScopePan').addEventListener('click', () => { state.scopePan = { x: 0, y: 0 }; renderObservation(); });
   byId('closeRadarInspection').addEventListener('click', closeRadarInspection);
+  byId('inspectRadarTarget')?.addEventListener('click', () => {
+    const key = byId('radarTargetSelect').value;
+    const plot = currentRadarPlots().find(item => selectableSurveillancePlot(item) && radarTargetKey(item) === key);
+    if (plot) openRadarInspection(plot);
+  });
+  byId('radarInspection').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeRadarInspection(); }
+  });
   byId('radarInspectionHandle').addEventListener('pointerdown', beginRadarInspectionDrag);
   byId('studentAudio').addEventListener('change', () => setPilotAudio(byId('studentAudio').checked));
   byId('togglePilotAudio').addEventListener('click', () => setPilotAudio(!byId('studentAudio').checked));
@@ -925,7 +1008,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   if ('speechSynthesis' in globalThis) speechSynthesis.addEventListener('voiceschanged', refreshAudioAvailability);
   addEventListener('pointermove', moveRadarInspection); addEventListener('pointerup', endRadarInspectionDrag); addEventListener('pointercancel', endRadarInspectionDrag);
   addEventListener('resize', () => state.metadata && chooseMode(state.metadata.mode)); addEventListener('orientationchange', () => setTimeout(() => state.metadata && chooseMode(state.metadata.mode), 100));
-  addEventListener('beforeunload', () => { cancelPilotAudio(); state.session?.close(); });
+  addEventListener('beforeunload', () => { controllerVoice?.destroy(); cancelPilotAudio(); state.session?.close(); });
   state.heartbeat = setInterval(() => { state.session?.heartbeat(); state.session?.tick(); }, 4000);
   state.freshnessTimer = setInterval(renderFreshness, 1000);
   void initialiseStudentPlotting();

@@ -149,6 +149,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     const raw = String(element.value || '').trim();
     const value = Number(raw);
     if (!raw || !Number.isFinite(value) || value < 0 || value > 359) {
+      const options = element.closest?.('details');
+      if (options) options.open = true;
+      element.focus?.();
       throw new Error((label || id) + ' must be from 000 to 359.');
     }
     return Core.normalize(value);
@@ -841,6 +844,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   }
 
   function startExercise() {
+    let validatingFleet = false;
     try {
       clearReplay();
       clearSpeedChange();
@@ -858,7 +862,9 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         random: exerciseRandom,
         initialSignatures: state.initialSignatures
       };
+      validatingFleet = true;
       state.exercise = Tactical.createExercise(cfg);
+      validatingFleet = false;
       state.activeAircraftId = state.exercise.formation && state.exercise.formation.enabled
         ? state.exercise.formation.leaderId
         : state.exercise.aircraft[0].id;
@@ -883,6 +889,13 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       startFlightLoop();
       showToast('TACTICAL EXERCISE STARTED');
     } catch (error) {
+      if (validatingFleet) {
+        const options = $('setupFleetDetails');
+        if (options) {
+          options.open = true;
+          options.querySelector('summary')?.focus();
+        }
+      }
       showToast(error.message || 'Check the exercise inputs.');
     }
   }
@@ -1562,4 +1575,5 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
   setReviewZoom(false);
   updateReplayButton();
   updateClock();
+  $('tSetup').setAttribute('data-setup-ready', '');
 })();
