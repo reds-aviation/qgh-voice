@@ -18,6 +18,7 @@ import {webcrypto} from 'node:crypto';
 import {IDBFactory} from 'fake-indexeddb';
 import {renderCurrentGuide,renderCommonGuide} from '../../scripts/build-suite-guides.mjs';
 import {domHarness} from './testing/dom-harness.mjs';
+import * as pilotScenarios from './static/pilot-scenarios.js';
 const require=createRequire(import.meta.url);
 const {matchGuideQuestion,topicForPage}=require('./static/suite-guide-chat.js');
 const knowledge=require('./static/guide-knowledge.js');
@@ -340,8 +341,9 @@ test('procedural console boots after feedback removal; mouse/touch controls pres
 test('phone roster keeps 20 editable cards and retains callsigns while changing the count',async()=>{
   const h=domHarness('<html><body><section id="setup"></section></body></html>');
   let submitted;
+  Object.assign(h.context, pilotScenarios);
   h.context.rosterHost={container:h.document.getElementById('setup'),view:()=>({title:'Phone exercise',mode:'area',environment:{}}),submit:async value=>{submitted=value;},airspace(){},cancel(){}};
-  vm.runInContext(source('traffic-setup.js').replace('export function createTrafficSetup','function createTrafficSetup')+';createTrafficSetup(rosterHost).open();',h.context);
+  vm.runInContext(source('traffic-setup.js').replace(/^import .*;\r?\n/gm, '').replace('export function createTrafficSetup','function createTrafficSetup')+';createTrafficSetup(rosterHost).open();',h.context);
   const count=h.document.querySelector('[name="aircraftCount"]');
   const setCount=n=>{count.value=String(n);count.dispatchEvent(new h.Event('input',{bubbles:true}));};
   setCount(20);

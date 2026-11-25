@@ -1,5 +1,5 @@
 {
-  "version": "1.0.12",
+  "version": "1.0.13",
   "go": "1.27.1",
   "files": [
     {
@@ -9,8 +9,8 @@
     },
     {
       "path": "static/procedural.js",
-      "bytes": 145719,
-      "sha256": "3b436adc436171cc93516baf7b1eeb9f366b722f869237a5b57807bd4fbf25cf"
+      "bytes": 146257,
+      "sha256": "a784c390f0cf85c42ccede1958b6d98417f8a53cca1b121de1117486e8cc87f3"
     },
     {
       "path": "static/procedural.css",
@@ -48,9 +48,14 @@
       "sha256": "8825fdda86d2bd7b9906a67f38ba9b988c300003633c5ba28f8f9225c992c7cc"
     },
     {
+      "path": "static/pilot-scenarios.js",
+      "bytes": 13030,
+      "sha256": "24dde21349e9e5523b52c39bdbfa4ba6ac2940dabcd8d205483d7a548973cf50"
+    },
+    {
       "path": "static/traffic-setup.js",
-      "bytes": 22020,
-      "sha256": "dbec4f3ce51bde1f1bf5e7db1695aa18e8fa3d52046ce96e0a01dbcccbbac17a"
+      "bytes": 25722,
+      "sha256": "bf85a3e773ab1169fd59860dd0f969d4b2864142cc3cb21224fc99995c861a50"
     },
     {
       "path": "static/india-airspace.json",
@@ -214,8 +219,8 @@
     },
     {
       "path": "static/guide-knowledge.js",
-      "bytes": 145118,
-      "sha256": "a3a52186ff32cec3c35db7ace922cc6ce1aed3d148315c49f7c8bc19266d955b"
+      "bytes": 146659,
+      "sha256": "3c09f236df8bfc6cdd9863f44093dbf887f88f13b530cd1808d5f797319521f7"
     },
     {
       "path": "static/gyani-instructor.png",

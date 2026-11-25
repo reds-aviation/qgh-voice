@@ -2357,14 +2357,25 @@ const trafficSetup = createTrafficSetup({
         const stamp = generation;
         if (chartWorkshop.hasDraft?.() || environmentDirty.size) throw new Error('Save or discard your airspace entries before creating traffic. Your entries are kept.');
         const exerciseId = view?.exerciseId;
-        if (!startingTrafficPending() && !await (globalThis.ATCSuiteWorkspace?.confirmAction?.('Create this exercise and replace the current traffic? The session will open paused with a new PIN.', {confirmLabel:'Create exercise'}) ?? confirm('Create this exercise and replace the current traffic? The session will open paused with a new PIN.')))
+        const replacement = payload.pilotScenario
+            ? 'Create this published scenario and replace the current traffic and chart? The session will open paused with a new PIN.'
+            : 'Create this exercise and replace the current traffic? The session will open paused with a new PIN.';
+        if (!startingTrafficPending() && !await (globalThis.ATCSuiteWorkspace?.confirmAction?.(replacement, {confirmLabel:'Create exercise'}) ?? confirm(replacement)))
             throw new Error('Creation cancelled. Your traffic entries are still available.');
         if (stamp !== generation || exerciseId !== view?.exerciseId || !isCurrent()) throw new Error('The exercise changed. Review your traffic and create again.');
-        await command('scenario-setup', payload);
+        if (payload.pilotScenario) {
+            await command('import', {scenario:payload.pilotScenario,expectedRevision:view?.revision}, undefined, exerciseId);
+        } else {
+            await command('scenario-setup', payload);
+        }
         if (stamp !== generation)
             return;
         if (!isCurrent())
             return;
+        if (payload.pilotScenario) {
+            trailHistory.clear(); drafts.clear(); selected = ''; settingsLoaded = false; signatures.clear();
+            sessionStorage.removeItem('reds-procedural-drafts');
+        }
         trafficSetup.markApplied?.();
         trafficSetup.close();
         session.startingTrafficRequired = false; sessionStorage.setItem(key, JSON.stringify(session));

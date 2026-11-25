@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {domHarness} from './testing/dom-harness.mjs';
+import * as pilotScenarios from './static/pilot-scenarios.js';
 
 const source = name => readFileSync(new URL('./static/' + name, import.meta.url), 'utf8');
 const gesturesModule = await import('data:text/javascript;base64,' + Buffer.from(source('scope-interaction.js')).toString('base64'));
@@ -37,7 +38,8 @@ function consoleHarness() {
   });
   vm.runInContext(source('workspace-shell.js'), h.context);
   vm.runInContext(source('meeting-room.js'), h.context);
-  vm.runInContext('(function(){' + source('traffic-setup.js').replace(/^export /gm, '') + ';globalThis.createTrafficSetup=createTrafficSetup;})();', h.context);
+  Object.assign(h.context, pilotScenarios);
+  vm.runInContext('(function(){' + source('traffic-setup.js').replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '') + ';globalThis.createTrafficSetup=createTrafficSetup;})();', h.context);
   vm.runInContext(source('procedural.js').replace(/^import .*;\r?\n/gm, '') + `
     globalThis.commands = []; command = async (...args) => commands.push(args);
     globalThis.downloads = []; download = (name, data) => downloads.push({name, data});
@@ -261,7 +263,8 @@ test('traffic setup submits exactly twenty initial aircraft and refuses twenty-o
   const h = domHarness('<html><body><section id="setup"></section></body></html>'), submitted = [];
   Object.assign(h.context, {host:{container:h.document.getElementById('setup'),view:()=>({title:'Capacity exercise',mode:'area',environment:{}}),
     submit:async payload => submitted.push(payload),cancel(){},airspace(){}}});
-  vm.runInContext(source('traffic-setup.js').replace(/export /g, '') + ';globalThis.setup=createTrafficSetup(host);setup.open();', h.context);
+  Object.assign(h.context, pilotScenarios);
+  vm.runInContext(source('traffic-setup.js').replace(/^import .*;\r?\n/gm, '').replace(/export /g, '') + ';globalThis.setup=createTrafficSetup(host);setup.open();', h.context);
   const count = h.document.querySelector('[name="aircraftCount"]'), form = h.document.querySelector('form');
   count.value = '20'; count.dispatchEvent(new h.Event('input'));
   form.dispatchEvent(new h.Event('submit', {cancelable:true})); await new Promise(resolve => setImmediate(resolve));

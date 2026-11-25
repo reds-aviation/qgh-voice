@@ -12,6 +12,7 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createRequire} from 'node:module';
+import {publishedPilotScenarios} from '../packages/procedural-beta/static/pilot-scenarios.js';
 const require = createRequire(import.meta.url);
 const knowledge = require('../packages/procedural-beta/static/guide-knowledge.js');
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -41,6 +42,21 @@ const reference = [
 ];
 const scopeDiagram = '<figure class="scope-layout-guide"><figcaption>The same workspace arrangement, with data appropriate to each role</figcaption><div class="scope-layout-header">Exercise state · time · local display options</div><div class="scope-layout-body"><div><strong>Left panel</strong><span>Aircraft controls<br>(instructor only)</span><span>Homing</span><span>Pilot transmission</span></div><div class="scope-layout-centre"><span class="scope-layout-ring" aria-hidden="true"></span><strong>Central instrument</strong><span>QGH homing<br>or SRE / SRA radar</span></div><div><strong>Right tools</strong><span>Session</span><span>Display tools</span><span>Help / review as available</span></div></div><p>Panels move or fold away. On phones, radio sits below the instrument. A matching layout does not reveal instructor truth to the student.</p></figure>';
 const radioFlow = flow('Homing indication follows the aircraft transmission', [['Transmit','Only the speaking aircraft'],['Live','QDM or QTE indication'],['Release','Hold last indication: 2 s'],['Blank','Await a new transmission']]);
+const pilotExercises = '<section class="section" id="published-traffic-exercises"><h3>Pune and Bagdogra traffic exercises</h3>'+
+  '<p>Open Procedural, then open Start from a training scenario in the traffic setup. Choose an exercise, select Prepare this exercise, review the roster, and select Create exercise. This applies the published training chart and opens the exercise paused.</p>'+
+  pointerList([
+    '101–104: Four circuit aircraft start on different legs. Tejas, Su-30MKI, An-32 and ALH Dhruv give you different speeds to manage.',
+    '201–202: A Mi-17V-5 and Su-30MKI operate in separate training sectors about 30 NM from the ARP.',
+    '301–302: Two transports track published ATS legs. Keep them in your picture while working the circuit.',
+    '401–402: A Su-30MKI and an An-32 return on a separate ATS route. Build their arrival sequence from reports.',
+    'Each exercise starts with 10 aircraft. The editable pilot roster is capped at 12. Callsigns, circuits, sectors and mission activity are training examples.'
+  ])+[
+    {id:'pune',name:'Pune (VAPO) · VAR37',text:'W28 (LUKTI–PPN) carries both en-route aircraft through VAR37. Returning aircraft follow W134 (MUBKU–PPN). The two sectors are northeast and southeast of the ARP.',source:'https://aim-india.aai.aero.in/eaip/eaip-v2-09-2026/eAIP/IN-AD%202.1VAPO-en-GB.html'},
+    {id:'bagdogra',name:'Bagdogra (VEBD) · VER 82',text:'W105 (KHR–LOTPU) and Q18 (VILEN–LOTPU) cross the lateral footprint of VER 82 above its 5,000 ft ceiling. Both returning aircraft follow W137 from OPIMO toward BGD. VER 82 starts about 34 NM from the ARP, so the circuit and the northeast and east training sectors sit outside it.',source:'https://aim-india.aai.aero.in/eaip/eaip-v2-09-2026/eAIP/IN-AD%202.1VEBD-en-GB.html'},
+  ].map(site=>'<details class="guide-answer"><summary>'+escape(site.name)+'</summary><p>'+escape(site.text)+'</p><ul class="guide-pointers">'+
+    publishedPilotScenarios.filter(item=>item.base===site.id).map(item=>'<li><strong>'+escape(item.variant.title)+' · RWY '+escape(item.runway)+'</strong> — '+escape(item.variant.goal)+'</li>').join('')+
+    '</ul><p><a href="'+escape(site.source)+'">AIP aerodrome source</a></p></details>').join('')+
+  '<p>Airspace and route source details travel with the chart. The scenarios use dated AIP data for practice and carry no live traffic or activation information.</p></section>';
 const joinSteps = [
   ['Instructor', 'Share PIN', 'Create the session and open Session to find its six-digit PIN.'],
   ['Controller', 'Request to join', 'Enter the PIN at Controller position. Procedural also asks for your name.'],
@@ -59,7 +75,7 @@ export function renderGuideContent(version = knowledge.revision) {
   const used = new Set();
   const entries = ids => ids.map(id=>{const e=byId(id);if(!e||used.has(id))return '';used.add(id);return renderEntry(e);}).join('');
   let html='<div id="current-flow" data-guide-revision="'+escape(version)+'">';
-  for (const [index,t] of tracks.entries()) html+='<section class="section guide-track" id="'+t.id+'">'+(t.id==='qgh'?'<span id="individual" class="guide-anchor"></span><span id="quick-start" class="guide-anchor"></span><span id="setup" class="guide-anchor"></span><span id="tactical" class="guide-anchor"></span>':'')+'<p class="eyebrow">0'+(index+1)+' · '+escape(t.note)+'</p><h2>'+t.label+'</h2>'+flow('From setup to review',t.steps)+entries(t.ids)+(t.id==='qgh'?qghNotes+'<p><a href="training-centre.html#calls">Search accepted QGH radio calls →</a></p>':'')+'<p class="guide-launch"><a class="button" href="'+t.href+'">Open '+t.label+' →</a></p></section>';
+  for (const [index,t] of tracks.entries()) html+='<section class="section guide-track" id="'+t.id+'">'+(t.id==='qgh'?'<span id="individual" class="guide-anchor"></span><span id="quick-start" class="guide-anchor"></span><span id="setup" class="guide-anchor"></span><span id="tactical" class="guide-anchor"></span>':'')+'<p class="eyebrow">0'+(index+1)+' · '+escape(t.note)+'</p><h2>'+t.label+'</h2>'+flow('From setup to review',t.steps)+entries(t.ids)+(t.id==='qgh'?qghNotes+'<p><a href="training-centre.html#calls">Search accepted QGH radio calls →</a></p>':'')+(t.id==='procedural'?pilotExercises:'')+'<p class="guide-launch"><a class="button" href="'+t.href+'">Open '+t.label+' →</a></p></section>';
   for (const [id,title,aliases,ids] of reference) html+='<section class="section" id="'+id+'">'+aliases.map(a=>'<span id="'+a+'" class="guide-anchor"></span>').join('')+'<h2>'+title+'</h2>'+(id==='connection'?joinDiagram:'')+(id==='scope'?scopeDiagram:'')+(id==='aircraft'?'<details class="guide-answer"><summary>Instructor QGH / SRE / SRA: transmission and radar are separate</summary>'+radioFlow+pointerList(['A pilot Position report gives the selected aircraft’s current bearing and range.','The student’s radar return remains at its sampled position until the next beam crossing.','Procedural D/F uses its own configured hold; see Transmit and read the bearing below.'])+'</details>':'')+entries(ids)+'</section>';
   html+='<section class="section" id="tutorial"><h2>Using the video tutorial</h2>'+entries(['youtube-tutorial'])+'<p><a href="training-centre.html#demonstrations">Open the video player →</a></p></section>';
   // Preserve every knowledge answer and its destination in the same searchable guide.

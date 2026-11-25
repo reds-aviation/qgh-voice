@@ -8,6 +8,8 @@ Contributor(s): None designated in this initial notice.
 No alternative licence is designated for this CPAL version. Historical MIT releases retain the permissions described in COPYRIGHT.md.
 */
 
+import { createPublishedPilotScenario, pilotAircraftLimit, publishedPilotScenarios } from './pilot-scenarios.js';
+
 const numericFields = [
     { key: 'qteDeg', label: 'Bearing °T', min: 0, max: 360, initial: i => (65 + i * 15) % 360 },
     { key: 'rangeNm', label: 'Range NM', min: 0, max: 2000, initial: i => 25 + i * 2 },
@@ -108,10 +110,18 @@ export function createTrafficSetup(host) {
     const scenarios = element('details', 'traffic-scenarios');
     scenarios.append(element('summary', '', 'Start from a training scenario'));
     const scenarioSelect = element('select');
+    scenarioSelect.id = 'training-scenario-select';
     const scenarioLabel = element('label', 'setup-field', 'Training scenario');
     for (const [id, scenario] of Object.entries(trainingScenarios)) {
         const option = element('option', '', scenario.title); option.value = id;
         scenarioSelect.append(option);
+    }
+    for (const name of ['Pune','Bagdogra']) {
+        const group = element('optgroup'); group.label = name + ' · published airspace';
+        for (const scenario of publishedPilotScenarios.filter(item => item.title.startsWith(name + ' ·'))) {
+            const option = element('option', '', scenario.title); option.value = scenario.id; group.append(option);
+        }
+        scenarioSelect.append(group);
     }
     scenarioSelect.value = 'crossing';
     scenarioLabel.append(scenarioSelect);
@@ -119,13 +129,48 @@ export function createTrafficSetup(host) {
     objective.setAttribute('aria-live','polite');
     const useScenario = element('button', 'secondary', 'Replace draft with this traffic');
     useScenario.type = 'button';
+    let pilotDraft = null;
     function describeScenario() {
         const scenario = trainingScenarios[scenarioSelect.value];
-        objective.textContent = scenario.aircraft.length + ' aircraft. ' + scenario.goal;
+        const published = publishedPilotScenarios.find(item => item.id === scenarioSelect.value);
+        objective.textContent = published
+            ? published.goal + ' Creating the exercise applies its published chart.'
+            : scenario ? scenario.aircraft.length + ' aircraft. ' + scenario.goal : '';
+        useScenario.textContent = published ? 'Prepare this exercise' : 'Replace draft with this traffic';
+        useScenario.disabled = pending || (!scenario && !published);
     }
     scenarioSelect.addEventListener('change', describeScenario);
-    useScenario.addEventListener('click', () => {
+    useScenario.addEventListener('click', async () => {
+        const selected = scenarioSelect.value;
+        const published = publishedPilotScenarios.find(item => item.id === selected);
+        if (pending) return;
+        if (published) {
+            const selectionEpoch = epoch;
+            pending = true;
+            syncControls();
+            try {
+                const prepared = await createPublishedPilotScenario(selected);
+                if (!isOpen || epoch !== selectionEpoch) return;
+                resetFromScenario(prepared, true);
+                airspaceLabel.textContent = 'Chart prepared: ' + prepared.environment.aerodromeName;
+                dirty = true;
+                error.hidden = true;
+            } catch (reason) {
+                if (isOpen && epoch === selectionEpoch) {
+                    error.textContent = reason.message;
+                    error.hidden = false;
+                }
+            } finally {
+                pending = false;
+                syncControls();
+            }
+            return;
+        }
         const scenario = trainingScenarios[scenarioSelect.value];
+        if (!scenario) return;
+        pilotDraft = null;
+        setDraftLimit();
+        airspaceLabel.textContent = 'Airspace: ' + (host.view()?.environment?.aerodromeName || 'Custom airspace');
         title.value = scenario.title;
         mode.value = scenario.mode;
         count.value = String(scenario.aircraft.length);
@@ -143,7 +188,6 @@ export function createTrafficSetup(host) {
         error.hidden = true;
         syncControls();
     });
-    describeScenario();
     scenarios.append(scenarioLabel, objective, useScenario);
     const roster = element('details', 'roster-editor optional-traffic');
     roster.append(element('summary', 'roster-editor-head', 'Initial aircraft · positions and performance'));
@@ -194,6 +238,11 @@ export function createTrafficSetup(host) {
     let pending = false;
     let epoch = 0;
     let dirty = false;
+    function setDraftLimit() {
+        count.max = String(pilotDraft ? pilotAircraftLimit : 20);
+        count.parentElement.querySelector('span').textContent = 'Aircraft count · 1–' + count.max;
+    }
+    describeScenario();
     const byteLength = (text) => new TextEncoder().encode(text).length;
     function addRow(index) {
         const row = element('div', 'roster-row');
@@ -268,13 +317,15 @@ export function createTrafficSetup(host) {
         }));
         jump.value = chosen && Number(chosen) < visibleCount ? chosen : '0';
         navigator.hidden = visibleCount < 2;
+        airspaceButton.hidden = Boolean(pilotDraft);
+        describeScenario();
         updateSummary();
         create.textContent = pending ? 'Creating exercise…' : 'Create exercise';
         form.setAttribute('aria-busy', String(pending));
     }
     function updateCount() {
         const value = Number(count.value);
-        if (count.value.trim() && Number.isInteger(value) && value >= 1 && value <= 20) {
+        if (count.value.trim() && Number.isInteger(value) && value >= 1 && value <= Number(count.max)) {
             visibleCount = value;
             syncControls();
         }
@@ -300,14 +351,14 @@ export function createTrafficSetup(host) {
         return value;
     }
     function payload() {
-        const size = readNumber(count, 'Aircraft count', 1, 20);
+        const size = readNumber(count, 'Aircraft count', 1, Number(count.max));
         if (!Number.isInteger(size))
-            fail(count, 'Aircraft count must be a whole number from 1 to 20.');
+            fail(count, 'Aircraft count must be a whole number from 1 to ' + count.max + '.');
         updateCount();
         const sessionTitle = readText(title, 'Session title', 100, true);
         if (!['area', 'approach', 'aerodrome'].includes(mode.value))
             fail(mode, 'Choose an exercise family.');
-        const currentEnvironment = host.view()?.environment || {};
+        const currentEnvironment = pilotDraft?.environment || host.view()?.environment || {};
         const callsigns = new Set();
         const aircraft = rows.slice(0, size).map((row, index) => {
             const prefix = `Aircraft ${index + 1}`;
@@ -335,6 +386,17 @@ export function createTrafficSetup(host) {
                 compassUnserviceable: row.inputs.compassUnserviceable.checked,
             };
         });
+        if (pilotDraft) {
+            return {pilotScenario: {
+                ...pilotDraft, title:sessionTitle, mode:mode.value, aircraft:aircraft.map(({qteDeg,rangeNm,...item})=>{
+                    const radians=qteDeg*Math.PI/180;
+                    return {...item,xNm:Math.sin(radians)*rangeNm,yNm:Math.cos(radians)*rangeNm,
+                        targetHeadingDeg:item.headingDeg,targetAltitudeFt:item.altitudeFt,targetSpeedKt:item.speedKt,
+                        mode:item.routeId?'route':'heading',status:item.spawnTime?'scheduled':'active',altimeterReference:item.altimeterReference || 'qnh',
+                        pendingClearances:[],lastFixTimes:{}};
+                }), strips:Object.fromEntries(aircraft.map(item=>[item.id,pilotDraft.strips[item.id] || {}])),
+            }};
+        }
         return { title: sessionTitle, mode: mode.value, aircraft, environment: { dfHoldSeconds: currentEnvironment.dfHoldSeconds ?? 10, ...(currentEnvironment.magneticVariationKnown === false && currentEnvironment.trainingMagneticVariationDeg == null ? { trainingMagneticVariationDeg: 0 } : {}) } };
     }
     function close() {
@@ -353,7 +415,7 @@ export function createTrafficSetup(host) {
             mode.value = ['area', 'approach', 'aerodrome'].includes(view?.mode) ? view.mode : 'area';
             initialized = true;
         }
-        airspaceLabel.textContent = `Airspace: ${environment.aerodromeName || 'Custom airspace'}`;
+        airspaceLabel.textContent = pilotDraft ? 'Chart prepared: '+pilotDraft.environment.aerodromeName : `Airspace: ${environment.aerodromeName || 'Custom airspace'}`;
         error.textContent = '';
         error.hidden = true;
         host.container.hidden = false;
@@ -367,7 +429,7 @@ export function createTrafficSetup(host) {
         // Give the software keyboard time to resize the visible viewport.
         setTimeout(() => { if (document.activeElement === current) current.scrollIntoView({ block: 'center', behavior: 'auto' }); }, 300);
     });
-    form.addEventListener('change', event => { dirty = true; if (event.target.dataset.field === 'callsign') syncControls(); });
+    form.addEventListener('change', event => { if (event.target === scenarioSelect) return; dirty = true; if (event.target.dataset.field === 'callsign') syncControls(); });
     form.addEventListener('input', event => {
         dirty = true;
         if (event.target === mode || event.target.dataset.field === 'callsign') updateSummary();
@@ -408,8 +470,9 @@ export function createTrafficSetup(host) {
             syncControls();
         }
     });
-    function resetFromScenario(scenario) {
+    function resetFromScenario(scenario, pilot = false) {
         if (!scenario) return;
+        pilotDraft = pilot ? scenario : null; setDraftLimit();
         epoch++; dirty = false; initialized = true;
         title.value = scenario.title || 'Procedural training session'; mode.value = scenario.mode || 'area';
         const aircraft = scenario.aircraft || [];
@@ -417,7 +480,8 @@ export function createTrafficSetup(host) {
         visibleCount = Math.max(1, aircraft.length); count.value = String(visibleCount); syncControls();
         const env = scenario.environment || {};
         aircraft.forEach((item,index) => {
-            rows[index].navigation = Object.fromEntries(['routeId', 'wakeCategory'].filter(key => item[key]).map(key => [key, item[key]]));
+            const navigationKeys = pilot ? ['routeId', 'wakeCategory', 'routeIndex', 'altimeterReference'] : ['routeId', 'wakeCategory'];
+            rows[index].navigation = Object.fromEntries(navigationKeys.filter(key => item[key]).map(key => [key, item[key]]));
             const target = rows[index].inputs, east = item.xNm - (env.stationXNm || 0), north = item.yNm - (env.stationYNm || 0);
             target.callsign.value = item.callsign; target.type.value = item.type || 'TRAINER';
             target.qteDeg.value = String((Math.atan2(east,north) * 180 / Math.PI + 360) % 360); target.rangeNm.value = String(Math.hypot(east,north));

@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { domHarness } from './testing/dom-harness.mjs';
+import * as pilotScenarios from './static/pilot-scenarios.js';
 
 const source = name => readFileSync(new URL('./static/' + name, import.meta.url), 'utf8');
 const uri = text => 'data:text/javascript;base64,' + Buffer.from(text).toString('base64');
@@ -54,7 +55,7 @@ async function preparationHarness() {
     h.document.getElementById('setup').append(trafficContainer);
     let scenario = startingScenario(), generation = 1, allowConfirmation = true;
     const commands = [], submissions = [], prompts = [], messages = [], requests = [], loads = [];
-    Object.assign(h.context, geometry, calibration, navigation, routeChart, {
+    Object.assign(h.context, geometry, calibration, navigation, routeChart, pilotScenarios, {
         Event: h.Event,
         confirm: prompt => { prompts.push(prompt); return allowConfirmation; },
         fetch: async path => ({ ok: true, json: async () => JSON.parse(source(path)) }),
