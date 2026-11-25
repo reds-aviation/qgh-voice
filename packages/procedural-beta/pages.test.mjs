@@ -86,6 +86,18 @@ test('Pages package: guide links, assets, unique IDs and safe offline room route
   assert.equal((canonicalGuide.match(/id="current-flow"/g)||[]).length,1);
   assert.ok(canonicalGuide.includes('I am also learning.'),'Training guide explains Saarthi limitations');
   const{document:guideDocument}=parseHTML(canonicalGuide);
+  const {document:homeDocument}=parseHTML(readFileSync(resolve(dist,'index.html'),'utf8'));
+  assert.ok(homeDocument.querySelector('#offline-welcome[hidden] a[href="training-centre.html#offline-preparation"]'));
+  assert.equal(homeDocument.querySelector('#offline-preparation, #offline-prepare-core, #offline-prepare-voice'),null);
+  assert.ok(homeDocument.getElementById('installWebApp'));
+  assert.ok(guideDocument.querySelector('.section-nav a[href="#offline-preparation"]'));
+  assert.ok(guideDocument.querySelector('#offline-preparation #offline-prepare-core'));
+  assert.ok(guideDocument.querySelector('#offline-preparation #offline-prepare-voice'));
+  assert.ok(guideDocument.querySelector('#offline-preparation a[href="#demonstrations"]'));
+  const guideScripts=[...guideDocument.querySelectorAll('script[src]')].map(script=>
+    new URL(script.getAttribute('src'),base).pathname.split('/').at(-1));
+  assert.equal(guideScripts.filter(path=>path==='suite-landing-register.js').length,1);
+  assert.ok(!guideScripts.includes('pwa-register.js'), 'guide runs only one shell registration handler');
   for(const id of ['qgh','instructor','procedural','calls','demonstrations'])assert.ok(guideDocument.getElementById(id),'one guide includes '+id);
   for(const [page,anchor,prefix] of [['user-guide.html','',''],['instructor-led/training-guide.html','instructor','../'],['procedural-beta/procedural-guide.html','procedural','../']]) {
     const {document}=parseHTML(readFileSync(resolve(dist,page),'utf8'));

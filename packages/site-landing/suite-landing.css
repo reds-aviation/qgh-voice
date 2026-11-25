@@ -29,7 +29,7 @@ a:focus-visible{outline:3px solid #a95a00;outline-offset:4px;border-radius:3px}
 .suite-install { min-height:44px; cursor:pointer; }
 .suite-install[hidden] { display:none; }
 .suite-install:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
-.suite-offline-actions .entry-native-downloads { flex-wrap:wrap; }
+.suite-footer .entry-native-downloads { flex-wrap:wrap; }
 .creator-credit{text-align:right;display:flex;flex-direction:column;gap:4px;white-space:nowrap}
 .creator-credit span{font:400 11px/1.4 Plex Sans,Arial,sans-serif;letter-spacing:0;color:var(--iaf-header-secondary)}
 .creator-credit strong{font:600 12px/1.4 Plex Sans,Arial,sans-serif;color:var(--iaf-header-ink)}
@@ -208,28 +208,34 @@ a.procedural-card:focus-visible{outline:3px solid #a95a00;outline-offset:5px}
   .suite-hero { --suite-hero-art: url('hero-airspace-760.webp'); }
 }
 
-.suite-offline {
-  margin: 0 clamp(16px, 5vw, 64px) 24px;
-  padding: clamp(16px, 2.5vw, 28px);
-  background: var(--iaf-card);
-  color: var(--iaf-ink);
+.offline-welcome {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  max-width: min(600px, 90%);
+  margin: 12px 4.1% 12px auto;
+  padding: 10px 12px 10px 16px;
   border: 1px solid var(--iaf-line);
   border-radius: 10px;
+  background: var(--iaf-card);
+  color: var(--iaf-ink);
 }
-.suite-offline h2 { margin: 0; font-size: clamp(21px, 2.5vw, 29px); }
-.suite-offline p { margin: .65rem 0 0; color: var(--iaf-muted); }
-.suite-offline-inventory { display: grid; gap: .5rem; margin: 1rem 0; }
-.suite-offline-inventory > div { display: flex; flex-wrap: wrap; gap: .3rem 1rem; }
-.suite-offline dt { font-weight: 650; }
-.suite-offline dd { margin: 0; color: var(--iaf-muted); }
-.suite-offline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
-.suite-offline-actions button {
-  min-height: 44px; padding: .5rem .8rem; border: 1px solid var(--tab-edge);
-  border-radius: 7px; color: var(--tab-text); background: var(--tab-surface);
-  font: 600 .9rem/1.2 var(--sim-ui-font);
+.offline-welcome[hidden] { display: none; }
+.offline-welcome div { flex: 1 1 205px; }
+.offline-welcome h2 { margin: 0; font-size: 1rem; }
+.offline-welcome p { margin: 2px 0 0; color: var(--iaf-muted); font-size: .9rem; }
+.offline-welcome a, .offline-welcome button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--tab-text);
+  background: var(--tab-surface);
+  border: 1px solid var(--tab-edge);
+  border-radius: 7px;
 }
-.suite-offline-actions button:enabled { cursor: pointer; }
-.suite-offline-actions button:enabled:hover { background: var(--tab-hover); }
-.suite-offline-actions button:disabled { border-style: dashed; }
-.suite-offline-actions a { color: var(--iaf-blue-dark); }
-#offline-preparation-status { min-height: 1.5em; font-size: .93rem; }
+.offline-welcome a { padding-inline: 12px; font-size: .9rem; font-weight: 600; }
+.offline-welcome button { min-width: 44px; margin-inline-start: auto; font: inherit; font-size: 1.25rem; cursor: pointer; }
+.offline-welcome :is(a, button):hover { background: var(--tab-hover); }
+.offline-welcome :is(a, button):focus-visible { outline: 2px solid var(--iaf-ink); outline-offset: 2px; }

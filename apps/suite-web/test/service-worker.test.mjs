@@ -142,13 +142,21 @@ test('offline preparation checks and repairs only the current shell assets', asy
   for (const repair of [false, true]) {
     let preparation, status;
     harness.handlers.get('message')({
-      source: { url: scope + 'index.html' },
+      source: { url: new URL('../training-centre.html', scope).href },
       data: { type: 'OFFLINE_SHELL_STATUS', repair },
       ports: [{ postMessage: payload => { status = payload; } }],
       waitUntil: value => { preparation = value; },
     });
     await preparation;
     assert.equal(status.ready, repair);
+  }
+  for (const url of [new URL('../single.html', scope).href, 'https://unrelated.test/training-centre.html']) {
+    harness.handlers.get('message')({
+      source: { url },
+      data: { type: 'OFFLINE_SHELL_STATUS', repair: true },
+      ports: [{ postMessage: () => assert.fail('Only the guide and suite entry may prepare this shell') }],
+      waitUntil: () => assert.fail('Unexpected offline shell request'),
+    });
   }
   assert.equal(harness.calls.addAll.length, 1);
   const paths = harness.calls.addAll[0].map(request => request.url);

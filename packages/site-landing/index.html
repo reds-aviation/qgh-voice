@@ -45,6 +45,14 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     </header>
 
     <main>
+      <aside class="offline-welcome" id="offline-welcome" aria-labelledby="offline-welcome-title" hidden>
+        <div>
+          <h2 id="offline-welcome-title">Training without internet?</h2>
+          <p>Get this device ready in the Training Guide.</p>
+        </div>
+        <a href="training-centre.html#offline-preparation">Set up offline use</a>
+        <button type="button" aria-label="Dismiss offline setup reminder">×</button>
+      </aside>
       <section class="suite-hero" aria-labelledby="hero-heading">
         <canvas class="hero-radar" aria-hidden="true"></canvas>
         <div class="hero-copy">
@@ -77,28 +85,15 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           </a>
         </div>
       </section>
-      <section class="suite-offline" id="offline-preparation" aria-labelledby="offline-title">
-        <h2 id="offline-title">Prepare for offline use</h2>
-        <p>Prepare this device for local training. Online rooms still need internet.</p>
-        <dl class="suite-offline-inventory">
-          <div><dt>Individual QGH, Procedural and Training Guide</dt><dd id="offline-main-status">Not checked</dd></div>
-          <div><dt>Instructor-led QGH, SRE, SRA and vectoring</dt><dd id="offline-instructor-status">Not checked</dd></div>
-          <div><dt>Speech recognition · about 45 MB</dt><dd id="offline-voice-status" role="status">Optional</dd></div>
-        </dl>
-        <div class="suite-offline-actions">
-          <button id="offline-prepare-core" type="button" disabled>Prepare exercises</button>
-          <button id="offline-prepare-voice" type="button" disabled>Download voice</button>
-          <a href="training-centre.html#demonstrations">Training videos</a>
-          <div class="entry-native-downloads" id="nativeDownloads" hidden>
-            <a id="downloadWindows" href="#" target="_blank" rel="noopener noreferrer" hidden>Windows installer</a>
-            <a id="downloadAndroid" href="#" target="_blank" rel="noopener noreferrer" hidden>Android APK</a>
-          </div>
-        </div>
-        <p id="offline-preparation-status" role="status">Offline preparation is available in the installable web app.</p>
-      </section>
     </main>
 
-    <div class="suite-footer"><span>Independent ATC training simulator</span></div>
+    <div class="suite-footer">
+      <span>Independent ATC training simulator</span>
+      <div class="entry-native-downloads" id="nativeDownloads" hidden>
+        <a id="downloadWindows" href="#" target="_blank" rel="noopener noreferrer" hidden>Windows installer</a>
+        <a id="downloadAndroid" href="#" target="_blank" rel="noopener noreferrer" hidden>Android APK</a>
+      </div>
+    </div>
   </div>
   <dialog class="pwa-install-sheet" id="pwaInstallSheet" aria-labelledby="pwaInstallTitle">
     <div class="pwa-install-sheet-card">

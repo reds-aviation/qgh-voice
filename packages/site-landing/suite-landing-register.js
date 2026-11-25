@@ -31,10 +31,35 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
         approved = true; button.disabled = true; button.textContent = 'Updating…';
         registration.waiting.postMessage({type:'SKIP_WAITING'});
       });
-      (document.querySelector('.topbar nav, .suite-header-left') || document.body).append(button);
+      (document.querySelector('.topbar nav, .suite-header-left, .site-header .header-links') || document.body).append(button);
     }
     button.hidden = active();
   };
+  const welcome = document.getElementById('offline-welcome');
+  if (welcome && window.isSecureContext) {
+    const preference = 'ats-simbox-offline-welcome-seen';
+    let seen = false;
+    try {
+      seen = localStorage.getItem(preference) === '1';
+      if (!seen) localStorage.setItem(preference, '1');
+    } catch {
+      try {
+        seen = sessionStorage.getItem(preference) === '1';
+        if (!seen) sessionStorage.setItem(preference, '1');
+      } catch { /* The reminder still works with storage disabled. */ }
+    }
+    if (!seen) {
+      welcome.hidden = false;
+      const dismiss = () => {
+        welcome.hidden = true;
+        document.querySelector('.suite-header a[href="training-centre.html"]')?.focus();
+      };
+      welcome.querySelector('button').addEventListener('click', dismiss);
+      welcome.addEventListener('keydown', event => { if (event.key === 'Escape') dismiss(); });
+      welcome.querySelector('a').addEventListener('click', () => { welcome.hidden = true; });
+    }
+  }
+
   const offlineSetup = document.getElementById('offline-preparation');
   if (offlineSetup && window.isSecureContext) {
     const coreButton = document.getElementById('offline-prepare-core');
@@ -52,10 +77,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       return globalThis.QGHOfflineVoiceEngine;
     };
 
-    function activeWorker(record) {
-      if (record?.active?.state === 'activated') return Promise.resolve(record.active);
-      const worker = record?.installing || record?.active;
+    function shellWorker(record) {
+      const worker = record?.installing || record?.waiting || record?.active;
       if (!worker) return Promise.reject(new Error('Offline installer unavailable'));
+      const installed = () => ['installed', 'activating', 'activated'].includes(worker.state);
+      if (installed()) return Promise.resolve(worker);
       return new Promise((resolve, reject) => {
         const finish = (callback, result) => {
           clearTimeout(timer);
@@ -63,7 +89,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           callback(result);
         };
         const check = () => {
-          if (worker.state === 'activated') finish(resolve, worker);
+          if (installed()) finish(resolve, worker);
           if (worker.state === 'redundant') finish(reject, new Error('Offline installer did not complete'));
         };
         const timer = setTimeout(() => finish(reject, new Error('Offline installer timed out')), 180000);
@@ -90,7 +116,8 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
     async function isShellReady(url) {
       try {
         const record = await navigator.serviceWorker.getRegistration(url.href);
-        return record?.scope === url.href && record.active && await shellStatus(record.active);
+        const worker = record?.waiting || record?.active;
+        return record?.scope === url.href && worker && await shellStatus(worker);
       } catch { return false; }
     }
 
@@ -126,7 +153,11 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
           navigator.serviceWorker.register(workerURL.href, {scope:root.pathname}),
           navigator.serviceWorker.register(new URL('service-worker.js', instructorRoot).href, {scope:instructorRoot.pathname})
         ]);
-        const workers = await Promise.all([activeWorker(main), activeWorker(instructor)]);
+        // A previously installed instructor worker may predate the Guide controls.
+        if (instructor.active && !instructor.installing && !instructor.waiting) {
+          await instructor.update().catch(() => {});
+        }
+        const workers = await Promise.all([shellWorker(main), shellWorker(instructor)]);
         const ready = await Promise.all(workers.map(worker => shellStatus(worker, true)));
         if (ready.every(Boolean)) notice.textContent = 'Exercises and the written guide are ready on this device.';
         else throw new Error('Some offline exercises are missing');

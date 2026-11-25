@@ -145,9 +145,14 @@ self.addEventListener('activate', event => {
 self.addEventListener('message', event => {
   if (event.data?.type === 'OFFLINE_SHELL_STATUS' && event.ports?.length) {
     const clientURL = event.source?.url;
+    if (!clientURL) return;
+    const client = new URL(clientURL);
     const suiteHome = new URL('../', self.registration.scope).href;
-    if (!clientURL || !clientURL.startsWith(self.registration.scope)
-      && clientURL !== suiteHome && clientURL !== new URL('index.html', suiteHome).href) return;
+    const page = new URL(client.pathname, client.origin).href;
+    // The shared Training Guide hosts offline setup for this scope.
+    if (!clientURL.startsWith(self.registration.scope) && page !== suiteHome
+      && page !== new URL('index.html', suiteHome).href
+      && page !== new URL('training-centre.html', suiteHome).href) return;
     const reply = event.ports[0];
     event.waitUntil((async () => {
       try {

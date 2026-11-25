@@ -10,7 +10,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 
 // Shared release knowledge: the common guide, Saarthi and screen tours. Maintain with each UI change.
 (function(root){ const knowledge = {
-  "revision": "1.0.14",
+  "revision": "1.0.15",
   "learning": "I am also learning. If I’m unable to answer, please refer to the training guide.",
   "examples": {
     "paired-controller-voice": "With aircraft 101 in a running exercise, hold to talk and say One zero one, turn right heading two six zero. Release and check the outcome.",
@@ -93,13 +93,24 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "answer-install-web-app",
       "priority": true,
       "match": "\\b(?:install(?:ing)? (?:ats sim box|(?:the |this |a )?(?:web app|app|website|simulator))|add to home screen|where (?:is|s) (?:the )?install(?:ation)? (?:button|option))\\b",
-      "text": "Select Install web app at the top of the ATS SIM BOX home page. Confirm in the browser prompt to add the app. If the button says Install help, the browser has not made a prompt available for that page. On iPhone or iPad, open the home page in Safari, tap Share, then choose Add to Home Screen. Enable Open as Web App if shown, then tap Add. For local training without internet, use Prepare for offline use on the home page.",
+      "text": "Select Install web app at the top of the ATS SIM BOX home page. Confirm in the browser prompt to add the app. If the button says Install help, the browser has not made a prompt available for that page. On iPhone or iPad, open the home page in Safari, tap Share, then choose Add to Home Screen. Enable Open as Web App if shown, then tap Add. For local training without internet, open Training Guide and choose Offline setup.",
       "intro": "Select Install web app at the top of the ATS SIM BOX home page and confirm in your browser.",
       "questions": [
         "Where is the install button?",
         "How do I install ATS SIM BOX?",
         "How do I add this to my iPhone Home Screen?"
       ]
+    },
+    {
+      "id": "offline-exercise-preparation",
+      "title": "Prepare exercises for offline use",
+      "topics": ["suite", "qgh", "qgh-individual", "qgh-instructor", "sra", "procedural"],
+      "anchor": "offline-preparation",
+      "controls": ["offline-prepare-core", "offline-prepare-voice"],
+      "match": "\\b(?:offline (?:setup|preparation|training|exercises|download)|prepare (?:for )?offline(?: use)?|prepare exercises|(?:download|save) (?:the )?voice|(?:run|practice|train|use (?:it|the simulator)) without internet)\\b",
+      "text": "While online, open Training Guide and choose Offline setup. Select Prepare exercises and wait until the exercise groups say Ready on this device. Select Download voice if you also want offline speech recognition. For a local paired exercise, keep both positions on the same PC, browser profile and site address, in separate windows. Online rooms still need internet.",
+      "intro": "Open Training Guide → Offline setup, then select Prepare exercises while connected.",
+      "questions": ["How do I prepare the exercises for offline use?", "Where did Prepare for offline use move?", "Where do I download the offline voice model?"]
     },
     {
       "id": "published-traffic-scenarios",
@@ -183,7 +194,7 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
       "anchor": "tutorial",
       "priority": true,
       "match": "\\b(?:(?:video|tutorial|gyani|guided (?:tour|training)).*updat|tutorial|youtube|narrated.*(?:course|video)|watch.*(?:lesson|video)|video.*chapter)\\b",
-      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. Recent updates mean some screens, button positions and setup steps may differ; no percentage of differences has been measured. The written Training guide, Saarthi answers and guided screen tour share the maintained current release knowledge. On Home, Prepare for offline use can cache exercises and charts, including instructor-led. Download voice separately or use the Training Guide to save individual clips. A notice below the video identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. A revised video is planned after the simulator changes are finalised, possibly for Version 2. Home → Tutorial or Training Centre → Demonstrations opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
+      "text": "The YouTube tutorial is a fixed recording and does not update automatically when the app changes. Recent updates mean some screens, button positions and setup steps may differ; no percentage of differences has been measured. The written Training guide, Saarthi answers and guided screen tour share the maintained current release knowledge. In the Training Guide, Offline setup can save exercises and charts, including instructor-led. Download voice separately or use the Training Guide to save individual clips. A notice below the video identifies changed workflows: Meet is optional, Prepare airspace uses the unified editor and fresh input pages hide Logout. A revised video is planned after the simulator changes are finalised, possibly for Version 2. Training Guide → Video tutorial opens the recorded course. Load tutorial, then press Play; there is no autoplay. Jump to chapter selects a measured start. Use captions and full-screen, or Watch on YouTube. Stop video or leave the page to unload the player. YouTube needs internet and cannot be saved by Make available offline; the written guide and individually saved local clips remain available. Local clips also retain their recorded appearance unless a new clip is recorded. The course distinguishes recorded actions from source-described controls.",
       "questions": [
         "Where is the full tutorial?",
         "Can I watch the tutorial inside the web app?",

@@ -46,6 +46,21 @@ No alternative licence is designated for this CPAL version. Historical MIT relea
 }
 @media print { .topic-nav-wrap, .topic-shortcuts { display: none !important; } }
 
+.offline-guide-inventory { margin: 0 0 16px; }
+.offline-guide-inventory > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 14px;
+  padding-block: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.offline-guide-inventory dt { font-weight: 600; }
+.offline-guide-inventory dd { margin: 0; color: var(--muted); }
+.offline-guide-card .action-row { align-items: stretch; }
+#offline-preparation-status { margin-top: 12px; }
+.suite-training-guide .site-header .suite-update { min-height: 44px; font-size: 12px; }
+
 /* One guide: three familiar starting choices and compact, expandable pointers. */
 .suite-training-guide{--paper:#eef3f7;--card:#fff;--ink:#17344b;--muted:#466177;--line:#b9cbd9;--accent:#24647f;--accent-dark:#174763;--tint:#e1edf4;font-family:Arial,Plex,sans-serif}
 .suite-training-guide .site-header{background:#294f6b;color:#fff;border-bottom:4px solid #f49b3a}

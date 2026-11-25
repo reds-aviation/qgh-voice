@@ -88,8 +88,32 @@ export function renderCurrentGuide(topic, prefix = '', version = knowledge.revis
   return '<section class="current-flow-guide" id="current-flow" data-guide-revision="'+escape(version)+'"><h2>Training guide</h2><p><a href="'+prefix+'training-centre.html">Open Training guide</a> · Version 1</p>'+knowledge.entries.filter(e=>e.topics.includes(topic)).map(renderEntry).join('')+'<p>'+escape(knowledge.learning)+'</p></section>';
 }
 
+const offlineSetup = `<section class="section" id="offline-preparation" aria-labelledby="offline-title">
+  <h2 id="offline-title">Prepare for offline use</h2>
+  <p>While connected, save the exercises you want to use on this device. Online rooms still require internet.</p>
+  <div class="guide-card offline-guide-card">
+    <dl class="offline-guide-inventory">
+      <div><dt>Individual QGH, Procedural and Training Guide</dt><dd id="offline-main-status">Not checked</dd></div>
+      <div><dt>Instructor-led QGH, SRE, SRA and vectoring</dt><dd id="offline-instructor-status">Not checked</dd></div>
+      <div><dt>Speech recognition · about 45 MB</dt><dd id="offline-voice-status" role="status">Optional</dd></div>
+    </dl>
+    <div class="action-row">
+      <button id="offline-prepare-core" type="button" disabled>Prepare exercises</button>
+      <button id="offline-prepare-voice" type="button" disabled>Download voice</button>
+      <a href="#demonstrations" class="button">Training videos</a>
+    </div>
+    <p id="offline-preparation-status" role="status">Offline downloads are available in a supported browser on the ATS SIM BOX website.</p>
+  </div>
+</section>`;
+
+function populateGuide(html, version) {
+  return html.replace('<!-- SUITE_OFFLINE_NAV -->', '<a href="#offline-preparation"><span>Offline setup</span></a>')
+    .replace('<!-- SUITE_OFFLINE_SETUP -->', offlineSetup)
+    .replace('<!-- SUITE_GUIDE_CONTENT -->', renderGuideContent(version));
+}
+
 export function renderCommonGuide(version = knowledge.revision) {
-  return readFileSync(new URL('../packages/qgh-engine/training-centre.html',import.meta.url),'utf8').replace('<!-- SUITE_GUIDE_CONTENT -->',renderGuideContent(version));
+  return populateGuide(readFileSync(new URL('../packages/qgh-engine/training-centre.html',import.meta.url),'utf8'), version);
 }
 
 export function legacyGuide(prefix = '', anchor = '') {
@@ -102,6 +126,7 @@ export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   const paths={home:'packages/site-landing/index.html',procedural:'packages/procedural-beta/static/procedural.html',single:'packages/qgh-engine/single.html',tactical:'packages/qgh-engine/tactical.html','instructor-entry':'packages/atc-suite/index.html',instructor:'packages/atc-suite/instructor.html',student:'packages/atc-suite/student.html','training-centre':'packages/qgh-engine/training-centre.html'};
   const sources={};
   for(const [page,path] of Object.entries(paths))sources[page]=await readFile(resolve(sourceRoot,path),'utf8');
+  sources['training-centre'] = populateGuide(sources['training-centre'], version);
   const workspaceShell=await readFile(resolve(sourceRoot,'packages/procedural-beta/static/workspace-shell.js'),'utf8');
   for(const page of ['procedural','instructor','student'])sources[page]+=workspaceShell;
   const plotting=await readFile(resolve(sourceRoot,'packages/procedural-beta/static/student-plotting.js'),'utf8');
@@ -127,7 +152,7 @@ export async function buildSuiteGuides(outputRoot, sourceRoot, version) {
   const centrePath=resolve(outputRoot,'training-centre.html');
   const centre=await readFile(centrePath,'utf8');
   if(!centre.includes('<!-- SUITE_GUIDE_CONTENT -->'))throw new Error('Missing Training guide content insertion point');
-  await writeFile(centrePath,centre.replace('<!-- SUITE_GUIDE_CONTENT -->',renderGuideContent(version)));
+  await writeFile(centrePath, populateGuide(centre, version));
   // Old nested guide routes remain bookmarks; application links use the canonical guide.
   for(const [page,prefix] of [['index.html',''],['qgh.html',''],['single.html',''],['tactical.html',''],['instructor-led/index.html','../'],['instructor-led/instructor.html','../'],['instructor-led/student.html','../'],['procedural-beta/index.html','../'],['procedural-beta/procedural.html','../']]) {
     const path=resolve(outputRoot,page);let html=await readFile(path,'utf8');

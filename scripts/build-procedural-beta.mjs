@@ -73,7 +73,8 @@ export async function buildProceduralBeta(outputRoot) {
     } else if (page === 'training-centre.html') {
       const marker = '<div class="header-links">';
       if (!html.includes(marker)) throw new Error('Missing Training Centre header for suite link');
-      html = html.replace(marker, marker + '<a class="back-link" href="./">ATC Suite</a>');
+      html = html.replace(marker, marker + '<a class="back-link" href="./">ATC Suite</a>')
+        .replace(/src="pwa-register\.js[^"]*"/, `src="suite-landing-register.js?release=${manifest.version}"`);
     }
     await writeFile(path,html);
   }
